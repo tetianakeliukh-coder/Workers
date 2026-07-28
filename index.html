@@ -783,6 +783,14 @@
     border-radius: 2px; padding: 0 1px; font-style: normal;
   }
 
+  .gs-view-all {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 20px 10px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--primary);
+    transition: background 0.1s;
+  }
+  .gs-view-all:hover { background: var(--bg-blue-light); }
+
   /* ─── Filter Search (inside drawer) ─── */
   .filter-search-section {
     padding: 12px 24px;
@@ -3048,29 +3056,39 @@
       return;
     }
 
+    var LIMIT = activeChip === 'all' ? 3 : Infinity;
     var html = '';
+    var prevHasResults = false;
+
+    function viewAllRow(cat, label, count) {
+      return '<div class="gs-view-all" data-switch-cat="' + cat + '">'
+        + 'View all ' + count + ' in ' + label
+        + '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M8 4.5l2.5 2.5-2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        + '</div>';
+    }
 
     if (workers.length) {
+      if (prevHasResults) html += '<hr class="gs-divider">';
       html += '<div class="gs-section-header"><span class="gs-section-label">Workers · ' + workers.length + '</span></div>';
-      workers.forEach(function(w, i) {
+      workers.slice(0, LIMIT).forEach(function(w, i) {
         html += '<div class="gs-item" data-type="worker" data-idx="' + i + '" tabindex="-1">'
           + '<div class="gs-avatar" style="background:' + w.bg + ';color:#fff">' + esc(w.initials) + '</div>'
           + '<div class="gs-item-main">'
           + '<div class="gs-item-name">' + highlight(w.name, q) + '</div>'
           + '<div class="gs-item-sub">ID: ' + esc(w.id) + ' · ' + esc(w.pos) + '</div>'
           + '</div>'
-          + '<div class="gs-item-right">'
           + '<span class="gs-badge ' + w.status + '">' + (w.status === 'active' ? 'Active' : 'Archived') + '</span>'
-          + '</div>'
           + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
           + '</div>';
       });
+      if (workers.length > LIMIT) html += viewAllRow('workers', 'Workers', workers.length);
+      prevHasResults = true;
     }
 
     if (sites.length) {
-      if (workers.length) html += '<hr class="gs-divider">';
+      if (prevHasResults) html += '<hr class="gs-divider">';
       html += '<div class="gs-section-header"><span class="gs-section-label">Sites · ' + sites.length + '</span></div>';
-      sites.forEach(function(s, i) {
+      sites.slice(0, LIMIT).forEach(function(s, i) {
         html += '<div class="gs-item" data-type="site" data-idx="' + i + '" tabindex="-1">'
           + '<div class="gs-icon-wrap"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="color:var(--primary)"><path d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.5-2-4.5-4.5-4.5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="6" r="1.5" stroke="currentColor" stroke-width="1.3"/></svg></div>'
           + '<div class="gs-item-main">'
@@ -3081,12 +3099,14 @@
           + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
           + '</div>';
       });
+      if (sites.length > LIMIT) html += viewAllRow('sites', 'Sites', sites.length);
+      prevHasResults = true;
     }
 
     if (vacancies.length) {
-      if (workers.length || sites.length) html += '<hr class="gs-divider">';
+      if (prevHasResults) html += '<hr class="gs-divider">';
       html += '<div class="gs-section-header"><span class="gs-section-label">Vacancies · ' + vacancies.length + '</span></div>';
-      vacancies.forEach(function(v, i) {
+      vacancies.slice(0, LIMIT).forEach(function(v, i) {
         html += '<div class="gs-item" data-type="vacancy" data-idx="' + i + '" tabindex="-1">'
           + '<div class="gs-icon-wrap"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="color:var(--primary)"><rect x="2" y="5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 5V3.5A1.5 1.5 0 0 1 7 2h2a1.5 1.5 0 0 1 1.5 1.5V5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 9h12" stroke="currentColor" stroke-width="1.3"/></svg></div>'
           + '<div class="gs-item-main">'
@@ -3097,12 +3117,14 @@
           + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
           + '</div>';
       });
+      if (vacancies.length > LIMIT) html += viewAllRow('vacancies', 'Vacancies', vacancies.length);
+      prevHasResults = true;
     }
 
     if (documents.length) {
-      if (workers.length || sites.length || vacancies.length) html += '<hr class="gs-divider">';
+      if (prevHasResults) html += '<hr class="gs-divider">';
       html += '<div class="gs-section-header"><span class="gs-section-label">Documents · ' + documents.length + '</span></div>';
-      documents.forEach(function(d, i) {
+      documents.slice(0, LIMIT).forEach(function(d, i) {
         html += '<div class="gs-item" data-type="document" data-idx="' + i + '" tabindex="-1">'
           + '<div class="gs-icon-wrap"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="color:var(--primary)"><path d="M4 2h6l3 3v9H4V2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 2v3h3" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 7.5h3M6.5 10h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>'
           + '<div class="gs-item-main">'
@@ -3113,6 +3135,7 @@
           + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
           + '</div>';
       });
+      if (documents.length > LIMIT) html += viewAllRow('documents', 'Documents', documents.length);
     }
 
     gsBody.innerHTML = html;
@@ -3149,8 +3172,16 @@
 
   function attachItemClicks() {
     gsBody.querySelectorAll('.gs-item').forEach(function(item) {
-      item.addEventListener('click', function() {
-        handleItemSelect(item);
+      item.addEventListener('click', function() { handleItemSelect(item); });
+    });
+    gsBody.querySelectorAll('.gs-view-all').forEach(function(el) {
+      el.addEventListener('click', function() {
+        var cat = el.dataset.switchCat;
+        activeChip = cat;
+        gsChipsRow.querySelectorAll('.gs-chip').forEach(function(c) {
+          c.classList.toggle('active', c.dataset.cat === cat);
+        });
+        renderBody();
       });
     });
   }
