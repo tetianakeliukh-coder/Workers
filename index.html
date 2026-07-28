@@ -614,6 +614,175 @@
   .additional-filters-body.open { display: flex; flex-direction: column; gap: 16px; }
   /* ── END ADDITIONAL FILTERS COLLAPSIBLE ── */
 
+  /* ─── Global Search ─── */
+  .gs-trigger {
+    width: 100%; background: none; border: none; cursor: pointer;
+    text-align: left; font-family: var(--fs-sans);
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 8px; color: var(--grey-700);
+    transition: background 0.12s;
+  }
+  .gs-trigger:hover { background: var(--bg-blue-light); color: var(--text-main); }
+  .gs-kbd {
+    margin-left: auto; font-size: 11px; color: var(--grey-400);
+    background: #f0f0f0; border-radius: 4px; padding: 2px 5px;
+    font-family: var(--fs-sans); line-height: 1.4; flex-shrink: 0;
+    border: 1px solid var(--grey-300);
+  }
+  .gs-trigger:hover .gs-kbd { background: rgba(0,51,255,0.06); color: var(--primary); border-color: rgba(0,51,255,0.15); }
+
+  .gs-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(8,17,21,0.40);
+    align-items: flex-start; justify-content: center;
+    padding-top: 80px;
+  }
+  .gs-backdrop.open { display: flex; }
+
+  .gs-panel {
+    width: 640px; max-width: calc(100vw - 32px);
+    background: var(--white); border-radius: 14px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08);
+    display: flex; flex-direction: column; overflow: hidden;
+    max-height: calc(100vh - 160px);
+  }
+
+  .gs-input-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 20px; border-bottom: 1px solid var(--grey-300); flex-shrink: 0;
+  }
+  .gs-input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-size: 16px; font-family: var(--fs-sans); color: var(--text-main);
+    line-height: 24px;
+  }
+  .gs-input::placeholder { color: var(--grey-400); }
+  .gs-esc-badge {
+    font-size: 11px; color: var(--grey-400); background: #f0f0f0;
+    border: 1px solid var(--grey-300); border-radius: 4px;
+    padding: 2px 6px; flex-shrink: 0; line-height: 1.5; font-family: var(--fs-sans);
+  }
+  .gs-clear-btn {
+    display: none; width: 22px; height: 22px; border-radius: 50%;
+    background: none; border: none; cursor: pointer;
+    align-items: center; justify-content: center; color: var(--grey-600);
+    flex-shrink: 0; transition: background 0.1s;
+  }
+  .gs-clear-btn.visible { display: flex; }
+  .gs-clear-btn:hover { background: var(--grey-300); color: var(--grey-800); }
+
+  .gs-chips-row {
+    display: flex; align-items: center; gap: 4px; padding: 10px 20px;
+    border-bottom: 1px solid var(--grey-300); flex-shrink: 0; overflow-x: auto;
+  }
+  .gs-chips-row::-webkit-scrollbar { display: none; }
+  .gs-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    height: 28px; padding: 0 12px; border-radius: 14px;
+    font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap;
+    border: 1px solid transparent; transition: all 0.12s;
+    font-family: var(--fs-sans); background: none; color: var(--grey-600);
+  }
+  .gs-chip:hover { background: var(--bg-blue-light); color: var(--primary); }
+  .gs-chip.active { background: var(--primary); color: var(--white); border-color: var(--primary); }
+  .gs-chip-count {
+    font-size: 11px; opacity: 0.75; font-weight: 600;
+  }
+
+  .gs-body { flex: 1; overflow-y: auto; padding: 4px 0 8px; }
+  .gs-body::-webkit-scrollbar { width: 5px; }
+  .gs-body::-webkit-scrollbar-thumb { background: var(--grey-300); border-radius: 3px; }
+
+  .gs-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px 4px;
+  }
+  .gs-section-label {
+    font-size: 11px; font-weight: 600; color: var(--grey-400);
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .gs-section-see-all {
+    font-size: 12px; color: var(--primary); cursor: pointer; background: none; border: none;
+    font-family: var(--fs-sans); padding: 0; font-weight: 500;
+  }
+  .gs-section-see-all:hover { opacity: 0.75; }
+
+  .gs-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 7px 20px; cursor: pointer; transition: background 0.1s;
+    min-height: 46px;
+  }
+  .gs-item:hover, .gs-item.hi { background: var(--bg-blue-light); }
+
+  .gs-avatar {
+    width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+  }
+  .gs-icon-wrap {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-blue-light);
+  }
+
+  .gs-item-main { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .gs-item-name {
+    font-size: 14px; font-weight: 500; color: var(--text-main);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .gs-item-sub {
+    font-size: 12px; color: var(--grey-600);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .gs-item-right { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
+  .gs-badge {
+    font-size: 12px; border-radius: 10px; padding: 2px 8px;
+    font-weight: 400; white-space: nowrap;
+  }
+  .gs-badge.active   { color: #17b26a; background: #f0fdf4; }
+  .gs-badge.archived { color: var(--grey-600); background: #f3f4f6; }
+  .gs-badge.module   { color: var(--grey-600); background: #f3f4f6; }
+
+  .gs-arrow {
+    color: var(--grey-300); flex-shrink: 0; transition: color 0.1s;
+  }
+  .gs-item:hover .gs-arrow, .gs-item.hi .gs-arrow { color: var(--grey-600); }
+
+  .gs-empty {
+    padding: 40px 20px 32px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .gs-empty-icon { color: var(--grey-300); margin-bottom: 4px; }
+  .gs-empty-title { font-size: 15px; font-weight: 600; color: var(--text-main); }
+  .gs-empty-sub { font-size: 14px; color: var(--grey-600); }
+
+  .gs-recent-header {
+    padding: 10px 20px 4px; font-size: 11px; font-weight: 600;
+    color: var(--grey-400); text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .gs-divider { border: none; border-top: 1px solid var(--grey-300); margin: 6px 0; }
+
+  .gs-footer {
+    display: flex; align-items: center; gap: 16px;
+    padding: 8px 20px; border-top: 1px solid var(--grey-300); flex-shrink: 0;
+  }
+  .gs-footer-hint {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--grey-400);
+  }
+  .gs-footer-key {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 18px; padding: 0 5px;
+    background: #f0f0f0; border: 1px solid var(--grey-300); border-radius: 3px;
+    font-size: 10px; color: var(--grey-600); line-height: 1;
+  }
+
+  mark.gs-mark {
+    background: #fef08a; color: var(--text-main);
+    border-radius: 2px; padding: 0 1px; font-style: normal;
+  }
+
   /* ─── Filter Search (inside drawer) ─── */
   .filter-search-section {
     padding: 12px 24px;
@@ -986,6 +1155,13 @@
       </div>
       <nav>
         <ul class="nav-list">
+          <li>
+            <button class="nav-item gs-trigger" id="gs-trigger" aria-label="Open global search">
+              <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              <span class="nav-label">Search</span>
+              <span class="gs-kbd">⌘K</span>
+            </button>
+          </li>
           <li><a class="nav-item">
             <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.5 7.6 8 2l6.5 5.6" stroke="#081115" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6.7V14h3.6v-3.6h2.8V14H13V6.7" stroke="#081115" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <span class="nav-label">Home</span>
@@ -1779,6 +1955,42 @@
       <button class="modal-cancel-btn" id="save-view-cancel">Cancel</button>
       <button class="modal-save-btn" id="save-view-confirm" disabled>Save</button>
     </div>
+  </div>
+</div>
+
+<!-- ── GLOBAL SEARCH MODAL ── -->
+<div class="gs-backdrop" id="gs-backdrop" role="dialog" aria-modal="true" aria-label="Global Search">
+  <div class="gs-panel" id="gs-panel">
+
+    <!-- Search input row -->
+    <div class="gs-input-row">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex-shrink:0;color:var(--grey-400)"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.5"/><path d="M13.5 13.5l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input class="gs-input" id="gs-input" type="text" placeholder="Search workers, sites, vacancies…" autocomplete="off" spellcheck="false">
+      <button class="gs-clear-btn" id="gs-clear" aria-label="Clear search">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <span class="gs-esc-badge">esc</span>
+    </div>
+
+    <!-- Filter chips -->
+    <div class="gs-chips-row" id="gs-chips-row">
+      <button class="gs-chip active" data-cat="all">All</button>
+      <button class="gs-chip" data-cat="workers">Workers</button>
+      <button class="gs-chip" data-cat="sites">Sites</button>
+      <button class="gs-chip" data-cat="vacancies">Vacancies</button>
+      <button class="gs-chip" data-cat="documents">Documents</button>
+    </div>
+
+    <!-- Results body -->
+    <div class="gs-body" id="gs-body"></div>
+
+    <!-- Footer hints -->
+    <div class="gs-footer">
+      <span class="gs-footer-hint"><span class="gs-footer-key">↑</span><span class="gs-footer-key">↓</span> navigate</span>
+      <span class="gs-footer-hint"><span class="gs-footer-key">↵</span> open</span>
+      <span class="gs-footer-hint"><span class="gs-footer-key">esc</span> close</span>
+    </div>
+
   </div>
 </div>
 
@@ -2707,6 +2919,335 @@
       if (isNaN(idx) || idx < 0 || idx >= WP_WORKERS.length) return;
       openWp(idx);
     });
+  });
+
+})();
+
+// ── GLOBAL SEARCH ────────────────────────────────────────────────
+(function() {
+
+  var RECENT = [
+    { label: 'Smith John',           cat: 'Workers',   module: 'workers'   },
+    { label: 'Gorgon LNG Platform',  cat: 'Sites',     module: 'sites'     },
+    { label: 'Offshore Electrician', cat: 'Vacancies', module: 'vacancies' },
+    { label: 'BOSIET Certificate',   cat: 'Documents', module: 'documents' },
+  ];
+
+  var WORKERS_DATA = [
+    { name: 'Smith John',   id: '111111', status: 'active',   pos: 'Offshore Technician', initials: 'SJ', bg: '#3b7dd8' },
+    { name: 'Stone Emma',   id: '234323', status: 'archived', pos: 'Safety Officer',       initials: 'SE', bg: '#e87d4a' },
+    { name: 'Adams Sophia', id: '455323', status: 'archived', pos: 'HSE Advisor',          initials: 'AS', bg: '#7c6bc4' },
+    { name: 'Miller Ava',   id: '126865', status: 'active',   pos: 'Crane Operator',       initials: 'MA', bg: '#4caf8a' },
+    { name: 'Clark Emma',   id: '555555', status: 'active',   pos: 'Medic / Paramedic',    initials: 'CE', bg: '#d0654a' },
+    { name: 'Baker Liam',   id: '754356', status: 'active',   pos: 'Rigger',               initials: 'BL', bg: '#3b7dd8' },
+    { name: 'Brown Olivia', id: '643457', status: 'active',   pos: 'Logistics Coordinator',initials: 'BO', bg: '#7c6bc4' },
+    { name: 'Clark Olivia', id: '098562', status: 'archived', pos: 'Subsea Engineer',      initials: 'CO', bg: '#4caf8a' },
+    { name: 'Hill Allison', id: '567853', status: 'archived', pos: 'Process Operator',     initials: 'HA', bg: '#e87d4a' },
+    { name: 'Davis Noah',   id: '789123', status: 'active',   pos: 'Deck Officer',         initials: 'DN', bg: '#d0654a' },
+    { name: 'Brown Chad',   id: '654321', status: 'active',   pos: 'Electrical Technician',initials: 'BC', bg: '#4caf8a' },
+  ];
+
+  var SITES_DATA = [
+    { name: 'Gorgon LNG Platform',   sub: 'Western Australia · Offshore',  icon: '🏭' },
+    { name: 'Wheatstone Offshore',   sub: 'Western Australia · Offshore',  icon: '⚓' },
+    { name: 'Bass Strait Rig',       sub: 'Victoria · Offshore',           icon: '🛢' },
+    { name: 'Ichthys CPF',           sub: 'Northern Territory · Offshore', icon: '🏭' },
+    { name: 'Prelude FLNG',          sub: 'Browse Basin · Floating LNG',   icon: '🚢' },
+    { name: 'Bowen Basin Mine',      sub: 'Queensland · Onshore Mining',   icon: '⛏' },
+    { name: 'Olympic Dam',           sub: 'South Australia · Underground', icon: '⛏' },
+  ];
+
+  var VACANCIES_DATA = [
+    { name: 'Offshore Electrician',   sub: 'Gorgon LNG · FIFO 2/2',    status: 'Open'   },
+    { name: 'Crane Operator',         sub: 'Wheatstone · FIFO 3/3',    status: 'Open'   },
+    { name: 'HSE Officer',            sub: 'Bass Strait · Residential', status: 'Open'   },
+    { name: 'Medic / Paramedic',      sub: 'Ichthys CPF · FIFO 2/2',   status: 'Closed' },
+    { name: 'Rigger Level 2',         sub: 'Prelude FLNG · FIFO 3/3',  status: 'Open'   },
+    { name: 'Process Operator',       sub: 'Bowen Basin · FIFO 4/1',   status: 'Open'   },
+    { name: 'Subsea Engineer',        sub: 'Gorgon LNG · Contract',    status: 'Closed' },
+  ];
+
+  var DOCUMENTS_DATA = [
+    { name: 'BOSIET Certificate',          sub: 'Baker Liam · Expires Jan 2026',    type: 'Certificate' },
+    { name: 'Offshore Medical',            sub: 'Smith John · Expires Mar 2026',    type: 'Medical'     },
+    { name: 'Employment Contract',         sub: 'Miller Ava · Signed May 2024',     type: 'Contract'    },
+    { name: 'Passport Copy',              sub: 'Brown Olivia · Expires Sep 2029',  type: 'ID'          },
+    { name: 'HUET Certificate',            sub: 'Clark Emma · Expires Jul 2025',   type: 'Certificate' },
+    { name: 'Driver Licence',              sub: 'Davis Noah · Expires Dec 2027',   type: 'ID'          },
+    { name: 'Visa – 482 Subclass',         sub: 'Adams Sophia · Expires Feb 2026', type: 'Visa'        },
+    { name: 'Safety Induction Checklist',  sub: 'Hill Allison · Aug 2024',         type: 'Document'    },
+  ];
+
+  var gsBackdrop   = document.getElementById('gs-backdrop');
+  var gsInput      = document.getElementById('gs-input');
+  var gsBody       = document.getElementById('gs-body');
+  var gsClear      = document.getElementById('gs-clear');
+  var gsChipsRow   = document.getElementById('gs-chips-row');
+  var gsTrigger    = document.getElementById('gs-trigger');
+  var activeChip   = 'all';
+  var hiIndex      = -1;
+
+  function gsOpen() {
+    gsBackdrop.classList.add('open');
+    gsInput.value = '';
+    gsClear.classList.remove('visible');
+    activeChip = 'all';
+    gsChipsRow.querySelectorAll('.gs-chip').forEach(function(c) {
+      c.classList.toggle('active', c.dataset.cat === 'all');
+    });
+    renderBody();
+    setTimeout(function() { gsInput.focus(); }, 50);
+  }
+
+  function gsClose() {
+    gsBackdrop.classList.remove('open');
+    hiIndex = -1;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function highlight(text, q) {
+    if (!q) return esc(text);
+    var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+    return esc(text).replace(re, '<mark class="gs-mark">$1</mark>');
+  }
+
+  function filterItems(arr, q, key) {
+    if (!q) return [];
+    return arr.filter(function(item) {
+      return (item[key] || '').toLowerCase().indexOf(q.toLowerCase()) !== -1;
+    });
+  }
+
+  function renderBody() {
+    var q = gsInput.value.trim();
+    hiIndex = -1;
+
+    if (!q) {
+      renderRecent();
+      updateChipCounts(null);
+      return;
+    }
+
+    var workers   = activeChip === 'all' || activeChip === 'workers'   ? filterItems(WORKERS_DATA,   q, 'name') : [];
+    var sites     = activeChip === 'all' || activeChip === 'sites'     ? filterItems(SITES_DATA,     q, 'name') : [];
+    var vacancies = activeChip === 'all' || activeChip === 'vacancies' ? filterItems(VACANCIES_DATA, q, 'name') : [];
+    var documents = activeChip === 'all' || activeChip === 'documents' ? filterItems(DOCUMENTS_DATA, q, 'name') : [];
+
+    updateChipCounts({ workers: workers.length, sites: sites.length, vacancies: vacancies.length, documents: documents.length });
+
+    var total = workers.length + sites.length + vacancies.length + documents.length;
+    if (total === 0) {
+      gsBody.innerHTML = '<div class="gs-empty">'
+        + '<svg class="gs-empty-icon" width="40" height="40" viewBox="0 0 40 40" fill="none"><circle cx="18" cy="18" r="11" stroke="currentColor" stroke-width="1.5"/><path d="M26 26l7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 18h10M18 13v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+        + '<div class="gs-empty-title">No results for "' + esc(q) + '"</div>'
+        + '<div class="gs-empty-sub">Try different keywords or change the filter</div>'
+        + '</div>';
+      return;
+    }
+
+    var html = '';
+
+    if (workers.length) {
+      html += '<div class="gs-section-header"><span class="gs-section-label">Workers · ' + workers.length + '</span></div>';
+      workers.forEach(function(w, i) {
+        html += '<div class="gs-item" data-type="worker" data-idx="' + i + '" tabindex="-1">'
+          + '<div class="gs-avatar" style="background:' + w.bg + ';color:#fff">' + esc(w.initials) + '</div>'
+          + '<div class="gs-item-main">'
+          + '<div class="gs-item-name">' + highlight(w.name, q) + '</div>'
+          + '<div class="gs-item-sub">ID: ' + esc(w.id) + ' · ' + esc(w.pos) + '</div>'
+          + '</div>'
+          + '<div class="gs-item-right">'
+          + '<span class="gs-badge ' + w.status + '">' + (w.status === 'active' ? 'Active' : 'Archived') + '</span>'
+          + '</div>'
+          + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '</div>';
+      });
+    }
+
+    if (sites.length) {
+      if (workers.length) html += '<hr class="gs-divider">';
+      html += '<div class="gs-section-header"><span class="gs-section-label">Sites · ' + sites.length + '</span></div>';
+      sites.forEach(function(s, i) {
+        html += '<div class="gs-item" data-type="site" data-idx="' + i + '" tabindex="-1">'
+          + '<div class="gs-icon-wrap"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="color:var(--primary)"><path d="M8 1.5C5.5 1.5 3.5 3.5 3.5 6c0 3.5 4.5 8.5 4.5 8.5s4.5-5 4.5-8.5c0-2.5-2-4.5-4.5-4.5z" stroke="currentColor" stroke-width="1.3"/><circle cx="8" cy="6" r="1.5" stroke="currentColor" stroke-width="1.3"/></svg></div>'
+          + '<div class="gs-item-main">'
+          + '<div class="gs-item-name">' + highlight(s.name, q) + '</div>'
+          + '<div class="gs-item-sub">' + esc(s.sub) + '</div>'
+          + '</div>'
+          + '<span class="gs-badge module">Sites</span>'
+          + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '</div>';
+      });
+    }
+
+    if (vacancies.length) {
+      if (workers.length || sites.length) html += '<hr class="gs-divider">';
+      html += '<div class="gs-section-header"><span class="gs-section-label">Vacancies · ' + vacancies.length + '</span></div>';
+      vacancies.forEach(function(v, i) {
+        html += '<div class="gs-item" data-type="vacancy" data-idx="' + i + '" tabindex="-1">'
+          + '<div class="gs-icon-wrap"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="color:var(--primary)"><rect x="2" y="5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 5V3.5A1.5 1.5 0 0 1 7 2h2a1.5 1.5 0 0 1 1.5 1.5V5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 9h12" stroke="currentColor" stroke-width="1.3"/></svg></div>'
+          + '<div class="gs-item-main">'
+          + '<div class="gs-item-name">' + highlight(v.name, q) + '</div>'
+          + '<div class="gs-item-sub">' + esc(v.sub) + '</div>'
+          + '</div>'
+          + '<span class="gs-badge ' + (v.status === 'Open' ? 'active' : 'archived') + '">' + esc(v.status) + '</span>'
+          + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '</div>';
+      });
+    }
+
+    if (documents.length) {
+      if (workers.length || sites.length || vacancies.length) html += '<hr class="gs-divider">';
+      html += '<div class="gs-section-header"><span class="gs-section-label">Documents · ' + documents.length + '</span></div>';
+      documents.forEach(function(d, i) {
+        html += '<div class="gs-item" data-type="document" data-idx="' + i + '" tabindex="-1">'
+          + '<div class="gs-icon-wrap"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="color:var(--primary)"><path d="M4 2h6l3 3v9H4V2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 2v3h3" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 7.5h3M6.5 10h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>'
+          + '<div class="gs-item-main">'
+          + '<div class="gs-item-name">' + highlight(d.name, q) + '</div>'
+          + '<div class="gs-item-sub">' + esc(d.sub) + '</div>'
+          + '</div>'
+          + '<span class="gs-badge module">' + esc(d.type) + '</span>'
+          + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+          + '</div>';
+      });
+    }
+
+    gsBody.innerHTML = html;
+    attachItemClicks();
+  }
+
+  function renderRecent() {
+    var html = '<div class="gs-recent-header">Recent</div>';
+    RECENT.forEach(function(r) {
+      html += '<div class="gs-item gs-recent-item" data-type="recent" data-label="' + esc(r.label) + '">'
+        + '<div class="gs-icon-wrap"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="color:var(--grey-600)"><circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.5V8l2 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>'
+        + '<div class="gs-item-main"><div class="gs-item-name">' + esc(r.label) + '</div></div>'
+        + '<span class="gs-badge module">' + esc(r.cat) + '</span>'
+        + '<svg class="gs-arrow" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 8h8M9 5l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        + '</div>';
+    });
+    gsBody.innerHTML = html;
+    attachItemClicks();
+  }
+
+  function updateChipCounts(counts) {
+    gsChipsRow.querySelectorAll('.gs-chip').forEach(function(chip) {
+      var cat = chip.dataset.cat;
+      var existing = chip.querySelector('.gs-chip-count');
+      if (existing) existing.remove();
+      if (counts && cat !== 'all' && counts[cat] > 0) {
+        var span = document.createElement('span');
+        span.className = 'gs-chip-count';
+        span.textContent = counts[cat];
+        chip.appendChild(span);
+      }
+    });
+  }
+
+  function attachItemClicks() {
+    gsBody.querySelectorAll('.gs-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        handleItemSelect(item);
+      });
+    });
+  }
+
+  function handleItemSelect(item) {
+    var type = item.dataset.type;
+    if (type === 'recent') {
+      gsInput.value = item.dataset.label;
+      gsClear.classList.add('visible');
+      renderBody();
+      return;
+    }
+    if (type === 'worker') {
+      var idx = parseInt(item.dataset.idx, 10);
+      gsClose();
+      var wpWorkers = window.__WP_WORKERS__;
+      if (wpWorkers && typeof openWp === 'function') {
+        setTimeout(function() { openWp(idx); }, 120);
+      }
+    } else {
+      gsClose();
+    }
+  }
+
+  function getItems() {
+    return Array.from(gsBody.querySelectorAll('.gs-item'));
+  }
+
+  function setHi(idx) {
+    var items = getItems();
+    items.forEach(function(el, i) {
+      el.classList.toggle('hi', i === idx);
+      if (i === idx) el.scrollIntoView({ block: 'nearest' });
+    });
+    hiIndex = idx;
+  }
+
+  // Keyboard navigation
+  gsInput.addEventListener('keydown', function(e) {
+    var items = getItems();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHi(Math.min(hiIndex + 1, items.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHi(Math.max(hiIndex - 1, 0));
+    } else if (e.key === 'Enter') {
+      if (hiIndex >= 0 && items[hiIndex]) {
+        handleItemSelect(items[hiIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      gsClose();
+    }
+  });
+
+  // Input change
+  gsInput.addEventListener('input', function() {
+    gsClear.classList.toggle('visible', gsInput.value.length > 0);
+    renderBody();
+  });
+
+  // Clear button
+  gsClear.addEventListener('click', function() {
+    gsInput.value = '';
+    gsClear.classList.remove('visible');
+    renderBody();
+    gsInput.focus();
+  });
+
+  // Filter chips
+  gsChipsRow.addEventListener('click', function(e) {
+    var chip = e.target.closest('.gs-chip');
+    if (!chip) return;
+    activeChip = chip.dataset.cat;
+    gsChipsRow.querySelectorAll('.gs-chip').forEach(function(c) {
+      c.classList.toggle('active', c === chip);
+    });
+    renderBody();
+  });
+
+  // Close on backdrop click
+  gsBackdrop.addEventListener('click', function(e) {
+    if (e.target === gsBackdrop) gsClose();
+  });
+
+  // Trigger button
+  gsTrigger.addEventListener('click', gsOpen);
+
+  // ⌘K / Ctrl+K shortcut
+  document.addEventListener('keydown', function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      if (gsBackdrop.classList.contains('open')) { gsClose(); } else { gsOpen(); }
+    }
+    if (e.key === 'Escape' && gsBackdrop.classList.contains('open')) {
+      gsClose();
+    }
   });
 
 })();
