@@ -403,11 +403,13 @@
       lastLeft = c.k;
     });
     if (lastLeft) {
-      rules.push('.frozen th.col-' + lastLeft + ',.frozen td.col-' + lastLeft +
-        '{box-shadow:1px 0 0 var(--grey-300);}');
+      rules.push('.sx-left .frozen th.col-' + lastLeft + ',.sx-left .frozen td.col-' + lastLeft +
+        '{box-shadow:1px 0 0 var(--grey-300),8px 0 10px -8px rgba(8,17,21,0.28);}');
     }
     rules.push('.frozen th.col-act,.frozen td.col-act' +
-      '{position:sticky;right:0;z-index:2;background:inherit;box-shadow:-1px 0 0 var(--grey-300);}');
+      '{position:sticky;right:0;z-index:2;background:inherit;}');
+    rules.push('.sx-right .frozen th.col-act,.sx-right .frozen td.col-act' +
+      '{box-shadow:-1px 0 0 var(--grey-300),-8px 0 10px -8px rgba(8,17,21,0.28);}');
     host.textContent = rules.join('\n');
   }
 
@@ -619,6 +621,17 @@
     render();
   });
 
+  /* A divider shows on an edge only while a frozen column is covering
+     something there — nothing at rest, both edges mid-scroll. */
+  var scrollBox = document.querySelector('.table-scroll');
+  function syncScrollEdges() {
+    var max = scrollBox.scrollWidth - scrollBox.clientWidth;
+    scrollBox.classList.toggle('sx-left', scrollBox.scrollLeft > 0);
+    scrollBox.classList.toggle('sx-right', max > 1 && scrollBox.scrollLeft < max - 1);
+  }
+  scrollBox.addEventListener('scroll', syncScrollEdges);
+  window.addEventListener('resize', syncScrollEdges);
+
   function render() {
     renderHead();
     var rows = TIMESHEETS.filter(matches);
@@ -673,6 +686,7 @@
 
     syncSelectAll(rows);
     syncSelectionBar();
+    syncScrollEdges();
   }
 
   /* ─── Selection ───────────────────────────────────────────────────── */
