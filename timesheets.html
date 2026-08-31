@@ -22,6 +22,8 @@
   td.col-issued { color: var(--text-main); font-variant-numeric: tabular-nums; }
   td.col-act { padding: 6px 12px 6px 6px; }
 
+  td.col-task { white-space: normal; line-height: 18px; }
+
   td.col-hrs, th.col-hrs { text-align: right; font-variant-numeric: tabular-nums; }
   th.col-hrs { padding-right: 16px; }
   td.col-hrs { font-weight: 600; color: var(--text-main); }
@@ -108,7 +110,7 @@
           <div class="seg" id="groupby">
             <button class="seg-btn active" type="button" data-group="none">Timesheet</button>
             <button class="seg-btn" type="button" data-group="worker">Worker</button>
-            <button class="seg-btn" type="button" data-group="project">No Grouping</button>
+            <button class="seg-btn" type="button" data-group="flat">No Grouping</button>
           </div>
         </div>
       </div>
@@ -299,6 +301,27 @@
      that with every group collapsed the header still describes what is on
      screen. Timesheet grouping has no parent rows and so no such column. */
   function columnsFor(group) {
+    /* No Grouping is the full base: one row per job, every timesheet field
+       repeated on it. No checkbox — a row here is a job, and the bulk
+       actions act on whole timesheets. */
+    if (group === 'flat') {
+      return [
+        // Sized to fit their content: this table scrolls sideways by nature,
+        // and clipped values are worse than a scrollbar.
+        { k: 'issued',  w: 120, label: 'Date' },
+        { k: 'site',    w: 195, label: 'Site' },
+        { k: 'super',   w: 140, label: 'Supervisor' },
+        { k: 'status',  w: 125, label: 'Status' },
+        { k: 'project', w: 190, label: 'Project' },
+        { k: 'updated', w: 185, label: 'Last Updated' },
+        { k: 'worker',  w: 140, label: 'Worker' },
+        { k: 'task',    w: 280, label: 'Task' },
+        { k: 'allow',   w: 165, label: 'Allowance' },
+        { k: 'times',   w: 125, label: 'Start - Finish' },
+        { k: 'hrs',     w: 80,  label: 'Hours', num: true }
+      ];
+    }
+
     var cols = [{ k: 'chk', w: 44, label: '' }];
 
     if (group === 'worker')  cols.push({ k: 'group', w: 180, label: 'Worker' });
@@ -364,6 +387,44 @@
       '</tr>';
   }
 
+  /* One row per job across every timesheet the filters allow through. */
+  function flatJobRows(sheets) {
+    var q = state.query, out = [];
+    sheets.forEach(function (t) {
+      var fields = fieldsFor(t.site);
+      workersFor(t).forEach(function (w) {
+        w.assignments.forEach(function (a) {
+          // The site's custom fields, joined — their names vary by site, so a
+          // single flat table can only carry the path, not a column each.
+          var path = fields.map(function (f, i) { return a.levels[i]; })
+                           .filter(Boolean).join(' | ');
+          var allow = [a.allow1, a.allow2].filter(Boolean).join(', ');
+          var times = (a.start && a.finish) ? (a.start + ' - ' + a.finish) : '';
+          function cell(v, cls) {
+            return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' +
+              (v ? Shell.highlight(v, q) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+          }
+          out.push('<tr>' +
+            '<td class="col-issued">' + Shell.highlight(fmtDate(t.issued), q) + '</td>' +
+            '<td title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
+            cell(t.supervisor) +
+            '<td>' + statusChip(t.status) + '</td>' +
+            cell(a.project) +
+            '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span>' +
+              '<span class="updated-time">' + t.time + '</span></span></td>' +
+            cell(w.worker) +
+            '<td class="col-task" title="' + Shell.esc(path) + '">' +
+              (path ? Shell.highlight(path, q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
+            cell(allow) +
+            cell(times) +
+            '<td class="col-hrs">' + fmtHours(a.hours) + '</td>' +
+          '</tr>');
+        });
+      });
+    });
+    return out.join('');
+  }
+
   function groupRowHtml(key, count, person) {
     var isCollapsed = !!collapsed[key];
     return '' +
@@ -391,7 +452,9 @@
     var rows = TIMESHEETS.filter(matches);
     var html = '';
 
-    if (state.group === 'none') {
+    if (state.group === 'flat') {
+      html = flatJobRows(rows);
+    } else if (state.group === 'none') {
       html = rows.map(function (t) { return rowHtml(t, false); }).join('');
     } else if (state.group === 'worker') {
       var widx = workerIndex(rows);
