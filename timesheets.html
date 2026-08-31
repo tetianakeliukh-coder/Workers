@@ -403,23 +403,21 @@
       lastLeft = c.k;
     });
     /* box-shadow on a <td> is dropped under border-collapse: collapse, so the
-       divider is drawn as a pseudo-element just outside the frozen edge. The
-       cell needs overflow:visible for it to escape. */
+       divider is drawn as a hairline pseudo-element just outside the frozen
+       edge. The cell needs overflow:visible for it to escape. */
     if (lastLeft) {
       rules.push('.sx-left .frozen th.col-' + lastLeft + ',.sx-left .frozen td.col-' + lastLeft +
         '{overflow:visible;}');
       rules.push('.sx-left .frozen th.col-' + lastLeft + '::after,.sx-left .frozen td.col-' + lastLeft + '::after' +
-        '{content:"";position:absolute;top:0;bottom:0;left:100%;width:10px;pointer-events:none;' +
-        'border-left:1px solid var(--grey-400);' +
-        'background:linear-gradient(to right,rgba(8,17,21,0.16),rgba(8,17,21,0));}');
+        '{content:"";position:absolute;top:0;bottom:0;left:100%;width:1px;pointer-events:none;' +
+        'background:var(--grey-400);}');
     }
     rules.push('.frozen th.col-act,.frozen td.col-act' +
       '{position:sticky;right:0;z-index:2;background:inherit;}');
     rules.push('.sx-right .frozen th.col-act,.sx-right .frozen td.col-act{overflow:visible;}');
     rules.push('.sx-right .frozen th.col-act::before,.sx-right .frozen td.col-act::before' +
-      '{content:"";position:absolute;top:0;bottom:0;right:100%;width:10px;pointer-events:none;' +
-      'border-right:1px solid var(--grey-400);' +
-      'background:linear-gradient(to left,rgba(8,17,21,0.16),rgba(8,17,21,0));}');
+      '{content:"";position:absolute;top:0;bottom:0;right:100%;width:1px;pointer-events:none;' +
+      'background:var(--grey-400);}');
     host.textContent = rules.join('\n');
   }
 
