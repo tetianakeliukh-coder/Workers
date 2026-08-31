@@ -184,6 +184,22 @@
     font-size: 13px; color: var(--grey-600);
   }
 
+  /* macOS hides overlay scrollbars until you scroll, which leaves no hint that
+     the table pans sideways — so paint one permanently under every tab. */
+  /* No scrollbar-color here: setting it makes Chrome ignore the
+     ::-webkit-scrollbar rules below and fall back to an overlay bar. */
+  .table-scroll { overflow-x: scroll; }
+  @supports (-moz-appearance: none) {
+    .table-scroll { scrollbar-color: var(--grey-400) var(--grey-200); }
+  }
+  .table-scroll::-webkit-scrollbar { -webkit-appearance: none; height: 10px; }
+  .table-scroll::-webkit-scrollbar-track { background: var(--grey-200); }
+  .table-scroll::-webkit-scrollbar-thumb {
+    background: var(--grey-400); border-radius: 5px;
+    border: 2px solid var(--grey-200); background-clip: padding-box;
+  }
+  .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--grey-600); background-clip: padding-box; }
+
 </style>
 </head>
 <body data-module="timesheets">
@@ -391,8 +407,8 @@
   supervisors.sort();
 
   superPanel.innerHTML =
-    '<button class="dd-item" type="button" data-super="me">' + CHECK + 'Me (' + Shell.esc(CURRENT_USER) + ')</button>' +
     '<button class="dd-item active" type="button" data-super="all">' + CHECK + 'All supervisors</button>' +
+    '<button class="dd-item" type="button" data-super="me">' + CHECK + 'Me (' + Shell.esc(CURRENT_USER) + ')</button>' +
     '<hr class="dd-divider" />' +
     supervisors.map(function (n) {
       return '<button class="dd-item" type="button" data-super="' + Shell.esc(n) + '">' + CHECK + Shell.esc(n) + '</button>';
