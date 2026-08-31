@@ -6,6 +6,7 @@
 <title>Timesheets — OPMS</title>
 <link rel="stylesheet" href="assets/tokens.css" />
 <link rel="stylesheet" href="assets/shell.css" />
+<style id="frozen-cols"></style>
 <style>
   /* ─── Timesheets-only ─────────────────────────────────────────────── */
   td.col-chk, th.col-chk { padding-left: 16px; padding-right: 0; }
@@ -34,6 +35,8 @@
   td.ts-count { font-weight: 600; color: var(--text-main); }
   td.ts-total { font-weight: 700; }
 
+  #tbody tr { background: var(--white); }
+  .table-card thead tr { background: var(--white); }
   tr.ts-job { background: #fafafa; }
   tr.ts-job > td { border-bottom: none; font-size: 13px; }
   tr.ts-job:hover { background: #f5f6f8; }
@@ -374,6 +377,35 @@
     ]);
   }
 
+  /* Date, Site and Supervisor stay put while the table scrolls sideways,
+     with the row actions pinned to the opposite edge. Offsets come from the
+     column model rather than hard-coded pixels, so they survive width
+     changes. Only the two wide tabs need it. */
+  var LEFT_FROZEN = ['chk', 'issued', 'site', 'super'];
+
+  function applyFrozen(cols) {
+    var host = document.getElementById('frozen-cols');
+    var wide = state.group === 'none' || state.group === 'flat';
+    mainTable.classList.toggle('frozen', wide);
+    if (!wide) { host.textContent = ''; return; }
+
+    var offset = 0, rules = [], lastLeft = null;
+    cols.forEach(function (c) {
+      if (LEFT_FROZEN.indexOf(c.k) === -1) return;
+      rules.push('.frozen th.col-' + c.k + ',.frozen td.col-' + c.k +
+        '{position:sticky;left:' + offset + 'px;z-index:2;background:inherit;}');
+      offset += c.w;
+      lastLeft = c.k;
+    });
+    if (lastLeft) {
+      rules.push('.frozen th.col-' + lastLeft + ',.frozen td.col-' + lastLeft +
+        '{box-shadow:1px 0 0 var(--grey-300);}');
+    }
+    rules.push('.frozen th.col-act,.frozen td.col-act' +
+      '{position:sticky;right:0;z-index:2;background:inherit;box-shadow:-1px 0 0 var(--grey-300);}');
+    host.textContent = rules.join('\n');
+  }
+
   function renderHead() {
     var cols = columnsFor(state.group);
     mainColgroup.innerHTML = cols.map(function (c) {
@@ -388,6 +420,7 @@
     }).join('') + '</tr>';
 
     mainTable.style.minWidth = cols.reduce(function (s, c) { return s + c.w; }, 0) + 'px';
+    applyFrozen(cols);
     return cols.length;
   }
 
@@ -475,8 +508,8 @@
         '<td class="col-issued"><span class="ts-parent-main">' +
           '<span class="ts-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
           Shell.highlight(fmtDate(t.issued), q) + '</span></td>' +
-        '<td title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
-        '<td>' + Shell.highlight(t.supervisor, q) + '</td>' +
+        '<td class="col-site" title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
+        '<td class="col-super">' + Shell.highlight(t.supervisor, q) + '</td>' +
         '<td>' + statusChip(t.status) + '</td>' +
         '<td class="ts-count">' + tally(people) + '</td>' +
         '<td class="ts-count">' + tally(projects) + '</td>' +
@@ -494,7 +527,8 @@
 
       jobs.forEach(function (j) {
         out.push('<tr class="ts-job' + (isCollapsed ? ' hidden' : '') + '" data-child="' + t.id + '">' +
-          '<td class="col-chk"></td><td></td><td></td><td></td><td></td>' +
+          '<td class="col-chk"></td><td class="col-issued"></td>' +
+          '<td class="col-site"></td><td class="col-super"></td><td></td>' +
           jobCell(j.w.worker) +
           jobCell(j.a.project) +
           jobCell(taskPath(j.a, fields), 'col-task') +
@@ -523,8 +557,8 @@
           var cell = jobCell;
           out.push('<tr>' +
             '<td class="col-issued">' + Shell.highlight(fmtDate(t.issued), q) + '</td>' +
-            '<td title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
-            cell(t.supervisor) +
+            '<td class="col-site" title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
+            cell(t.supervisor, 'col-super') +
             '<td>' + statusChip(t.status) + '</td>' +
             cell(w.worker) +
             cell(a.project) +
