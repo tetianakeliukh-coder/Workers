@@ -69,23 +69,6 @@
   /* Row kebab menu */
   .kebab-wrap { position: relative; }
 
-  /* ─── Version switcher ────────────────────────────────────────────
-     A presentation control for comparing two designs, not a product
-     feature — so it floats clear of the screen's own chrome.          */
-  .version-switch {
-    position: fixed; right: 24px; bottom: 24px; z-index: 400;
-    display: flex; align-items: center; gap: 10px;
-    padding: 8px 10px 8px 14px; border-radius: var(--radius-pill);
-    background: var(--white); border: 1px solid var(--grey-350);
-    box-shadow: 0 6px 24px rgba(5, 23, 95, 0.16);
-  }
-  .version-label {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.6px;
-    text-transform: uppercase; color: var(--grey-500); white-space: nowrap;
-  }
-  .version-switch .seg { height: 28px; border-radius: var(--radius-pill); overflow: hidden; }
-  .version-switch .seg-btn { padding: 0 14px; font-size: 13px; }
-
   /* ─── Timesheet detail popup ──────────────────────────────────────── */
   #detail-modal .modal { max-width: min(1000px, calc(100vw - 48px)); }
   .detail-switch { display: flex; align-items: center; gap: 8px; }
@@ -226,7 +209,7 @@
           <div class="seg" id="groupby">
             <button class="seg-btn active" type="button" data-group="none">Timesheet</button>
             <button class="seg-btn" type="button" data-group="worker">Worker</button>
-            <button class="seg-btn" type="button" data-group="project">Project</button>
+            <button class="seg-btn" type="button" data-group="project">No Grouping</button>
           </div>
         </div>
       </div>
@@ -257,14 +240,6 @@
 
     </div>
   </main>
-</div>
-
-<div class="version-switch" id="version-switch">
-  <span class="version-label">Version</span>
-  <div class="seg">
-    <button class="seg-btn active" type="button" data-version="a">A</button>
-    <button class="seg-btn" type="button" data-version="b">B</button>
-  </div>
 </div>
 
 <div class="modal-backdrop" id="detail-modal" role="dialog" aria-modal="true" aria-labelledby="detail-title">
@@ -336,14 +311,7 @@
   }
 
   /* ─── State ───────────────────────────────────────────────────────── */
-  var state = { query: '', month: 'all', group: 'none', version: 'a' };
-
-  /* Which of the two designs is on screen. Kept in localStorage so a reload
-     mid-demo doesn't snap back to A. */
-  try {
-    var saved = window.localStorage.getItem('opms-timesheets-version');
-    if (saved === 'a' || saved === 'b') state.version = saved;
-  } catch (e) { /* private mode, blocked storage — default stands */ }
+  var state = { query: '', month: 'all', group: 'none' };
   var selected = Object.create(null);
   var collapsed = Object.create(null);
 
@@ -448,73 +416,12 @@
     return { order: order, buckets: buckets };
   }
 
-  /* Sortable key for "last updated", so 01:18 pm beats 10:03 am. */
-  function updatedKey(t) {
-    var m = /^(\d+):(\d+)\s*(am|pm)$/i.exec(t.time || '');
-    if (!m) return t.updated + 'T00:00';
-    var h = Number(m[1]) % 12;
-    if (/pm/i.test(m[3])) h += 12;
-    return t.updated + 'T' + (h < 10 ? '0' + h : h) + ':' + m[2];
-  }
-
-  function latestOf(list) {
-    return list.reduce(function (best, x) {
-      return (!best || updatedKey(x.ts) > updatedKey(best.ts)) ? x : best;
-    }, null).ts;
-  }
-
-  /* Version B collapses the Worker / Project tabs to one row each, so every
-     figure on the row is an aggregate over the timesheets behind it. */
-  function workerSummaries(rows) {
-    var idx = workerIndex(rows);
-    return idx.order.map(function (name) {
-      var list = idx.buckets[name];
-      return {
-        name: name,
-        color: list[0].rec.color,
-        count: list.length,
-        hours: list.reduce(function (s, p) { return s + p.rec.total; }, 0),
-        updated: latestOf(list),
-        ids: list.map(function (p) { return p.ts.id; })
-      };
-    });
-  }
-
-  function projectSummaries(rows) {
-    var idx = projectIndex(rows);
-    return idx.order.map(function (name) {
-      var list = idx.buckets[name];
-      return {
-        name: name,
-        count: list.length,
-        hours: list.reduce(function (s, p) { return s + p.hours; }, 0),
-        updated: latestOf(list),
-        ids: list.map(function (p) { return p.ts.id; })
-      };
-    });
-  }
-
-  function isFlatMode() {
-    return state.version === 'b' && (state.group === 'worker' || state.group === 'project');
-  }
-
   /* ─── Columns ─────────────────────────────────────────────────────────
      Worker and Project grouping add a leading column naming the group, so
      that with every group collapsed the header still describes what is on
      screen. Timesheet grouping has no parent rows and so no such column. */
   function columnsFor(group) {
     var cols = [{ k: 'chk', w: 44, label: '' }];
-
-    if (isFlatMode()) {
-      // One row per worker / project: summary figures, then a single View.
-      return cols.concat([
-        { k: 'group',   w: 300, label: group === 'worker' ? 'Worker' : 'Project' },
-        { k: 'sheets',  w: 150, label: 'Timesheets', num: true },
-        { k: 'hrs',     w: 150, label: 'Total Hours', num: true },
-        { k: 'updated', w: 230, label: 'Last Updated' },
-        { k: 'act',     w: 110, label: '' }
-      ]);
-    }
 
     if (group === 'worker')  cols.push({ k: 'group', w: 180, label: 'Worker' });
     if (group === 'project') cols.push({ k: 'group', w: 180, label: 'Project' });
@@ -581,35 +488,6 @@
       '</tr>';
   }
 
-  /* Version B: one row summarising a worker or project. Its checkbox stands
-     for every timesheet behind it, so it can be part-selected. */
-  function flatRowHtml(s, kind) {
-    var picked = s.ids.filter(function (id) { return selected[id]; }).length;
-    var cls = picked === s.ids.length ? 'checked' : (picked ? 'indeterminate' : '');
-    var q = state.query;
-
-    return '' +
-      '<tr' + (picked === s.ids.length ? ' class="selected"' : '') + ' data-ids="' + s.ids.join(',') + '">' +
-        '<td class="col-chk"><span class="chk ' + cls + '" role="checkbox" tabindex="0" ' +
-          'aria-checked="' + (picked === s.ids.length ? 'true' : picked ? 'mixed' : 'false') + '" ' +
-          'data-bulk-chk="' + s.ids.join(',') + '"></span></td>' +
-        '<td class="col-group"><span class="flat-name">' +
-          (s.color ? '<span class="avatar avatar-sm" style="background:' + s.color + '">' + Shell.initials(s.name) + '</span>' : '') +
-          '<span>' + Shell.highlight(s.name, q) + '</span>' +
-        '</span></td>' +
-        '<td class="col-sheets num">' + s.count + '</td>' +
-        '<td class="col-hrs">' + fmtHours(s.hours) + '</td>' +
-        '<td><span class="updated-cell"><span>' + fmtDate(s.updated.updated) + '</span>' +
-          '<span class="updated-time">' + s.updated.time + '</span></span></td>' +
-        '<td class="col-act"><span class="action-cell">' +
-          '<button class="btn-text" type="button" data-view-all-' + kind + '="' + Shell.esc(s.name) + '">View</button>' +
-          '<button class="kebab" type="button" data-kebab="' + Shell.esc(s.name) + '" aria-label="More actions">' +
-            '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
-          '</button>' +
-        '</span></td>' +
-      '</tr>';
-  }
-
   function groupRowHtml(key, count, person) {
     var isCollapsed = !!collapsed[key];
     return '' +
@@ -637,11 +515,7 @@
     var rows = TIMESHEETS.filter(matches);
     var html = '';
 
-    if (isFlatMode()) {
-      var summaries = state.group === 'worker' ? workerSummaries(rows) : projectSummaries(rows);
-      var kind = state.group;
-      html = summaries.map(function (s) { return flatRowHtml(s, kind); }).join('');
-    } else if (state.group === 'none') {
+    if (state.group === 'none') {
       html = rows.map(function (t) { return rowHtml(t, false); }).join('');
     } else if (state.group === 'worker') {
       var widx = workerIndex(rows);
@@ -733,15 +607,6 @@
 
   /* ─── Table interactions ──────────────────────────────────────────── */
   tbody.addEventListener('click', function (e) {
-    var bulkBox = e.target.closest('[data-bulk-chk]');
-    if (bulkBox) {
-      var ids = bulkBox.getAttribute('data-bulk-chk').split(',');
-      var allOn = ids.every(function (id) { return selected[id]; });
-      ids.forEach(function (id) { if (allOn) delete selected[id]; else selected[id] = true; });
-      render();
-      return;
-    }
-
     var box = e.target.closest('[data-row-chk]');
     if (box) { toggleRow(box.getAttribute('data-row-chk')); return; }
 
@@ -752,11 +617,6 @@
       render();
       return;
     }
-
-    var viewAllW = e.target.closest('[data-view-all-worker]');
-    if (viewAllW) { openWorkerAll(viewAllW.getAttribute('data-view-all-worker')); return; }
-    var viewAllP = e.target.closest('[data-view-all-project]');
-    if (viewAllP) { openProjectAll(viewAllP.getAttribute('data-view-all-project')); return; }
 
     var view = e.target.closest('[data-view]');
     if (view) {
@@ -1181,180 +1041,7 @@
     document.getElementById('detail-close').focus();
   }
 
-  /* ── Version B popups ───────────────────────────────────────────────
-     Everything about one worker (or project) in a single popup: their
-     timesheets as parent rows, each opening to the jobs underneath. That
-     replaces A's one-popup-per-timesheet clicking.                     */
-  function dayParent(ts, key, isCollapsed, countText, hours) {
-    return '<tr class="tsn-worker' + (isCollapsed ? ' collapsed' : '') + '" data-worker="' + key + '">' +
-        '<td><span class="tsn-main">' +
-          '<span class="tsn-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
-          '<span class="tsn-day">' + fmtDate(ts.issued) + '</span>' +
-        '</span></td>' +
-        '<td class="tsn-sup">' + Shell.esc(ts.supervisor) + '</td>' +
-        '<td title="' + Shell.esc(ts.site) + '">' + Shell.esc(ts.site) + '</td>' +
-        '<td>' + statusChip(ts.status) + '</td>' +
-        '<td class="tsn-jobs">' + countText + '</td>' +
-        '<td class="num tsn-total">' + fmtHours(hours) + '</td>' +
-      '</tr>';
-  }
-
-  function jobCells(a, fields) {
-    var allow = allowancesOf(a);
-    return fields.map(function (f, idx) {
-        return '<td>' + (a.levels[idx] ? Shell.esc(a.levels[idx]) : EMPTY) + '</td>';
-      }).join('') +
-      '<td class="allow">' + (allow.length ? chips(allow) : EMPTY) + '</td>' +
-      '<td class="num">' + (a.start ? Shell.esc(a.start) : EMPTY) + '</td>' +
-      '<td class="num">' + (a.finish ? Shell.esc(a.finish) : EMPTY) + '</td>' +
-      '<td class="num hrs">' + (fmtHours(a.hours) || EMPTY) + '</td>';
-  }
-
-  function dayTableShell(body) {
-    return '<table class="tsn-table">' +
-      '<colgroup><col class="c-day" /><col class="c-super" /><col class="c-site" />' +
-      '<col class="c-status" /><col class="c-jobs" /><col class="c-hours" /></colgroup>' +
-      '<thead><tr><th>Date</th><th>Supervisor</th><th>Site</th><th>Status</th>' +
-      '<th>Jobs</th><th class="num">Total Hours</th></tr></thead>' +
-      '<tbody>' + body + '</tbody></table>';
-  }
-
-  function renderWorkerTimesheets(ctx) {
-    var body = ctx.days.map(function (d) {
-      var isCollapsed = !!collapsedWorkers[d.ts.id];
-      var fields = fieldsFor(d.ts.site);
-      var n = d.rec.assignments.length;
-
-      var head = '<tr><th>Project</th>' +
-        fields.map(function (f) { return '<th>' + Shell.esc(f.name) + '</th>'; }).join('') +
-        '<th>Allowances</th><th class="num">Start</th><th class="num">Finish</th><th class="num">Hours</th></tr>';
-
-      var rows = d.rec.assignments.map(function (a) {
-        return '<tr><td>' + Shell.esc(a.project) + '</td>' + jobCells(a, fields) + '</tr>';
-      }).join('');
-
-      return dayParent(d.ts, d.ts.id, isCollapsed, n + ' job' + (n === 1 ? '' : 's'), d.rec.total) +
-        '<tr class="tsn-detail' + (isCollapsed ? ' hidden' : '') + '" data-child="' + d.ts.id + '">' +
-          '<td colspan="6"><div class="tsn-sub"><table class="tsn-subtable">' +
-            '<thead>' + head + '</thead><tbody>' + rows + '</tbody>' +
-          '</table></div></td></tr>';
-    }).join('');
-    return dayTableShell(body);
-  }
-
-  function renderProjectTimesheets(ctx) {
-    var body = ctx.sheets.map(function (s) {
-      var isCollapsed = !!collapsedWorkers[s.ts.id];
-      var fields = fieldsFor(s.ts.site);
-      var n = s.workers.length;
-
-      // Project is constant here, so Worker takes the leading column.
-      var head = '<tr><th>Worker</th>' +
-        fields.map(function (f) { return '<th>' + Shell.esc(f.name) + '</th>'; }).join('') +
-        '<th>Allowances</th><th class="num">Start</th><th class="num">Finish</th><th class="num">Hours</th></tr>';
-
-      var rows = s.workers.map(function (w) {
-        return w.assignments.map(function (a) {
-          return '<tr><td>' + Shell.esc(w.worker) + '</td>' + jobCells(a, fields) + '</tr>';
-        }).join('');
-      }).join('');
-
-      return dayParent(s.ts, s.ts.id, isCollapsed, n + ' worker' + (n === 1 ? '' : 's'), s.hours) +
-        '<tr class="tsn-detail' + (isCollapsed ? ' hidden' : '') + '" data-child="' + s.ts.id + '">' +
-          '<td colspan="6"><div class="tsn-sub"><table class="tsn-subtable">' +
-            '<thead>' + head + '</thead><tbody>' + rows + '</tbody>' +
-          '</table></div></td></tr>';
-    }).join('');
-    return dayTableShell(body);
-  }
-
-  function openWorkerAll(name) {
-    var days = [];
-    TIMESHEETS.filter(matches).forEach(function (t) {
-      workersFor(t).forEach(function (w) { if (w.worker === name) days.push({ ts: t, rec: w }); });
-    });
-    if (!days.length) return;
-    days.sort(function (a, b) { return a.ts.issued < b.ts.issued ? -1 : 1; });
-
-    currentWorker = { name: name, days: days };
-    detailMode = 'worker-all';
-    currentTs = null; currentProject = null;
-
-    collapsedWorkers = {};
-    days.forEach(function (d) { collapsedWorkers[d.ts.id] = true; });
-
-    var jobs  = days.reduce(function (s, d) { return s + d.rec.assignments.length; }, 0);
-    var total = days.reduce(function (s, d) { return s + d.rec.total; }, 0);
-    var sites = {};
-    days.forEach(function (d) { sites[d.ts.site] = true; });
-
-    detailTtl.textContent = name;
-    detailMeta.innerHTML =
-      metaItem('Position', Shell.esc(days[0].rec.position)) +
-      metaItem('Timesheets', String(days.length)) +
-      metaItem('Sites', String(Object.keys(sites).length));
-
-    paintDetail();
-    detailSum.innerHTML =
-      days.length + ' timesheet' + (days.length === 1 ? '' : 's') +
-      ' &middot; ' + jobs + ' job' + (jobs === 1 ? '' : 's') +
-      ' &middot; ' + (Math.round(total * 10) / 10).toFixed(1) + ' hours total';
-
-    lastFocus = document.activeElement;
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    document.getElementById('detail-close').focus();
-  }
-
-  function openProjectAll(name) {
-    var sheets = [];
-    TIMESHEETS.filter(matches).forEach(function (t) {
-      var workers = projectWorkers(t, name);
-      if (workers.length) sheets.push({ ts: t, workers: workers, hours: projectHours(t, name) });
-    });
-    if (!sheets.length) return;
-    sheets.sort(function (a, b) { return a.ts.issued < b.ts.issued ? -1 : 1; });
-
-    currentProject = { project: name, sheets: sheets };
-    detailMode = 'project-all';
-    currentTs = null; currentWorker = null;
-
-    collapsedWorkers = {};
-    sheets.forEach(function (s) { collapsedWorkers[s.ts.id] = true; });
-
-    var people = {};
-    var jobs = 0;
-    sheets.forEach(function (s) {
-      s.workers.forEach(function (w) { people[w.worker] = true; jobs += w.assignments.length; });
-    });
-    var total = sheets.reduce(function (acc, s) { return acc + s.hours; }, 0);
-
-    detailTtl.textContent = name;
-    detailMeta.innerHTML =
-      metaItem('Timesheets', String(sheets.length)) +
-      metaItem('Workers', String(Object.keys(people).length));
-
-    paintDetail();
-    detailSum.innerHTML =
-      sheets.length + ' timesheet' + (sheets.length === 1 ? '' : 's') +
-      ' &middot; ' + jobs + ' job' + (jobs === 1 ? '' : 's') +
-      ' &middot; ' + (Math.round(total * 10) / 10).toFixed(1) + ' hours total';
-
-    lastFocus = document.activeElement;
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    document.getElementById('detail-close').focus();
-  }
-
   function paintDetail() {
-    if (detailMode === 'worker-all') {
-      if (currentWorker) detailView.innerHTML = renderWorkerTimesheets(currentWorker);
-      return;
-    }
-    if (detailMode === 'project-all') {
-      if (currentProject) detailView.innerHTML = renderProjectTimesheets(currentProject);
-      return;
-    }
     if (detailMode === 'worker') {
       if (currentWorker) detailView.innerHTML = renderWorkerJobs(currentWorker);
       return;
@@ -1434,24 +1121,7 @@
     if (e.key === 'Escape') closeDetail();
   });
 
-  /* ─── Version switcher ────────────────────────────────────────────── */
-  function applyVersion() {
-    document.body.setAttribute('data-version', state.version);
-    document.querySelectorAll('#version-switch .seg-btn').forEach(function (b) {
-      b.classList.toggle('active', b.getAttribute('data-version') === state.version);
-    });
-    render();
-  }
-
-  document.getElementById('version-switch').addEventListener('click', function (e) {
-    var btn = e.target.closest('.seg-btn');
-    if (!btn) return;
-    state.version = btn.getAttribute('data-version');
-    try { window.localStorage.setItem('opms-timesheets-version', state.version); } catch (err) {}
-    applyVersion();
-  });
-
-  applyVersion();
+  render();
 })();
 </script>
 </body>
