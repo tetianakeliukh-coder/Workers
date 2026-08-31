@@ -367,6 +367,23 @@
       ];
     }
 
+    if (group === 'worker') {
+      return [
+        { k: 'group',   w: 200, label: 'Worker' },
+        { k: 'issued',  w: 120, label: 'Date' },
+        { k: 'site',    w: 185, label: 'Site' },
+        { k: 'super',   w: 140, label: 'Supervisor' },
+        { k: 'status',  w: 125, label: 'Status' },
+        { k: 'project', w: 180, label: 'Project' },
+        { k: 'task',    w: 290, label: 'Task' },
+        { k: 'allow',   w: 180, label: 'Allowance' },
+        { k: 'times',   w: 125, label: 'Start - Finish' },
+        { k: 'hrs',     w: 80,  label: 'Hours', num: true },
+        { k: 'updated', w: 185, label: 'Last Updated' },
+        { k: 'act',     w: 70,  label: '' }
+      ];
+    }
+
     var cols = [{ k: 'chk', w: 44, label: '' }];
 
     if (group === 'worker')  cols.push({ k: 'group', w: 180, label: 'Worker' });
@@ -386,11 +403,11 @@
      with the row actions pinned to the opposite edge. Offsets come from the
      column model rather than hard-coded pixels, so they survive width
      changes. Only the two wide tabs need it. */
-  var LEFT_FROZEN = ['chk', 'issued', 'site', 'super'];
+  var LEFT_FROZEN = ['chk', 'group', 'issued', 'site', 'super'];
 
   function applyFrozen(cols) {
     var host = document.getElementById('frozen-cols');
-    var wide = state.group === 'none' || state.group === 'flat';
+    var wide = state.group !== 'project';
     mainTable.classList.toggle('frozen', wide);
     if (!wide) { host.textContent = ''; return; }
 
@@ -486,6 +503,79 @@
   function jobCell(v, cls) {
     return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' +
       (v ? Shell.highlight(v, state.query) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+  }
+
+  function workerRows(sheets) {
+    var index = Object.create(null), order = [];
+    sheets.forEach(function (t) {
+      var fields = fieldsFor(t.site);
+      workersFor(t).forEach(function (w) {
+        if (!index[w.worker]) { index[w.worker] = { color: w.color, jobs: [] }; order.push(w.worker); }
+        w.assignments.forEach(function (a) {
+          index[w.worker].jobs.push({ t: t, a: a, fields: fields });
+        });
+      });
+    });
+    order.sort();
+
+    var out = [];
+    order.forEach(function (name) {
+      var g = index[name], jobs = g.jobs;
+      var isCollapsed = isCollapsed_(name);
+      var sites = {}, projects = {}, tasks = {}, allowances = {};
+      var total = 0;
+      jobs.forEach(function (j) {
+        total += Number(j.a.hours) || 0;
+        sites[j.t.site] = true;
+        if (j.a.project) projects[j.a.project] = true;
+        var path = taskPath(j.a, j.fields);
+        if (path) tasks[path] = true;
+        [j.a.allow1, j.a.allow2].forEach(function (x) { if (x) allowances[x] = true; });
+      });
+      function tally(m) { var n = Object.keys(m).length; return n ? String(n) : ''; }
+
+      out.push('<tr class="ts-parent' + (isCollapsed ? ' collapsed' : '') +
+            '" data-sheet="' + Shell.esc(name) + '">' +
+        '<td class="col-group"><span class="ts-parent-main">' +
+          '<span class="ts-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+          '<span class="avatar avatar-sm" style="background:' + g.color + '">' + Shell.initials(name) + '</span>' +
+          Shell.highlight(name, state.query) + '</span></td>' +
+        '<td class="col-issued ts-count">' + jobs.length + '</td>' +
+        '<td class="col-site ts-count">' + tally(sites) + '</td>' +
+        '<td class="col-super"></td>' +
+        '<td></td>' +
+        '<td class="ts-count">' + tally(projects) + '</td>' +
+        '<td class="ts-count">' + tally(tasks) + '</td>' +
+        '<td class="ts-count">' + tally(allowances) + '</td>' +
+        '<td></td>' +
+        '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
+        '<td></td>' +
+        '<td class="col-act"><span class="action-cell">' +
+          '<button class="kebab" type="button" data-kebab="' + Shell.esc(name) + '" aria-label="More actions">' +
+            '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
+          '</button>' +
+        '</span></td>' +
+      '</tr>');
+
+      jobs.forEach(function (j) {
+        out.push('<tr class="ts-job' + (isCollapsed ? ' hidden' : '') +
+              '" data-child="' + Shell.esc(name) + '">' +
+          '<td class="col-group"></td>' +
+          '<td class="col-issued">' + Shell.highlight(fmtDate(j.t.issued), state.query) + '</td>' +
+          '<td class="col-site" title="' + Shell.esc(j.t.site) + '">' + Shell.highlight(j.t.site, state.query) + '</td>' +
+          '<td class="col-super">' + Shell.highlight(j.t.supervisor, state.query) + '</td>' +
+          '<td>' + statusChip(j.t.status) + '</td>' +
+          jobCell(j.a.project) +
+          jobCell(taskPath(j.a, j.fields), 'col-task') +
+          jobCell(allowText(j.a), 'col-allow') +
+          jobCell(timesText(j.a)) +
+          '<td class="col-hrs">' + fmtHours(j.a.hours) + '</td>' +
+          '<td><span class="updated-cell"><span>' + fmtDate(j.t.updated) + '</span><span class="updated-time">' + j.t.time + '</span></span></td>' +
+          '<td class="col-act"></td>' +
+        '</tr>');
+      });
+    });
+    return out.join('');
   }
 
   /* Timesheet tab: the sheet is the parent row, its jobs nest underneath and
@@ -650,17 +740,7 @@
     } else if (state.group === 'none') {
       html = timesheetRows(rows);
     } else if (state.group === 'worker') {
-      var widx = workerIndex(rows);
-      widx.order.forEach(function (name) {
-        var list = widx.buckets[name];
-        html += groupRowHtml(name, list.length, {
-          color: list[0].rec.color,
-          total: list.reduce(function (s, pair) { return s + pair.rec.total; }, 0)
-        });
-        html += list.map(function (pair) {
-          return rowHtml(pair.ts, isCollapsed_(name), { type: 'worker', name: name, rec: pair.rec });
-        }).join('');
-      });
+      html = workerRows(rows);
     } else {
       var pidx = projectIndex(rows);
       pidx.order.forEach(function (name) {
