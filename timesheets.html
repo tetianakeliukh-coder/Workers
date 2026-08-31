@@ -443,11 +443,14 @@
       var checked = !!selected[t.id];
       var isCollapsed = !!collapsed[t.id];
       var fields = fieldsFor(t.site);
-      var jobs = [];
+      var jobs = [], people = {};
       workersFor(t).forEach(function (w) {
+        people[w.worker] = true;
         w.assignments.forEach(function (a) { jobs.push({ w: w, a: a }); });
       });
       var total = jobs.reduce(function (s, j) { return s + (Number(j.a.hours) || 0); }, 0);
+      // Distinct people, not job rows — the number sits under the Worker heading.
+      var headcount = Object.keys(people).length;
 
       out.push('<tr class="ts-parent' + (checked ? ' selected' : '') + (isCollapsed ? ' collapsed' : '') +
             '" data-id="' + t.id + '" data-sheet="' + t.id + '">' +
@@ -460,7 +463,7 @@
         '<td>' + statusChip(t.status) + '</td>' +
         '<td></td>' +
         '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span><span class="updated-time">' + t.time + '</span></span></td>' +
-        '<td class="ts-count">' + jobs.length + '</td>' +
+        '<td class="ts-count">' + headcount + '</td>' +
         '<td></td><td></td><td></td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
       '</tr>');
