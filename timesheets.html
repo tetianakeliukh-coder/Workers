@@ -24,6 +24,20 @@
 
   td.col-task, td.col-allow { white-space: normal; line-height: 18px; }
 
+  /* Timesheet tab: sheet rows lead, their jobs sit under them on a tint. */
+  tr.ts-parent { cursor: pointer; }
+  tr.ts-parent > td { border-top: 1px solid var(--grey-300); }
+  #tbody tr.ts-parent:first-child > td { border-top: none; }
+  .ts-parent-main { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); }
+  .ts-caret { display: inline-flex; color: var(--grey-500); transition: transform var(--t-fast); }
+  tr.ts-parent.collapsed .ts-caret { transform: rotate(-90deg); }
+  td.ts-count { font-weight: 600; color: var(--text-main); }
+  td.ts-total { font-weight: 700; }
+
+  tr.ts-job { background: #fafafa; }
+  tr.ts-job > td { border-bottom: none; font-size: 13px; }
+  tr.ts-job:hover { background: #f5f6f8; }
+
   td.col-hrs, th.col-hrs { text-align: right; font-variant-numeric: tabular-nums; }
   th.col-hrs { padding-right: 16px; }
   td.col-hrs { font-weight: 600; color: var(--text-main); }
@@ -322,6 +336,23 @@
       ];
     }
 
+    if (group === 'none') {
+      return [
+        { k: 'chk',     w: 44,  label: '' },
+        { k: 'issued',  w: 120, label: 'Date' },
+        { k: 'site',    w: 195, label: 'Site' },
+        { k: 'super',   w: 140, label: 'Supervisor' },
+        { k: 'status',  w: 125, label: 'Status' },
+        { k: 'project', w: 190, label: 'Project' },
+        { k: 'updated', w: 185, label: 'Last Updated' },
+        { k: 'worker',  w: 140, label: 'Worker' },
+        { k: 'task',    w: 300, label: 'Task' },
+        { k: 'allow',   w: 185, label: 'Allowance' },
+        { k: 'times',   w: 125, label: 'Start - Finish' },
+        { k: 'hrs',     w: 80,  label: 'Hours', num: true }
+      ];
+    }
+
     var cols = [{ k: 'chk', w: 44, label: '' }];
 
     if (group === 'worker')  cols.push({ k: 'group', w: 180, label: 'Worker' });
@@ -387,6 +418,69 @@
       '</tr>';
   }
 
+  /* An assignment's populated custom-field path, joined — field names differ
+     per site, so one flat grid can only carry the path. */
+  function taskPath(a, fields) {
+    return fields.map(function (f, i) { return a.levels[i]; }).filter(Boolean).join(' | ');
+  }
+  function allowText(a) { return [a.allow1, a.allow2].filter(Boolean).join(', '); }
+  /* Finishing before you started means the shift ran past midnight. */
+  function timesText(a) {
+    if (!a.start || !a.finish) return '';
+    return a.start + ' - ' + a.finish + (a.finish <= a.start ? ' (+1)' : '');
+  }
+  function jobCell(v, cls) {
+    return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' +
+      (v ? Shell.highlight(v, state.query) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+  }
+
+  /* Timesheet tab: the sheet is the parent row, its jobs nest underneath and
+     start at the Worker column so every value sits under its own heading. */
+  function timesheetRows(sheets) {
+    var out = [];
+    sheets.forEach(function (t) {
+      var q = state.query;
+      var checked = !!selected[t.id];
+      var isCollapsed = !!collapsed[t.id];
+      var fields = fieldsFor(t.site);
+      var jobs = [];
+      workersFor(t).forEach(function (w) {
+        w.assignments.forEach(function (a) { jobs.push({ w: w, a: a }); });
+      });
+      var total = jobs.reduce(function (s, j) { return s + (Number(j.a.hours) || 0); }, 0);
+
+      out.push('<tr class="ts-parent' + (checked ? ' selected' : '') + (isCollapsed ? ' collapsed' : '') +
+            '" data-id="' + t.id + '" data-sheet="' + t.id + '">' +
+        '<td class="col-chk"><span class="chk' + (checked ? ' checked' : '') + '" role="checkbox" tabindex="0" aria-checked="' + checked + '" data-row-chk="' + t.id + '"></span></td>' +
+        '<td class="col-issued"><span class="ts-parent-main">' +
+          '<span class="ts-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+          Shell.highlight(fmtDate(t.issued), q) + '</span></td>' +
+        '<td title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
+        '<td>' + Shell.highlight(t.supervisor, q) + '</td>' +
+        '<td>' + statusChip(t.status) + '</td>' +
+        '<td></td>' +
+        '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span><span class="updated-time">' + t.time + '</span></span></td>' +
+        '<td class="ts-count">' + jobs.length + '</td>' +
+        '<td></td><td></td><td></td>' +
+        '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
+      '</tr>');
+
+      jobs.forEach(function (j) {
+        out.push('<tr class="ts-job' + (isCollapsed ? ' hidden' : '') + '" data-child="' + t.id + '">' +
+          '<td class="col-chk"></td><td></td><td></td><td></td><td></td>' +
+          jobCell(j.a.project) +
+          '<td></td>' +
+          jobCell(j.w.worker) +
+          jobCell(taskPath(j.a, fields), 'col-task') +
+          jobCell(allowText(j.a), 'col-allow') +
+          jobCell(timesText(j.a)) +
+          '<td class="col-hrs">' + fmtHours(j.a.hours) + '</td>' +
+        '</tr>');
+      });
+    });
+    return out.join('');
+  }
+
   /* One row per job across every timesheet the filters allow through. */
   function flatJobRows(sheets) {
     var q = state.query, out = [];
@@ -396,14 +490,10 @@
         w.assignments.forEach(function (a) {
           // The site's custom fields, joined — their names vary by site, so a
           // single flat table can only carry the path, not a column each.
-          var path = fields.map(function (f, i) { return a.levels[i]; })
-                           .filter(Boolean).join(' | ');
-          var allow = [a.allow1, a.allow2].filter(Boolean).join(', ');
-          var times = (a.start && a.finish) ? (a.start + ' - ' + a.finish) : '';
-          function cell(v, cls) {
-            return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' +
-              (v ? Shell.highlight(v, q) : '<span class="cell-empty">&mdash;</span>') + '</td>';
-          }
+          var path = taskPath(a, fields);
+          var allow = allowText(a);
+          var times = timesText(a);
+          var cell = jobCell;
           out.push('<tr>' +
             '<td class="col-issued">' + Shell.highlight(fmtDate(t.issued), q) + '</td>' +
             '<td title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
@@ -455,7 +545,7 @@
     if (state.group === 'flat') {
       html = flatJobRows(rows);
     } else if (state.group === 'none') {
-      html = rows.map(function (t) { return rowHtml(t, false); }).join('');
+      html = timesheetRows(rows);
     } else if (state.group === 'worker') {
       var widx = workerIndex(rows);
       widx.order.forEach(function (name) {
@@ -546,6 +636,17 @@
 
   /* ─── Table interactions ──────────────────────────────────────────── */
   tbody.addEventListener('click', function (e) {
+    var sheetRow = e.target.closest('.ts-parent');
+    if (sheetRow && !e.target.closest('[data-row-chk], .kebab')) {
+      var sid = sheetRow.getAttribute('data-sheet');
+      collapsed[sid] = !collapsed[sid];
+      sheetRow.classList.toggle('collapsed', !!collapsed[sid]);
+      tbody.querySelectorAll('tr[data-child="' + sid + '"]').forEach(function (tr) {
+        tr.classList.toggle('hidden', !!collapsed[sid]);
+      });
+      return;
+    }
+
     var box = e.target.closest('[data-row-chk]');
     if (box) { toggleRow(box.getAttribute('data-row-chk')); return; }
 
