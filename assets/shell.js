@@ -58,6 +58,55 @@
       '<text x="25" y="14.5" fill="#0033ff" font-family="system-ui,\'Segoe UI\',sans-serif" font-weight="700" font-size="13.5" letter-spacing="0.8">pms</text>' +
     '</svg>';
 
+  var TOGGLE_ICON =
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+      '<path d="M9.5 4L5.5 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+
+  /* ─── Sidebar collapse ──────────────────────────────────────────────────
+     Remembered per browser so the choice survives navigating between
+     modules — every screen renders its own copy of the sidebar.          */
+  var SIDEBAR_KEY = 'opms-sidebar-collapsed';
+  function readCollapsed() {
+    try { return localStorage.getItem(SIDEBAR_KEY) === '1'; } catch (e) { return false; }
+  }
+  function writeCollapsed(v) {
+    try { localStorage.setItem(SIDEBAR_KEY, v ? '1' : '0'); } catch (e) {}
+  }
+
+  /* Collapsed items are icons only, so the label moves into a tooltip. */
+  function syncSidebarTitles(host) {
+    var collapsed = host.classList.contains('collapsed');
+    host.querySelectorAll('.nav-item').forEach(function (el) {
+      var label = el.querySelector('.nav-label');
+      if (!label) return;
+      if (collapsed) el.setAttribute('title', label.textContent);
+      else if (el.classList.contains('is-todo')) el.setAttribute('title', 'Not designed yet');
+      else el.removeAttribute('title');
+    });
+    var btn = host.querySelector('.sidebar-toggle');
+    if (!btn) return;
+    var text = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    btn.setAttribute('title', text);
+    btn.setAttribute('aria-label', text);
+    btn.setAttribute('aria-expanded', String(!collapsed));
+  }
+
+  function initSidebarToggle(host) {
+    var btn = host.querySelector('.sidebar-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      writeCollapsed(host.classList.toggle('collapsed'));
+      syncSidebarTitles(host);
+      /* Screens size things off the viewport (frozen-column edges, table
+         scroll state); the width change needs the same nudge a resize gives,
+         once now and once after the transition settles. */
+      window.dispatchEvent(new Event('resize'));
+      setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 200);
+    });
+    syncSidebarTitles(host);
+  }
+
   function navItem(item, current) {
     var cls = 'nav-item';
     if (item.r4) cls += ' r4';
@@ -85,10 +134,13 @@
     var host = document.getElementById('shell-sidebar');
     if (!host) return;
 
-    host.className = 'sidebar';
+    host.className = 'sidebar' + (readCollapsed() ? ' collapsed' : '');
     host.innerHTML =
       '<div class="sidebar-top">' +
-        '<div class="logo-area">' + LOGO + '</div>' +
+        '<div class="logo-area">' +
+          '<span class="logo-mark">' + LOGO + '</span>' +
+          '<button class="sidebar-toggle" type="button">' + TOGGLE_ICON + '</button>' +
+        '</div>' +
         '<nav><ul class="nav-list">' + NAV.map(function (i) { return navItem(i, current); }).join('') + '</ul></nav>' +
       '</div>' +
       '<div class="sidebar-footer">' +
@@ -103,6 +155,8 @@
           '</div>' +
         '</div></div>' +
       '</div>';
+
+    initSidebarToggle(host);
   }
 
   /* ─── Shared behaviours ─────────────────────────────────────────────── */

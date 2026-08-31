@@ -21,7 +21,7 @@ body { font-family: var(--fs-sans); -webkit-font-smoothing: antialiased; }
   position: sticky; top: 0; height: 100vh;
 }
 .sidebar-top { padding: 8px; }
-.logo-area { padding: 20px 16px 24px; }
+.logo-area { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 20px 16px 24px; }
 .nav-list, .footer-nav { list-style: none; }
 
 .nav-item {
@@ -68,6 +68,32 @@ body { font-family: var(--fs-sans); -webkit-font-smoothing: antialiased; }
 .ac-name-row { display: flex; align-items: center; gap: 6px; }
 .ac-name { font-weight: 500; font-size: 14px; line-height: 18px; color: var(--grey-800); letter-spacing: 0.14px; white-space: nowrap; }
 .ac-email { font-size: 12px; line-height: 16px; color: var(--grey-600); letter-spacing: 0.12px; white-space: nowrap; }
+
+/* ─── Collapsed sidebar ───────────────────────────────────────────────── */
+.sidebar { transition: width var(--t-fast); }
+/* The wordmark sits to the right of the 19px square inside one SVG, so the
+   collapsed rail clips it rather than swapping in a second asset. */
+.logo-mark { display: block; overflow: hidden; width: 87px; height: 19px; transition: width var(--t-fast); }
+.sidebar-toggle {
+  width: 28px; height: 28px; flex-shrink: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--grey-350); border-radius: 8px; background: var(--white);
+  color: var(--grey-600); cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.sidebar-toggle:hover { background: var(--grey-100); border-color: var(--border-hover); color: var(--text-main); }
+.sidebar-toggle svg { transition: transform var(--t-fast); }
+
+.sidebar.collapsed { width: 68px; }
+.sidebar.collapsed .logo-area { flex-direction: column; gap: 14px; padding: 20px 8px; }
+.sidebar.collapsed .logo-mark { width: 19px; }
+.sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+/* Fixed height keeps the icon rail on the same rhythm as the labelled rows. */
+.sidebar.collapsed .nav-item { justify-content: center; padding: 0; height: 42px; }
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .ac-info { display: none; }
+.sidebar.collapsed .account-block { padding: 12px 8px 0; }
+.sidebar.collapsed .account-row { justify-content: center; }
 
 .notif-wrap { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
 .notif-dot {
