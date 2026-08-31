@@ -429,10 +429,6 @@
     }
     rules.push('.frozen th.col-act,.frozen td.col-act' +
       '{position:sticky;right:0;z-index:2;background:inherit;}');
-    rules.push('.sx-right .frozen th.col-act,.sx-right .frozen td.col-act{overflow:visible;}');
-    rules.push('.sx-right .frozen th.col-act::before,.sx-right .frozen td.col-act::before' +
-      '{content:"";position:absolute;top:0;bottom:0;right:100%;width:1px;pointer-events:none;' +
-      'background:var(--grey-400);}');
     host.textContent = rules.join('\n');
   }
 
