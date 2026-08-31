@@ -374,8 +374,19 @@
   /* Rows start collapsed, so an unrecorded key counts as collapsed and
      only an explicit false means a row has been opened. */
   var collapsed = Object.create(null);
-  function isCollapsed_(key) { return collapsed[key] !== false; }
-  var openKeys = [];   // what the Expand all button acts on, set during render
+  /* A search opens the rows it matches inside. That lives in its own map, so
+     clearing the search puts the manual open/closed state back as it was. */
+  var searchCollapsed = Object.create(null);
+  function isCollapsed_(key) {
+    if (state.query) return searchCollapsed[key] === true;
+    return collapsed[key] !== false;
+  }
+  function setCollapsed_(key, v) {
+    if (state.query) searchCollapsed[key] = v; else collapsed[key] = v;
+  }
+  var openKeys = [];       // what the Expand all button acts on, set during render
+  var renderedKeys = [];   // parent rows the current render actually emitted
+  var shownIds = [];       // timesheet ids on screen, for select-all
 
   var tbody     = document.getElementById('tbody');
   var empty     = document.getElementById('empty');
@@ -583,16 +594,60 @@
   syncDateLabel();
 
   /* ─── Filtering + grouping ────────────────────────────────────────── */
+  /* Date and supervisor narrow the set of timesheets. The search runs later,
+     per row, because what it covers depends on the tab and on which columns
+     are switched on. */
   function matches(t) {
     var b = rangeBounds();
     if (b && (t.issued < b.from || t.issued > b.to)) return false;
-    if (state.supervisor === 'me') { if (t.supervisor !== CURRENT_USER) return false; }
-    else if (state.supervisor !== 'all' && t.supervisor !== state.supervisor) return false;
+    if (state.supervisor === 'me') return t.supervisor === CURRENT_USER;
+    return state.supervisor === 'all' || t.supervisor === state.supervisor;
+  }
+
+  /* ─── Search ──────────────────────────────────────────────────────────
+     Only what is on screen is searchable: switch Position off in the Columns
+     picker and its values stop matching — the same rule as the Documents and
+     Expense Claims screens. Checkbox, actions and the derived Hours figures
+     carry no text of their own and stay out of it. */
+  var SEARCH_SKIP = { chk: true, act: true, hrs: true };
+
+  function visibleKeys() {
+    var vis = Object.create(null);
+    columnsFor(state.group).forEach(function (c) {
+      if (!hiddenCols[c.k] && !SEARCH_SKIP[c.k]) vis[c.k] = true;
+    });
+    return vis;
+  }
+
+  function hitsQuery(values, vis) {
     if (!state.query) return true;
     var q = state.query.toLowerCase();
-    var haystack = [t.id, t.supervisor, t.site, t.project, t.status, fmtDate(t.issued)]
-      .concat(workersFor(t).map(function (w) { return w.worker; }));
-    return haystack.some(function (v) { return v.toLowerCase().indexOf(q) !== -1; });
+    return Object.keys(values).some(function (k) {
+      return vis[k] && values[k] && String(values[k]).toLowerCase().indexOf(q) !== -1;
+    });
+  }
+
+  /* The columns a timesheet owns — the ones its parent row carries. */
+  function sheetValues(t) {
+    return { issued: fmtDate(t.issued), site: t.site, super: t.supervisor,
+             status: t.status, updated: fmtDate(t.updated) + ' ' + t.time };
+  }
+
+  /* withSheet says whether this row repeats the timesheet's own columns:
+     jobs nested under a timesheet don't (those values sit on the parent),
+     jobs on the Worker and No Grouping tabs do. */
+  function jobValues(t, w, a, fields, withSheet) {
+    var v = { worker: w.worker, position: w.position, worktype: w.workType,
+              project: a.project, task: taskPath(a, fields),
+              allow: allowText(a), times: timesText(a) };
+    if (withSheet) {
+      v.issued = fmtDate(t.issued);
+      v.site = t.site;
+      v.super = t.supervisor;
+      v.status = t.status;
+      v.updated = fmtDate(t.updated) + ' ' + t.time;
+    }
+    return v;
   }
 
   function groupKeyOf(t) {
@@ -829,7 +884,13 @@
 
   /* ─── Rendering ───────────────────────────────────────────────────── */
   function statusChip(status) {
-    return '<span class="status-sec status-sec-' + STATUS_COLOR[status] + '">' + status + '</span>';
+    return '<span class="status-sec status-sec-' + STATUS_COLOR[status] + '">' +
+      Shell.highlight(status, state.query) + '</span>';
+  }
+
+  function updatedCell(t) {
+    return '<span class="updated-cell"><span>' + Shell.highlight(fmtDate(t.updated), state.query) + '</span>' +
+      '<span class="updated-time">' + Shell.highlight(t.time, state.query) + '</span></span>';
   }
 
   /* ctx is null (plain timesheet row), or {type:'worker'|'project', name, …},
@@ -851,7 +912,7 @@
         '<td>' + statusChip(t.status) + '</td>' +
         // In Worker mode this is the worker's own hours; otherwise the sheet's.
         '<td class="col-hrs">' + fmtHours(hours) + '</td>' +
-        '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span><span class="updated-time">' + t.time + '</span></span></td>' +
+        '<td>' + updatedCell(t) + '</td>' +
         '<td class="col-act"><span class="action-cell">' +
           '<button class="kebab" type="button" data-kebab="' + t.id + '" aria-label="More actions">' +
             '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
@@ -877,14 +938,15 @@
   }
 
   function workerRows(sheets) {
-    var index = Object.create(null), order = [];
+    var index = Object.create(null), order = [], vis = visibleKeys(), q = state.query;
     sheets.forEach(function (t) {
       var fields = fieldsFor(t.site);
       workersFor(t).forEach(function (w) {
         if (!index[w.worker]) { index[w.worker] = { color: w.color, jobs: [] }; order.push(w.worker); }
         w.assignments.forEach(function (a) {
           index[w.worker].jobs.push({ t: t, a: a, fields: fields,
-            position: w.position, workType: w.workType });
+            position: w.position, workType: w.workType,
+            values: jobValues(t, w, a, fields, true) });
         });
       });
     });
@@ -892,8 +954,15 @@
 
     var out = [];
     order.forEach(function (name) {
-      var g = index[name], jobs = g.jobs;
-      var position = jobs.length ? jobs[0].position : '';
+      var g = index[name];
+      var position = g.jobs.length ? g.jobs[0].position : '';
+      /* A worker stays when their own row matches — then everything under it
+         belongs to the match — otherwise only the jobs that match show. */
+      var parentHit = hitsQuery({ group: name, position: position }, vis);
+      var jobs = (!q || parentHit) ? g.jobs
+               : g.jobs.filter(function (j) { return hitsQuery(j.values, vis); });
+      if (q && !parentHit && !jobs.length) return;
+      renderedKeys.push(name);
       var isCollapsed = isCollapsed_(name);
       var sites = {}, projects = {}, tasks = {}, allowances = {};
       var total = 0;
@@ -947,7 +1016,7 @@
           jobCell(allowText(j.a), 'col-allow') +
           jobCell(timesText(j.a)) +
           '<td class="col-hrs">' + fmtHours(j.a.hours) + '</td>' +
-          '<td><span class="updated-cell"><span>' + fmtDate(j.t.updated) + '</span><span class="updated-time">' + j.t.time + '</span></span></td>' +
+          '<td>' + updatedCell(j.t) + '</td>' +
           '<td class="col-act"></td>' +
         '</tr>');
       });
@@ -959,21 +1028,33 @@
      start at the Worker column so every value sits under its own heading. */
   function timesheetRows(sheets) {
     var out = [];
+    var vis = visibleKeys(), q = state.query;
     sheets.forEach(function (t) {
-      var q = state.query;
+      var fields = fieldsFor(t.site);
+      var all = [];
+      workersFor(t).forEach(function (w) {
+        w.assignments.forEach(function (a) {
+          all.push({ w: w, a: a, values: jobValues(t, w, a, fields, false) });
+        });
+      });
+      /* A sheet stays when its own row matches — then every job on it belongs
+         to the match — otherwise only the jobs that match are listed. */
+      var parentHit = hitsQuery(sheetValues(t), vis);
+      var jobs = (!q || parentHit) ? all : all.filter(function (j) { return hitsQuery(j.values, vis); });
+      if (q && !parentHit && !jobs.length) return;
+      renderedKeys.push(t.id);
+
       var checked = !!selected[t.id];
       var isCollapsed = isCollapsed_(t.id);
-      var fields = fieldsFor(t.site);
-      var jobs = [], people = {}, projects = {}, tasks = {}, allowances = {};
-      workersFor(t).forEach(function (w) {
-        people[w.worker] = true;
-        w.assignments.forEach(function (a) {
-          jobs.push({ w: w, a: a });
-          if (a.project) projects[a.project] = true;
-          var path = taskPath(a, fields);
-          if (path) tasks[path] = true;
-          [a.allow1, a.allow2].forEach(function (x) { if (x) allowances[x] = true; });
-        });
+      /* Summaries count what is listed underneath, so a filtered sheet reads
+         as what it shows rather than what it holds. */
+      var people = {}, projects = {}, tasks = {}, allowances = {};
+      jobs.forEach(function (j) {
+        people[j.w.worker] = true;
+        if (j.a.project) projects[j.a.project] = true;
+        var path = taskPath(j.a, fields);
+        if (path) tasks[path] = true;
+        [j.a.allow1, j.a.allow2].forEach(function (x) { if (x) allowances[x] = true; });
       });
       var total = jobs.reduce(function (s, j) { return s + (Number(j.a.hours) || 0); }, 0);
       /* Each summary number counts distinct values among the jobs beneath, so
@@ -1000,7 +1081,7 @@
         '<td class="ts-count">' + tally(allowances) + '</td>' +
         '<td></td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
-        '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span><span class="updated-time">' + t.time + '</span></span></td>' +
+        '<td>' + updatedCell(t) + '</td>' +
         '<td class="col-act"><span class="action-cell">' +
           '<button class="kebab" type="button" data-kebab="' + t.id + '" aria-label="More actions">' +
             '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
@@ -1029,11 +1110,13 @@
 
   /* One row per job across every timesheet the filters allow through. */
   function flatJobRows(sheets) {
-    var q = state.query, out = [];
+    var q = state.query, out = [], vis = visibleKeys();
     sheets.forEach(function (t) {
       var fields = fieldsFor(t.site);
       workersFor(t).forEach(function (w) {
         w.assignments.forEach(function (a) {
+          // Nothing nests here, so a row either matches or it is left out.
+          if (!hitsQuery(jobValues(t, w, a, fields, true), vis)) return;
           // The site's custom fields, joined — their names vary by site, so a
           // single flat table can only carry the path, not a column each.
           var path = taskPath(a, fields);
@@ -1054,8 +1137,7 @@
             cell(allow, 'col-allow') +
             cell(times) +
             '<td class="col-hrs">' + fmtHours(a.hours) + '</td>' +
-            '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span>' +
-              '<span class="updated-time">' + t.time + '</span></span></td>' +
+            '<td>' + updatedCell(t) + '</td>' +
           '</tr>');
         });
       });
@@ -1097,7 +1179,7 @@
 
   document.getElementById('expand-all').addEventListener('click', function () {
     var anyClosed = openKeys.some(isCollapsed_);
-    openKeys.forEach(function (k) { collapsed[k] = !anyClosed; });
+    openKeys.forEach(function (k) { setCollapsed_(k, !anyClosed); });
     render();
   });
 
@@ -1115,6 +1197,7 @@
   function render() {
     renderHead();
     var rows = TIMESHEETS.filter(matches);
+    renderedKeys = [];
     var html = '';
 
     if (state.group === 'flat') {
@@ -1138,35 +1221,36 @@
 
     tbody.innerHTML = html;
 
-    // Which keys the Expand all button acts on, for the tab now showing.
-    if (state.group === 'none')        openKeys = rows.map(function (t) { return t.id; });
-    else if (state.group === 'worker') openKeys = workerIndex(rows).order;
+    // Which keys the Expand all button acts on — the parent rows actually
+    // rendered, so a search narrows what it opens too.
+    if (state.group === 'none' || state.group === 'worker') openKeys = renderedKeys.slice();
     else if (state.group === 'project') openKeys = projectIndex(rows).order;
     else                                openKeys = [];
+    shownIds = state.group === 'none' ? renderedKeys.slice() : rows.map(function (t) { return t.id; });
     syncExpandBtn();
 
-    var none = rows.length === 0;
+    var none = html === '';
     empty.classList.toggle('visible', none);
     tbody.closest('.table-scroll').style.display = none ? 'none' : '';
     if (none) {
       emptySub.textContent = state.query
-        ? 'No timesheets match “' + state.query + '”.'
+        ? 'Nothing matches “' + state.query + '” in the columns on screen.'
         : state.supervisor === 'all'
           ? 'No timesheets in this date range.'
           : 'No timesheets match the current filters.';
     }
 
-    syncSelectAll(rows);
+    syncSelectAll();
     syncSelectionBar();
     syncScrollEdges();
   }
 
   /* ─── Selection ───────────────────────────────────────────────────── */
-  function visibleIds() { return TIMESHEETS.filter(matches).map(function (t) { return t.id; }); }
+  function visibleIds() { return shownIds.slice(); }
   function selectedIds() { return Object.keys(selected); }
 
-  function syncSelectAll(rows) {
-    var ids = (rows || TIMESHEETS.filter(matches)).map(function (t) { return t.id; });
+  function syncSelectAll() {
+    var ids = shownIds;
     var n = ids.filter(function (id) { return selected[id]; }).length;
     var box = chkAll();
     if (!box) return;
@@ -1214,10 +1298,11 @@
     var sheetRow = e.target.closest('.ts-parent');
     if (sheetRow && !e.target.closest('[data-row-chk], .kebab')) {
       var sid = sheetRow.getAttribute('data-sheet');
-      collapsed[sid] = !isCollapsed_(sid);
-      sheetRow.classList.toggle('collapsed', collapsed[sid]);
+      var nowCollapsed = !isCollapsed_(sid);
+      setCollapsed_(sid, nowCollapsed);
+      sheetRow.classList.toggle('collapsed', nowCollapsed);
       tbody.querySelectorAll('tr[data-child="' + sid + '"]').forEach(function (tr) {
-        tr.classList.toggle('hidden', collapsed[sid]);
+        tr.classList.toggle('hidden', nowCollapsed);
       });
       syncExpandBtn();
       return;
@@ -1229,7 +1314,7 @@
     var groupBtn = e.target.closest('.group-toggle');
     if (groupBtn) {
       var key = groupBtn.closest('.group-row').getAttribute('data-group');
-      collapsed[key] = !isCollapsed_(key);
+      setCollapsed_(key, !isCollapsed_(key));
       render();
       return;
     }
@@ -1252,12 +1337,14 @@
   /* ─── Search ──────────────────────────────────────────────────────── */
   searchEl.addEventListener('input', function () {
     state.query = this.value.trim();
+    searchCollapsed = Object.create(null);
     clearBtn.classList.toggle('visible', this.value.length > 0);
     render();
   });
   clearBtn.addEventListener('click', function () {
     searchEl.value = '';
     state.query = '';
+    searchCollapsed = Object.create(null);
     clearBtn.classList.remove('visible');
     searchEl.focus();
     render();
