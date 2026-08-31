@@ -23,6 +23,60 @@
   td.col-issued { color: var(--text-main); font-variant-numeric: tabular-nums; }
   td.col-act { padding: 6px 12px 6px 6px; }
 
+  /* ─── Columns button & panel — same component as the Workers module ─── */
+  .btn-columns {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px; border-radius: 8px;
+    background: var(--white); border: 1px solid var(--grey-350);
+    font-size: 14px; font-weight: 500; line-height: 18px;
+    color: var(--grey-800); cursor: pointer; font-family: var(--fs-sans);
+    white-space: nowrap; transition: border-color 0.15s, background 0.15s;
+  }
+  .btn-columns:hover { border-color: #aab6cc; background: var(--bg-blue-light); }
+  .btn-columns.active { background: var(--bg-blue-light); border-color: var(--primary); color: var(--primary); }
+
+  .col-panel-wrap { position: relative; }
+  .col-panel {
+    display: none; position: absolute; top: calc(100% + 6px); right: 0;
+    min-width: 210px; background: var(--white);
+    border: 1px solid var(--grey-350); border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    z-index: 50; padding: 6px 0; overflow: hidden;
+  }
+  .col-panel.open { display: block; }
+  .col-panel-section { padding: 6px 14px 2px; font-size: 11px; font-weight: 600; color: var(--grey-400); text-transform: uppercase; letter-spacing: 0.6px; }
+  .col-panel-divider { border: none; border-top: 1px solid var(--grey-300); margin: 6px 0; }
+  .col-panel-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 14px; height: 36px; cursor: pointer; user-select: none;
+    transition: background 0.1s;
+  }
+  .col-panel-row:hover { background: var(--bg-blue-light); }
+  .col-chk-box {
+    width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+    border: 1.5px solid var(--grey-400); background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .col-panel-row input[type="checkbox"] { display: none; }
+  .col-panel-row input:checked + .col-chk-box { background: var(--primary); border-color: var(--primary); }
+  .col-panel-row input:checked + .col-chk-box::after {
+    content: ''; width: 9px; height: 5px;
+    border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
+    transform: rotate(-45deg) translateY(-1px); display: block;
+  }
+  .col-panel-name { font-size: 14px; color: var(--text-main); }
+  /* Frozen columns can't be hidden — the table's anchor points. */
+  .col-panel-row.locked { cursor: default; }
+  .col-panel-row.locked:hover { background: transparent; }
+  .col-panel-row.locked .col-chk-box { background: var(--grey-400); border-color: var(--grey-400); }
+  .col-panel-row.locked .col-chk-box::after {
+    content: ''; width: 9px; height: 5px;
+    border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
+    transform: rotate(-45deg) translateY(-1px); display: block;
+  }
+  .col-panel-row.locked .col-panel-name { color: var(--grey-600); }
+
   td.col-task, td.col-allow { white-space: normal; line-height: 18px; }
 
   /* Timesheet tab: sheet rows lead, their jobs sit under them on a tint. */
@@ -133,6 +187,17 @@
             <button class="seg-btn" type="button" data-group="flat">No Grouping</button>
           </div>
           <button class="btn-ghost" type="button" id="expand-all">Expand all</button>
+          <div class="col-panel-wrap">
+            <button class="btn-columns" id="btn-columns" type="button" aria-expanded="false" aria-haspopup="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+                <rect x="6" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+                <rect x="11" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+              </svg>
+              Columns
+            </button>
+            <div class="col-panel" id="col-panel"></div>
+          </div>
         </div>
       </div>
 
@@ -213,6 +278,11 @@
 
   /* ─── State ───────────────────────────────────────────────────────── */
   var state = { query: '', month: 'all', group: 'none' };
+
+  /* Columns the user has switched off. Position and Work Type ship hidden. */
+  var hiddenCols = { position: true, worktype: true };
+  /* The frozen columns anchor the table, so they can't be switched off. */
+  var LOCKED_COLS = ['chk', 'group', 'issued', 'site', 'super', 'act'];
   var selected = Object.create(null);
   /* Rows start collapsed, so an unrecorded key counts as collapsed and
      only an explicit false means a row has been opened. */
@@ -338,6 +408,8 @@
         { k: 'super',   w: 140, label: 'Supervisor' },
         { k: 'status',  w: 125, label: 'Status' },
         { k: 'worker',  w: 140, label: 'Worker' },
+        { k: 'position', w: 155, label: 'Position' },
+        { k: 'worktype', w: 130, label: 'Work Type' },
         { k: 'project', w: 190, label: 'Project' },
         { k: 'task',    w: 300, label: 'Task' },
         { k: 'allow',   w: 185, label: 'Allowance' },
@@ -355,6 +427,8 @@
         { k: 'super',   w: 140, label: 'Supervisor' },
         { k: 'status',  w: 125, label: 'Status' },
         { k: 'worker',  w: 140, label: 'Worker' },
+        { k: 'position', w: 155, label: 'Position' },
+        { k: 'worktype', w: 130, label: 'Work Type' },
         { k: 'project', w: 190, label: 'Project' },
         { k: 'task',    w: 300, label: 'Task' },
         { k: 'allow',   w: 185, label: 'Allowance' },
@@ -372,6 +446,8 @@
         { k: 'site',    w: 185, label: 'Site' },
         { k: 'super',   w: 140, label: 'Supervisor' },
         { k: 'status',  w: 125, label: 'Status' },
+        { k: 'position', w: 155, label: 'Position' },
+        { k: 'worktype', w: 130, label: 'Work Type' },
         { k: 'project', w: 180, label: 'Project' },
         { k: 'task',    w: 290, label: 'Task' },
         { k: 'allow',   w: 180, label: 'Allowance' },
@@ -403,13 +479,22 @@
      changes. Only the two wide tabs need it. */
   var LEFT_FROZEN = ['chk', 'group', 'issued', 'site', 'super'];
 
-  function applyFrozen(cols) {
+  function applyFrozen(cols, allCols) {
     var host = document.getElementById('frozen-cols');
+    var rules = [];
+    // Switched-off columns leave the layout entirely, so the remaining cells
+    // line up with the <col> list without any per-cell bookkeeping.
+    allCols.forEach(function (c) {
+      if (hiddenCols[c.k]) {
+        rules.push('.table-card th.col-' + c.k + ',.table-card td.col-' + c.k + '{display:none;}');
+      }
+    });
+
     var wide = state.group !== 'project';
     mainTable.classList.toggle('frozen', wide);
-    if (!wide) { host.textContent = ''; return; }
+    if (!wide) { host.textContent = rules.join('\n'); return; }
 
-    var offset = 0, rules = [], lastLeft = null;
+    var offset = 0, lastLeft = null;
     cols.forEach(function (c) {
       if (LEFT_FROZEN.indexOf(c.k) === -1) return;
       rules.push('.frozen th.col-' + c.k + ',.frozen td.col-' + c.k +
@@ -432,8 +517,47 @@
     host.textContent = rules.join('\n');
   }
 
+  function renderColPanel(allCols) {
+    var panel = document.getElementById('col-panel');
+    panel.innerHTML = '<div class="col-panel-section">Show columns</div>' +
+      allCols.filter(function (c) { return c.label; }).map(function (c) {
+        var locked = LOCKED_COLS.indexOf(c.k) !== -1;
+        var on = !hiddenCols[c.k];
+        return '<label class="col-panel-row' + (locked ? ' locked' : '') + '"' +
+            (locked ? ' title="Always shown"' : '') + '>' +
+          '<input type="checkbox" data-col="' + c.k + '"' + (on ? ' checked' : '') +
+            (locked ? ' disabled' : '') + ' />' +
+          '<span class="col-chk-box"></span>' +
+          '<span class="col-panel-name">' + c.label + '</span>' +
+        '</label>';
+      }).join('');
+  }
+
+  var colBtn = document.getElementById('btn-columns');
+  var colPanel = document.getElementById('col-panel');
+  colBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = colPanel.classList.toggle('open');
+    colBtn.classList.toggle('active', open);
+    colBtn.setAttribute('aria-expanded', String(open));
+  });
+  colPanel.addEventListener('click', function (e) { e.stopPropagation(); });
+  colPanel.addEventListener('change', function (e) {
+    var box = e.target.closest('[data-col]');
+    if (!box) return;
+    var key = box.getAttribute('data-col');
+    if (box.checked) delete hiddenCols[key]; else hiddenCols[key] = true;
+    render();
+  });
+  document.addEventListener('click', function () {
+    colPanel.classList.remove('open');
+    colBtn.classList.remove('active');
+    colBtn.setAttribute('aria-expanded', 'false');
+  });
+
   function renderHead() {
-    var cols = columnsFor(state.group);
+    var allCols = columnsFor(state.group);
+    var cols = allCols.filter(function (c) { return !hiddenCols[c.k]; });
     mainColgroup.innerHTML = cols.map(function (c) {
       return '<col class="col-' + c.k + '" style="width:' + c.w + 'px" />';
     }).join('');
@@ -446,7 +570,8 @@
     }).join('') + '</tr>';
 
     mainTable.style.minWidth = cols.reduce(function (s, c) { return s + c.w; }, 0) + 'px';
-    applyFrozen(cols);
+    applyFrozen(cols, allCols);
+    renderColPanel(allCols);
     return cols.length;
   }
 
@@ -506,7 +631,8 @@
       workersFor(t).forEach(function (w) {
         if (!index[w.worker]) { index[w.worker] = { color: w.color, jobs: [] }; order.push(w.worker); }
         w.assignments.forEach(function (a) {
-          index[w.worker].jobs.push({ t: t, a: a, fields: fields });
+          index[w.worker].jobs.push({ t: t, a: a, fields: fields,
+            position: w.position, workType: w.workType });
         });
       });
     });
@@ -515,6 +641,7 @@
     var out = [];
     order.forEach(function (name) {
       var g = index[name], jobs = g.jobs;
+      var position = jobs.length ? jobs[0].position : '';
       var isCollapsed = isCollapsed_(name);
       var sites = {}, projects = {}, tasks = {}, allowances = {};
       var total = 0;
@@ -538,6 +665,8 @@
         '<td class="col-site ts-count">' + tally(sites) + '</td>' +
         '<td class="col-super"></td>' +
         '<td></td>' +
+        '<td class="col-position">' + Shell.esc(position) + '</td>' +
+        '<td class="col-worktype"></td>' +
         '<td class="ts-count">' + tally(projects) + '</td>' +
         '<td class="ts-count">' + tally(tasks) + '</td>' +
         '<td class="ts-count">' + tally(allowances) + '</td>' +
@@ -559,6 +688,8 @@
           '<td class="col-site" title="' + Shell.esc(j.t.site) + '">' + Shell.highlight(j.t.site, state.query) + '</td>' +
           '<td class="col-super">' + Shell.highlight(j.t.supervisor, state.query) + '</td>' +
           '<td>' + statusChip(j.t.status) + '</td>' +
+          jobCell(j.position, 'col-position') +
+          jobCell(j.workType, 'col-worktype') +
           jobCell(j.a.project) +
           jobCell(taskPath(j.a, j.fields), 'col-task') +
           jobCell(allowText(j.a), 'col-allow') +
@@ -611,6 +742,7 @@
         '<td class="col-super">' + Shell.highlight(t.supervisor, q) + '</td>' +
         '<td>' + statusChip(t.status) + '</td>' +
         '<td class="ts-count">' + tally(people) + '</td>' +
+        '<td class="col-position"></td><td class="col-worktype"></td>' +
         '<td class="ts-count">' + tally(projects) + '</td>' +
         '<td class="ts-count">' + tally(tasks) + '</td>' +
         '<td class="ts-count">' + tally(allowances) + '</td>' +
@@ -629,6 +761,8 @@
           '<td class="col-chk"></td><td class="col-issued"></td>' +
           '<td class="col-site"></td><td class="col-super"></td><td></td>' +
           jobCell(j.w.worker) +
+          jobCell(j.w.position, 'col-position') +
+          jobCell(j.w.workType, 'col-worktype') +
           jobCell(j.a.project) +
           jobCell(taskPath(j.a, fields), 'col-task') +
           jobCell(allowText(j.a), 'col-allow') +
@@ -660,6 +794,8 @@
             cell(t.supervisor, 'col-super') +
             '<td>' + statusChip(t.status) + '</td>' +
             cell(w.worker) +
+            cell(w.position, 'col-position') +
+            cell(w.workType, 'col-worktype') +
             cell(a.project) +
             '<td class="col-task" title="' + Shell.esc(path) + '">' +
               (path ? Shell.highlight(path, q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
