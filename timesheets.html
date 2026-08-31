@@ -22,7 +22,7 @@
   td.col-issued { color: var(--text-main); font-variant-numeric: tabular-nums; }
   td.col-act { padding: 6px 12px 6px 6px; }
 
-  td.col-task { white-space: normal; line-height: 18px; }
+  td.col-task, td.col-allow { white-space: normal; line-height: 18px; }
 
   td.col-hrs, th.col-hrs { text-align: right; font-variant-numeric: tabular-nums; }
   th.col-hrs { padding-right: 16px; }
@@ -315,8 +315,8 @@
         { k: 'project', w: 190, label: 'Project' },
         { k: 'updated', w: 185, label: 'Last Updated' },
         { k: 'worker',  w: 140, label: 'Worker' },
-        { k: 'task',    w: 280, label: 'Task' },
-        { k: 'allow',   w: 165, label: 'Allowance' },
+        { k: 'task',    w: 300, label: 'Task' },
+        { k: 'allow',   w: 185, label: 'Allowance' },
         { k: 'times',   w: 125, label: 'Start - Finish' },
         { k: 'hrs',     w: 80,  label: 'Hours', num: true }
       ];
@@ -415,7 +415,7 @@
             cell(w.worker) +
             '<td class="col-task" title="' + Shell.esc(path) + '">' +
               (path ? Shell.highlight(path, q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
-            cell(allow) +
+            cell(allow, 'col-allow') +
             cell(times) +
             '<td class="col-hrs">' + fmtHours(a.hours) + '</td>' +
           '</tr>');
@@ -647,22 +647,23 @@
   var SITE_FIELDS = {
     'MMA VIGILANT – 360': [
       { name: 'Work Order', values: ['WORK-00123', 'WORK-00124', 'WORK-00187', 'WORK-00201'] },
-      { name: 'Task',       values: ['TSK-0410', 'TSK-0415', 'TSK-0422', 'TSK-0438'] },
-      { name: 'Delay Code', values: ['DLY-WX01', 'DLY-EQ03', 'DLY-MAT02'] },
-      { name: 'Sub-task',   values: ['SUB-02', 'SUB-07'] }
+      { name: 'Task',       values: ['Repair the machine', 'Replace hydraulic hose', 'Weld handrail section', 'Deck plating repair'] },
+      { name: 'Type',       values: ['Labour', 'Waiting for materials', 'Equipment breakdown'] },
+      { name: 'Sub-task',   values: ['Preparation', 'Clean-up'] }
     ],
     'MMA VIGILANT ROV': [
       { name: 'Job Number', values: ['JOB-00451', 'JOB-00478', 'JOB-00492'] },
-      { name: 'Activity',   values: ['ROV Dive', 'Deck Handling', 'Tooling Change'] },
-      { name: 'Delay Code', values: ['DLY-WX01', 'DLY-EQ03'] }
+      { name: 'Activity',   values: ['ROV dive', 'Deck handling', 'Tooling change'] },
+      { name: 'Type',       values: ['Labour', 'Weather standby'] }
     ],
     'SA BHP OLYMPIC DAM': [
       { name: 'Work Order', values: ['WORK-00123', 'WORK-00201'] },
       { name: 'Cost Code',  values: ['CC-1140', 'CC-1155', 'CC-1163'] },
-      { name: 'Delay Code', values: ['DLY-MAT02', 'DLY-WX01'] },
-      { name: 'Shift Code', values: ['SH-A', 'SH-B'] }
+      { name: 'Type',       values: ['Labour', 'Waiting for materials'] },
+      { name: 'Shift Code', values: ['Day', 'Night'] }
     ]
   };
+
   function fieldsFor(site) { return SITE_FIELDS[site] || []; }
 
   /* A timesheet's entries do not all share one project. Each site runs a
@@ -674,7 +675,7 @@
     'SA BHP OLYMPIC DAM': ['Olympic Dam Expansion', 'Shutdown Factory XYZ']
   };
 
-  var E_ALLOW = ['Offshore', 'Travel', 'Meal', 'Height', 'Confined Space'];
+  var E_ALLOW = ['Rope Allowance', 'Offshore Allowance', 'Height Allowance', 'Travel Allowance', 'Meal Allowance'];
   var E_TIMES = [['06:00', '18:00'], ['07:30', '19:30'], ['18:00', '06:00'], ['05:45', '17:45'], ['06:30', '16:30']];
 
   /* Which fields a row carries. Covers the cases called out in review:
