@@ -344,7 +344,7 @@
     if (group === 'none') {
       return [
         { k: 'chk',     w: 44,  label: '' },
-        { k: 'issued',  w: 120, label: 'Date' },
+        { k: 'issued',  w: 145, label: 'Date' },
         { k: 'site',    w: 195, label: 'Site' },
         { k: 'super',   w: 140, label: 'Supervisor' },
         { k: 'status',  w: 125, label: 'Status' },
@@ -466,8 +466,8 @@
         '<td title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
         '<td>' + Shell.highlight(t.supervisor, q) + '</td>' +
         '<td>' + statusChip(t.status) + '</td>' +
-        '<td></td>' +
         '<td class="ts-count">' + headcount + '</td>' +
+        '<td></td>' +
         '<td></td><td></td><td></td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
         '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span><span class="updated-time">' + t.time + '</span></span></td>' +
