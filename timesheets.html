@@ -354,7 +354,8 @@
         { k: 'allow',   w: 185, label: 'Allowance' },
         { k: 'times',   w: 125, label: 'Start - Finish' },
         { k: 'hrs',     w: 80,  label: 'Hours', num: true },
-        { k: 'updated', w: 185, label: 'Last Updated' }
+        { k: 'updated', w: 185, label: 'Last Updated' },
+        { k: 'act',     w: 70,  label: '' }
       ];
     }
 
@@ -484,6 +485,11 @@
         '<td></td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
         '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span><span class="updated-time">' + t.time + '</span></span></td>' +
+        '<td class="col-act"><span class="action-cell">' +
+          '<button class="kebab" type="button" data-kebab="' + t.id + '" aria-label="More actions">' +
+            '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
+          '</button>' +
+        '</span></td>' +
       '</tr>');
 
       jobs.forEach(function (j) {
@@ -495,7 +501,7 @@
           jobCell(allowText(j.a), 'col-allow') +
           jobCell(timesText(j.a)) +
           '<td class="col-hrs">' + fmtHours(j.a.hours) + '</td>' +
-          '<td></td>' +
+          '<td></td><td></td>' +
         '</tr>');
       });
     });
