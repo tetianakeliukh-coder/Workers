@@ -326,8 +326,8 @@
         { k: 'site',    w: 195, label: 'Site' },
         { k: 'super',   w: 140, label: 'Supervisor' },
         { k: 'status',  w: 125, label: 'Status' },
-        { k: 'project', w: 190, label: 'Project' },
         { k: 'worker',  w: 140, label: 'Worker' },
+        { k: 'project', w: 190, label: 'Project' },
         { k: 'task',    w: 300, label: 'Task' },
         { k: 'allow',   w: 185, label: 'Allowance' },
         { k: 'times',   w: 125, label: 'Start - Finish' },
@@ -343,8 +343,8 @@
         { k: 'site',    w: 195, label: 'Site' },
         { k: 'super',   w: 140, label: 'Supervisor' },
         { k: 'status',  w: 125, label: 'Status' },
-        { k: 'project', w: 190, label: 'Project' },
         { k: 'worker',  w: 140, label: 'Worker' },
+        { k: 'project', w: 190, label: 'Project' },
         { k: 'task',    w: 300, label: 'Task' },
         { k: 'allow',   w: 185, label: 'Allowance' },
         { k: 'times',   w: 125, label: 'Start - Finish' },
@@ -471,8 +471,8 @@
       jobs.forEach(function (j) {
         out.push('<tr class="ts-job' + (isCollapsed ? ' hidden' : '') + '" data-child="' + t.id + '">' +
           '<td class="col-chk"></td><td></td><td></td><td></td><td></td>' +
-          jobCell(j.a.project) +
           jobCell(j.w.worker) +
+          jobCell(j.a.project) +
           jobCell(taskPath(j.a, fields), 'col-task') +
           jobCell(allowText(j.a), 'col-allow') +
           jobCell(timesText(j.a)) +
@@ -502,8 +502,8 @@
             '<td title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
             cell(t.supervisor) +
             '<td>' + statusChip(t.status) + '</td>' +
-            cell(a.project) +
             cell(w.worker) +
+            cell(a.project) +
             '<td class="col-task" title="' + Shell.esc(path) + '">' +
               (path ? Shell.highlight(path, q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
             cell(allow, 'col-allow') +
