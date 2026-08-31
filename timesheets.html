@@ -141,6 +141,49 @@
   /* Row kebab menu */
   .kebab-wrap { position: relative; }
 
+  /* ─── Date range calendar (MUI date-range picker layout) ─────────── */
+  .dd-chev { width: 12px; height: 12px; margin-left: auto; color: var(--grey-600); }
+  .dd-panel.cal-mode { min-width: 0; padding: 0; }
+  .dd-panel.cal-mode #date-quick { display: none; }
+  #date-cal { display: none; }
+  .dd-panel.cal-mode #date-cal { display: block; }
+
+  .cal { width: 600px; padding: 8px 8px 0; }
+  .cal-head { display: flex; align-items: center; padding: 4px 8px 6px; }
+  .cal-nav {
+    width: 32px; height: 32px; flex-shrink: 0; border: none; border-radius: 50%;
+    background: none; cursor: pointer; color: var(--grey-700);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-nav:hover { background: var(--grey-200); }
+  .cal-nav.next svg { transform: rotate(180deg); }
+  .cal-title { flex: 1; text-align: center; font-size: 15px; font-weight: 500; color: var(--text-main); }
+
+  .cal-months { display: flex; gap: 24px; padding: 0 8px; }
+  .cal-month { flex: 1; }
+  .cal-dow, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-dow span { height: 30px; line-height: 30px; text-align: center; font-size: 12px; color: var(--grey-600); }
+
+  /* The cell carries the range band; the button carries the day circle. */
+  .cal-cell { height: 36px; display: flex; align-items: center; justify-content: center; }
+  .cal-cell.in { background: var(--bg-blue-light); }
+  .cal-cell.start { border-radius: 18px 0 0 18px; }
+  .cal-cell.end { border-radius: 0 18px 18px 0; }
+  .cal-cell.start.end { border-radius: 18px; }
+  .cal-day {
+    width: 34px; height: 34px; border: none; border-radius: 50%; background: none;
+    cursor: pointer; font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
+  }
+  .cal-day:hover { background: var(--grey-200); }
+  .cal-day.today { border: 1px solid var(--grey-400); }
+  .cal-cell.sel .cal-day { background: var(--primary); color: #fff; font-weight: 500; }
+  .cal-cell.sel .cal-day.today { border-color: var(--primary); }
+
+  .cal-foot {
+    margin-top: 8px; padding: 10px 16px; border-top: 1px solid var(--grey-300);
+    font-size: 13px; color: var(--grey-600);
+  }
+
 </style>
 </head>
 <body data-module="timesheets">
@@ -154,9 +197,16 @@
       <div class="page-header">
         <h1 class="page-title">Timesheets</h1>
         <div class="header-actions">
+          <div class="dd-wrap" id="super-dd">
+            <button class="dd-trigger" type="button">
+              <span>Supervisor: <span id="super-dd-value">All</span></span>
+              <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="dd-panel" id="super-dd-panel"></div>
+          </div>
           <div class="dd-wrap" id="date-dd">
             <button class="dd-trigger" type="button">
-              <span>Date: <span id="date-dd-value">All</span></span>
+              <span>Date: <span id="date-dd-value">Last 7 days</span></span>
               <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <div class="dd-panel" id="date-dd-panel"></div>
@@ -243,20 +293,20 @@
   };
 
   var TIMESHEETS = [
-    { id: 'TS-1041', issued: '2025-05-01', supervisor: 'Marcus Webb',    site: 'MMA VIGILANT – 360', project: 'Vigilant 360 Refit',    worker: 'Smith John',   status: 'Created',   updated: '2025-05-01', time: '10:03 am' },
-    { id: 'TS-1042', issued: '2025-05-03', supervisor: 'Priya Nair',   site: 'MMA VIGILANT ROV',   project: 'ROV Mobilisation',      worker: 'Stone Emma',   status: 'Exported',  updated: '2025-05-03', time: '10:03 am' },
-    { id: 'TS-1043', issued: '2025-05-07', supervisor: 'Tom Halloran', site: 'SA BHP OLYMPIC DAM', project: 'Shutdown Factory XYZ',  worker: 'Adams Sophia', status: 'Submitted', updated: '2025-05-07', time: '10:03 am' },
-    { id: 'TS-1044', issued: '2025-05-12', supervisor: 'Grace Okafor', site: 'MMA VIGILANT – 360', project: 'Vigilant 360 Refit',    worker: 'Miller Ava',   status: 'Updated',   updated: '2025-05-13', time: '09:14 am' },
-    { id: 'TS-1045', issued: '2025-05-18', supervisor: 'Grace Okafor', site: 'MMA VIGILANT ROV',   project: 'ROV Mobilisation',      worker: 'Clark Emma',   status: 'Imported',  updated: '2025-05-19', time: '04:41 pm' },
-    { id: 'TS-1046', issued: '2025-05-22', supervisor: 'Grace Okafor', site: 'SA BHP OLYMPIC DAM', project: 'Olympic Dam Expansion', worker: 'Baker Liam',   status: 'Revised',   updated: '2025-05-24', time: '11:52 am' },
-    { id: 'TS-1047', issued: '2025-05-29', supervisor: 'Marcus Webb',    site: 'MMA VIGILANT – 360', project: 'Shutdown Factory XYZ',  worker: 'Brown Olivia', status: 'Finalised', updated: '2025-05-30', time: '08:20 am' },
-    { id: 'TS-1048', issued: '2025-06-02', supervisor: 'Priya Nair',   site: 'SA BHP OLYMPIC DAM', project: 'Olympic Dam Expansion', worker: 'Clark Olivia', status: 'Created',   updated: '2025-06-02', time: '02:07 pm' },
-    { id: 'TS-1049', issued: '2025-06-09', supervisor: 'Tom Halloran', site: 'MMA VIGILANT ROV',   project: 'ROV Mobilisation',      worker: 'Hill Allison', status: 'Submitted', updated: '2025-06-10', time: '10:33 am' },
-    { id: 'TS-1050', issued: '2025-06-16', supervisor: 'Marcus Webb',    site: 'MMA VIGILANT – 360', project: 'Vigilant 360 Refit',    worker: 'Davis Noah',   status: 'Exported',  updated: '2025-06-17', time: '03:55 pm' },
-    { id: 'TS-1051', issued: '2025-06-23', supervisor: 'Grace Okafor', site: 'SA BHP OLYMPIC DAM', project: 'Shutdown Factory XYZ',  worker: 'Smith John',   status: 'Updated',   updated: '2025-06-24', time: '09:02 am' },
-    { id: 'TS-1052', issued: '2025-07-01', supervisor: 'Priya Nair',   site: 'MMA VIGILANT ROV',   project: 'ROV Mobilisation',      worker: 'Miller Ava',   status: 'Revised',   updated: '2025-07-02', time: '01:18 pm' },
-    { id: 'TS-1053', issued: '2025-07-07', supervisor: 'Tom Halloran', site: 'MMA VIGILANT – 360', project: 'Vigilant 360 Refit',    worker: 'Baker Liam',   status: 'Finalised', updated: '2025-07-08', time: '07:45 am' },
-    { id: 'TS-1054', issued: '2025-07-14', supervisor: 'Marcus Webb',    site: 'SA BHP OLYMPIC DAM', project: 'Olympic Dam Expansion', worker: 'Hill Allison', status: 'Imported',  updated: '2025-07-15', time: '12:30 pm' }
+    { id: 'TS-1041', ago: 70, supervisor: 'Olivia Rhye',    site: 'MMA VIGILANT – 360', project: 'Vigilant 360 Refit',    worker: 'Smith John',   status: 'Created',   updAgo: 69, time: '10:03 am' },
+    { id: 'TS-1042', ago: 62, supervisor: 'Priya Nair',   site: 'MMA VIGILANT ROV',   project: 'ROV Mobilisation',      worker: 'Stone Emma',   status: 'Exported',  updAgo: 62, time: '10:03 am' },
+    { id: 'TS-1043', ago: 55, supervisor: 'Tom Halloran', site: 'SA BHP OLYMPIC DAM', project: 'Shutdown Factory XYZ',  worker: 'Adams Sophia', status: 'Submitted', updAgo: 54, time: '10:03 am' },
+    { id: 'TS-1044', ago: 47, supervisor: 'Grace Okafor', site: 'MMA VIGILANT – 360', project: 'Vigilant 360 Refit',    worker: 'Miller Ava',   status: 'Updated',   updAgo: 46, time: '09:14 am' },
+    { id: 'TS-1045', ago: 40, supervisor: 'Grace Okafor', site: 'MMA VIGILANT ROV',   project: 'ROV Mobilisation',      worker: 'Clark Emma',   status: 'Imported',  updAgo: 40, time: '04:41 pm' },
+    { id: 'TS-1046', ago: 33, supervisor: 'Grace Okafor', site: 'SA BHP OLYMPIC DAM', project: 'Olympic Dam Expansion', worker: 'Baker Liam',   status: 'Revised',   updAgo: 32, time: '11:52 am' },
+    { id: 'TS-1047', ago: 26, supervisor: 'Olivia Rhye',    site: 'MMA VIGILANT – 360', project: 'Shutdown Factory XYZ',  worker: 'Brown Olivia', status: 'Finalised', updAgo: 25, time: '08:20 am' },
+    { id: 'TS-1048', ago: 19, supervisor: 'Priya Nair',   site: 'SA BHP OLYMPIC DAM', project: 'Olympic Dam Expansion', worker: 'Clark Olivia', status: 'Created',   updAgo: 19, time: '02:07 pm' },
+    { id: 'TS-1049', ago: 12, supervisor: 'Tom Halloran', site: 'MMA VIGILANT ROV',   project: 'ROV Mobilisation',      worker: 'Hill Allison', status: 'Submitted', updAgo: 11, time: '10:33 am' },
+    { id: 'TS-1050', ago: 6 , supervisor: 'Olivia Rhye',    site: 'MMA VIGILANT – 360', project: 'Vigilant 360 Refit',    worker: 'Davis Noah',   status: 'Exported',  updAgo: 5 , time: '03:55 pm' },
+    { id: 'TS-1051', ago: 4 , supervisor: 'Grace Okafor', site: 'SA BHP OLYMPIC DAM', project: 'Shutdown Factory XYZ',  worker: 'Smith John',   status: 'Updated',   updAgo: 4 , time: '09:02 am' },
+    { id: 'TS-1052', ago: 2 , supervisor: 'Priya Nair',   site: 'MMA VIGILANT ROV',   project: 'ROV Mobilisation',      worker: 'Miller Ava',   status: 'Revised',   updAgo: 1 , time: '01:18 pm' },
+    { id: 'TS-1053', ago: 0 , supervisor: 'Tom Halloran', site: 'MMA VIGILANT – 360', project: 'Vigilant 360 Refit',    worker: 'Baker Liam',   status: 'Finalised', updAgo: 0 , time: '07:45 am' },
+    { id: 'TS-1054', ago: 0 , supervisor: 'Olivia Rhye',    site: 'SA BHP OLYMPIC DAM', project: 'Olympic Dam Expansion', worker: 'Hill Allison', status: 'Imported',  updAgo: 0 , time: '12:30 pm' }
   ];
 
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -266,14 +316,39 @@
     var p = iso.split('-');
     return String(Number(p[2])) + ' ' + MONTHS[Number(p[1]) - 1] + ' ' + p[0];
   }
-  function monthKey(iso) { return iso.slice(0, 7); }
-  function monthLabel(key) {
-    var p = key.split('-');
-    return FULL_MONTHS[Number(p[1]) - 1] + ' ' + p[0];
+
+  /* ─── Dates ────────────────────────────────────────────────────────
+     The mock timesheets carry day offsets, not fixed dates, and are rebased
+     onto today at load. A hardcoded dataset would age out of "Last 7 days"
+     and leave the default view empty a week after this was written. */
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function toIso(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function parseIso(iso) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+
+  var TODAY = new Date();
+  TODAY.setHours(0, 0, 0, 0);
+
+  function daysAgoIso(n) {
+    var d = new Date(TODAY.getTime());
+    d.setDate(d.getDate() - n);
+    return toIso(d);
+  }
+
+  TIMESHEETS.forEach(function (t) {
+    t.issued  = daysAgoIso(t.ago);
+    t.updated = daysAgoIso(t.updAgo);
+  });
+
+  /* "12 Aug – 20 Aug 2025", collapsing the year when both ends share it. */
+  function fmtRange(from, to) {
+    if (from === to) return fmtDate(from);
+    var a = fmtDate(from), b = fmtDate(to);
+    if (from.slice(0, 4) === to.slice(0, 4)) a = a.slice(0, a.lastIndexOf(' '));
+    return a + ' – ' + b;
   }
 
   /* ─── State ───────────────────────────────────────────────────────── */
-  var state = { query: '', month: 'all', group: 'none' };
+  var state = { query: '', range: 'last7', from: null, to: null, supervisor: 'all', group: 'none' };
 
   /* Columns the user has switched off. Position and Work Type ship hidden. */
   var hiddenCols = { position: true, worktype: true };
@@ -299,39 +374,204 @@
   var searchEl  = document.getElementById('search');
   var clearBtn  = document.getElementById('search-clear');
 
-  /* ─── Date dropdown, built from the months present in the data ─────── */
-  var months = [];
-  TIMESHEETS.forEach(function (t) {
-    var k = monthKey(t.issued);
-    if (months.indexOf(k) === -1) months.push(k);
-  });
-  months.sort();
-
-  var datePanel = document.getElementById('date-dd-panel');
-  var dateValue = document.getElementById('date-dd-value');
   var CHECK = '<svg class="dd-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  datePanel.innerHTML =
-    '<button class="dd-item active" type="button" data-month="all">' + CHECK + 'All</button>' +
+  /* ─── Supervisor filter ───────────────────────────────────────────── */
+  /* The signed-in account in the shell — what "Me" resolves to. */
+  var CURRENT_USER = 'Olivia Rhye';
+
+  var superPanel = document.getElementById('super-dd-panel');
+  var superValue = document.getElementById('super-dd-value');
+
+  var supervisors = [];
+  TIMESHEETS.forEach(function (t) {
+    if (t.supervisor === CURRENT_USER) return;      // covered by the Me option
+    if (supervisors.indexOf(t.supervisor) === -1) supervisors.push(t.supervisor);
+  });
+  supervisors.sort();
+
+  superPanel.innerHTML =
+    '<button class="dd-item" type="button" data-super="me">' + CHECK + 'Me (' + Shell.esc(CURRENT_USER) + ')</button>' +
+    '<button class="dd-item active" type="button" data-super="all">' + CHECK + 'All supervisors</button>' +
     '<hr class="dd-divider" />' +
-    months.map(function (k) {
-      return '<button class="dd-item" type="button" data-month="' + k + '">' + CHECK + monthLabel(k) + '</button>';
+    supervisors.map(function (n) {
+      return '<button class="dd-item" type="button" data-super="' + Shell.esc(n) + '">' + CHECK + Shell.esc(n) + '</button>';
     }).join('');
 
-  datePanel.addEventListener('click', function (e) {
+  superPanel.addEventListener('click', function (e) {
     var item = e.target.closest('.dd-item');
     if (!item) return;
-    state.month = item.getAttribute('data-month');
-    datePanel.querySelectorAll('.dd-item').forEach(function (i) { i.classList.remove('active'); });
+    state.supervisor = item.getAttribute('data-super');
+    superPanel.querySelectorAll('.dd-item').forEach(function (i) { i.classList.remove('active'); });
     item.classList.add('active');
-    dateValue.textContent = state.month === 'all' ? 'All' : monthLabel(state.month);
+    superValue.textContent = state.supervisor === 'all' ? 'All'
+      : state.supervisor === 'me' ? 'Me' : state.supervisor;
     Shell.closeAllDropdowns();
     render();
   });
 
+  /* ─── Date filter: quick ranges + a custom range calendar ─────────── */
+  var datePanel = document.getElementById('date-dd-panel');
+  var dateValue = document.getElementById('date-dd-value');
+  var dateTrigger = document.querySelector('#date-dd .dd-trigger');
+
+  var QUICK = [
+    { k: 'today', label: 'Today' },
+    { k: 'last7', label: 'Last 7 days' },
+    { k: 'month', label: 'Last month' }
+  ];
+  var CHEV = '<svg class="dd-chev" viewBox="0 0 12 12" fill="none"><path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  datePanel.innerHTML =
+    '<div class="dd-view" id="date-quick">' +
+      QUICK.map(function (r) {
+        return '<button class="dd-item' + (r.k === state.range ? ' active' : '') + '" type="button" data-range="' + r.k + '">' +
+          CHECK + r.label + '</button>';
+      }).join('') +
+      '<button class="dd-item" type="button" data-range="custom">' + CHECK + 'Custom' + CHEV + '</button>' +
+      '<hr class="dd-divider" />' +
+      '<button class="dd-item" type="button" data-range="all">' + CHECK + 'All time</button>' +
+    '</div>' +
+    '<div class="cal" id="date-cal"></div>';
+
+  function markRange(k) {
+    datePanel.querySelectorAll('#date-quick .dd-item').forEach(function (i) {
+      i.classList.toggle('active', i.getAttribute('data-range') === k);
+    });
+  }
+  function syncDateLabel() {
+    if (state.range === 'custom') { dateValue.textContent = fmtRange(state.from, state.to); return; }
+    if (state.range === 'all')    { dateValue.textContent = 'All time'; return; }
+    dateValue.textContent = QUICK.filter(function (r) { return r.k === state.range; })[0].label;
+  }
+
+  /* The date window every filter reads. null means no date limit. */
+  function rangeBounds() {
+    if (state.range === 'today')  return { from: daysAgoIso(0),  to: daysAgoIso(0) };
+    if (state.range === 'last7')  return { from: daysAgoIso(6),  to: daysAgoIso(0) };
+    if (state.range === 'month')  return { from: daysAgoIso(29), to: daysAgoIso(0) };
+    if (state.range === 'custom') return { from: state.from, to: state.to };
+    return null;
+  }
+
+  /* ─── Custom range calendar (two months, MUI date-range style) ─────── */
+  var DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  var calAnchor = null;                    // first day of the left-hand month
+  var pick = { from: null, to: null };     // in-progress selection
+  var hoverIso = null;
+
+  var ARROW = '<svg viewBox="0 0 16 16" fill="none" width="16" height="16"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function openCalendar() {
+    var base = (state.range === 'custom' && state.from) ? parseIso(state.from) : new Date(TODAY.getTime());
+    /* Show the previous month alongside the current one — most of the
+       records being picked over are in the past. */
+    calAnchor = new Date(base.getFullYear(), base.getMonth() - 1, 1);
+    pick = state.range === 'custom' ? { from: state.from, to: state.to } : { from: null, to: null };
+    hoverIso = null;
+    datePanel.classList.add('cal-mode');
+    renderCal();
+  }
+
+  function monthGrid(y, m) {
+    var lead = new Date(y, m, 1).getDay();
+    var days = new Date(y, m + 1, 0).getDate();
+    var lo = pick.from;
+    var hi = pick.to || (lo && hoverIso && hoverIso > lo ? hoverIso : null);
+    var today = daysAgoIso(0);
+    var cells = '';
+    for (var i = 0; i < lead; i++) cells += '<div class="cal-cell"></div>';
+    for (var d = 1; d <= days; d++) {
+      var iso = y + '-' + pad2(m + 1) + '-' + pad2(d);
+      var isStart = !!lo && iso === lo;
+      var isEnd   = !!hi && iso === hi;
+      var cls = 'cal-cell';
+      if (lo && hi && iso >= lo && iso <= hi) cls += ' in';
+      if (isStart) cls += ' start';
+      if (isEnd)   cls += ' end';
+      if (isStart || isEnd) cls += ' sel';
+      cells += '<div class="' + cls + '"><button class="cal-day' + (iso === today ? ' today' : '') +
+        '" type="button" data-iso="' + iso + '">' + d + '</button></div>';
+    }
+    return '<div class="cal-month">' +
+      '<div class="cal-dow">' + DOW.map(function (w) { return '<span>' + w + '</span>'; }).join('') + '</div>' +
+      '<div class="cal-grid">' + cells + '</div>' +
+    '</div>';
+  }
+
+  function renderCal() {
+    var y = calAnchor.getFullYear(), m = calAnchor.getMonth();
+    var right = new Date(y, m + 1, 1);
+    var hint = !pick.from ? 'Select start date'
+             : !pick.to   ? 'Select end date'
+             : fmtRange(pick.from, pick.to);
+    document.getElementById('date-cal').innerHTML =
+      '<div class="cal-head">' +
+        '<button class="cal-nav" type="button" data-nav="-1" aria-label="Previous month">' + ARROW + '</button>' +
+        '<div class="cal-title">' + FULL_MONTHS[m] + ' ' + y + '</div>' +
+        '<div class="cal-title">' + FULL_MONTHS[right.getMonth()] + ' ' + right.getFullYear() + '</div>' +
+        '<button class="cal-nav next" type="button" data-nav="1" aria-label="Next month">' + ARROW + '</button>' +
+      '</div>' +
+      '<div class="cal-months">' + monthGrid(y, m) + monthGrid(right.getFullYear(), right.getMonth()) + '</div>' +
+      '<div class="cal-foot">' + hint + '</div>';
+  }
+
+  function pickDay(iso) {
+    if (!pick.from || pick.to) { pick = { from: iso, to: null }; hoverIso = null; renderCal(); return; }
+    if (iso < pick.from) { pick.from = iso; renderCal(); return; }
+    pick.to = iso;
+    state.range = 'custom'; state.from = pick.from; state.to = pick.to;
+    markRange('custom');
+    syncDateLabel();
+    Shell.closeAllDropdowns();
+    render();
+  }
+
+  /* The panel lives inside the document-level "click closes dropdowns"
+     handler, so calendar clicks have to be kept from bubbling to it. */
+  datePanel.addEventListener('click', function (e) { e.stopPropagation(); });
+  datePanel.addEventListener('click', function (e) {
+    var item = e.target.closest('.dd-item');
+    if (item) {
+      var k = item.getAttribute('data-range');
+      if (k === 'custom') { openCalendar(); return; }
+      state.range = k;
+      markRange(k);
+      syncDateLabel();
+      Shell.closeAllDropdowns();
+      render();
+      return;
+    }
+    var nav = e.target.closest('[data-nav]');
+    if (nav) {
+      calAnchor = new Date(calAnchor.getFullYear(), calAnchor.getMonth() + Number(nav.getAttribute('data-nav')), 1);
+      renderCal();
+      return;
+    }
+    var day = e.target.closest('.cal-day');
+    if (day) pickDay(day.getAttribute('data-iso'));
+  });
+
+  datePanel.addEventListener('mouseover', function (e) {
+    var day = e.target.closest('.cal-day');
+    if (!day || !pick.from || pick.to) return;
+    var iso = day.getAttribute('data-iso');
+    if (iso === hoverIso) return;
+    hoverIso = iso;
+    renderCal();
+  });
+
+  // Reopening the dropdown always lands back on the quick list.
+  dateTrigger.addEventListener('click', function () { datePanel.classList.remove('cal-mode'); });
+
+  syncDateLabel();
+
   /* ─── Filtering + grouping ────────────────────────────────────────── */
   function matches(t) {
-    if (state.month !== 'all' && monthKey(t.issued) !== state.month) return false;
+    var b = rangeBounds();
+    if (b && (t.issued < b.from || t.issued > b.to)) return false;
+    if (state.supervisor === 'me') { if (t.supervisor !== CURRENT_USER) return false; }
+    else if (state.supervisor !== 'all' && t.supervisor !== state.supervisor) return false;
     if (!state.query) return true;
     var q = state.query.toLowerCase();
     var haystack = [t.id, t.supervisor, t.site, t.project, t.status, fmtDate(t.issued)]
@@ -895,7 +1135,9 @@
     if (none) {
       emptySub.textContent = state.query
         ? 'No timesheets match “' + state.query + '”.'
-        : 'No timesheets in this date range.';
+        : state.supervisor === 'all'
+          ? 'No timesheets in this date range.'
+          : 'No timesheets match the current filters.';
     }
 
     syncSelectAll(rows);
