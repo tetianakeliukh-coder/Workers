@@ -137,6 +137,8 @@
   .sel-action:hover { background: var(--primary-pressed-bg); }
   .sel-action.danger { color: var(--error); }
   .sel-action.danger:hover { background: var(--error-light); }
+  .sel-action:disabled { color: var(--grey-400); cursor: default; }
+  .sel-action:disabled:hover { background: none; }
 
   /* Row kebab menu */
   .kebab-wrap { position: relative; }
@@ -386,6 +388,7 @@
   }
   var openKeys = [];       // what the Expand all button acts on, set during render
   var renderedKeys = [];   // parent rows the current render actually emitted
+  var renderedSheets = Object.create(null);   // timesheet ids the render touched
   var shownIds = [];       // timesheet ids on screen, for select-all
 
   var tbody     = document.getElementById('tbody');
@@ -710,6 +713,7 @@
       return [
         // Sized to fit their content: this table scrolls sideways by nature,
         // and clipped values are worse than a scrollbar.
+        { k: 'chk',     w: 44,  label: '' },
         { k: 'issued',  w: 120, label: 'Date' },
         { k: 'site',    w: 195, label: 'Site' },
         { k: 'super',   w: 140, label: 'Supervisor' },
@@ -748,6 +752,7 @@
 
     if (group === 'worker') {
       return [
+        { k: 'chk',     w: 44,  label: '' },
         { k: 'group',   w: 200, label: 'Worker' },
         { k: 'issued',  w: 120, label: 'Date' },
         { k: 'site',    w: 185, label: 'Site' },
@@ -964,6 +969,16 @@
       if (q && !parentHit && !jobs.length) return;
       renderedKeys.push(name);
       var isCollapsed = isCollapsed_(name);
+      /* Selection is always by timesheet, so ticking a person means ticking
+         every sheet they appear on — part-selected shows as indeterminate. */
+      var sheetIds = [];
+      jobs.forEach(function (j) {
+        renderedSheets[j.t.id] = true;
+        if (sheetIds.indexOf(j.t.id) === -1) sheetIds.push(j.t.id);
+      });
+      var picked = sheetIds.filter(function (id) { return selected[id]; }).length;
+      var allPicked = picked > 0 && picked === sheetIds.length;
+      var chkCls = allPicked ? ' checked' : (picked > 0 ? ' indeterminate' : '');
       var sites = {}, projects = {}, tasks = {}, allowances = {};
       var total = 0;
       jobs.forEach(function (j) {
@@ -976,8 +991,11 @@
       });
       function tally(m) { var n = Object.keys(m).length; return n ? String(n) : ''; }
 
-      out.push('<tr class="ts-parent' + (isCollapsed ? ' collapsed' : '') +
+      out.push('<tr class="ts-parent' + (allPicked ? ' selected' : '') + (isCollapsed ? ' collapsed' : '') +
             '" data-sheet="' + Shell.esc(name) + '">' +
+        '<td class="col-chk"><span class="chk' + chkCls + '" role="checkbox" tabindex="0" aria-checked="' +
+          (allPicked ? 'true' : (picked > 0 ? 'mixed' : 'false')) + '" data-worker-chk="' + Shell.esc(name) +
+          '" data-sheet-ids="' + sheetIds.join(',') + '"></span></td>' +
         '<td class="col-group"><span class="ts-parent-main">' +
           '<span class="ts-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
           '<span class="avatar avatar-sm" style="background:' + g.color + '">' + Shell.initials(name) + '</span>' +
@@ -1004,6 +1022,7 @@
       jobs.forEach(function (j) {
         out.push('<tr class="ts-job' + (isCollapsed ? ' hidden' : '') +
               '" data-child="' + Shell.esc(name) + '">' +
+          '<td class="col-chk"></td>' +
           '<td class="col-group"></td>' +
           '<td class="col-issued">' + Shell.highlight(fmtDate(j.t.issued), state.query) + '</td>' +
           '<td class="col-site" title="' + Shell.esc(j.t.site) + '">' + Shell.highlight(j.t.site, state.query) + '</td>' +
@@ -1043,6 +1062,7 @@
       var jobs = (!q || parentHit) ? all : all.filter(function (j) { return hitsQuery(j.values, vis); });
       if (q && !parentHit && !jobs.length) return;
       renderedKeys.push(t.id);
+      renderedSheets[t.id] = true;
 
       var checked = !!selected[t.id];
       var isCollapsed = isCollapsed_(t.id);
@@ -1117,13 +1137,19 @@
         w.assignments.forEach(function (a) {
           // Nothing nests here, so a row either matches or it is left out.
           if (!hitsQuery(jobValues(t, w, a, fields, true), vis)) return;
+          renderedSheets[t.id] = true;
           // The site's custom fields, joined — their names vary by site, so a
           // single flat table can only carry the path, not a column each.
           var path = taskPath(a, fields);
           var allow = allowText(a);
           var times = timesText(a);
           var cell = jobCell;
-          out.push('<tr>' +
+          /* A row here is a job, but bulk actions act on whole timesheets —
+             so the tick belongs to the sheet, and its sibling jobs tick with
+             it. */
+          var checked = !!selected[t.id];
+          out.push('<tr class="' + (checked ? 'selected' : '') + '" data-id="' + t.id + '">' +
+            '<td class="col-chk"><span class="chk' + (checked ? ' checked' : '') + '" role="checkbox" tabindex="0" aria-checked="' + checked + '" data-row-chk="' + t.id + '"></span></td>' +
             '<td class="col-issued">' + Shell.highlight(fmtDate(t.issued), q) + '</td>' +
             '<td class="col-site" title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
             cell(t.supervisor, 'col-super') +
@@ -1198,6 +1224,7 @@
     renderHead();
     var rows = TIMESHEETS.filter(matches);
     renderedKeys = [];
+    renderedSheets = Object.create(null);
     var html = '';
 
     if (state.group === 'flat') {
@@ -1226,7 +1253,7 @@
     if (state.group === 'none' || state.group === 'worker') openKeys = renderedKeys.slice();
     else if (state.group === 'project') openKeys = projectIndex(rows).order;
     else                                openKeys = [];
-    shownIds = state.group === 'none' ? renderedKeys.slice() : rows.map(function (t) { return t.id; });
+    shownIds = Object.keys(renderedSheets);
     syncExpandBtn();
 
     var none = html === '';
@@ -1259,11 +1286,34 @@
     box.setAttribute('aria-checked', n === 0 ? 'false' : (n === ids.length ? 'true' : 'mixed'));
   }
 
+  function statusOf(id) {
+    for (var i = 0; i < TIMESHEETS.length; i++) if (TIMESHEETS[i].id === id) return TIMESHEETS[i].status;
+    return '';
+  }
+
   function syncSelectionBar() {
-    var n = selectedIds().length;
+    var ids = selectedIds();
+    var n = ids.length;
     selBar.classList.toggle('visible', n > 0);
     toolbar.style.display = n > 0 ? 'none' : '';
-    selCount.textContent = n + ' selected';
+    selCount.textContent = n + ' timesheet' + (n === 1 ? '' : 's') + ' selected';
+
+    /* Deleting acts on the whole timesheet, so it is offered only where the
+       rows are timesheets. Export applies everywhere. */
+    selBar.querySelector('[data-bulk="delete"]').style.display =
+      state.group === 'none' ? '' : 'none';
+
+    /* Finalising is only defined for a revised sheet, so anything else in the
+       selection blocks it — shown but disabled, with the reason on hover. */
+    var fin = selBar.querySelector('[data-bulk="finalise"]');
+    var offenders = ids.filter(function (id) { return statusOf(id) !== 'Revised'; });
+    fin.disabled = offenders.length > 0;
+    fin.title = offenders.length
+      ? (offenders.length === n
+          ? 'Only revised timesheets can be finalised.'
+          : offenders.length + ' of the selected timesheets ' +
+            (offenders.length === 1 ? 'is' : 'are') + ' not revised.')
+      : '';
   }
 
   function toggleRow(id) {
@@ -1296,7 +1346,7 @@
   /* ─── Table interactions ──────────────────────────────────────────── */
   tbody.addEventListener('click', function (e) {
     var sheetRow = e.target.closest('.ts-parent');
-    if (sheetRow && !e.target.closest('[data-row-chk], .kebab')) {
+    if (sheetRow && !e.target.closest('[data-row-chk], [data-worker-chk], .kebab')) {
       var sid = sheetRow.getAttribute('data-sheet');
       var nowCollapsed = !isCollapsed_(sid);
       setCollapsed_(sid, nowCollapsed);
@@ -1310,6 +1360,15 @@
 
     var box = e.target.closest('[data-row-chk]');
     if (box) { toggleRow(box.getAttribute('data-row-chk')); return; }
+
+    var wbox = e.target.closest('[data-worker-chk]');
+    if (wbox) {
+      var wids = (wbox.getAttribute('data-sheet-ids') || '').split(',').filter(Boolean);
+      var allOn = wids.length > 0 && wids.every(function (id) { return selected[id]; });
+      wids.forEach(function (id) { if (allOn) delete selected[id]; else selected[id] = true; });
+      render();
+      return;
+    }
 
     var groupBtn = e.target.closest('.group-toggle');
     if (groupBtn) {
