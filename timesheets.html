@@ -404,12 +404,12 @@
     });
     if (lastLeft) {
       rules.push('.sx-left .frozen th.col-' + lastLeft + ',.sx-left .frozen td.col-' + lastLeft +
-        '{box-shadow:1px 0 0 var(--grey-300),8px 0 10px -8px rgba(8,17,21,0.28);}');
+        '{box-shadow:1px 0 0 var(--grey-400),10px 0 12px -6px rgba(8,17,21,0.22);}');
     }
     rules.push('.frozen th.col-act,.frozen td.col-act' +
       '{position:sticky;right:0;z-index:2;background:inherit;}');
     rules.push('.sx-right .frozen th.col-act,.sx-right .frozen td.col-act' +
-      '{box-shadow:-1px 0 0 var(--grey-300),-8px 0 10px -8px rgba(8,17,21,0.28);}');
+      '{box-shadow:-1px 0 0 var(--grey-400),-10px 0 12px -6px rgba(8,17,21,0.22);}');
     host.textContent = rules.join('\n');
   }
 
