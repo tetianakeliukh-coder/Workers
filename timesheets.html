@@ -126,6 +126,7 @@
             <button class="seg-btn" type="button" data-group="worker">Worker</button>
             <button class="seg-btn" type="button" data-group="flat">No Grouping</button>
           </div>
+          <button class="btn-ghost" type="button" id="expand-all">Expand all</button>
         </div>
       </div>
 
@@ -207,7 +208,11 @@
   /* ─── State ───────────────────────────────────────────────────────── */
   var state = { query: '', month: 'all', group: 'none' };
   var selected = Object.create(null);
+  /* Rows start collapsed, so an unrecorded key counts as collapsed and
+     only an explicit false means a row has been opened. */
   var collapsed = Object.create(null);
+  function isCollapsed_(key) { return collapsed[key] !== false; }
+  var openKeys = [];   // what the Expand all button acts on, set during render
 
   var tbody     = document.getElementById('tbody');
   var empty     = document.getElementById('empty');
@@ -441,7 +446,7 @@
     sheets.forEach(function (t) {
       var q = state.query;
       var checked = !!selected[t.id];
-      var isCollapsed = !!collapsed[t.id];
+      var isCollapsed = isCollapsed_(t.id);
       var fields = fieldsFor(t.site);
       var jobs = [], people = {};
       workersFor(t).forEach(function (w) {
@@ -519,7 +524,7 @@
   }
 
   function groupRowHtml(key, count, person) {
-    var isCollapsed = !!collapsed[key];
+    var isCollapsed = isCollapsed_(key);
     return '' +
       '<tr class="group-row' + (isCollapsed ? ' collapsed' : '') + '" data-group="' + Shell.esc(key) + '">' +
         '<td class="col-chk"></td>' +
@@ -540,6 +545,22 @@
       '</tr>';
   }
 
+  /* The button reflects what clicking it will do, so it stays honest after
+     rows are opened or closed one at a time. */
+  function syncExpandBtn() {
+    var btn = document.getElementById('expand-all');
+    if (!openKeys.length) { btn.style.display = 'none'; return; }
+    btn.style.display = '';
+    var anyClosed = openKeys.some(isCollapsed_);
+    btn.textContent = anyClosed ? 'Expand all' : 'Collapse all';
+  }
+
+  document.getElementById('expand-all').addEventListener('click', function () {
+    var anyClosed = openKeys.some(isCollapsed_);
+    openKeys.forEach(function (k) { collapsed[k] = !anyClosed; });
+    render();
+  });
+
   function render() {
     renderHead();
     var rows = TIMESHEETS.filter(matches);
@@ -558,7 +579,7 @@
           total: list.reduce(function (s, pair) { return s + pair.rec.total; }, 0)
         });
         html += list.map(function (pair) {
-          return rowHtml(pair.ts, !!collapsed[name], { type: 'worker', name: name, rec: pair.rec });
+          return rowHtml(pair.ts, isCollapsed_(name), { type: 'worker', name: name, rec: pair.rec });
         }).join('');
       });
     } else {
@@ -569,12 +590,19 @@
           total: list.reduce(function (s, pair) { return s + pair.hours; }, 0)
         });
         html += list.map(function (pair) {
-          return rowHtml(pair.ts, !!collapsed[name], { type: 'project', name: name, hours: pair.hours });
+          return rowHtml(pair.ts, isCollapsed_(name), { type: 'project', name: name, hours: pair.hours });
         }).join('');
       });
     }
 
     tbody.innerHTML = html;
+
+    // Which keys the Expand all button acts on, for the tab now showing.
+    if (state.group === 'none')        openKeys = rows.map(function (t) { return t.id; });
+    else if (state.group === 'worker') openKeys = workerIndex(rows).order;
+    else if (state.group === 'project') openKeys = projectIndex(rows).order;
+    else                                openKeys = [];
+    syncExpandBtn();
 
     var none = rows.length === 0;
     empty.classList.toggle('visible', none);
@@ -642,11 +670,12 @@
     var sheetRow = e.target.closest('.ts-parent');
     if (sheetRow && !e.target.closest('[data-row-chk], .kebab')) {
       var sid = sheetRow.getAttribute('data-sheet');
-      collapsed[sid] = !collapsed[sid];
-      sheetRow.classList.toggle('collapsed', !!collapsed[sid]);
+      collapsed[sid] = !isCollapsed_(sid);
+      sheetRow.classList.toggle('collapsed', collapsed[sid]);
       tbody.querySelectorAll('tr[data-child="' + sid + '"]').forEach(function (tr) {
-        tr.classList.toggle('hidden', !!collapsed[sid]);
+        tr.classList.toggle('hidden', collapsed[sid]);
       });
+      syncExpandBtn();
       return;
     }
 
@@ -656,7 +685,7 @@
     var groupBtn = e.target.closest('.group-toggle');
     if (groupBtn) {
       var key = groupBtn.closest('.group-row').getAttribute('data-group');
-      collapsed[key] = !collapsed[key];
+      collapsed[key] = !isCollapsed_(key);
       render();
       return;
     }
