@@ -136,7 +136,8 @@
   .sel-unselect:hover { text-decoration: underline; }
   .sel-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
   .sel-action {
-    height: 36px; padding: 0 16px; border-radius: 8px; cursor: pointer;
+    /* Same 32px height as Create Timesheet, so the two rows sit on one scale. */
+    height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     background: var(--white); border: 1px solid var(--primary); color: var(--primary);
     font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
     white-space: nowrap; transition: background var(--t-fast);
