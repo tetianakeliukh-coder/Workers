@@ -66,16 +66,12 @@
     transform: rotate(-45deg) translateY(-1px); display: block;
   }
   .col-panel-name { font-size: 14px; color: var(--text-main); }
-  /* Frozen columns can't be hidden — the table's anchor points. */
-  .col-panel-row.locked { cursor: default; }
+  /* Frozen columns can't be hidden — the table's anchor points.
+     Kept checked so the state reads as "on", dimmed so it reads as locked. */
+  .col-panel-row.locked { cursor: not-allowed; }
   .col-panel-row.locked:hover { background: transparent; }
-  .col-panel-row.locked .col-chk-box { background: var(--grey-400); border-color: var(--grey-400); }
-  .col-panel-row.locked .col-chk-box::after {
-    content: ''; width: 9px; height: 5px;
-    border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
-    transform: rotate(-45deg) translateY(-1px); display: block;
-  }
-  .col-panel-row.locked .col-panel-name { color: var(--grey-600); }
+  .col-panel-row.locked .col-chk-box { opacity: 0.4; }
+  .col-panel-row.locked .col-panel-name { color: var(--grey-600); opacity: 0.75; }
 
   td.col-task, td.col-allow { white-space: normal; line-height: 18px; }
 
