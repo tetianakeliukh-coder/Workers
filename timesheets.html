@@ -448,14 +448,25 @@
       var checked = !!selected[t.id];
       var isCollapsed = isCollapsed_(t.id);
       var fields = fieldsFor(t.site);
-      var jobs = [], people = {};
+      var jobs = [], people = {}, projects = {}, tasks = {}, allowances = {};
       workersFor(t).forEach(function (w) {
         people[w.worker] = true;
-        w.assignments.forEach(function (a) { jobs.push({ w: w, a: a }); });
+        w.assignments.forEach(function (a) {
+          jobs.push({ w: w, a: a });
+          if (a.project) projects[a.project] = true;
+          var path = taskPath(a, fields);
+          if (path) tasks[path] = true;
+          [a.allow1, a.allow2].forEach(function (x) { if (x) allowances[x] = true; });
+        });
       });
       var total = jobs.reduce(function (s, j) { return s + (Number(j.a.hours) || 0); }, 0);
-      // Distinct people, not job rows — the number sits under the Worker heading.
-      var headcount = Object.keys(people).length;
+      /* Each summary number counts distinct values among the jobs beneath, so
+         it answers "how many different X are on this sheet" under its own
+         heading. Blank cells don't count toward any of them. */
+      function tally(map) {
+        var n = Object.keys(map).length;
+        return n ? String(n) : '';
+      }
 
       out.push('<tr class="ts-parent' + (checked ? ' selected' : '') + (isCollapsed ? ' collapsed' : '') +
             '" data-id="' + t.id + '" data-sheet="' + t.id + '">' +
@@ -466,9 +477,11 @@
         '<td title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
         '<td>' + Shell.highlight(t.supervisor, q) + '</td>' +
         '<td>' + statusChip(t.status) + '</td>' +
-        '<td class="ts-count">' + headcount + '</td>' +
+        '<td class="ts-count">' + tally(people) + '</td>' +
+        '<td class="ts-count">' + tally(projects) + '</td>' +
+        '<td class="ts-count">' + tally(tasks) + '</td>' +
+        '<td class="ts-count">' + tally(allowances) + '</td>' +
         '<td></td>' +
-        '<td></td><td></td><td></td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
         '<td><span class="updated-cell"><span>' + fmtDate(t.updated) + '</span><span class="updated-time">' + t.time + '</span></span></td>' +
       '</tr>');
