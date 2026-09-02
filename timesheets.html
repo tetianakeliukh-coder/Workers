@@ -150,6 +150,10 @@
   .sel-action:disabled { border-color: var(--grey-350); color: var(--grey-400); cursor: default; }
   .sel-action:disabled:hover { background: var(--white); }
 
+  /* The label truncates inside its own box, so the header cell itself can keep
+     overflow visible for the frozen-edge divider. */
+  .th-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* Drag handle on the right edge of every resizable header cell. */
   .col-grip {
     position: absolute; top: 0; right: 0; width: 8px; height: 100%;
@@ -214,7 +218,7 @@
 
   /* The table scrolls inside the card rather than with the page, so the
      header row and the timesheet being read can stay pinned to the top. */
-  .table-scroll { max-height: calc(100vh - 180px); overflow-y: auto; }
+  .table-scroll { max-height: calc(100vh - 180px); overflow-y: auto; }   /* JS refines this */
   .table-card thead th {
     position: sticky; top: 0; z-index: 5; background: var(--white);
   }
@@ -759,7 +763,7 @@
         { k: 'chk',     w: 44,  label: '' },
         { k: 'issued',  w: 120, label: 'Date' },
         { k: 'site',    w: 195, label: 'Site' },
-        { k: 'super',   w: 190, label: 'Supervisor / Sign-on Group' },
+        { k: 'super',   w: 225, label: 'Supervisor / Sign-on Group' },
         { k: 'status',  w: 125, label: 'Status' },
         { k: 'worker',  w: 140, label: 'Worker' },
         { k: 'position', w: 155, label: 'Position' },
@@ -767,7 +771,7 @@
         { k: 'project', w: 190, label: 'Project' },
         { k: 'task',    w: 300, label: 'Task' },
         { k: 'allow',   w: 200, label: 'Allowance' },
-        { k: 'times',   w: 125, label: 'Start - Finish' },
+        { k: 'times',   w: 132, label: 'Start - Finish' },
         { k: 'updated', w: 185, label: 'Last Updated' },
         { k: 'hrs',     w: 90,  label: 'Hours', num: true }
       ];
@@ -778,7 +782,7 @@
         { k: 'chk',     w: 44,  label: '' },
         { k: 'issued',  w: 145, label: 'Date' },
         { k: 'site',    w: 195, label: 'Site' },
-        { k: 'super',   w: 190, label: 'Supervisor / Sign-on Group' },
+        { k: 'super',   w: 225, label: 'Supervisor / Sign-on Group' },
         { k: 'status',  w: 125, label: 'Status' },
         { k: 'worker',  w: 140, label: 'Worker' },
         { k: 'position', w: 155, label: 'Position' },
@@ -786,7 +790,7 @@
         { k: 'project', w: 190, label: 'Project' },
         { k: 'task',    w: 300, label: 'Task' },
         { k: 'allow',   w: 200, label: 'Allowance' },
-        { k: 'times',   w: 125, label: 'Start - Finish' },
+        { k: 'times',   w: 132, label: 'Start - Finish' },
         { k: 'updated', w: 185, label: 'Last Updated' },
         { k: 'hrs',     w: 90,  label: 'Hours', num: true },
         { k: 'act',     w: 118, label: '' }
@@ -799,14 +803,14 @@
         { k: 'group',   w: 200, label: 'Worker' },
         { k: 'issued',  w: 120, label: 'Date' },
         { k: 'site',    w: 185, label: 'Site' },
-        { k: 'super',   w: 190, label: 'Supervisor / Sign-on Group' },
+        { k: 'super',   w: 225, label: 'Supervisor / Sign-on Group' },
         { k: 'status',  w: 125, label: 'Status' },
         { k: 'position', w: 155, label: 'Position' },
         { k: 'worktype', w: 130, label: 'Work Type' },
         { k: 'project', w: 180, label: 'Project' },
         { k: 'task',    w: 290, label: 'Task' },
         { k: 'allow',   w: 200, label: 'Allowance' },
-        { k: 'times',   w: 125, label: 'Start - Finish' },
+        { k: 'times',   w: 132, label: 'Start - Finish' },
         { k: 'updated', w: 185, label: 'Last Updated' },
         { k: 'hrs',     w: 90,  label: 'Hours', num: true },
         { k: 'act',     w: 118, label: '' }
@@ -957,7 +961,8 @@
       }
       // The pinned actions column has no width worth dragging.
       var grip = c.k === 'act' ? '' : '<span class="col-grip" data-grip="' + c.k + '"></span>';
-      return '<th class="col-' + c.k + (c.num ? ' num' : '') + '">' + c.label + grip + '</th>';
+      return '<th class="col-' + c.k + (c.num ? ' num' : '') + '" title="' + Shell.esc(c.label) + '">' +
+        '<span class="th-label">' + c.label + '</span>' + grip + '</th>';
     }).join('') + '</tr>';
 
     mainTable.style.minWidth = cols.reduce(function (s, c) { return s + c.w; }, 0) + 'px';
@@ -1356,6 +1361,15 @@
   scrollBox.addEventListener('scroll', syncScrollEdges);
   window.addEventListener('resize', syncScrollEdges);
 
+  /* Measured rather than guessed: the toolbar swaps for the taller selection
+     bar, so a fixed viewport offset would be wrong half the time. */
+  function sizeTableBox() {
+    scrollBox.style.maxHeight = '';
+    var top = scrollBox.getBoundingClientRect().top + window.pageYOffset;
+    scrollBox.style.maxHeight = Math.max(240, window.innerHeight - top - 24) + 'px';
+  }
+  window.addEventListener('resize', sizeTableBox);
+
   function render() {
     renderHead();
     var rows = TIMESHEETS.filter(matches);
@@ -1406,6 +1420,7 @@
 
     syncSelectAll();
     syncSelectionBar();
+    sizeTableBox();
     syncScrollEdges();
   }
 

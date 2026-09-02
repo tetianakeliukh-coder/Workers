@@ -299,14 +299,16 @@
     background: var(--white); border: 1px solid var(--grey-350);
     border-radius: 12px; overflow: hidden;
   }
-  .table-scroll { overflow-x: auto; }
+  /* The table scrolls inside its card so the header row can stay pinned —
+     same behaviour as the Timesheets screen. JS refines the max-height. */
+  .table-scroll { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 200px); }
 
   table {
     width: 100%; border-collapse: collapse;
     table-layout: fixed; min-width: 980px;
   }
   colgroup .col-name      { width: 220px; }
-  colgroup .col-id        { width: 96px; }
+  colgroup .col-id        { width: 112px; }   /* fits the "OPMS ID" header */
   colgroup .col-status    { width: 114px; }
   colgroup .col-positions { width: 280px; }
   colgroup .col-act       { width: 90px; }
@@ -333,9 +335,10 @@
     text-align: left; padding: 6px 24px 6px 16px;
     font-weight: 500; font-size: 14px; line-height: 24px;
     color: var(--text-87); letter-spacing: 0.17px;
-    white-space: nowrap;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     border-bottom: 1px solid var(--row-divider);
     background: var(--white);
+    position: sticky; top: 0; z-index: 5;
   }
   thead th:last-child { padding: 6px 16px; }
 
@@ -3018,6 +3021,19 @@
   var gsBody       = document.getElementById('gs-body');
   var gsClear      = document.getElementById('gs-clear');
   var gsChipsRow   = document.getElementById('gs-chips-row');
+  // ── Table box height, so the sticky header has something to stick to ──
+  (function () {
+    var box = document.querySelector('.table-scroll');
+    if (!box) return;
+    function sizeTableBox() {
+      box.style.maxHeight = '';
+      var top = box.getBoundingClientRect().top + window.pageYOffset;
+      box.style.maxHeight = Math.max(240, window.innerHeight - top - 24) + 'px';
+    }
+    window.addEventListener('resize', sizeTableBox);
+    sizeTableBox();
+  })();
+
   // ── Sidebar collapse (mirrors assets/shell.js; same storage key) ──
   (function () {
     var KEY = 'opms-sidebar-collapsed';
