@@ -73,7 +73,9 @@
   .col-panel-row.locked .col-chk-box { opacity: 0.4; }
   .col-panel-row.locked .col-panel-name { color: var(--grey-600); opacity: 0.75; }
 
-  td.col-task, td.col-allow { white-space: normal; line-height: 18px; }
+  td.col-task { white-space: normal; line-height: 18px; }
+  /* pre-line so each allowance keeps its own line inside the cell. */
+  td.col-allow { white-space: pre-line; line-height: 18px; }
 
   /* Timesheet tab: sheet rows lead, their jobs sit under them on a tint. */
   tr.ts-parent { cursor: pointer; }
@@ -148,6 +150,22 @@
   .sel-action:disabled { border-color: var(--grey-350); color: var(--grey-400); cursor: default; }
   .sel-action:disabled:hover { background: var(--white); }
 
+  /* Drag handle on the right edge of every resizable header cell. */
+  .col-grip {
+    position: absolute; top: 0; right: 0; width: 8px; height: 100%;
+    cursor: col-resize; user-select: none; z-index: 7;
+  }
+  .col-grip::after {
+    content: ''; position: absolute; top: 10px; bottom: 10px; right: 3px;
+    width: 2px; border-radius: 1px; background: transparent;
+  }
+  .col-grip:hover::after, .col-grip.dragging::after { background: var(--primary); }
+  body.col-resizing, body.col-resizing * { cursor: col-resize !important; user-select: none; }
+
+  .worker-link { color: var(--text-main); text-decoration: none; }
+  .worker-link:hover { color: var(--primary); text-decoration: underline; }
+  .col-act .btn-text { font-size: 14px; }
+
   /* Row kebab menu */
   .kebab-wrap { position: relative; }
 
@@ -192,6 +210,13 @@
   .cal-foot {
     margin-top: 8px; padding: 10px 16px; border-top: 1px solid var(--grey-300);
     font-size: 13px; color: var(--grey-600);
+  }
+
+  /* The table scrolls inside the card rather than with the page, so the
+     header row and the timesheet being read can stay pinned to the top. */
+  .table-scroll { max-height: calc(100vh - 180px); overflow-y: auto; }
+  .table-card thead th {
+    position: sticky; top: 0; z-index: 5; background: var(--white);
   }
 
   /* macOS hides overlay scrollbars until you scroll, which leaves no hint that
@@ -377,9 +402,9 @@
   var state = { query: '', range: 'last7', from: null, to: null, supervisor: 'all', group: 'none' };
 
   /* Columns the user has switched off. Position and Work Type ship hidden. */
-  var hiddenCols = { position: true, worktype: true };
+  var hiddenCols = { position: true, worktype: true, project: true };
   /* The frozen columns anchor the table, so they can't be switched off. */
-  var LOCKED_COLS = ['chk', 'group', 'issued', 'site', 'super', 'act'];
+  var LOCKED_COLS = ['chk', 'group', 'issued', 'site', 'super', 'hrs', 'act'];
   var selected = Object.create(null);
   /* Rows start collapsed, so an unrecorded key counts as collapsed and
      only an explicit false means a row has been opened. */
@@ -394,6 +419,16 @@
   function setCollapsed_(key, v) {
     if (state.query) searchCollapsed[key] = v; else collapsed[key] = v;
   }
+  /* Column widths the user has dragged, keyed by tab so the same column can
+     be sized differently where it carries different content. */
+  var colWidths = Object.create(null);
+  var MIN_COL_W = 64;
+  var currentCols = [], currentAllCols = [];
+  /* Child rows are built on demand: a timesheet can carry hundreds of entries,
+     and rendering every one of them for a collapsed row costs the same as
+     rendering the whole table. Key -> function returning that row's <tr>s. */
+  var childHtml = Object.create(null);
+
   var openKeys = [];       // what the Expand all button acts on, set during render
   var renderedKeys = [];   // parent rows the current render actually emitted
   var renderedSheets = Object.create(null);   // timesheet ids the render touched
@@ -724,17 +759,17 @@
         { k: 'chk',     w: 44,  label: '' },
         { k: 'issued',  w: 120, label: 'Date' },
         { k: 'site',    w: 195, label: 'Site' },
-        { k: 'super',   w: 140, label: 'Supervisor' },
+        { k: 'super',   w: 190, label: 'Supervisor / Sign-on Group' },
         { k: 'status',  w: 125, label: 'Status' },
         { k: 'worker',  w: 140, label: 'Worker' },
         { k: 'position', w: 155, label: 'Position' },
         { k: 'worktype', w: 130, label: 'Work Type' },
         { k: 'project', w: 190, label: 'Project' },
         { k: 'task',    w: 300, label: 'Task' },
-        { k: 'allow',   w: 185, label: 'Allowance' },
+        { k: 'allow',   w: 200, label: 'Allowance' },
         { k: 'times',   w: 125, label: 'Start - Finish' },
-        { k: 'hrs',     w: 80,  label: 'Hours', num: true },
-        { k: 'updated', w: 185, label: 'Last Updated' }
+        { k: 'updated', w: 185, label: 'Last Updated' },
+        { k: 'hrs',     w: 90,  label: 'Hours', num: true }
       ];
     }
 
@@ -743,18 +778,18 @@
         { k: 'chk',     w: 44,  label: '' },
         { k: 'issued',  w: 145, label: 'Date' },
         { k: 'site',    w: 195, label: 'Site' },
-        { k: 'super',   w: 140, label: 'Supervisor' },
+        { k: 'super',   w: 190, label: 'Supervisor / Sign-on Group' },
         { k: 'status',  w: 125, label: 'Status' },
         { k: 'worker',  w: 140, label: 'Worker' },
         { k: 'position', w: 155, label: 'Position' },
         { k: 'worktype', w: 130, label: 'Work Type' },
         { k: 'project', w: 190, label: 'Project' },
         { k: 'task',    w: 300, label: 'Task' },
-        { k: 'allow',   w: 185, label: 'Allowance' },
+        { k: 'allow',   w: 200, label: 'Allowance' },
         { k: 'times',   w: 125, label: 'Start - Finish' },
-        { k: 'hrs',     w: 80,  label: 'Hours', num: true },
         { k: 'updated', w: 185, label: 'Last Updated' },
-        { k: 'act',     w: 70,  label: '' }
+        { k: 'hrs',     w: 90,  label: 'Hours', num: true },
+        { k: 'act',     w: 118, label: '' }
       ];
     }
 
@@ -764,17 +799,17 @@
         { k: 'group',   w: 200, label: 'Worker' },
         { k: 'issued',  w: 120, label: 'Date' },
         { k: 'site',    w: 185, label: 'Site' },
-        { k: 'super',   w: 140, label: 'Supervisor' },
+        { k: 'super',   w: 190, label: 'Supervisor / Sign-on Group' },
         { k: 'status',  w: 125, label: 'Status' },
         { k: 'position', w: 155, label: 'Position' },
         { k: 'worktype', w: 130, label: 'Work Type' },
         { k: 'project', w: 180, label: 'Project' },
         { k: 'task',    w: 290, label: 'Task' },
-        { k: 'allow',   w: 180, label: 'Allowance' },
+        { k: 'allow',   w: 200, label: 'Allowance' },
         { k: 'times',   w: 125, label: 'Start - Finish' },
-        { k: 'hrs',     w: 80,  label: 'Hours', num: true },
         { k: 'updated', w: 185, label: 'Last Updated' },
-        { k: 'act',     w: 70,  label: '' }
+        { k: 'hrs',     w: 90,  label: 'Hours', num: true },
+        { k: 'act',     w: 118, label: '' }
       ];
     }
 
@@ -798,6 +833,9 @@
      column model rather than hard-coded pixels, so they survive width
      changes. Only the two wide tabs need it. */
   var LEFT_FROZEN = ['chk', 'group', 'issued', 'site', 'super'];
+  /* Hours is pinned beside the actions, so the total stays in view however far
+     the custom-field columns push the table sideways. */
+  var RIGHT_FROZEN = ['hrs', 'act'];
 
   function applyFrozen(cols, allCols) {
     var host = document.getElementById('frozen-cols');
@@ -814,11 +852,16 @@
     mainTable.classList.toggle('frozen', wide);
     if (!wide) { host.textContent = rules.join('\n'); return; }
 
+    /* Stacking, from the back: ordinary cells, frozen cells (2), the pinned
+       timesheet row (3) and its own frozen cells (4), then the header (5) and
+       the header's frozen cells (6). */
+    var frozenKeys = [];
     var offset = 0, lastLeft = null;
     cols.forEach(function (c) {
       if (LEFT_FROZEN.indexOf(c.k) === -1) return;
-      rules.push('.frozen th.col-' + c.k + ',.frozen td.col-' + c.k +
-        '{position:sticky;left:' + offset + 'px;z-index:2;background:inherit;}');
+      rules.push('.frozen th.col-' + c.k + '{position:sticky;left:' + offset + 'px;z-index:6;background:inherit;}');
+      rules.push('.frozen td.col-' + c.k + '{position:sticky;left:' + offset + 'px;z-index:2;background:inherit;}');
+      frozenKeys.push(c.k);
       offset += c.w;
       lastLeft = c.k;
     });
@@ -832,8 +875,27 @@
         '{content:"";position:absolute;top:0;bottom:0;left:100%;width:1px;pointer-events:none;' +
         'background:var(--grey-400);}');
     }
-    rules.push('.frozen th.col-act,.frozen td.col-act' +
-      '{position:sticky;right:0;z-index:2;background:inherit;}');
+    // Right-hand offsets accumulate from the outer edge inwards.
+    var rOffset = 0;
+    for (var i = cols.length - 1; i >= 0; i--) {
+      var rc = cols[i];
+      if (RIGHT_FROZEN.indexOf(rc.k) === -1) continue;
+      rules.push('.frozen th.col-' + rc.k + '{position:sticky;right:' + rOffset + 'px;z-index:6;background:inherit;}');
+      rules.push('.frozen td.col-' + rc.k + '{position:sticky;right:' + rOffset + 'px;z-index:2;background:inherit;}');
+      frozenKeys.push(rc.k);
+      rOffset += rc.w;
+    }
+
+    /* A timesheet row stays pinned under the header while its entries scroll
+       past; the next timesheet, painting later, slides over and replaces it. */
+    // Ceil, so a fractional header height can't leave a hairline of scrolled
+    // content showing between the header and the pinned row.
+    var headH = Math.ceil(mainThead.getBoundingClientRect().height) || 41;
+    rules.push('#tbody tr.ts-parent > td{position:sticky;top:' + headH + 'px;z-index:3;background:inherit;}');
+    frozenKeys.forEach(function (k) {
+      rules.push('#tbody tr.ts-parent > td.col-' + k + '{z-index:4;}');
+    });
+
     host.textContent = rules.join('\n');
   }
 
@@ -877,7 +939,14 @@
 
   function renderHead() {
     var allCols = columnsFor(state.group);
+    allCols.forEach(function (c) {
+      var w = colWidths[state.group + ':' + c.k];
+      if (w) c.w = w;
+    });
     var cols = allCols.filter(function (c) { return !hiddenCols[c.k]; });
+    currentCols = cols;
+    currentAllCols = allCols;
+
     mainColgroup.innerHTML = cols.map(function (c) {
       return '<col class="col-' + c.k + '" style="width:' + c.w + 'px" />';
     }).join('');
@@ -886,7 +955,9 @@
       if (c.k === 'chk') {
         return '<th class="col-chk"><span class="chk" id="chk-all" role="checkbox" tabindex="0" aria-checked="false" aria-label="Select all"></span></th>';
       }
-      return '<th class="col-' + c.k + (c.num ? ' num' : '') + '">' + c.label + '</th>';
+      // The pinned actions column has no width worth dragging.
+      var grip = c.k === 'act' ? '' : '<span class="col-grip" data-grip="' + c.k + '"></span>';
+      return '<th class="col-' + c.k + (c.num ? ' num' : '') + '">' + c.label + grip + '</th>';
     }).join('') + '</tr>';
 
     mainTable.style.minWidth = cols.reduce(function (s, c) { return s + c.w; }, 0) + 'px';
@@ -895,10 +966,63 @@
     return cols.length;
   }
 
+  /* ─── Column resizing ─────────────────────────────────────────────────
+     Widths live on the <col> elements, so a drag only has to touch those and
+     the frozen offsets — the rows are left alone. */
+  var drag = null;
+
+  function applyLiveWidths() {
+    mainTable.style.minWidth = currentCols.reduce(function (sum, c) { return sum + c.w; }, 0) + 'px';
+    applyFrozen(currentCols, currentAllCols);
+  }
+
+  mainThead.addEventListener('mousedown', function (e) {
+    var grip = e.target.closest('[data-grip]');
+    if (!grip) return;
+    e.preventDefault();
+    var key = grip.getAttribute('data-grip');
+    var col = mainColgroup.querySelector('col.col-' + key);
+    if (!col) return;
+    drag = { key: key, startX: e.clientX, startW: col.getBoundingClientRect().width, col: col, grip: grip };
+    grip.classList.add('dragging');
+    document.body.classList.add('col-resizing');
+  });
+
+  document.addEventListener('mousemove', function (e) {
+    if (!drag) return;
+    var w = Math.max(MIN_COL_W, Math.round(drag.startW + (e.clientX - drag.startX)));
+    colWidths[state.group + ':' + drag.key] = w;
+    drag.col.style.width = w + 'px';
+    currentCols.forEach(function (c) { if (c.k === drag.key) c.w = w; });
+    applyLiveWidths();
+  });
+
+  document.addEventListener('mouseup', function () {
+    if (!drag) return;
+    drag.grip.classList.remove('dragging');
+    document.body.classList.remove('col-resizing');
+    drag = null;
+    syncScrollEdges();
+  });
+
   /* ─── Rendering ───────────────────────────────────────────────────── */
   function statusChip(status) {
     return '<span class="status-sec status-sec-' + STATUS_COLOR[status] + '">' +
       Shell.highlight(status, state.query) + '</span>';
+  }
+
+  /* A finalised timesheet is read-only, so its row offers View; anything else
+     is still editable. Both open the same timesheet detail page. */
+  function openBtn(t) {
+    return '<button class="btn-text row-open" type="button" data-open="' + t.id + '">' +
+      (t.status === 'Finalised' ? 'View' : 'Edit') + '</button>';
+  }
+  function kebabBtn(id) {
+    return '<button class="kebab" type="button" data-kebab="' + Shell.esc(id) + '" aria-label="More actions">' +
+      '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg></button>';
+  }
+  function actionCell(inner) {
+    return '<td class="col-act"><span class="action-cell">' + inner + '</span></td>';
   }
 
   function updatedCell(t) {
@@ -939,7 +1063,12 @@
   function taskPath(a, fields) {
     return fields.map(function (f, i) { return a.levels[i]; }).filter(Boolean).join(' | ');
   }
-  function allowText(a) { return [a.allow1, a.allow2].filter(Boolean).join(', '); }
+  /* Name and units together, one allowance per line. Clients without any
+     allowances configured never see this column at all. */
+  function allowText(a) {
+    return [a.allow1 ? a.allow1 + ', ' + a.qty1 : '',
+            a.allow2 ? a.allow2 + ', ' + a.qty2 : ''].filter(Boolean).join('\n');
+  }
   /* Finishing before you started means the shift ran past midnight. */
   function timesText(a) {
     if (!a.start || !a.finish) return '';
@@ -1007,46 +1136,45 @@
         '<td class="col-group"><span class="ts-parent-main">' +
           '<span class="ts-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
           '<span class="avatar avatar-sm" style="background:' + g.color + '">' + Shell.initials(name) + '</span>' +
-          Shell.highlight(name, state.query) + '</span></td>' +
+          '<a class="worker-link" href="#" data-worker="' + Shell.esc(name) + '">' +
+            Shell.highlight(name, state.query) + '</a></span></td>' +
         '<td class="col-issued ts-count">' + jobs.length + '</td>' +
         '<td class="col-site ts-count">' + tally(sites) + '</td>' +
         '<td class="col-super"></td>' +
-        '<td></td>' +
+        '<td class="col-status"></td>' +
         '<td class="col-position">' + Shell.esc(position) + '</td>' +
         '<td class="col-worktype"></td>' +
-        '<td class="ts-count">' + tally(projects) + '</td>' +
-        '<td class="ts-count">' + tally(tasks) + '</td>' +
-        '<td class="ts-count">' + tally(allowances) + '</td>' +
-        '<td></td>' +
+        '<td class="col-project ts-count">' + tally(projects) + '</td>' +
+        '<td class="col-task ts-count">' + tally(tasks) + '</td>' +
+        '<td class="col-allow ts-count">' + tally(allowances) + '</td>' +
+        '<td class="col-times"></td>' +
+        '<td class="col-updated"></td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
-        '<td></td>' +
-        '<td class="col-act"><span class="action-cell">' +
-          '<button class="kebab" type="button" data-kebab="' + Shell.esc(name) + '" aria-label="More actions">' +
-            '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
-          '</button>' +
-        '</span></td>' +
+        actionCell(kebabBtn(name)) +
       '</tr>');
 
-      jobs.forEach(function (j) {
-        out.push('<tr class="ts-job' + (isCollapsed ? ' hidden' : '') +
-              '" data-child="' + Shell.esc(name) + '">' +
+      childHtml[name] = function () {
+        return jobs.map(function (j) {
+          return '<tr class="ts-job" data-child="' + Shell.esc(name) + '">' +
           '<td class="col-chk"></td>' +
           '<td class="col-group"></td>' +
           '<td class="col-issued">' + Shell.highlight(fmtDate(j.t.issued), state.query) + '</td>' +
           '<td class="col-site" title="' + Shell.esc(j.t.site) + '">' + Shell.highlight(j.t.site, state.query) + '</td>' +
           '<td class="col-super">' + Shell.highlight(j.t.supervisor, state.query) + '</td>' +
-          '<td>' + statusChip(j.t.status) + '</td>' +
+          '<td class="col-status">' + statusChip(j.t.status) + '</td>' +
           jobCell(j.position, 'col-position') +
           jobCell(j.workType, 'col-worktype') +
-          jobCell(j.a.project) +
+          jobCell(j.a.project, 'col-project') +
           jobCell(taskPath(j.a, j.fields), 'col-task') +
           jobCell(allowText(j.a), 'col-allow') +
-          jobCell(timesText(j.a)) +
+          jobCell(timesText(j.a), 'col-times') +
+          '<td class="col-updated">' + updatedCell(j.t) + '</td>' +
           '<td class="col-hrs">' + fmtHours(j.a.hours) + '</td>' +
-          '<td>' + updatedCell(j.t) + '</td>' +
-          '<td class="col-act"></td>' +
-        '</tr>');
-      });
+          actionCell(openBtn(j.t)) +
+        '</tr>';
+        }).join('');
+      };
+      if (!isCollapsed) out.push(childHtml[name]());
     });
     return out.join('');
   }
@@ -1101,37 +1229,37 @@
           Shell.highlight(fmtDate(t.issued), q) + '</span></td>' +
         '<td class="col-site" title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
         '<td class="col-super">' + Shell.highlight(t.supervisor, q) + '</td>' +
-        '<td>' + statusChip(t.status) + '</td>' +
-        '<td class="ts-count">' + tally(people) + '</td>' +
+        '<td class="col-status">' + statusChip(t.status) + '</td>' +
+        '<td class="col-worker ts-count">' + tally(people) + '</td>' +
         '<td class="col-position"></td><td class="col-worktype"></td>' +
-        '<td class="ts-count">' + tally(projects) + '</td>' +
-        '<td class="ts-count">' + tally(tasks) + '</td>' +
-        '<td class="ts-count">' + tally(allowances) + '</td>' +
-        '<td></td>' +
+        '<td class="col-project ts-count">' + tally(projects) + '</td>' +
+        '<td class="col-task ts-count">' + tally(tasks) + '</td>' +
+        '<td class="col-allow ts-count">' + tally(allowances) + '</td>' +
+        '<td class="col-times"></td>' +
+        '<td class="col-updated">' + updatedCell(t) + '</td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
-        '<td>' + updatedCell(t) + '</td>' +
-        '<td class="col-act"><span class="action-cell">' +
-          '<button class="kebab" type="button" data-kebab="' + t.id + '" aria-label="More actions">' +
-            '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
-          '</button>' +
-        '</span></td>' +
+        actionCell(openBtn(t) + kebabBtn(t.id)) +
       '</tr>');
 
-      jobs.forEach(function (j) {
-        out.push('<tr class="ts-job' + (isCollapsed ? ' hidden' : '') + '" data-child="' + t.id + '">' +
+      childHtml[t.id] = function () {
+        return jobs.map(function (j) {
+          return '<tr class="ts-job" data-child="' + t.id + '">' +
           '<td class="col-chk"></td><td class="col-issued"></td>' +
-          '<td class="col-site"></td><td class="col-super"></td><td></td>' +
-          jobCell(j.w.worker) +
+          '<td class="col-site"></td><td class="col-super"></td><td class="col-status"></td>' +
+          jobCell(j.w.worker, 'col-worker') +
           jobCell(j.w.position, 'col-position') +
           jobCell(j.w.workType, 'col-worktype') +
-          jobCell(j.a.project) +
+          jobCell(j.a.project, 'col-project') +
           jobCell(taskPath(j.a, fields), 'col-task') +
           jobCell(allowText(j.a), 'col-allow') +
-          jobCell(timesText(j.a)) +
+          jobCell(timesText(j.a), 'col-times') +
+          '<td class="col-updated"></td>' +
           '<td class="col-hrs">' + fmtHours(j.a.hours) + '</td>' +
-          '<td></td><td></td>' +
-        '</tr>');
-      });
+          '<td class="col-act"></td>' +
+        '</tr>';
+        }).join('');
+      };
+      if (!isCollapsed) out.push(childHtml[t.id]());
     });
     return out.join('');
   }
@@ -1161,17 +1289,17 @@
             '<td class="col-issued">' + Shell.highlight(fmtDate(t.issued), q) + '</td>' +
             '<td class="col-site" title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
             cell(t.supervisor, 'col-super') +
-            '<td>' + statusChip(t.status) + '</td>' +
-            cell(w.worker) +
+            '<td class="col-status">' + statusChip(t.status) + '</td>' +
+            cell(w.worker, 'col-worker') +
             cell(w.position, 'col-position') +
             cell(w.workType, 'col-worktype') +
-            cell(a.project) +
+            cell(a.project, 'col-project') +
             '<td class="col-task" title="' + Shell.esc(path) + '">' +
               (path ? Shell.highlight(path, q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
             cell(allow, 'col-allow') +
-            cell(times) +
+            cell(times, 'col-times') +
+            '<td class="col-updated">' + updatedCell(t) + '</td>' +
             '<td class="col-hrs">' + fmtHours(a.hours) + '</td>' +
-            '<td>' + updatedCell(t) + '</td>' +
           '</tr>');
         });
       });
@@ -1233,6 +1361,7 @@
     var rows = TIMESHEETS.filter(matches);
     renderedKeys = [];
     renderedSheets = Object.create(null);
+    childHtml = Object.create(null);
     var html = '';
 
     if (state.group === 'flat') {
@@ -1354,14 +1483,18 @@
   /* ─── Table interactions ──────────────────────────────────────────── */
   tbody.addEventListener('click', function (e) {
     var sheetRow = e.target.closest('.ts-parent');
-    if (sheetRow && !e.target.closest('[data-row-chk], [data-worker-chk], .kebab')) {
+    if (sheetRow && !e.target.closest('[data-row-chk], [data-worker-chk], [data-open], [data-worker], .kebab')) {
       var sid = sheetRow.getAttribute('data-sheet');
       var nowCollapsed = !isCollapsed_(sid);
       setCollapsed_(sid, nowCollapsed);
       sheetRow.classList.toggle('collapsed', nowCollapsed);
-      tbody.querySelectorAll('tr[data-child="' + sid + '"]').forEach(function (tr) {
-        tr.classList.toggle('hidden', nowCollapsed);
-      });
+      var kids = tbody.querySelectorAll('tr[data-child="' + sid + '"]');
+      if (!nowCollapsed && !kids.length && childHtml[sid]) {
+        // First time this row is opened — build its entries now.
+        sheetRow.insertAdjacentHTML('afterend', childHtml[sid]());
+      } else {
+        kids.forEach(function (tr) { tr.classList.toggle('hidden', nowCollapsed); });
+      }
       syncExpandBtn();
       return;
     }
@@ -1383,6 +1516,19 @@
       var key = groupBtn.closest('.group-row').getAttribute('data-group');
       setCollapsed_(key, !isCollapsed_(key));
       render();
+      return;
+    }
+
+    var open = e.target.closest('[data-open]');
+    if (open) {
+      Shell.snackbar('Timesheet ' + open.getAttribute('data-open') + ' — detail page not designed yet.');
+      return;
+    }
+
+    var wlink = e.target.closest('[data-worker]');
+    if (wlink) {
+      e.preventDefault();
+      Shell.snackbar(wlink.getAttribute('data-worker') + ' — worker details not designed yet.');
       return;
     }
 
@@ -1561,8 +1707,11 @@
           levels: fields.map(function (f, idx) {
             return idx < depth ? pick(f.values, k, 1 + idx * 2) : '';
           }),
+          // Each allowance carries the number of units claimed against it.
           allow1: nAllow >= 1 ? pick(E_ALLOW, k, 2) : '',
+          qty1:   1 + ((seed + k) % 3),
           allow2: nAllow >= 2 ? pick(E_ALLOW, k + 2, 2) : '',
+          qty2:   1 + ((seed + k) % 2),
           start:  pat.times ? t[0] : '',
           finish: pat.times ? t[1] : '',
           hours:  pat.times ? diffHours(t[0], t[1]) : pat.hours
