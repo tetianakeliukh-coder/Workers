@@ -66,12 +66,6 @@
     transform: rotate(-45deg) translateY(-1px); display: block;
   }
   .col-panel-name { font-size: 14px; color: var(--text-main); }
-  /* Frozen columns can't be hidden — the table's anchor points.
-     Kept checked so the state reads as "on", dimmed so it reads as locked. */
-  .col-panel-row.locked { cursor: not-allowed; }
-  .col-panel-row.locked:hover { background: transparent; }
-  .col-panel-row.locked .col-chk-box { opacity: 0.4; }
-  .col-panel-row.locked .col-panel-name { color: var(--grey-600); opacity: 0.75; }
 
   td.col-task { white-space: normal; line-height: 18px; }
   /* pre-line so each allowance keeps its own line inside the cell. */
@@ -903,16 +897,17 @@
     host.textContent = rules.join('\n');
   }
 
+  /* Frozen columns anchor the table and can't be switched off, so they are
+     left out of the list entirely rather than shown as dead rows. */
   function renderColPanel(allCols) {
     var panel = document.getElementById('col-panel');
     panel.innerHTML = '<div class="col-panel-section">Show columns</div>' +
-      allCols.filter(function (c) { return c.label; }).map(function (c) {
-        var locked = LOCKED_COLS.indexOf(c.k) !== -1;
+      allCols.filter(function (c) {
+        return c.label && LOCKED_COLS.indexOf(c.k) === -1;
+      }).map(function (c) {
         var on = !hiddenCols[c.k];
-        return '<label class="col-panel-row' + (locked ? ' locked' : '') + '"' +
-            (locked ? ' title="Always shown"' : '') + '>' +
-          '<input type="checkbox" data-col="' + c.k + '"' + (on ? ' checked' : '') +
-            (locked ? ' disabled' : '') + ' />' +
+        return '<label class="col-panel-row">' +
+          '<input type="checkbox" data-col="' + c.k + '"' + (on ? ' checked' : '') + ' />' +
           '<span class="col-chk-box"></span>' +
           '<span class="col-panel-name">' + c.label + '</span>' +
         '</label>';
