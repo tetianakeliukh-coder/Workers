@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Documents — James Hetfield — OPMS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/shell.css" />
+<style>
+  /* ─── Worker documents ──────────────────────────────────────────────
+     A single worker's document list. The worker page itself doesn't exist
+     yet, so the breadcrumb carries the hierarchy on its own. */
+
+  .crumbs { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; }
+  .crumbs a { color: var(--grey-700); text-decoration: none; }
+  .crumbs a:hover { color: var(--primary); text-decoration: underline; }
+  .crumbs .sep { color: var(--grey-400); display: flex; }
+  .crumbs .current { color: var(--text-main); font-weight: 500; }
+
+  .doc-title {
+    font-family: var(--fs-roboto); font-weight: 700; font-size: 28px;
+    line-height: 34px; letter-spacing: 0.2px; color: var(--black);
+  }
+
+  .doc-search { width: 215px; }
+  .doc-search .search-bar { height: 36px; }
+
+  /* ─── Tabs ─────────────────────────────────────────────────────── */
+  .tabs { display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--grey-300); }
+  .tab {
+    position: relative; background: none; border: none; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; line-height: 18px; font-weight: 400;
+    color: var(--grey-700); padding: 10px 2px 12px; white-space: nowrap;
+  }
+  .tab:hover { color: var(--text-main); }
+  .tab.active { color: var(--primary); font-weight: 500; }
+  .tab.active::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px;
+    height: 2px; background: var(--primary); border-radius: 1px;
+  }
+
+  .doc-section { display: flex; flex-direction: column; gap: 12px; }
+  .doc-section + .doc-section { margin-top: 20px; }
+  .section-title {
+    font-size: 16px; line-height: 22px; font-weight: 600; color: var(--text-main);
+  }
+
+  /* ─── Table ────────────────────────────────────────────────────── */
+  .doc-table { min-width: 1420px; }
+  .doc-table th, .doc-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .doc-table td { color: var(--text-main); }
+  .doc-table td.muted { color: var(--grey-700); }
+  .doc-table th.col-act, .doc-table td.col-act { text-align: right; }
+
+  /* The rows needing attention carry a warm wash rather than a status chip. */
+  #outstanding tbody tr { background: var(--white); }
+  #outstanding tbody tr.flagged, .doc-card tbody tr.flagged { background: #fff7ec; }
+  .doc-card tbody tr:hover { background: #fafbfe; }
+  .doc-card tbody tr.flagged:hover { background: #fdf1e0; }
+
+  .you-chip {
+    display: inline-flex; align-items: center; height: 18px; padding: 0 6px;
+    margin-left: 6px; border-radius: 4px; background: #5577ff;
+    font-size: 11px; font-weight: 500; line-height: 18px; color: var(--white);
+    vertical-align: 1px;
+  }
+
+  .reason { display: inline-flex; align-items: center; gap: 8px; color: var(--grey-700); }
+  .reason svg { flex-shrink: 0; color: var(--grey-700); }
+  .reason .note { color: #e88f1a; }
+  .reason .sent { color: #17b26a; }
+
+  .row-actions { display: inline-flex; align-items: center; gap: 10px; justify-content: flex-end; }
+  .row-actions .btn-text { font-size: 14px; }
+
+  .cell-empty { color: var(--grey-400); }
+
+  /* ─── Tabs with nothing designed behind them yet ───────────────── */
+  .tab-panel { display: none; }
+  .tab-panel.visible { display: block; }
+  .panel-empty {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 72px 24px; border: 1px solid var(--grey-350); border-radius: 12px;
+    background: var(--white); text-align: center;
+  }
+  .panel-empty .t { font-size: 16px; font-weight: 600; color: var(--text-main); }
+  .panel-empty .s { font-size: 14px; color: var(--grey-600); }
+</style>
+</head>
+<body data-module="workers">
+
+<div class="page">
+  <aside id="shell-sidebar"></aside>
+
+  <main class="main">
+    <div class="content">
+
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <a id="bc-workers" href="workers/index.html">Workers</a>
+        <span class="sep" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <a href="#" id="bc-worker">James Hetfield</a>
+        <span class="sep" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="current" aria-current="page">Documents</span>
+      </nav>
+
+      <h1 class="doc-title">Documents</h1>
+
+      <div class="doc-search search-wrap">
+        <label class="search-bar">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <input class="search-input-el" id="search" type="text" placeholder="Search" autocomplete="off" />
+          <button class="search-clear" id="search-clear" type="button" aria-label="Clear search">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+        </label>
+      </div>
+
+      <div class="tabs" id="tabs" role="tablist">
+        <button class="tab active" type="button" role="tab" data-tab="outstanding">Outstanding Docs</button>
+        <button class="tab" type="button" role="tab" data-tab="completed">Completed</button>
+        <button class="tab" type="button" role="tab" data-tab="archived">Archived</button>
+      </div>
+
+      <div class="tab-panel visible" id="panel-outstanding"></div>
+
+      <div class="tab-panel" id="panel-completed">
+        <div class="panel-empty">
+          <span class="t">Completed documents</span>
+          <span class="s">This tab hasn't been designed yet.</span>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="panel-archived">
+        <div class="panel-empty">
+          <span class="t">Archived documents</span>
+          <span class="s">This tab hasn't been designed yet.</span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ─── Icons for the Outstanding Reason column ─────────────────────── */
+  var S = 'stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"';
+  function icon(paths, cls) {
+    return '<svg class="' + (cls || '') + '" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' + paths + '</svg>';
+  }
+  var ICONS = {
+    rejected:   icon('<circle cx="6.5" cy="5" r="2.5" ' + S + '/><path d="M2 13.5c0-2.2 2-4 4.5-4" ' + S + '/><path d="M10.5 9.5l3.5 3.5M14 9.5l-3.5 3.5" ' + S + '/>'),
+    review:     icon('<circle cx="6.5" cy="5" r="2.5" ' + S + '/><path d="M2 13.5c0-2.2 2-4 4.5-4" ' + S + '/><circle cx="11.5" cy="11" r="2.5" ' + S + '/><path d="M13.4 12.9L15 14.5" ' + S + '/>'),
+    upload:     icon('<path d="M3.5 2h5L12.5 6v8h-9V2z" ' + S + '/><path d="M8 11.5V7.5M6.2 9.3L8 7.5l1.8 1.8" ' + S + '/>'),
+    link:       icon('<path d="M6.5 9.5a2.8 2.8 0 0 0 4 0l2-2a2.8 2.8 0 0 0-4-4l-.8.8" ' + S + '/><path d="M9.5 6.5a2.8 2.8 0 0 0-4 0l-2 2a2.8 2.8 0 0 0 4 4l.8-.8" ' + S + '/>'),
+    expiring:   icon('<circle cx="8" cy="8.5" r="5.5" ' + S + '/><path d="M8 5.5v3.3l2.2 1.4" ' + S + '/>'),
+    expired:    icon('<path d="M3.5 2h5L12.5 6v8h-9V2z" ' + S + '/><path d="M6.3 8.3l3.4 3.4M9.7 8.3l-3.4 3.4" ' + S + '/>'),
+    note:       icon('<path d="M13.5 8.5a5 5 0 0 1-7.2 4.5L3 14l1.1-3.2A5 5 0 1 1 13.5 8.5z" ' + S + '/><circle cx="12.8" cy="3.6" r="2.2" fill="currentColor"/>', 'note'),
+    sent:       icon('<rect x="2" y="3.5" width="12" height="9" rx="1.5" ' + S + '/><path d="M2.5 4.5L8 8.5l5.5-4" ' + S + '/>', 'sent')
+  };
+
+  var REASONS = {
+    'Rejected':       ICONS.rejected,
+    'Pending Review': ICONS.review,
+    'Pending Upload': ICONS.upload,
+    'Complete Form':  ICONS.link,
+    'About to Expire': ICONS.expiring,
+    'Expired':        ICONS.expired
+  };
+
+  /* ─── Mock data ───────────────────────────────────────────────────
+     James Hetfield's documents, as drawn. "flag" is the warm row wash;
+     "note" is the rejection comment, "sent" the form already emailed. */
+  var MANDATORY = 'Mandatory, Legal, Development';
+
+  var OUTSTANDING = [
+    { doc: 'Drivers licence',     sub: 'Sub-type', expiry: '1 May 2025', level: MANDATORY,     who: 'J. Sith', you: true,  type: 'Workflow',     reason: 'Rejected',        note: true, action: 'Review',        flag: true },
+    { doc: 'Drivers licence',     sub: 'Sub-type', expiry: '3 May 2025', level: 'Mandatory',   who: 'J. Sith', you: true,  type: 'Workflow',     reason: 'Pending Review',              action: 'Review',        flag: true },
+    { doc: 'Passport',            sub: 'Sub-type', expiry: '7 May 2025', level: 'Legal',       who: 'E. Stone',            type: 'Upload',       reason: 'Pending Upload',              action: 'Upload' },
+    { doc: 'Passport',            sub: 'Sub-type', expiry: '1 May 2025', level: 'Development', who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',               action: 'Complete Form' },
+    { doc: 'Passport',            sub: 'Sub-type', expiry: '1 May 2025', level: MANDATORY,     who: 'E. Stone',            type: 'Upload',       reason: 'About to Expire',             action: 'Review' },
+    { doc: 'Employer Feedback 1', sub: 'Sub-type', expiry: '',           level: 'HR',          who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',               action: 'Send Link' },
+    { doc: 'Employer Feedback 2', sub: 'Sub-type', expiry: '',           level: 'HR',          who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',  sent: true,  action: 'Review' },
+    { doc: 'HWRL',                sub: 'Sub-type', expiry: '1 May 2025', level: MANDATORY,     who: '',                    type: 'Upload',       reason: 'Expired',                     action: 'Upload' }
+  ];
+
+  var NON_OUTSTANDING = [
+    { doc: 'Drivers licence', sub: 'Sub-type', expiry: '1 May 2025',  level: MANDATORY, who: 'J. Sith', you: true, type: 'Workflow',     reason: 'Rejected',       note: true, action: 'Review', flag: true },
+    { doc: 'Passport',        sub: 'Sub-type', expiry: '12 May 2025', level: 'Legal',   who: 'E. Stone',           type: 'Upload',       reason: 'Pending Upload',             action: 'Upload' },
+    { doc: 'HWRL',            sub: 'Sub-type', expiry: '',            level: 'HR',      who: 'E. Stone',           type: 'External URL', reason: 'Complete Form',              action: 'Send Link' }
+  ];
+
+  var COLS = [
+    { k: 'doc',     w: 230, label: 'Document Type' },
+    { k: 'sub',     w: 200, label: 'Document Sub-Type' },
+    { k: 'expiry',  w: 140, label: 'Expiry Date' },
+    { k: 'level',   w: 215, label: 'Level' },
+    { k: 'who',     w: 160, label: 'Assigned to' },
+    { k: 'type',    w: 150, label: 'Type' },
+    { k: 'reason',  w: 235, label: 'Outstanding Reason' },
+    { k: 'act',     w: 170, label: 'Actions' }
+  ];
+
+  var state = { query: '' };
+  var panel = document.getElementById('panel-outstanding');
+
+  function cell(v, q) {
+    return v ? Shell.highlight(v, q) : '<span class="cell-empty">&ndash;</span>';
+  }
+
+  function rowHtml(r, q) {
+    var reason = (REASONS[r.reason] || '') + '<span>' + Shell.highlight(r.reason, q) + '</span>' +
+      (r.note ? ICONS.note : '') + (r.sent ? ICONS.sent : '');
+    return '<tr class="' + (r.flag ? 'flagged' : '') + '">' +
+      '<td class="col-doc">' + Shell.highlight(r.doc, q) + '</td>' +
+      '<td class="col-sub muted">' + cell(r.sub, q) + '</td>' +
+      '<td class="col-expiry">' + cell(r.expiry, q) + '</td>' +
+      '<td class="col-level" title="' + Shell.esc(r.level) + '">' + cell(r.level, q) + '</td>' +
+      '<td class="col-who">' + (r.who ? Shell.highlight(r.who, q) : '<span class="cell-empty">&ndash;</span>') +
+        (r.you ? '<span class="you-chip">You</span>' : '') + '</td>' +
+      '<td class="col-type">' + cell(r.type, q) + '</td>' +
+      '<td class="col-reason"><span class="reason">' + reason + '</span></td>' +
+      '<td class="col-act"><span class="row-actions">' +
+        '<button class="btn-text" type="button" data-action="' + Shell.esc(r.action) + '">' + r.action + '</button>' +
+        '<button class="kebab" type="button" data-kebab="' + Shell.esc(r.doc) + '" aria-label="More actions">' +
+          '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
+        '</button>' +
+      '</span></td>' +
+    '</tr>';
+  }
+
+  function matches(r, q) {
+    if (!q) return true;
+    var hay = [r.doc, r.sub, r.expiry, r.level, r.who, r.type, r.reason];
+    return hay.some(function (v) { return v && v.toLowerCase().indexOf(q) !== -1; });
+  }
+
+  function tableHtml(rows, q) {
+    return '<div class="table-card"><div class="table-scroll"><table class="doc-table">' +
+      '<colgroup>' + COLS.map(function (c) { return '<col class="col-' + c.k + '" style="width:' + c.w + 'px" />'; }).join('') + '</colgroup>' +
+      '<thead><tr>' + COLS.map(function (c) { return '<th class="col-' + c.k + '">' + c.label + '</th>'; }).join('') + '</tr></thead>' +
+      '<tbody>' + rows.map(function (r) { return rowHtml(r, q); }).join('') + '</tbody>' +
+    '</table></div></div>';
+  }
+
+  function sectionHtml(title, rows, q, id) {
+    if (!rows.length) return '';
+    return '<div class="doc-section" id="' + id + '">' +
+      '<div class="section-title">' + title + ' (' + rows.length + ')</div>' +
+      tableHtml(rows, q) +
+    '</div>';
+  }
+
+  function render() {
+    var q = state.query.toLowerCase();
+    var a = OUTSTANDING.filter(function (r) { return matches(r, q); });
+    var b = NON_OUTSTANDING.filter(function (r) { return matches(r, q); });
+
+    if (!a.length && !b.length) {
+      panel.innerHTML = '<div class="panel-empty">' +
+        '<span class="t">No documents found</span>' +
+        '<span class="s">Nothing matches &ldquo;' + Shell.esc(state.query) + '&rdquo;.</span></div>';
+      return;
+    }
+    panel.innerHTML =
+      sectionHtml('Outstanding Pending Docs', a, state.query, 'outstanding') +
+      sectionHtml('Non &ndash; outstanding Pending Docs', b, state.query, 'non-outstanding');
+  }
+
+  /* ─── Search ──────────────────────────────────────────────────────── */
+  var searchEl = document.getElementById('search');
+  var clearBtn = document.getElementById('search-clear');
+  searchEl.addEventListener('input', function () {
+    state.query = this.value.trim();
+    clearBtn.classList.toggle('visible', this.value.length > 0);
+    render();
+  });
+  clearBtn.addEventListener('click', function () {
+    searchEl.value = '';
+    state.query = '';
+    clearBtn.classList.remove('visible');
+    searchEl.focus();
+    render();
+  });
+
+  /* ─── Tabs ────────────────────────────────────────────────────────── */
+  document.getElementById('tabs').addEventListener('click', function (e) {
+    var tab = e.target.closest('.tab');
+    if (!tab) return;
+    this.querySelectorAll('.tab').forEach(function (t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    var key = tab.getAttribute('data-tab');
+    document.querySelectorAll('.tab-panel').forEach(function (p) {
+      p.classList.toggle('visible', p.id === 'panel-' + key);
+    });
+  });
+
+  /* ─── Row actions — the screens behind them aren't designed yet ──── */
+  panel.addEventListener('click', function (e) {
+    var act = e.target.closest('[data-action]');
+    if (act) { Shell.snackbar(act.getAttribute('data-action') + ' — flow not designed yet.'); return; }
+    var kebab = e.target.closest('[data-kebab]');
+    if (kebab) { Shell.snackbar('Row actions for ' + kebab.getAttribute('data-kebab') + ' — menu not designed yet.'); }
+  });
+
+  /* The Workers crumb points wherever the shell's own nav points, so the
+     deployed copy (which rewrites that href) stays correct. */
+  var workersNav = (Shell.nav || []).filter(function (n) { return n.id === 'workers'; })[0];
+  if (workersNav && workersNav.href) document.getElementById('bc-workers').href = workersNav.href;
+
+  document.getElementById('bc-worker').addEventListener('click', function (e) {
+    e.preventDefault();
+    Shell.snackbar('James Hetfield — worker page not designed yet.');
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
