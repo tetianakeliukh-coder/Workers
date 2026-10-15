@@ -154,6 +154,99 @@
   .link-modal .modal-footer-actions { gap: 12px; }
   .btn-primary:disabled { background: var(--grey-350); cursor: default; }
   .btn-primary:disabled:hover { background: var(--grey-350); }
+  /* ─── Sent marker tooltip ──────────────────────────────────────── */
+  .doc-table td.col-reason { overflow: visible; }
+  .tip { position: relative; display: inline-flex; }
+  .tip-bubble {
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    white-space: nowrap; padding: 6px 10px; border-radius: 6px;
+    background: var(--white); border: 1px solid var(--grey-350); box-shadow: var(--shadow-dropdown);
+    font-size: 12px; line-height: 16px; color: var(--text-main);
+    opacity: 0; pointer-events: none; transition: opacity var(--t-fast); z-index: 40;
+  }
+  .tip:hover .tip-bubble, .tip:focus-within .tip-bubble { opacity: 1; }
+
+  /* ─── Manage external links ────────────────────────────────────── */
+  .modal.manage-modal { max-width: 760px; width: 100%; }
+  .manage-modal .modal-header { align-items: center; gap: 12px; }
+  .manage-modal #manage-create { margin-left: auto; }
+  .manage-modal .modal-body { padding: 20px 24px 24px; }
+
+  .link-grid { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .link-grid th {
+    text-align: left; padding: 0 12px 10px; font-size: 12px; font-weight: 500;
+    letter-spacing: 0.3px; text-transform: uppercase; color: var(--grey-600);
+    border-bottom: 1px solid var(--grey-300); white-space: nowrap;
+  }
+  .link-grid td { padding: 12px; color: var(--text-main); border-bottom: 1px solid var(--grey-200); vertical-align: middle; }
+  .link-grid tr:last-child td { border-bottom: none; }
+  .link-grid .to { font-weight: 500; word-break: break-all; }
+  .link-grid .muted { color: var(--grey-700); white-space: nowrap; }
+  .link-grid .act { text-align: right; white-space: nowrap; }
+  .btn-revoke {
+    background: none; border: none; padding: 0; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--error);
+  }
+  .btn-revoke:hover { text-decoration: underline; }
+
+  .links-empty {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 40px 16px; text-align: center;
+  }
+  .links-empty .t { font-size: 15px; font-weight: 600; color: var(--text-main); }
+  .links-empty .s { font-size: 14px; color: var(--grey-600); }
+
+  /* ─── Revoke confirmation ──────────────────────────────────────── */
+  .modal.confirm-modal { max-width: 420px; width: 100%; }
+  .confirm-modal .modal-body { padding: 18px 24px 4px; }
+  .confirm-text { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
+  .confirm-text b { color: var(--text-main); font-weight: 500; word-break: break-all; }
+  .btn-danger {
+    background: var(--error); color: var(--white); border: none;
+    height: 32px; padding: 0 16px; border-radius: 12px;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
+    cursor: pointer; white-space: nowrap;
+  }
+  .btn-danger:hover { background: #8a0a19; }
+
+  /* Layered dialogs: the confirm sits above the grid it acts on. */
+  #revoke-modal { z-index: 320; }
+
+  /* ─── Narrow screens ───────────────────────────────────────────── */
+  @media (max-width: 680px) {
+    .modal-backdrop { padding: 0; align-items: flex-end; }
+    .modal { max-height: 94vh; border-radius: 16px 16px 0 0; }
+    .modal.confirm-modal { border-radius: 16px; margin: auto; }
+    .modal-header, .link-modal .modal-body, .manage-modal .modal-body, .link-modal .modal-footer {
+      padding-left: 16px; padding-right: 16px;
+    }
+    .manage-modal .modal-header { flex-wrap: wrap; }
+    .manage-modal .modal-close { order: 2; }
+    .manage-modal #manage-create {
+      order: 3; width: 100%; margin-left: 0; margin-top: 4px; justify-content: center;
+    }
+
+    /* The grid stops being a grid — each link becomes its own block.
+       The shell sets a fixed row height for real tables, which has to go
+       or the stacked cards draw on top of each other. */
+    .link-grid, .link-grid tbody, .link-grid tr, .link-grid td { display: block; width: 100%; }
+    .link-grid thead { display: none; }
+    .link-grid tr {
+      height: auto; border: 1px solid var(--grey-300); border-radius: 10px;
+      padding: 12px; margin-bottom: 12px;
+    }
+    .link-grid td, .link-grid tbody tr:not(:last-child) td { border: none; padding: 3px 0; }
+    .link-grid td[data-label]::before {
+      content: attr(data-label); display: block;
+      font-size: 11px; letter-spacing: 0.3px; text-transform: uppercase; color: var(--grey-600);
+    }
+    .link-grid .act { text-align: left; padding-top: 10px; }
+    .link-grid .muted { white-space: normal; }
+
+    .link-modal .modal-footer-actions { width: 100%; }
+    .link-modal .modal-footer-actions .btn-ghost, .link-modal .modal-footer-actions .btn-primary { flex: 1; justify-content: center; }
+    .cal-pop { left: auto; right: 0; }
+  }
 </style>
 </head>
 <body data-module="workers">
@@ -270,6 +363,45 @@
 </div>
 
 
+<!-- ── Manage External Links ─────────────────────────────────────── -->
+<div class="modal-backdrop" id="manage-modal" role="dialog" aria-modal="true" aria-labelledby="manage-modal-title">
+  <div class="modal manage-modal">
+    <div class="modal-header">
+      <div class="modal-heading">
+        <span class="modal-title" id="manage-modal-title">Manage External Links</span>
+      </div>
+      <button class="btn-primary" type="button" id="manage-create">Create Link</button>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="manage-body"></div>
+  </div>
+</div>
+
+<!-- ── Revoke confirmation ───────────────────────────────────────── -->
+<div class="modal-backdrop" id="revoke-modal" role="dialog" aria-modal="true" aria-labelledby="revoke-modal-title">
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <div class="modal-heading">
+        <span class="modal-title" id="revoke-modal-title">Revoke Link</span>
+      </div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-text" id="revoke-text"></p>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-actions">
+        <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-danger" type="button" id="revoke-confirm">Revoke</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="assets/shell.js"></script>
 <script>
 (function () {
@@ -288,7 +420,10 @@
     expiring:   icon('<circle cx="8" cy="8.5" r="5.5" ' + S + '/><path d="M8 5.5v3.3l2.2 1.4" ' + S + '/>'),
     expired:    icon('<path d="M3.5 2h5L12.5 6v8h-9V2z" ' + S + '/><path d="M6.3 8.3l3.4 3.4M9.7 8.3l-3.4 3.4" ' + S + '/>'),
     note:       icon('<path d="M13.5 8.5a5 5 0 0 1-7.2 4.5L3 14l1.1-3.2A5 5 0 1 1 13.5 8.5z" ' + S + '/><circle cx="12.8" cy="3.6" r="2.2" fill="currentColor"/>', 'note'),
-    sent:       icon('<rect x="2" y="3.5" width="12" height="9" rx="1.5" ' + S + '/><path d="M2.5 4.5L8 8.5l5.5-4" ' + S + '/>', 'sent')
+    sent:       icon('<path d="M2 5.2A1.7 1.7 0 0 1 3.7 3.5h8.6A1.7 1.7 0 0 1 14 5.2v3.1" ' + S + '/>' +
+                     '<path d="M2 5.5l6 4 6-4" ' + S + '/>' +
+                     '<path d="M2 5.2v5.6c0 .94.76 1.7 1.7 1.7H8" ' + S + '/>' +
+                     '<circle cx="11.8" cy="11.8" r="3.2" ' + S + '/><path d="M10.4 11.8l1 1 1.8-2" ' + S + '/>', 'sent')
   };
 
   var REASONS = {
@@ -311,8 +446,11 @@
     { doc: 'Passport',            sub: 'Sub-type', expiry: '7 May 2025', level: 'Legal',       who: 'E. Stone',            type: 'Upload',       reason: 'Pending Upload',              action: 'Upload' },
     { doc: 'Passport',            sub: 'Sub-type', expiry: '1 May 2025', level: 'Development', who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',               action: 'Complete Form' },
     { doc: 'Passport',            sub: 'Sub-type', expiry: '1 May 2025', level: MANDATORY,     who: 'E. Stone',            type: 'Upload',       reason: 'About to Expire',             action: 'Review' },
-    { doc: 'Employer Feedback 1', sub: 'Sub-type', expiry: '',           level: 'HR',          who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',               action: 'Send Link' },
-    { doc: 'Employer Feedback 2', sub: 'Sub-type', expiry: '',           level: 'HR',          who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',  sent: true,  action: 'Review' },
+    { doc: 'Employer Feedback 1', sub: 'Sub-type', expiry: '',           level: 'HR',          who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',  linkable: true, links: [] },
+    { doc: 'Employer Feedback 2', sub: 'Sub-type', expiry: '',           level: 'HR',          who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',  linkable: true, links: [
+        { to: 'richard.referee@companyxyz.com', by: 'John Smith',  created: new Date(2026, 9, 8, 13, 1, 12),  until: new Date(2026, 9, 15) },
+        { to: 'hr@contractor-group.com',        by: 'Olivia Rhye', created: new Date(2026, 9, 12, 9, 24, 40), until: new Date(2026, 9, 19) }
+      ] },
     { doc: 'HWRL',                sub: 'Sub-type', expiry: '1 May 2025', level: MANDATORY,     who: '',                    type: 'Upload',       reason: 'Expired',                     action: 'Upload' }
   ];
 
@@ -340,9 +478,25 @@
     return v ? Shell.highlight(v, q) : '<span class="cell-empty">&ndash;</span>';
   }
 
+  /* A link that is out changes what the row offers: Send Link becomes
+     Manage Links, and the reason cell gains the sent marker. */
+  function actionOf(r) {
+    if (!r.linkable) return r.action;
+    return r.links && r.links.length ? 'Manage Links' : 'Send Link';
+  }
+  function latestLink(r) {
+    return (r.links || []).slice().sort(function (a, b) { return b.created - a.created; })[0];
+  }
+
   function rowHtml(r, q) {
+    var sent = r.linkable ? latestLink(r) : null;
+    var sentMark = sent
+      ? '<span class="tip">' + ICONS.sent +
+          '<span class="tip-bubble">Link sent on ' + fmtDate(sent.created) + '</span></span>'
+      : '';
     var reason = (REASONS[r.reason] || '') + '<span>' + Shell.highlight(r.reason, q) + '</span>' +
-      (r.note ? ICONS.note : '') + (r.sent ? ICONS.sent : '');
+      (r.note ? ICONS.note : '') + sentMark;
+    var action = actionOf(r);
     return '<tr class="' + (r.flag ? 'flagged' : '') + '">' +
       '<td class="col-doc">' + Shell.highlight(r.doc, q) + '</td>' +
       '<td class="col-sub muted">' + cell(r.sub, q) + '</td>' +
@@ -353,7 +507,7 @@
       '<td class="col-type">' + cell(r.type, q) + '</td>' +
       '<td class="col-reason"><span class="reason">' + reason + '</span></td>' +
       '<td class="col-act"><span class="row-actions">' +
-        '<button class="btn-text" type="button" data-action="' + Shell.esc(r.action) + '" data-doc="' + Shell.esc(r.doc) + '">' + r.action + '</button>' +
+        '<button class="btn-text" type="button" data-action="' + Shell.esc(action) + '" data-doc="' + Shell.esc(r.doc) + '">' + action + '</button>' +
         '<button class="kebab" type="button" data-kebab="' + Shell.esc(r.doc) + '" aria-label="More actions">' +
           '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
         '</button>' +
@@ -363,7 +517,7 @@
 
   function matches(r, q) {
     if (!q) return true;
-    var hay = [r.doc, r.sub, r.expiry, r.level, r.who, r.type, r.reason];
+    var hay = [r.doc, r.sub, r.expiry, r.level, r.who, r.type, r.reason, actionOf(r)];
     return hay.some(function (v) { return v && v.toLowerCase().indexOf(q) !== -1; });
   }
 
@@ -433,7 +587,8 @@
     var act = e.target.closest('[data-action]');
     if (act) {
       var action = act.getAttribute('data-action');
-      if (action === 'Send Link') { openLinkModal(act.getAttribute('data-doc')); return; }
+      if (action === 'Send Link')   { openLinkModal(act.getAttribute('data-doc')); return; }
+      if (action === 'Manage Links') { openManageModal(act.getAttribute('data-doc')); return; }
       Shell.snackbar(action + ' — flow not designed yet.');
       return;
     }
@@ -464,7 +619,6 @@
   function startOfToday() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
   function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
   function sameDay(a, b) { return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
-  function fmtLong(d) { return d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear(); }
 
   function defaultMessage(competency) {
     var me = (Shell.account && Shell.account.name) || 'Olivia Rhye';
@@ -484,7 +638,7 @@
       '<b>' + Shell.esc(competency) + '</b> for <b>' + Shell.esc(WORKER) + '</b>.';
     recipient.value = '';
     message.value = defaultMessage(competency);
-    validValue.textContent = fmtLong(linkState.date);
+    validValue.textContent = fmtDate(linkState.date);
 
     ['field-recipient', 'field-message', 'field-valid'].forEach(function (id) {
       document.getElementById(id).classList.remove('invalid');
@@ -583,7 +737,7 @@
     var day = e.target.closest('[data-day]');
     if (!day) return;
     linkState.date = new Date(linkState.calMonth.getFullYear(), linkState.calMonth.getMonth(), Number(day.getAttribute('data-day')));
-    validValue.textContent = fmtLong(linkState.date);
+    validValue.textContent = fmtDate(linkState.date);
     document.getElementById('field-valid').classList.remove('invalid');
     syncSend();
     closeCal();
@@ -595,7 +749,7 @@
     postExternalLink().then(function () {
       closeLinkModal();
       Shell.snackbar('Successfully sent link to ' + to);
-      markLinkSent(linkState.competency);
+      recordLink(linkState.competency, to, linkState.date);
     }).catch(function () {
       // The popup stays open so the user can correct and retry.
       Shell.snackbar('Could not send link, please try again', { variant: 'error', persistent: true });
@@ -609,14 +763,20 @@
     });
   }
 
-  /* With a link now out, the row no longer has "no active links" — it drops
-     the Send Link action and shows the sent-form marker instead. */
-  function markLinkSent(competency) {
+  function rowFor(competency) {
+    var hit = null;
     [OUTSTANDING, NON_OUTSTANDING].forEach(function (set) {
-      set.forEach(function (r) {
-        if (r.doc === competency && r.action === 'Send Link') { r.action = 'Review'; r.sent = true; }
-      });
+      set.forEach(function (r) { if (!hit && r.linkable && r.doc === competency) hit = r; });
     });
+    return hit;
+  }
+
+  /* The new link is what flips the row from Send Link to Manage Links. */
+  function recordLink(competency, to, until) {
+    var row = rowFor(competency);
+    if (!row) return;
+    row.links.push({ to: to, by: (Shell.account && Shell.account.name) || 'Olivia Rhye',
+                     created: new Date(), until: until });
     render();
   }
 
@@ -624,8 +784,108 @@
     if (e.target === modal || e.target.closest('[data-close]')) { closeLinkModal(); return; }
     closeCal();
   });
+
+  /* ─── Manage External Links ───────────────────────────────────────
+     Stands in for GET /training/external_links?worker_id=…&competency_id=…
+     &is_active=1 — the rows are the competency's own active links. */
+  var manageModal = document.getElementById('manage-modal');
+  var manageBody  = document.getElementById('manage-body');
+  var revokeModal = document.getElementById('revoke-modal');
+  var revokeText  = document.getElementById('revoke-text');
+  var manageState = { competency: '', pending: null };
+
+  function fmtDate(d) { return d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear(); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function fmtStamp(d) {
+    return fmtDate(d) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  }
+
+  function renderManage() {
+    var row = rowFor(manageState.competency);
+    var links = (row && row.links) || [];
+
+    if (!links.length) {
+      manageBody.innerHTML = '<div class="links-empty">' +
+        '<span class="t">No active links</span>' +
+        '<span class="s">Create one to let someone outside OPMS complete this form.</span></div>';
+      return;
+    }
+
+    manageBody.innerHTML = '<table class="link-grid"><thead><tr>' +
+        '<th>Recipient</th><th>Created By</th><th>Created Date</th><th>Valid Until</th>' +
+        '<th class="act">Action</th>' +
+      '</tr></thead><tbody>' +
+      links.map(function (l, i) {
+        return '<tr>' +
+          '<td class="to" data-label="Recipient">' + Shell.esc(l.to) + '</td>' +
+          '<td class="muted" data-label="Created By">' + Shell.esc(l.by) + '</td>' +
+          '<td class="muted" data-label="Created Date">' + fmtStamp(l.created) + '</td>' +
+          '<td class="muted" data-label="Valid Until">' + fmtDate(l.until) + '</td>' +
+          '<td class="act"><button class="btn-revoke" type="button" data-revoke="' + i + '">Revoke</button></td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+
+  function openManageModal(competency) {
+    manageState.competency = competency;
+    document.getElementById('manage-modal-title').textContent = 'Manage External Links';
+    renderManage();
+    manageModal.classList.add('open');
+  }
+  function closeManageModal() { manageModal.classList.remove('open'); }
+
+  manageModal.addEventListener('click', function (e) {
+    if (e.target === manageModal || e.target.closest('[data-close]')) { closeManageModal(); return; }
+    var rev = e.target.closest('[data-revoke]');
+    if (rev) {
+      var row = rowFor(manageState.competency);
+      var link = row.links[Number(rev.getAttribute('data-revoke'))];
+      manageState.pending = link;
+      revokeText.innerHTML = 'This link will no longer be usable by <b>' + Shell.esc(link.to) + '</b>.';
+      revokeModal.classList.add('open');
+    }
+  });
+
+  // Create Link takes over from the manage popup.
+  document.getElementById('manage-create').addEventListener('click', function () {
+    var competency = manageState.competency;
+    closeManageModal();
+    openLinkModal(competency);
+  });
+
+  /* ─── Revoke ──────────────────────────────────────────────────────
+     POST /training/external_links/revoke, then the row leaves the grid. */
+  function closeRevoke() { revokeModal.classList.remove('open'); manageState.pending = null; }
+
+  revokeModal.addEventListener('click', function (e) {
+    if (e.target === revokeModal || e.target.closest('[data-close]')) closeRevoke();
+  });
+
+  document.getElementById('revoke-confirm').addEventListener('click', function () {
+    var row = rowFor(manageState.competency);
+    var link = manageState.pending;
+    postRevoke().then(function () {
+      var at = row.links.indexOf(link);
+      if (at !== -1) row.links.splice(at, 1);
+      closeRevoke();
+      renderManage();     // the popup stays open, even with nothing left
+      render();           // the table behind follows the row's new state
+    }).catch(function () {
+      Shell.snackbar('Could not revoke link, please try again', { variant: 'error', persistent: true });
+    });
+  });
+
+  function postRevoke() {
+    return new Promise(function (resolve, reject) {
+      setTimeout(function () { FORCE_ERROR ? reject() : resolve(); }, 250);
+    });
+  }
+
   document.addEventListener('keydown', function (e) {
-    if (e.key !== 'Escape' || !modal.classList.contains('open')) return;
+    if (e.key !== 'Escape') return;
+    if (revokeModal.classList.contains('open')) { closeRevoke(); return; }
+    if (manageModal.classList.contains('open')) { closeManageModal(); return; }
+    if (!modal.classList.contains('open')) return;
     if (calPop.classList.contains('open')) closeCal(); else closeLinkModal();
   });
 
