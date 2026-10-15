@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Employer Feedback — MMA Offshore</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<style>
+  /* ─── External form ─────────────────────────────────────────────────
+     What someone outside OPMS sees when they open the emailed link. The
+     client's brand leads, because the trust relationship is with them;
+     OPMS signs the page and makes its pitch once the work is done. */
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: var(--fs-sans); background: var(--grey-100); color: var(--text-main);
+    -webkit-font-smoothing: antialiased; display: flex; flex-direction: column;
+  }
+
+  /* ─── Client brand bar ─────────────────────────────────────────── */
+  .brand-bar {
+    background: var(--white); border-bottom: 1px solid var(--grey-300);
+    padding: 16px 24px; display: flex; justify-content: center;
+  }
+  .client-logo {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 18px; border: 1px dashed var(--grey-350); border-radius: 8px;
+    font-size: 15px; font-weight: 600; color: #5b2bbf; letter-spacing: 0.2px;
+  }
+
+  /* ─── Page ─────────────────────────────────────────────────────── */
+  .wrap { flex: 1; width: 100%; max-width: 1100px; margin: 0 auto; padding: 36px 24px 56px; }
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 460px); gap: 40px; align-items: start; }
+
+  .eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--grey-600); margin-bottom: 10px;
+  }
+  h1 {
+    font-family: var(--fs-roboto); font-size: 28px; line-height: 34px; font-weight: 700;
+    letter-spacing: 0.2px; margin-bottom: 12px;
+  }
+  .lede { font-size: 15px; line-height: 23px; color: var(--grey-700); max-width: 58ch; }
+  .lede b { color: var(--text-main); font-weight: 600; }
+
+  .brief { margin-top: 28px; }
+  .brief h2 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  .brief ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .brief li {
+    position: relative; padding-left: 26px; font-size: 14px; line-height: 21px; color: var(--grey-700);
+  }
+  .brief li svg { position: absolute; left: 0; top: 2px; color: var(--grey-600); }
+
+  .expiry {
+    margin-top: 24px; display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: 8px; background: #fff7ec; border: 1px solid #f3dfc2;
+    font-size: 14px; color: #7a4d10;
+  }
+  .expiry svg { flex-shrink: 0; }
+  .fine { margin-top: 20px; font-size: 13px; line-height: 19px; color: var(--grey-600); }
+  .fine a { color: var(--primary); }
+
+  /* ─── Form card ────────────────────────────────────────────────── */
+  .card {
+    background: var(--white); border: 1px solid var(--grey-300);
+    border-radius: var(--radius-lg); box-shadow: 0 1px 2px rgba(8, 17, 21, 0.04);
+  }
+  .card-head { padding: 20px 24px 0; }
+  .card-head h2 { font-size: 17px; font-weight: 600; }
+  .card-head p { margin-top: 4px; font-size: 13px; color: var(--grey-600); }
+  .card-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 18px; }
+
+  .group-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.7px; text-transform: uppercase;
+    color: var(--grey-600); padding-top: 4px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field > label { font-size: 14px; font-weight: 500; }
+  .field .req { color: var(--error); margin-left: 2px; }
+  .field input, .field textarea, .field select {
+    width: 100%; font-family: var(--fs-sans); font-size: 14px; line-height: 20px; color: var(--text-main);
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px; padding: 10px 12px;
+    transition: border-color var(--t-fast);
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--primary); }
+  .field textarea { min-height: 96px; resize: vertical; }
+  .field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { font-size: 12px; color: var(--grey-600); }
+
+  .choice { display: flex; gap: 10px; }
+  .choice label {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+    height: 40px; border: 1px solid var(--grey-350); border-radius: 8px;
+    font-size: 14px; cursor: pointer; transition: border-color var(--t-fast), background var(--t-fast);
+  }
+  .choice input { position: absolute; opacity: 0; pointer-events: none; }
+  .choice label:hover { border-color: var(--border-hover); }
+  .choice input:checked + span { color: var(--primary); font-weight: 500; }
+  .choice label:has(input:checked) { border-color: var(--primary); background: var(--bg-blue-light); }
+
+  .card-foot { padding: 0 24px 24px; display: flex; flex-direction: column; gap: 12px; }
+  .btn-submit {
+    width: 100%; height: 44px; border: none; border-radius: 10px;
+    background: var(--primary); color: var(--white); cursor: pointer;
+    font-family: var(--fs-sans); font-size: 15px; font-weight: 600;
+    transition: background var(--t-fast);
+  }
+  .btn-submit:hover { background: var(--primary-dark); }
+  .btn-submit:disabled { background: var(--grey-350); cursor: default; }
+
+  /* Attribution sits with the form, quietly — it answers "who is this?" */
+  .attribution {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-size: 12px; color: var(--grey-600); text-align: center;
+  }
+  .attribution a { color: var(--grey-700); font-weight: 500; text-decoration: none; }
+  .attribution a:hover { color: var(--primary); text-decoration: underline; }
+  .attribution .dot { color: var(--grey-400); }
+
+  /* ─── Done state — where the pitch belongs ─────────────────────── */
+  .done { display: none; }
+  .done.visible { display: block; }
+  /* Once it's sent, the instructions have no job left — the thank-you and
+     the pitch get the page to themselves. */
+  .sent .form-side, .sent .intro-side { display: none; }
+  .sent .cols { grid-template-columns: minmax(0, 560px); justify-content: center; }
+
+  .done-card { padding: 32px 28px; text-align: center; }
+  .done-tick {
+    width: 48px; height: 48px; margin: 0 auto 16px; border-radius: 50%;
+    background: #e8f6ec; color: var(--online);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .done h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .done p { font-size: 14px; line-height: 21px; color: var(--grey-700); }
+
+  .pitch {
+    margin-top: 20px; padding: 24px; border-radius: var(--radius-lg);
+    background: var(--primary); color: var(--white); text-align: left;
+  }
+  .pitch .k {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72); margin-bottom: 8px;
+  }
+  .pitch h3 { font-size: 18px; line-height: 25px; font-weight: 700; margin-bottom: 10px; }
+  .pitch p { font-size: 14px; line-height: 21px; color: rgba(255, 255, 255, 0.86); }
+  .pitch ul { list-style: none; margin: 14px 0 18px; display: flex; flex-direction: column; gap: 8px; }
+  .pitch li { position: relative; padding-left: 24px; font-size: 14px; color: rgba(255, 255, 255, 0.92); }
+  .pitch li svg { position: absolute; left: 0; top: 3px; }
+  .pitch-cta {
+    display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px;
+    border-radius: 10px; background: var(--white); color: var(--primary);
+    font-size: 14px; font-weight: 600; text-decoration: none;
+  }
+  .pitch-cta:hover { background: #eef2ff; }
+
+  /* ─── OPMS footer ──────────────────────────────────────────────── */
+  .opms-bar { background: var(--primary); color: var(--white); padding: 18px 24px; }
+  .opms-inner {
+    max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  }
+  .opms-logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
+  .opms-word { font-size: 18px; font-weight: 700; letter-spacing: 0.4px; }
+  .opms-line { font-size: 13px; line-height: 19px; color: rgba(255, 255, 255, 0.82); max-width: 54ch; }
+  .opms-link {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; font-weight: 600; color: var(--white); text-decoration: none; white-space: nowrap;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.45); padding-bottom: 1px;
+  }
+  .opms-link:hover { border-bottom-color: var(--white); }
+
+  @media (max-width: 880px) {
+    .cols { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    .wrap { padding: 24px 16px 40px; }
+    h1 { font-size: 24px; line-height: 30px; }
+    .brand-bar { padding: 12px 16px; }
+    .opms-inner { gap: 12px; }
+    .opms-link { margin-left: 0; }
+    .field-pair { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="brand-bar">
+  <span class="client-logo">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="8" cy="10" r="5.5" fill="#5b2bbf"/><circle cx="13" cy="10" r="5.5" fill="#7c4dde" opacity="0.85"/>
+    </svg>
+    Client LOGO
+  </span>
+</header>
+
+<main class="wrap">
+  <div class="cols">
+
+    <section class="intro-side">
+      <div class="eyebrow">Employer reference</div>
+      <h1>Employer Feedback for James Hetfield</h1>
+      <p class="lede">
+        <b>MMA Offshore</b> has asked you to confirm James Hetfield's employment history as part of
+        their crew compliance checks. Your answers go straight to their compliance team — you don't
+        need an account, and this page is only reachable through the link you were sent.
+      </p>
+
+      <div class="brief">
+        <h2>Before you start</h2>
+        <ul>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.8v3.4l2.2 1.3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            Takes about 3 minutes.
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 2h6L12.5 5.2V14h-9V2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 8.5h5M5.5 11h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            You'll need the dates he worked with you and the position he held.
+          </li>
+          <li>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2.2l4.8 1.8v4c0 3-2 5-4.8 5.8C5.2 13 3.2 11 3.2 8V4L8 2.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.2 8.1l1.4 1.4 2.6-2.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Answers are stored against his record and seen only by MMA Offshore.
+          </li>
+        </ul>
+      </div>
+
+      <div class="expiry">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.5v3.3l2.2 1.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <span>This link stops working on <b>22 Oct 2026</b>.</span>
+      </div>
+
+      <p class="fine">
+        Didn't expect this? You can ignore it — nothing is submitted until you press the button.
+        Questions about the request go to MMA Offshore. <a href="#">Privacy policy</a>.
+      </p>
+    </section>
+
+    <!-- ── Form ─────────────────────────────────────────────────── -->
+    <section class="form-side">
+      <div class="card">
+        <div class="card-head">
+          <h2>Employer Feedback</h2>
+          <p>All fields marked * are required.</p>
+        </div>
+
+        <form id="ext-form" class="card-body" novalidate>
+          <div class="group-label">About you</div>
+          <div class="field">
+            <label for="ref-name">Your name<span class="req">*</span></label>
+            <input id="ref-name" type="text" autocomplete="name" required />
+          </div>
+          <div class="field">
+            <label for="ref-role">Your position<span class="req">*</span></label>
+            <input id="ref-role" type="text" placeholder="e.g. Operations Manager" required />
+          </div>
+          <div class="field">
+            <label for="ref-company">Company<span class="req">*</span></label>
+            <input id="ref-company" type="text" required />
+          </div>
+
+          <div class="group-label">About James Hetfield</div>
+          <div class="field">
+            <label>Dates employed<span class="req">*</span></label>
+            <div class="field-pair">
+              <input id="ref-from" type="date" required aria-label="From" />
+              <input id="ref-to" type="date" required aria-label="To" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="ref-position">Position held<span class="req">*</span></label>
+            <input id="ref-position" type="text" required />
+          </div>
+          <div class="field">
+            <label>Would you employ him again?<span class="req">*</span></label>
+            <div class="choice">
+              <label><input type="radio" name="rehire" value="yes" required /><span>Yes</span></label>
+              <label><input type="radio" name="rehire" value="no" /><span>No</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="ref-notes">Anything else we should know?</label>
+            <textarea id="ref-notes" placeholder="Optional"></textarea>
+            <span class="hint">Shared with MMA Offshore's compliance team only.</span>
+          </div>
+        </form>
+
+        <div class="card-foot">
+          <button class="btn-submit" type="button" id="ext-submit" disabled>Submit feedback</button>
+          <div class="attribution">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4.5 7V5a3.5 3.5 0 1 1 7 0v2" stroke="currentColor" stroke-width="1.3"/><rect x="3" y="7" width="10" height="7" rx="1.8" stroke="currentColor" stroke-width="1.3"/></svg>
+            <span>Secure form, delivered by <a href="#" id="attr-link">OPMS</a></span>
+            <span class="dot">·</span>
+            <a href="#">What is OPMS?</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Done ─────────────────────────────────────────────────── -->
+    <section class="done" id="ext-done">
+      <div class="card done-card">
+        <div class="done-tick">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M6 12.5l4 4 8-9" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h2>Thank you — that's been sent</h2>
+        <p>Your feedback has gone to MMA Offshore's compliance team. You can close this page; the link
+          will no longer work.</p>
+
+        <div class="pitch">
+          <div class="k">This form was sent with OPMS</div>
+          <h3>The people side of offshore, mining and construction — in one place.</h3>
+          <p>OPMS keeps crews compliant and audit-ready, so teams stop chasing paperwork by email.</p>
+          <ul>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Certifications and documents that chase themselves</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Rostering and timesheets across sites and vessels</li>
+            <li><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 8.5l3 3 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>References and checks collected without an account</li>
+          </ul>
+          <a class="pitch-cta" href="#">
+            See how OPMS works
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<footer class="opms-bar">
+  <div class="opms-inner">
+    <span class="opms-logo">
+      <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+        <rect x="0.5" y="0.5" width="21" height="21" rx="5" stroke="rgba(255,255,255,0.6)"/>
+        <circle cx="11" cy="11" r="5" stroke="#fff" stroke-width="1.7"/><circle cx="11" cy="11" r="2" fill="#fff"/>
+      </svg>
+      <span class="opms-word">opms</span>
+    </span>
+    <span class="opms-line">
+      Workforce compliance, rostering and certification tracking for offshore, mining and construction.
+    </span>
+    <a class="opms-link" href="#">
+      Learn more
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+  var form = document.getElementById('ext-form');
+  var submit = document.getElementById('ext-submit');
+
+  function valid() {
+    var filled = ['ref-name', 'ref-role', 'ref-company', 'ref-from', 'ref-to', 'ref-position']
+      .every(function (id) { return document.getElementById(id).value.trim(); });
+    return filled && !!form.querySelector('input[name="rehire"]:checked');
+  }
+  function sync() { submit.disabled = !valid(); }
+
+  form.addEventListener('input', sync);
+  form.addEventListener('change', sync);
+
+  submit.addEventListener('click', function () {
+    submit.disabled = true;
+    submit.textContent = 'Sending…';
+    // Stands in for the POST the real form would make.
+    setTimeout(function () {
+      document.body.classList.add('sent');
+      document.getElementById('ext-done').classList.add('visible');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 500);
+  });
+
+  sync();
+})();
+</script>
+</body>
+</html>
