@@ -85,6 +85,75 @@
   }
   .panel-empty .t { font-size: 16px; font-weight: 600; color: var(--text-main); }
   .panel-empty .s { font-size: 14px; color: var(--grey-600); }
+  /* ─── Create link popup ────────────────────────────────────────── */
+  .modal.link-modal { max-width: 560px; width: 100%; }
+  .link-modal .modal-body { padding: 20px 24px 4px; display: flex; flex-direction: column; gap: 18px; }
+  .link-intro { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
+  .link-intro b { color: var(--text-main); font-weight: 500; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
+  .field-label .req { color: var(--error); margin-left: 2px; }
+  .field-input, .field-area {
+    width: 100%; font-family: var(--fs-sans); font-size: 14px; line-height: 20px;
+    color: var(--text-main); background: var(--white);
+    border: 1px solid var(--grey-350); border-radius: 8px; padding: 9px 12px;
+    transition: border-color var(--t-fast);
+  }
+  .field-input:focus, .field-area:focus { outline: none; border-color: var(--primary); }
+  .field-area { min-height: 132px; resize: vertical; }
+  .field-foot { display: flex; align-items: center; gap: 12px; min-height: 16px; }
+  .field-error { font-size: 12px; line-height: 16px; color: var(--error); display: none; }
+  .field.invalid .field-input, .field.invalid .field-area { border-color: var(--error); }
+  .field.invalid .field-error { display: block; }
+  .char-count { margin-left: auto; font-size: 12px; color: var(--grey-600); font-variant-numeric: tabular-nums; }
+
+  /* ─── Date field + single-month picker ─────────────────────────── */
+  .date-field { position: relative; }
+  .date-trigger {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; height: 40px; padding: 0 12px; cursor: pointer;
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main); text-align: left;
+  }
+  .date-trigger:hover { border-color: var(--border-hover); }
+  .date-trigger.open { border-color: var(--primary); }
+  .date-trigger svg { color: var(--grey-600); flex-shrink: 0; }
+
+  .cal-pop {
+    display: none; position: absolute; z-index: 20; bottom: calc(100% + 6px); left: 0;
+    width: 300px; padding: 8px; background: var(--white);
+    border: 1px solid var(--grey-350); border-radius: 10px; box-shadow: var(--shadow-dropdown);
+  }
+  .cal-pop.open { display: block; }
+  .cal-head { display: flex; align-items: center; padding: 2px 4px 8px; }
+  .cal-nav {
+    width: 30px; height: 30px; flex-shrink: 0; border: none; border-radius: 50%;
+    background: none; cursor: pointer; color: var(--grey-700);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .cal-nav:hover:not(:disabled) { background: var(--grey-200); }
+  .cal-nav:disabled { color: var(--grey-350); cursor: default; }
+  .cal-title { flex: 1; text-align: center; font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .cal-dow, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-dow span { height: 26px; line-height: 26px; text-align: center; font-size: 11px; color: var(--grey-600); }
+  .cal-cell { height: 36px; display: flex; align-items: center; justify-content: center; }
+  .cal-day {
+    width: 32px; height: 32px; border: none; border-radius: 50%; background: none;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main); cursor: pointer;
+  }
+  .cal-day:hover:not(:disabled) { background: var(--grey-200); }
+  .cal-day:disabled { color: var(--grey-400); cursor: default; }
+  .cal-day.sel { background: var(--primary); color: var(--white); font-weight: 500; }
+  .cal-foot {
+    margin-top: 6px; padding: 8px 8px 2px; border-top: 1px solid var(--grey-300);
+    font-size: 12px; color: var(--grey-600);
+  }
+
+  .link-modal .modal-footer { padding: 16px 24px 20px; }
+  .link-modal .modal-footer-actions { gap: 12px; }
+  .btn-primary:disabled { background: var(--grey-350); cursor: default; }
+  .btn-primary:disabled:hover { background: var(--grey-350); }
 </style>
 </head>
 <body data-module="workers">
@@ -144,6 +213,62 @@
     </div>
   </main>
 </div>
+
+<!-- ── Create Link for External User ─────────────────────────────── -->
+<div class="modal-backdrop" id="link-modal" role="dialog" aria-modal="true" aria-labelledby="link-modal-title">
+  <div class="modal link-modal">
+    <div class="modal-header">
+      <div class="modal-heading">
+        <span class="modal-title" id="link-modal-title">Create Link for External User</span>
+      </div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <p class="link-intro" id="link-intro"></p>
+
+      <div class="field" id="field-recipient">
+        <label class="field-label" for="link-recipient">Recipient<span class="req">*</span></label>
+        <input class="field-input" id="link-recipient" type="email" autocomplete="off"
+               placeholder="name@company.com" />
+        <div class="field-foot">
+          <span class="field-error" id="recipient-error">Enter a valid email address.</span>
+        </div>
+      </div>
+
+      <div class="field" id="field-message">
+        <label class="field-label" for="link-message">Message<span class="req">*</span></label>
+        <textarea class="field-area" id="link-message" maxlength="2000"></textarea>
+        <div class="field-foot">
+          <span class="field-error" id="message-error">A message is required.</span>
+          <span class="char-count" id="message-count">0/2000</span>
+        </div>
+      </div>
+
+      <div class="field date-field" id="field-valid">
+        <label class="field-label" for="link-valid">Link is valid until<span class="req">*</span></label>
+        <button class="date-trigger" id="link-valid" type="button" aria-haspopup="dialog" aria-expanded="false">
+          <span id="link-valid-value"></span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2" y="3.5" width="12" height="11" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5h12M5.5 2v3M10.5 2v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </button>
+        <div class="cal-pop" id="link-cal" role="dialog" aria-label="Choose a date"></div>
+        <div class="field-foot">
+          <span class="field-error" id="valid-error">Choose a future date.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <div class="modal-footer-actions">
+        <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-primary" type="button" id="link-send">Send Link</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <script src="assets/shell.js"></script>
 <script>
@@ -228,7 +353,7 @@
       '<td class="col-type">' + cell(r.type, q) + '</td>' +
       '<td class="col-reason"><span class="reason">' + reason + '</span></td>' +
       '<td class="col-act"><span class="row-actions">' +
-        '<button class="btn-text" type="button" data-action="' + Shell.esc(r.action) + '">' + r.action + '</button>' +
+        '<button class="btn-text" type="button" data-action="' + Shell.esc(r.action) + '" data-doc="' + Shell.esc(r.doc) + '">' + r.action + '</button>' +
         '<button class="kebab" type="button" data-kebab="' + Shell.esc(r.doc) + '" aria-label="More actions">' +
           '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
         '</button>' +
@@ -302,12 +427,206 @@
     });
   });
 
-  /* ─── Row actions — the screens behind them aren't designed yet ──── */
+  /* ─── Row actions ─────────────────────────────────────────────────
+     Send Link opens the create-link popup; the rest aren't designed yet. */
   panel.addEventListener('click', function (e) {
     var act = e.target.closest('[data-action]');
-    if (act) { Shell.snackbar(act.getAttribute('data-action') + ' — flow not designed yet.'); return; }
+    if (act) {
+      var action = act.getAttribute('data-action');
+      if (action === 'Send Link') { openLinkModal(act.getAttribute('data-doc')); return; }
+      Shell.snackbar(action + ' — flow not designed yet.');
+      return;
+    }
     var kebab = e.target.closest('[data-kebab]');
     if (kebab) { Shell.snackbar('Row actions for ' + kebab.getAttribute('data-kebab') + ' — menu not designed yet.'); }
+  });
+
+  /* ─── Create Link for External User ───────────────────────────────
+     POST /training/external_links always succeeds here. The failure path
+     is built — flip FORCE_ERROR to demo it. */
+  var FORCE_ERROR = false;
+  var WORKER = 'James Hetfield';
+  var MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  var modal      = document.getElementById('link-modal');
+  var introEl    = document.getElementById('link-intro');
+  var recipient  = document.getElementById('link-recipient');
+  var message    = document.getElementById('link-message');
+  var msgCount   = document.getElementById('message-count');
+  var validBtn   = document.getElementById('link-valid');
+  var validValue = document.getElementById('link-valid-value');
+  var calPop     = document.getElementById('link-cal');
+  var sendBtn    = document.getElementById('link-send');
+
+  var linkState = { competency: '', date: null, calMonth: null, touched: {} };
+
+  function startOfToday() { var d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+  function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+  function sameDay(a, b) { return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+  function fmtLong(d) { return d.getDate() + ' ' + MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear(); }
+
+  function defaultMessage(competency) {
+    var me = (Shell.account && Shell.account.name) || 'Olivia Rhye';
+    return 'Hi,\n' +
+      'Could you please complete the form ' + competency + ' for ' + WORKER + ', using the button below?\n' +
+      'Kind regards,\n' + me;
+  }
+
+  function openLinkModal(competency) {
+    linkState.competency = competency;
+    linkState.touched = {};
+    /* Only future dates are allowed, so the default sits a week out. */
+    linkState.date = addDays(startOfToday(), 7);
+    linkState.calMonth = new Date(linkState.date.getFullYear(), linkState.date.getMonth(), 1);
+
+    introEl.innerHTML = 'This will create a link for an external user, so that they can complete the form for ' +
+      '<b>' + Shell.esc(competency) + '</b> for <b>' + Shell.esc(WORKER) + '</b>.';
+    recipient.value = '';
+    message.value = defaultMessage(competency);
+    validValue.textContent = fmtLong(linkState.date);
+
+    ['field-recipient', 'field-message', 'field-valid'].forEach(function (id) {
+      document.getElementById(id).classList.remove('invalid');
+    });
+    syncCount();
+    syncSend();
+    closeCal();
+    modal.classList.add('open');
+    recipient.focus();
+  }
+
+  function closeLinkModal() {
+    modal.classList.remove('open');
+    closeCal();
+  }
+
+  function validEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()); }
+  function dateOk() { return !!linkState.date && linkState.date > startOfToday(); }
+
+  function syncCount() { msgCount.textContent = message.value.length + '/2000'; }
+
+  function syncSend() {
+    sendBtn.disabled = !(validEmail(recipient.value) && message.value.trim() && dateOk());
+    if (linkState.touched.recipient) {
+      document.getElementById('field-recipient').classList.toggle('invalid', !validEmail(recipient.value));
+    }
+    if (linkState.touched.message) {
+      document.getElementById('field-message').classList.toggle('invalid', !message.value.trim());
+    }
+  }
+
+  recipient.addEventListener('input', syncSend);
+  recipient.addEventListener('blur', function () { linkState.touched.recipient = true; syncSend(); });
+  message.addEventListener('input', function () { syncCount(); syncSend(); });
+  message.addEventListener('blur', function () { linkState.touched.message = true; syncSend(); });
+
+  /* ─── Date picker ─────────────────────────────────────────────────── */
+  var DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  function renderCal() {
+    var y = linkState.calMonth.getFullYear(), m = linkState.calMonth.getMonth();
+    var today = startOfToday();
+    var lead = new Date(y, m, 1).getDay();
+    var days = new Date(y, m + 1, 0).getDate();
+    /* Nothing to go back to once the grid reaches the current month. */
+    var atFloor = y === today.getFullYear() && m === today.getMonth();
+
+    var cells = '';
+    for (var i = 0; i < lead; i++) cells += '<div class="cal-cell"></div>';
+    for (var d = 1; d <= days; d++) {
+      var cur = new Date(y, m, d);
+      var past = cur <= today;
+      var sel = sameDay(cur, linkState.date);
+      cells += '<div class="cal-cell"><button class="cal-day' + (sel ? ' sel' : '') + '" type="button"' +
+        (past ? ' disabled' : ' data-day="' + d + '"') + '>' + d + '</button></div>';
+    }
+
+    calPop.innerHTML =
+      '<div class="cal-head">' +
+        '<button class="cal-nav" type="button" data-nav="-1" aria-label="Previous month"' + (atFloor ? ' disabled' : '') + '>' +
+          '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+        '<div class="cal-title">' + MONTHS_LONG[m] + ' ' + y + '</div>' +
+        '<button class="cal-nav" type="button" data-nav="1" aria-label="Next month">' +
+          '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      '</div>' +
+      '<div class="cal-dow">' + DOW.map(function (w) { return '<span>' + w + '</span>'; }).join('') + '</div>' +
+      '<div class="cal-grid">' + cells + '</div>' +
+      '<div class="cal-foot">Only future dates can be chosen.</div>';
+  }
+
+  function openCal() {
+    linkState.calMonth = new Date(linkState.date.getFullYear(), linkState.date.getMonth(), 1);
+    renderCal();
+    calPop.classList.add('open');
+    validBtn.classList.add('open');
+    validBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeCal() {
+    calPop.classList.remove('open');
+    validBtn.classList.remove('open');
+    validBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  validBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (calPop.classList.contains('open')) closeCal(); else openCal();
+  });
+  calPop.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var nav = e.target.closest('[data-nav]');
+    if (nav) {
+      linkState.calMonth = new Date(linkState.calMonth.getFullYear(), linkState.calMonth.getMonth() + Number(nav.getAttribute('data-nav')), 1);
+      renderCal();
+      return;
+    }
+    var day = e.target.closest('[data-day]');
+    if (!day) return;
+    linkState.date = new Date(linkState.calMonth.getFullYear(), linkState.calMonth.getMonth(), Number(day.getAttribute('data-day')));
+    validValue.textContent = fmtLong(linkState.date);
+    document.getElementById('field-valid').classList.remove('invalid');
+    syncSend();
+    closeCal();
+  });
+
+  /* ─── Send ────────────────────────────────────────────────────────── */
+  sendBtn.addEventListener('click', function () {
+    var to = recipient.value.trim();
+    postExternalLink().then(function () {
+      closeLinkModal();
+      Shell.snackbar('Successfully sent link to ' + to);
+      markLinkSent(linkState.competency);
+    }).catch(function () {
+      // The popup stays open so the user can correct and retry.
+      Shell.snackbar('Could not send link, please try again', { variant: 'error', persistent: true });
+    });
+  });
+
+  // Stands in for POST /training/external_links.
+  function postExternalLink() {
+    return new Promise(function (resolve, reject) {
+      setTimeout(function () { FORCE_ERROR ? reject() : resolve(); }, 350);
+    });
+  }
+
+  /* With a link now out, the row no longer has "no active links" — it drops
+     the Send Link action and shows the sent-form marker instead. */
+  function markLinkSent(competency) {
+    [OUTSTANDING, NON_OUTSTANDING].forEach(function (set) {
+      set.forEach(function (r) {
+        if (r.doc === competency && r.action === 'Send Link') { r.action = 'Review'; r.sent = true; }
+      });
+    });
+    render();
+  }
+
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal || e.target.closest('[data-close]')) { closeLinkModal(); return; }
+    closeCal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape' || !modal.classList.contains('open')) return;
+    if (calPop.classList.contains('open')) closeCal(); else closeLinkModal();
   });
 
   /* The Workers crumb points wherever the shell's own nav points, so the

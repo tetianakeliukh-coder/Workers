@@ -210,20 +210,33 @@
       .map(function (part) { return part.charAt(0).toUpperCase(); }).join('');
   }
 
+  /* snackbar(msg) auto-dismisses. snackbar(msg, { variant: 'error',
+     persistent: true }) stays until the user dismisses it — a failure the
+     user has to act on shouldn't vanish while they are reading it. */
   var snackTimer;
-  function snackbar(msg) {
+  function snackbar(msg, opts) {
+    opts = opts || {};
     var el = document.getElementById('shell-snackbar');
     if (!el) {
       el = document.createElement('div');
       el.id = 'shell-snackbar';
-      el.className = 'snackbar';
-      el.innerHTML = '<span class="snackbar-msg"></span>';
+      el.innerHTML = '<span class="snackbar-msg"></span>' +
+        '<button class="snackbar-close" type="button" aria-label="Dismiss">' +
+          '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
+        '</button>';
       document.body.appendChild(el);
+      el.querySelector('.snackbar-close').addEventListener('click', function () {
+        el.classList.remove('visible');
+      });
     }
+    el.className = 'snackbar' + (opts.variant ? ' ' + opts.variant : '');
     el.querySelector('.snackbar-msg').textContent = msg;
+    el.querySelector('.snackbar-close').classList.toggle('visible', !!opts.persistent);
     el.classList.add('visible');
     clearTimeout(snackTimer);
-    snackTimer = setTimeout(function () { el.classList.remove('visible'); }, 2600);
+    if (!opts.persistent) {
+      snackTimer = setTimeout(function () { el.classList.remove('visible'); }, 2600);
+    }
   }
 
   /* ─── Boot ──────────────────────────────────────────────────────────── */
@@ -240,6 +253,7 @@
 
   window.Shell = {
     nav: NAV,
+    account: ACCOUNT,
     icon: icon,
     esc: esc,
     highlight: highlight,
