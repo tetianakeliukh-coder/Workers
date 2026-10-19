@@ -167,7 +167,12 @@
 
   /* ─── Add task ─────────────────────────────────────────────────── */
   .modal.add-modal { max-width: 460px; width: 100%; }
-  .add-modal .modal-body { padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 14px; }
+  /* The shell's modal body is flex:1 with a zero basis, which collapses when
+     the dialog has no fixed height — size it to its content instead. */
+  .add-modal .modal-body {
+    padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 14px;
+    flex: 0 1 auto; max-height: 68vh; overflow: auto;
+  }
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
 
@@ -186,8 +191,49 @@
   .rr-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); }
   .recent-empty { font-size: 13px; color: var(--grey-600); }
 
-  .another { display: none; flex-direction: column; gap: 14px; }
-  .another.open { display: flex; }
+  /* .step and the footer buttons set display, which beats the browser's
+     own [hidden] rule — so say it louder. */
+  [hidden] { display: none !important; }
+  .wiz-step { display: flex; flex-direction: column; gap: 14px; }
+  .fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .lvl-head {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.7px; text-transform: uppercase;
+    color: var(--grey-600); padding-top: 2px;
+  }
+
+  /* Recents are a quiet helper under the form, not the way in. */
+  .quick { border-top: 1px solid var(--grey-300); padding-top: 12px; }
+  .quick-label {
+    display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.7px;
+    text-transform: uppercase; color: var(--grey-600); margin-bottom: 8px;
+  }
+  .quick-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .quick-row button {
+    padding: 6px 10px; border-radius: 999px; cursor: pointer;
+    background: var(--white); border: 1px solid var(--grey-350);
+    font-family: var(--fs-sans); font-size: 12px; color: var(--grey-800); white-space: nowrap;
+  }
+  .quick-row button:hover { border-color: var(--primary); background: var(--bg-blue-light); color: var(--primary); }
+
+  .shifts { display: flex; flex-direction: column; gap: 10px; }
+  .shift {
+    display: grid; grid-template-columns: 1fr 1fr 88px 28px; gap: 8px; align-items: end;
+  }
+  .shift .fld-label { font-size: 12px; font-weight: 500; color: var(--grey-700); }
+  .shift input {
+    width: 100%; height: 40px; padding: 0 10px;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 8px; background: var(--white);
+  }
+  .shift input:focus { outline: none; border-color: var(--primary); }
+  .shift-drop {
+    width: 28px; height: 40px; border: none; background: none; cursor: pointer;
+    color: var(--grey-600); display: flex; align-items: center; justify-content: center; border-radius: 6px;
+  }
+  .shift-drop:hover { background: var(--grey-100); color: var(--error); }
+  .add-shift { align-self: flex-start; font-size: 14px; }
+  .shift-total { text-align: right; font-size: 14px; color: var(--grey-700); }
+  .shift-total b { color: var(--text-main); font-size: 16px; }
   .fld { display: flex; flex-direction: column; gap: 6px; }
   .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
   .fld select {
@@ -368,45 +414,65 @@
   </button>
 </div>
 
-<!-- ── Add task ─────────────────────────────────────────────────── -->
+<!-- ── Add task: where and what, then the hours ─────────────────── -->
 <div class="modal-backdrop" id="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-title">
   <div class="modal add-modal">
     <div class="modal-header">
-      <div class="modal-heading"><span class="modal-title" id="add-title">Add task</span></div>
+      <div class="modal-heading">
+        <span class="modal-title" id="add-title">Add task</span>
+        <span class="modal-meta"><span class="meta-item" id="add-step-label">Step 1 of 2 · Where and what</span></span>
+      </div>
       <button class="modal-close" type="button" data-close aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
     </div>
-    <div class="modal-body">
-      <div class="fld" id="date-fld">
-        <label class="fld-label" for="add-date">Date</label>
-        <select id="add-date"></select>
-        <span class="fld-hint" id="date-hint"></span>
-      </div>
-      <p class="add-sub" id="add-sub"></p>
-      <div class="recent-list" id="recent-tasks"></div>
 
-      <div class="another" id="another">
+    <div class="modal-body">
+      <!-- Step 1 -->
+      <div class="wiz-step" id="step-1">
+        <div class="fld-row">
+          <div class="fld">
+            <label class="fld-label" for="add-date">Date</label>
+            <select id="add-date"></select>
+          </div>
+          <div class="fld">
+            <label class="fld-label" for="add-site">Site</label>
+            <select id="add-site"></select>
+          </div>
+        </div>
         <div class="fld">
           <label class="fld-label" for="add-sup">Supervisor</label>
           <select id="add-sup"></select>
-          <span class="fld-hint" id="sup-hint"></span>
+          <span class="fld-hint" id="date-hint"></span>
         </div>
-        <div class="fld">
-          <label class="fld-label" for="add-site">Site</label>
-          <select id="add-site"></select>
-        </div>
-        <div class="fld">
-          <label class="fld-label" for="add-task">Job code</label>
-          <select id="add-task"></select>
+
+        <!-- One to four fields, named by the site -->
+        <div id="level-fields"></div>
+
+        <div class="quick" id="quick-wrap">
+          <span class="quick-label">Recent</span>
+          <div class="quick-row" id="quick-tasks"></div>
         </div>
       </div>
+
+      <!-- Step 2 -->
+      <div class="wiz-step" id="step-2" hidden>
+        <p class="add-sub" id="shift-sub"></p>
+        <div class="shifts" id="shifts"></div>
+        <button class="btn-text add-shift" type="button" id="add-shift">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Add another shift
+        </button>
+        <div class="shift-total">Total <b id="shift-total">0</b> h</div>
+      </div>
     </div>
+
     <div class="modal-footer">
       <div class="modal-footer-actions">
-        <button class="btn-ghost" type="button" data-close>Cancel</button>
-        <button class="btn-ghost" type="button" id="add-another">Choose another task</button>
-        <button class="btn-primary" type="button" id="add-confirm">Add task</button>
+        <button class="btn-ghost" type="button" data-close id="add-cancel">Cancel</button>
+        <button class="btn-ghost" type="button" id="add-back" hidden>Back</button>
+        <button class="btn-primary" type="button" id="add-next">Next</button>
+        <button class="btn-primary" type="button" id="add-save" hidden>Save</button>
       </div>
     </div>
   </div>
@@ -418,105 +484,136 @@
   'use strict';
 
   var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var MONTHS_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   var DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   var DOW_SHORT = ['Su','Mo','Tu','We','Th','Fr','Sa'];
   var FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
   function startOfDay(d) { var x = new Date(d.getTime()); x.setHours(0, 0, 0, 0); return x; }
   function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
-  function iso(d) {
-    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
-  }
-  function mondayOf(d) {
-    var x = startOfDay(d), back = (x.getDay() + 6) % 7;   // Monday starts the week
-    return addDays(x, -back);
-  }
+  function iso(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function fromIso(v) { var p = v.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function mondayOf(d) { var x = startOfDay(d); return addDays(x, -((x.getDay() + 6) % 7)); }
   function fmtDay(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()]; }
   function fmtHours(n) { return n % 1 === 0 ? String(n) : n.toFixed(1); }
 
   var TODAY = startOfDay(new Date());
   var THIS_MON = mondayOf(TODAY);
 
-  /* ─── The worker's tasks and their week ───────────────────────────
-     Generated around today so the screen never ages out: last week is a
-     full week, this week has started. */
-  var TASKS = [
-    { code: 'WORK-00123', name: 'Repair the machine',    site: 'MMA VIGILANT – 360', sup: 'Grace Okafor' },
-    { code: 'WORK-00201', name: 'Deck plating repair',   site: 'MMA VIGILANT – 360', sup: 'Grace Okafor' },
-    { code: 'JOB-00492',  name: 'Tooling change-out',    site: 'MMA VIGILANT ROV',   sup: 'Priya Nair' },
-    { code: 'WORK-00187', name: 'Weld handrail section', site: 'MMA VIGILANT – 360', sup: 'Tom Halloran' },
-    { code: 'JOB-00451',  name: 'ROV mobilisation',      site: 'MMA VIGILANT ROV',   sup: 'Priya Nair' }
-  ];
-  function taskBy(code) { return TASKS.filter(function (t) { return t.code === code; })[0]; }
+  /* ─── Sites, their custom fields and their supervisors ─────────────
+     The fields a task is built from differ per site — one to four levels,
+     named by the client's own configuration. Mirrors Team Timesheets. */
+  var SITE_FIELDS = {
+    'MMA VIGILANT – 360': [
+      { name: 'Work Order', values: ['WORK-00123', 'WORK-00124', 'WORK-00187', 'WORK-00201'] },
+      { name: 'Task',       values: ['Repair the machine', 'Replace hydraulic hose', 'Weld handrail section', 'Deck plating repair'] },
+      { name: 'Type',       values: ['Labour', 'Waiting for materials', 'Equipment breakdown'] },
+      { name: 'Sub-task',   values: ['Preparation', 'Clean-up'] }
+    ],
+    'MMA VIGILANT ROV': [
+      { name: 'Job Number', values: ['JOB-00451', 'JOB-00478', 'JOB-00492'] },
+      { name: 'Activity',   values: ['ROV dive', 'Deck handling', 'Tooling change'] },
+      { name: 'Type',       values: ['Labour', 'Weather standby'] }
+    ],
+    'SA BHP OLYMPIC DAM': [
+      { name: 'Work Order', values: ['WORK-00123', 'WORK-00201'] },
+      { name: 'Cost Code',  values: ['CC-1140', 'CC-1155', 'CC-1163'] },
+      { name: 'Type',       values: ['Labour', 'Waiting for materials'] },
+      { name: 'Shift Code', values: ['Day', 'Night'] }
+    ]
+  };
+  var SITES = Object.keys(SITE_FIELDS);
+  var SUPS_BY_SITE = {
+    'MMA VIGILANT – 360': ['Grace Okafor', 'Tom Halloran'],
+    'MMA VIGILANT ROV':   ['Priya Nair'],
+    'SA BHP OLYMPIC DAM': ['Grace Okafor', 'Marcus Webb']
+  };
+  function fieldsFor(site) { return SITE_FIELDS[site] || []; }
+  function pathOf(levels) { return levels.filter(Boolean).join(' | '); }
+  function keyOf(site, sup, levels) { return site + '§' + sup + '§' + pathOf(levels); }
 
-  var entries = [];                     // { date, code, hours }
-  function seed(day, code, hours) { entries.push({ date: iso(day), code: code, hours: hours }); }
+  /* ─── The worker's own entries ────────────────────────────────────
+     Generated around today so the week always has something in it. */
+  var entries = [];
+  var taskMeta = Object.create(null);         // key -> { site, sup, levels }
+
+  function add(day, site, sup, levels, hours, start, finish) {
+    var k = keyOf(site, sup, levels);
+    taskMeta[k] = { site: site, sup: sup, levels: levels.slice() };
+    entries.push({ date: iso(day), key: k, hours: hours, start: start || '', finish: finish || '' });
+  }
+
+  var A = ['WORK-00123', 'Repair the machine', 'Labour', ''];
+  var B = ['WORK-00201', 'Deck plating repair', 'Labour', ''];
+  var C = ['JOB-00492', 'Tooling change', 'Labour'];
   var lastMon = addDays(THIS_MON, -7);
   for (var i = 0; i < 5; i++) {
-    seed(addDays(lastMon, i), 'WORK-00123', 8);
-    seed(addDays(lastMon, i), 'WORK-00201', 4);
+    add(addDays(lastMon, i), 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
+    add(addDays(lastMon, i), 'MMA VIGILANT – 360', 'Grace Okafor', B, 4, '14:00', '18:00');
   }
-  seed(addDays(lastMon, 4), 'JOB-00492', 2.5);
-  seed(addDays(lastMon, 3), 'JOB-00492', 3);
-  // This week has begun.
-  seed(THIS_MON, 'WORK-00123', 8);
-  seed(THIS_MON, 'WORK-00201', 4);
-  /* Older work, so the recents list can say when each task was last
-     touched — that date is what makes a recent worth tapping. */
-  seed(addDays(THIS_MON, -24), 'WORK-00187', 10);
-  seed(addDays(THIS_MON, -38), 'JOB-00451', 7.5);
+  add(addDays(lastMon, 3), 'MMA VIGILANT ROV', 'Priya Nair', C, 3, '07:00', '10:00');
+  add(addDays(lastMon, 4), 'MMA VIGILANT ROV', 'Priya Nair', C, 2.5, '07:00', '09:30');
+  add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
+  add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', B, 4, '14:00', '18:00');
+  /* Older work, so the quick picks can say when each was last used. */
+  add(addDays(THIS_MON, -24), 'MMA VIGILANT – 360', 'Tom Halloran', ['WORK-00187', 'Weld handrail section', 'Labour', ''], 10);
+  add(addDays(THIS_MON, -38), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1155', 'Labour', 'Day'], 7.5);
 
   /* ─── State ───────────────────────────────────────────────────── */
   var state = { weekStart: new Date(THIS_MON.getTime()), editing: false, selDay: iso(TODAY) };
   var collapsed = Object.create(null);
-  var draft = null;        // { 'code|date': hours } while editing
-  var extraRows = [];      // task codes added during this edit
+  var draft = null;          // 'key|date' -> hours, while editing
+  var extraRows = [];        // keys added during this edit
 
   function days() {
     var out = [];
     for (var i = 0; i < 7; i++) out.push(addDays(state.weekStart, i));
     return out;
   }
-  function hoursFor(code, isoDate) {
+  function hoursFor(key, isoDate) {
     if (draft) {
-      var k = code + '|' + isoDate;
-      if (k in draft) return draft[k];
+      var dk = key + '|' + isoDate;
+      if (dk in draft) return draft[dk];
     }
     var sum = 0;
-    entries.forEach(function (e) { if (e.code === code && e.date === isoDate) sum += e.hours; });
+    entries.forEach(function (e) { if (e.key === key && e.date === isoDate) sum += e.hours; });
     return sum;
   }
+  function lastUsed(key) {
+    var ds = entries.filter(function (e) { return e.key === key; }).map(function (e) { return e.date; }).sort();
+    return ds.length ? fromIso(ds[ds.length - 1]) : null;
+  }
 
-  /* Rows that belong to this week: anything with hours, plus anything
-     added during the current edit. */
-  function weekTree() {
-    var ds = days().map(iso);
-    var codes = [];
-    TASKS.forEach(function (t) {
-      var any = ds.some(function (d) { return hoursFor(t.code, d) > 0; });
-      if (any || extraRows.indexOf(t.code) !== -1) codes.push(t.code);
+  /* Tasks on screen this week: anything with hours, plus anything added
+     during the current edit. */
+  function weekKeys() {
+    var ds = days().map(iso), out = [];
+    Object.keys(taskMeta).forEach(function (k) {
+      var any = ds.some(function (d) { return hoursFor(k, d) > 0; });
+      if (any || extraRows.indexOf(k) !== -1) out.push(k);
     });
-
+    return out;
+  }
+  function weekTree() {
     var sites = [], bySite = Object.create(null);
-    codes.forEach(function (code) {
-      var t = taskBy(code);
-      if (!bySite[t.site]) { bySite[t.site] = { name: t.site, sups: [], bySup: Object.create(null) }; sites.push(bySite[t.site]); }
-      var s = bySite[t.site];
-      if (!s.bySup[t.sup]) { s.bySup[t.sup] = { name: t.sup, tasks: [] }; s.sups.push(s.bySup[t.sup]); }
-      s.bySup[t.sup].tasks.push(t);
+    weekKeys().forEach(function (k) {
+      var m = taskMeta[k];
+      if (!bySite[m.site]) { bySite[m.site] = { name: m.site, sups: [], by: Object.create(null) }; sites.push(bySite[m.site]); }
+      var S = bySite[m.site];
+      if (!S.by[m.sup]) { S.by[m.sup] = { name: m.sup, tasks: [] }; S.sups.push(S.by[m.sup]); }
+      S.by[m.sup].tasks.push({ key: k, label: pathOf(m.levels) || 'No task', meta: m });
     });
     return sites;
   }
-
-  function sumRow(tasks, isoDate) {
-    var n = 0;
-    tasks.forEach(function (t) { n += hoursFor(t.code, isoDate); });
-    return n;
-  }
-  function sitesTasks(site) {
+  function tasksOfSite(site) {
     var out = [];
     site.sups.forEach(function (s) { out = out.concat(s.tasks); });
     return out;
+  }
+  function sumRow(tasks, isoDate) {
+    var n = 0;
+    tasks.forEach(function (t) { n += hoursFor(t.key, isoDate); });
+    return n;
   }
 
   /* ─── Desktop grid ────────────────────────────────────────────── */
@@ -525,15 +622,14 @@
   var gridBody = document.getElementById('grid-body');
   var gridFoot = document.getElementById('grid-foot');
 
-  function cellHtml(value, code, isoDate) {
-    if (state.editing && code) {
+  function cellHtml(value, key, isoDate) {
+    if (state.editing && key) {
       var v = value > 0 ? fmtHours(value) : '';
       return '<td class="col-day"><input class="hr-input" type="text" inputmode="decimal" ' +
-        'data-code="' + code + '" data-date="' + isoDate + '" value="' + v + '" aria-label="Hours" /></td>';
+        'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '" value="' + v + '" aria-label="Hours" /></td>';
     }
     return '<td class="col-day">' + (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
-
   function caret() {
     return '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
   }
@@ -542,56 +638,43 @@
 
   function renderGrid() {
     var ds = days();
+    gridCols.innerHTML = '<col style="width:360px" />' +
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
 
-    gridCols.innerHTML = '<col style="width:340px" />' +
-      ds.map(function () { return '<col style="width:92px" />'; }).join('') +
-      '<col style="width:96px" />';
-
-    gridHead.innerHTML = '<tr>' +
-      '<th class="col-label">Site › Supervisor › Task</th>' +
+    gridHead.innerHTML = '<tr><th class="col-label">Site › Supervisor › Task</th>' +
       ds.map(function (d) {
         var today = iso(d) === iso(TODAY);
         return '<th class="col-day"><span class="day-head' + (today ? ' is-today' : '') + '">' +
-          '<span class="dow">' + DOW[d.getDay()] + '</span>' +
-          '<span class="dnum">' + fmtDay(d) + '</span></span></th>';
-      }).join('') +
-      '<th class="col-total">Total</th>' +
-    '</tr>';
+          '<span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + fmtDay(d) + '</span></span></th>';
+      }).join('') + '<th class="col-total">Total</th></tr>';
 
     var tree = weekTree(), rows = [], shown = 0;
     tree.forEach(function (site) {
-      var all = sitesTasks(site);
-      var siteKey = 's:' + site.name;
+      var all = tasksOfSite(site), siteKey = 's:' + site.name;
       var siteOpen = collapsed[siteKey] !== true;
-
       rows.push('<tr class="row-site' + (siteOpen ? '' : ' collapsed') + '" data-key="' + Shell.esc(siteKey) + '">' +
         '<td class="col-label"><span class="tree">' + caret() + ICO_SITE +
           '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
         ds.map(function (d) { return cellHtml(sumRow(all, iso(d))); }).join('') +
-        '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(all, iso(d)); }, 0)) + '</td>' +
-      '</tr>');
+        '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(all, iso(d)); }, 0)) + '</td></tr>');
       shown++;
       if (!siteOpen) return;
 
       site.sups.forEach(function (sup) {
-        var supKey = siteKey + '|' + sup.name;
-        var supOpen = collapsed[supKey] !== true;
+        var supKey = siteKey + '|' + sup.name, supOpen = collapsed[supKey] !== true;
         rows.push('<tr class="row-sup' + (supOpen ? '' : ' collapsed') + '" data-key="' + Shell.esc(supKey) + '">' +
           '<td class="col-label"><span class="tree" style="padding-left:20px">' + caret() + ICO_SUP +
             '<span class="name">' + Shell.esc(sup.name) + '</span></span></td>' +
           ds.map(function (d) { return cellHtml(sumRow(sup.tasks, iso(d))); }).join('') +
-          '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
-        '</tr>');
+          '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(sup.tasks, iso(d)); }, 0)) + '</td></tr>');
         shown++;
         if (!supOpen) return;
 
         sup.tasks.forEach(function (t) {
           rows.push('<tr class="row-task">' +
-            '<td class="col-label" title="' + Shell.esc(t.code + ' — ' + t.name) + '">' +
-              '<span class="code">' + Shell.esc(t.code) + '</span> <span class="what">' + Shell.esc(t.name) + '</span></td>' +
-            ds.map(function (d) { return cellHtml(hoursFor(t.code, iso(d)), t.code, iso(d)); }).join('') +
-            '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.code, iso(d)); }, 0)) + '</td>' +
-          '</tr>');
+            '<td class="col-label" title="' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
+            ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
+            '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td></tr>');
           shown++;
         });
       });
@@ -599,20 +682,18 @@
 
     if (!rows.length) {
       rows.push('<tr><td class="col-label" colspan="' + (ds.length + 2) + '" style="color:var(--grey-600)">' +
-        'No hours recorded this week.' + (state.editing ? ' Use Add task to start.' : '') + '</td></tr>');
+        'No hours recorded this week.</td></tr>');
     }
     gridBody.innerHTML = rows.join('');
 
     var allTasks = [];
-    tree.forEach(function (s) { allTasks = allTasks.concat(sitesTasks(s)); });
-    gridFoot.innerHTML = '<tr>' +
-      '<td class="col-label">Total hours</td>' +
+    tree.forEach(function (s) { allTasks = allTasks.concat(tasksOfSite(s)); });
+    gridFoot.innerHTML = '<tr><td class="col-label">Total hours</td>' +
       ds.map(function (d) {
         var n = sumRow(allTasks, iso(d));
         return '<td class="col-day">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
       }).join('') +
-      '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(allTasks, iso(d)); }, 0)) + '</td>' +
-    '</tr>';
+      '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(allTasks, iso(d)); }, 0)) + '</td></tr>';
 
     document.getElementById('grid-count').textContent = 'Displaying ' + shown + ' row' + (shown === 1 ? '' : 's');
   }
@@ -623,146 +704,112 @@
   var dayCards = document.getElementById('day-cards');
 
   function entriesOn(isoDate) {
-    var tree = weekTree(), all = [];
-    tree.forEach(function (s) { all = all.concat(sitesTasks(s)); });
-    return all.map(function (t) { return { task: t, hours: hoursFor(t.code, isoDate) }; })
-              .filter(function (r) { return r.hours > 0 || (state.editing && extraRows.indexOf(r.task.code) !== -1); });
+    var all = [];
+    weekTree().forEach(function (s) { all = all.concat(tasksOfSite(s)); });
+    return all.map(function (t) { return { task: t, hours: hoursFor(t.key, isoDate) }; })
+              .filter(function (r) { return r.hours > 0 || (state.editing && extraRows.indexOf(r.task.key) !== -1); });
   }
 
   function renderWeek() {
     var ds = days(), weekTotal = 0;
-
     strip.innerHTML = ds.map(function (d) {
       var key = iso(d), n = 0;
-      TASKS.forEach(function (t) { n += hoursFor(t.code, key); });
+      Object.keys(taskMeta).forEach(function (k) { n += hoursFor(k, key); });
       weekTotal += n;
       var cls = 'day-chip' + (key === iso(TODAY) ? ' today' : '') + (key === state.selDay ? ' sel' : '') +
                 (d.getDay() === 0 || d.getDay() === 6 ? ' weekend' : '');
       return '<button class="' + cls + '" type="button" data-day="' + key + '">' +
-        '<span class="d">' + DOW_SHORT[d.getDay()] + '</span>' +
-        '<span class="n">' + d.getDate() + '</span>' +
-        '<span class="h' + (n > 0 ? '' : ' none') + '">' + (n > 0 ? fmtHours(n) : '&mdash;') + '</span>' +
-      '</button>';
+        '<span class="d">' + DOW_SHORT[d.getDay()] + '</span><span class="n">' + d.getDate() + '</span>' +
+        '<span class="h' + (n > 0 ? '' : ' none') + '">' + (n > 0 ? fmtHours(n) : '&mdash;') + '</span></button>';
     }).join('');
-
     weekTotalEl.innerHTML = 'Week total <b>' + fmtHours(weekTotal) + ' h</b>';
 
-    /* Most recent day first — the day you are filling in is the one you
-       just worked. */
     var cards = ds.slice().reverse().filter(function (d) {
       return entriesOn(iso(d)).length || iso(d) === state.selDay;
     });
-
     dayCards.innerHTML = cards.map(function (d) {
       var key = iso(d), rows = entriesOn(key);
       var total = rows.reduce(function (n, r) { return n + r.hours; }, 0);
       var open = state.editing && key === state.selDay;
-
       var body = rows.length ? rows.map(function (r) {
-        return '<div class="entry">' +
-          '<span class="entry-main">' +
-            '<span class="entry-code">' + Shell.esc(r.task.code) + '</span>' +
-            '<span class="entry-sub">' + Shell.esc(r.task.name) + ' · ' + Shell.esc(r.task.sup) + ' · ' + Shell.esc(r.task.site) + '</span>' +
+        return '<div class="entry"><span class="entry-main">' +
+            '<span class="entry-code">' + Shell.esc(r.task.label) + '</span>' +
+            '<span class="entry-sub">' + Shell.esc(r.task.meta.sup) + ' · ' + Shell.esc(r.task.meta.site) + '</span>' +
           '</span>' +
           (open
-            ? '<input class="hr-input" type="text" inputmode="decimal" data-code="' + r.task.code + '" data-date="' + key + '" value="' + (r.hours > 0 ? fmtHours(r.hours) : '') + '" aria-label="Hours" />'
+            ? '<input class="hr-input" type="text" inputmode="decimal" data-key="' + Shell.esc(r.task.key) + '" data-date="' + key + '" value="' + (r.hours > 0 ? fmtHours(r.hours) : '') + '" aria-label="Hours" />'
             : '<span class="entry-hrs">' + fmtHours(r.hours) + ' h</span>') +
         '</div>';
       }).join('') : '<div class="day-empty">No hours recorded.</div>';
 
-      return '<div class="day-card">' +
-        '<div class="day-card-head">' +
+      return '<div class="day-card"><div class="day-card-head">' +
           '<span class="dt">' + FULL_DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
           '<span class="tot">' + fmtHours(total) + ' h</span>' +
           '<button class="btn-text" type="button" data-edit-day="' + key + '">' + (open ? 'Done' : 'Edit') + '</button>' +
         '</div>' + body +
-        (open ? '<div class="day-card-foot"><button class="btn-text" type="button" id="card-add" data-day="' + key + '">' +
-            '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:4px"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
-            'Add task</button></div>' : '') +
+        '<div class="day-card-foot"><button class="btn-text" type="button" data-card-add="' + key + '">' +
+          '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:4px"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Add task</button></div>' +
       '</div>';
     }).join('');
   }
 
-  /* ─── Period bar ──────────────────────────────────────────────── */
+  /* ─── Period control ──────────────────────────────────────────── */
   function weekLabel(start) {
     var a = start, b = addDays(start, 6);
     return fmtDay(a) + ' – ' + fmtDay(b) + ' ' + b.getFullYear();
   }
-
   function syncPeriod() {
     document.getElementById('period-range').textContent = weekLabel(state.weekStart);
     document.getElementById('period-chip').classList.toggle('visible', iso(state.weekStart) === iso(THIS_MON));
     renderWeekMenu();
   }
 
-  /* ─── Week dropdown ───────────────────────────────────────────────
-     The period control Team Timesheets uses, scoped to whole weeks —
-     a timesheet is a day, and a worker fills one week at a time. */
   var weekPanel = document.getElementById('week-dd-panel');
   var CHECK = '<svg class="dd-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var calMonth = null;
 
   function quickWeeks() {
     return [
-      { k: 'this', label: 'This week',     start: THIS_MON },
-      { k: 'last', label: 'Last week',     start: addDays(THIS_MON, -7) },
-      { k: 'prev', label: 'Two weeks ago', start: addDays(THIS_MON, -14) }
+      { label: 'This week',     start: THIS_MON },
+      { label: 'Last week',     start: addDays(THIS_MON, -7) },
+      { label: 'Two weeks ago', start: addDays(THIS_MON, -14) }
     ];
   }
-
   function renderWeekMenu() {
     if (weekPanel.classList.contains('cal-mode')) return;
     var cur = iso(state.weekStart);
     weekPanel.innerHTML = quickWeeks().map(function (w) {
       return '<button class="dd-item' + (iso(w.start) === cur ? ' active' : '') + '" type="button" data-week="' + iso(w.start) + '">' +
         CHECK + w.label + '<span class="sub">' + weekLabel(w.start) + '</span></button>';
-    }).join('') +
-    '<hr class="dd-divider" />' +
+    }).join('') + '<hr class="dd-divider" />' +
     '<button class="dd-item" type="button" data-week="pick">' + CHECK + 'Choose a week…</button>';
   }
-
   function renderWeekCal() {
     var y = calMonth.getFullYear(), m = calMonth.getMonth();
-    var lead = (new Date(y, m, 1).getDay() + 6) % 7;      // Monday-first grid
-    var count = new Date(y, m + 1, 0).getDate();
+    var lead = (new Date(y, m, 1).getDay() + 6) % 7, count = new Date(y, m + 1, 0).getDate();
     var selStart = iso(state.weekStart), selEnd = iso(addDays(state.weekStart, 6));
-
     var cells = '';
     for (var i = 0; i < lead; i++) cells += '<div class="cal-cell"></div>';
     for (var d = 1; d <= count; d++) {
-      var cur = new Date(y, m, d), key = iso(cur);
+      var key = iso(new Date(y, m, d));
       var inWeek = key >= selStart && key <= selEnd;
-      var cls = 'cal-cell' + (inWeek ? ' inweek' : '') +
-                (key === selStart ? ' wk-start' : '') + (key === selEnd ? ' wk-end' : '');
-      cells += '<div class="' + cls + '"><button class="cal-day" type="button" data-pickday="' + key + '">' + d + '</button></div>';
+      cells += '<div class="cal-cell' + (inWeek ? ' inweek' : '') + (key === selStart ? ' wk-start' : '') + (key === selEnd ? ' wk-end' : '') +
+        '"><button class="cal-day" type="button" data-pickday="' + key + '">' + d + '</button></div>';
     }
-    weekPanel.innerHTML = '<div id="week-cal">' +
-      '<div class="cal-head">' +
+    weekPanel.innerHTML = '<div id="week-cal"><div class="cal-head">' +
         '<button class="cal-nav" type="button" data-cal="-1" aria-label="Previous month"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
-        '<div class="cal-title">' + ['January','February','March','April','May','June','July','August','September','October','November','December'][m] + ' ' + y + '</div>' +
+        '<div class="cal-title">' + MONTHS_LONG[m] + ' ' + y + '</div>' +
         '<button class="cal-nav" type="button" data-cal="1" aria-label="Next month"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
-      '</div>' +
-      '<div class="cal-dow">' + ['M','T','W','T','F','S','S'].map(function (w) { return '<span>' + w + '</span>'; }).join('') + '</div>' +
-      '<div class="cal-grid">' + cells + '</div>' +
-      '<div class="cal-foot">Pick any day — the week it belongs to opens.</div>' +
-    '</div>';
+      '</div><div class="cal-dow">' + ['M','T','W','T','F','S','S'].map(function (w) { return '<span>' + w + '</span>'; }).join('') +
+      '</div><div class="cal-grid">' + cells + '</div>' +
+      '<div class="cal-foot">Pick any day — the week it belongs to opens.</div></div>';
   }
-
   weekPanel.addEventListener('click', function (e) {
     e.stopPropagation();
     var nav = e.target.closest('[data-cal]');
-    if (nav) {
-      calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + Number(nav.getAttribute('data-cal')), 1);
-      renderWeekCal();
-      return;
-    }
+    if (nav) { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + Number(nav.getAttribute('data-cal')), 1); renderWeekCal(); return; }
     var day = e.target.closest('[data-pickday]');
-    if (day) {
-      goToWeek(mondayOf(new Date(day.getAttribute('data-pickday').replace(/-/g, '/'))));
-      weekPanel.classList.remove('cal-mode');
-      Shell.closeAllDropdowns();
-      return;
-    }
+    if (day) { goToWeek(mondayOf(fromIso(day.getAttribute('data-pickday')))); weekPanel.classList.remove('cal-mode'); Shell.closeAllDropdowns(); return; }
     var item = e.target.closest('[data-week]');
     if (!item) return;
     var v = item.getAttribute('data-week');
@@ -772,27 +819,29 @@
       renderWeekCal();
       return;
     }
-    goToWeek(new Date(v.replace(/-/g, '/')));
+    goToWeek(fromIso(v));
     Shell.closeAllDropdowns();
   });
-
   document.querySelector('#week-dd .dd-trigger').addEventListener('click', function () {
     weekPanel.classList.remove('cal-mode');
     renderWeekMenu();
   });
-
   function goToWeek(start) {
     state.weekStart = startOfDay(start);
-    var ds = days().map(iso);
-    if (ds.indexOf(state.selDay) === -1) state.selDay = ds[0];
+    if (days().map(iso).indexOf(state.selDay) === -1) state.selDay = iso(state.weekStart);
     render();
   }
+  document.querySelectorAll('[data-step]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (state.editing) return;
+      goToWeek(addDays(state.weekStart, 7 * Number(b.getAttribute('data-step'))));
+    });
+  });
 
-  /* ─── Viewport switcher (prototype aid, not product UI) ─────────── */
+  /* ─── Viewport switcher (prototype aid) ───────────────────────── */
   var vp = document.getElementById('vp-switch');
   var narrowQuery = window.matchMedia('(max-width: 860px)');
   var vpMode = 'auto';
-
   function applyViewport() {
     var narrow = vpMode === 'mobile' ? true : vpMode === 'desktop' ? false : narrowQuery.matches;
     document.body.classList.toggle('is-narrow', narrow);
@@ -811,10 +860,9 @@
   });
   narrowQuery.addEventListener('change', function () { if (vpMode === 'auto') applyViewport(); });
 
+  /* ─── Render ──────────────────────────────────────────────────── */
   var scrollBox = document.querySelector('.grid-card .table-scroll');
-  function syncScrollEdge() {
-    scrollBox.classList.toggle('sx-left', scrollBox.scrollLeft > 0);
-  }
+  function syncScrollEdge() { scrollBox.classList.toggle('sx-left', scrollBox.scrollLeft > 0); }
   scrollBox.addEventListener('scroll', syncScrollEdge);
 
   function render() {
@@ -823,14 +871,8 @@
     renderWeek();
     syncEditBar();
     syncScrollEdge();
+    syncCollapseBtn();
   }
-
-  document.querySelectorAll('[data-step]').forEach(function (b) {
-    b.addEventListener('click', function () {
-      if (state.editing) return;
-      goToWeek(addDays(state.weekStart, 7 * Number(b.getAttribute('data-step'))));
-    });
-  });
 
   /* ─── Collapse ────────────────────────────────────────────────── */
   gridBody.addEventListener('click', function (e) {
@@ -841,7 +883,6 @@
     renderGrid();
     syncCollapseBtn();
   });
-
   function allKeys() {
     var keys = [];
     weekTree().forEach(function (site) {
@@ -853,8 +894,8 @@
   }
   function syncCollapseBtn() {
     var keys = allKeys();
-    var anyOpen = keys.some(function (k) { return collapsed[k] !== true; });
-    document.getElementById('btn-collapse').textContent = anyOpen ? 'Collapse all' : 'Expand all';
+    document.getElementById('btn-collapse').textContent =
+      keys.some(function (k) { return collapsed[k] !== true; }) ? 'Collapse all' : 'Expand all';
   }
   document.getElementById('btn-collapse').addEventListener('click', function () {
     var keys = allKeys();
@@ -866,236 +907,251 @@
 
   /* ─── Edit mode ───────────────────────────────────────────────── */
   function changeCount() { return draft ? Object.keys(draft).length : 0; }
-
   function syncEditBar() {
     var n = changeCount();
     document.getElementById('edit-status').textContent =
       n === 0 ? 'Editing · no changes yet' : 'Editing · ' + n + ' change' + (n === 1 ? '' : 's');
     document.getElementById('btn-save').disabled = n === 0;
   }
-
   function enterEdit() {
-    state.editing = true;
-    draft = Object.create(null);
-    extraRows = [];
+    state.editing = true; draft = Object.create(null); extraRows = [];
     document.body.classList.add('editing');
     render();
   }
   function exitEdit() {
-    state.editing = false;
-    draft = null;
-    extraRows = [];
+    state.editing = false; draft = null; extraRows = [];
     document.body.classList.remove('editing');
     render();
   }
-
   document.getElementById('btn-edit').addEventListener('click', enterEdit);
   document.getElementById('btn-cancel').addEventListener('click', exitEdit);
-
   document.getElementById('btn-save').addEventListener('click', function () {
     var n = changeCount();
-    Object.keys(draft).forEach(function (k) {
-      var parts = k.split('|'), code = parts[0], date = parts[1], hours = draft[k];
+    Object.keys(draft).forEach(function (dk) {
+      var at = dk.lastIndexOf('|');
+      var key = dk.slice(0, at), date = dk.slice(at + 1), hours = draft[dk];
       for (var i = entries.length - 1; i >= 0; i--) {
-        if (entries[i].code === code && entries[i].date === date) entries.splice(i, 1);
+        if (entries[i].key === key && entries[i].date === date) entries.splice(i, 1);
       }
-      if (hours > 0) entries.push({ date: date, code: code, hours: hours });
+      if (hours > 0) entries.push({ date: date, key: key, hours: hours, start: '', finish: '' });
     });
     exitEdit();
     Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved to your timesheets.');
   });
 
-  /* Typing anywhere in the week updates the draft and the totals. */
   document.addEventListener('input', function (e) {
     var box = e.target.closest('.hr-input');
     if (!box || !draft) return;
     var raw = box.value.trim().replace(',', '.');
     var val = raw === '' ? 0 : Number(raw);
     if (isNaN(val) || val < 0) return;
-    var key = box.getAttribute('data-code') + '|' + box.getAttribute('data-date');
-    draft[key] = val;
+    draft[box.getAttribute('data-key') + '|' + box.getAttribute('data-date')] = val;
     box.classList.add('changed');
-
-    // Totals have to follow the typing, but re-rendering would steal focus.
-    var active = document.activeElement;
-    var caret = active && active.selectionStart;
-    renderGrid();
-    renderWeek();
-    syncEditBar();
-    var again = document.querySelector('.hr-input[data-code="' + box.getAttribute('data-code') +
-      '"][data-date="' + box.getAttribute('data-date') + '"]');
-    if (again) {
-      again.focus();
-      if (caret != null) { try { again.setSelectionRange(caret, caret); } catch (err) {} }
-    }
+    var caretPos = box.selectionStart;
+    var k = box.getAttribute('data-key'), dt = box.getAttribute('data-date');
+    renderGrid(); renderWeek(); syncEditBar();
+    var again = document.querySelector('.hr-input[data-key="' + k.replace(/"/g, '\\"') + '"][data-date="' + dt + '"]');
+    if (again) { again.focus(); try { again.setSelectionRange(caretPos, caretPos); } catch (err) {} }
   });
 
-  /* ─── Mobile: edit one day at a time ──────────────────────────── */
   document.addEventListener('click', function (e) {
     var chip = e.target.closest('[data-day]');
     if (chip) { state.selDay = chip.getAttribute('data-day'); renderWeek(); return; }
-
     var dayEdit = e.target.closest('[data-edit-day]');
     if (dayEdit) {
-      var key = dayEdit.getAttribute('data-edit-day');
-      state.selDay = key;
+      state.selDay = dayEdit.getAttribute('data-edit-day');
       if (!state.editing) enterEdit(); else renderWeek();
       return;
     }
-
-    var cardAdd = e.target.closest('#card-add');
-    if (cardAdd) openAdd(cardAdd.getAttribute('data-day'));
+    var cardAdd = e.target.closest('[data-card-add]');
+    if (cardAdd) openAdd(cardAdd.getAttribute('data-card-add'));
   });
 
-  /* ─── Add task ──────────────────────────────────────────────────
-     Recents first, the way a worker thinks: the same job, again. Picking
-     "Choose another task" opens the supervisor › site › job code path. */
+  /* ─── Add task: step 1 where and what, step 2 the hours ─────────
+     Every field is on screen from the start; the recents underneath are
+     a shortcut that fills the same form, not the way in. */
   var addModal = document.getElementById('add-modal');
-  var anotherBox = document.getElementById('another');
-  var addPick = null;
-  var addForDay = null;                 // set when opened from a day card
+  var shifts = [];
+  var addStep = 1;
 
-  /* When the worker last booked time against a task, for the recents list. */
-  function lastWorked(code) {
-    var dates = entries.filter(function (e) { return e.code === code; })
-                       .map(function (e) { return e.date; }).sort();
-    if (!dates.length) return null;
-    var parts = dates[dates.length - 1].split('-');
-    return new Date(+parts[0], +parts[1] - 1, +parts[2]);
+  function el(id) { return document.getElementById(id); }
+
+  function renderLevelFields(preset) {
+    var site = el('add-site').value, fields = fieldsFor(site);
+    el('level-fields').innerHTML = '<div class="lvl-head">Task</div>' + fields.map(function (f, i) {
+      var val = preset && preset[i] ? preset[i] : '';
+      return '<div class="fld"><label class="fld-label" for="lvl-' + i + '">' + Shell.esc(f.name) +
+        (i === 0 ? '<span style="color:var(--error)">*</span>' : ' <span style="color:var(--grey-600);font-weight:400">(optional)</span>') + '</label>' +
+        '<select id="lvl-' + i + '" data-lvl="' + i + '"><option value="">Select…</option>' +
+        f.values.map(function (v) { return '<option' + (v === val ? ' selected' : '') + '>' + Shell.esc(v) + '</option>'; }).join('') +
+        '</select></div>';
+    }).join('');
   }
 
-  /* A timesheet is one day, so adding work starts with the date. Opened
-     from a day card the date is already known and the field is hidden. */
-  function supervisorOn(dayIso) {
+  function fillSupervisors(preset) {
+    var site = el('add-site').value;
+    var list = SUPS_BY_SITE[site] || [];
+    el('add-sup').innerHTML = list.map(function (x) {
+      return '<option' + (x === preset ? ' selected' : '') + '>' + Shell.esc(x) + '</option>';
+    }).join('');
+  }
+
+  function supervisorOn(isoDate) {
     var found = null;
     entries.forEach(function (e) {
-      if (e.date === dayIso && !found) found = taskBy(e.code).sup;
+      if (e.date === isoDate && !found) found = taskMeta[e.key] && taskMeta[e.key].sup;
     });
     return found;
   }
-
-  function syncDateHint() {
-    var day = document.getElementById('add-date').value;
-    var sup = supervisorOn(day);
-    document.getElementById('date-hint').textContent = sup
+  function syncDayHint() {
+    var sup = supervisorOn(el('add-date').value);
+    el('date-hint').textContent = sup
       ? 'This day already has a timesheet with ' + sup + '.'
       : 'No timesheet for this day yet — one will be created.';
-    if (sup) {
-      var sel = document.getElementById('add-sup');
-      if (Array.prototype.some.call(sel.options, function (o) { return o.value === sup || o.text === sup; })) {
-        sel.value = sup;
-        fillJobCodes();
-      }
-    }
   }
-  document.getElementById('add-date').addEventListener('change', syncDateHint);
+
+  function renderQuick() {
+    var recent = Object.keys(taskMeta).map(function (k) {
+      return { key: k, meta: taskMeta[k], when: lastUsed(k) };
+    }).sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 4);
+
+    el('quick-tasks').innerHTML = recent.map(function (r) {
+      return '<button type="button" data-quick="' + Shell.esc(r.key) + '">' +
+        Shell.esc(pathOf(r.meta.levels).split(' | ')[0]) + ' · ' + Shell.esc(r.meta.sup) +
+        (r.when ? ' · ' + fmtDay(r.when) : '') + '</button>';
+    }).join('');
+  }
+
+  function setStep(n) {
+    addStep = n;
+    el('step-1').hidden = n !== 1;
+    el('step-2').hidden = n !== 2;
+    el('add-step-label').textContent = n === 1 ? 'Step 1 of 2 · Where and what' : 'Step 2 of 2 · Hours';
+    el('add-next').hidden = n !== 1;
+    el('add-save').hidden = n !== 2;
+    el('add-back').hidden = n !== 2;
+  }
 
   function openAdd(dayIso) {
-    addPick = null;
-    addForDay = dayIso || null;
-    anotherBox.classList.remove('open');
-    document.getElementById('add-another').style.display = '';
+    var ds = days();
+    el('add-date').innerHTML = ds.map(function (d) {
+      return '<option value="' + iso(d) + '">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</option>';
+    }).join('');
+    el('add-date').value = dayIso || (ds.map(iso).indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : iso(ds[0]));
 
-    var dateFld = document.getElementById('date-fld');
-    dateFld.style.display = addForDay ? 'none' : '';
-    if (!addForDay) {
-      var ds = days();
-      var preferred = ds.filter(function (d) { return iso(d) === iso(TODAY); })[0] || ds[0];
-      document.getElementById('add-date').innerHTML = ds.map(function (d) {
-        return '<option value="' + iso(d) + '">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</option>';
-      }).join('');
-      document.getElementById('add-date').value = iso(preferred);
-    }
+    el('add-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    fillSupervisors(supervisorOn(el('add-date').value));
+    renderLevelFields(null);
+    renderQuick();
+    syncDayHint();
 
-    document.getElementById('add-sub').innerHTML = addForDay
-      ? 'Choose one of your recent tasks for <b>' + FULL_DOW[new Date(addForDay.replace(/-/g, '/')).getDay()] +
-        ' ' + fmtDay(new Date(addForDay.replace(/-/g, '/'))) + '</b>, or another.'
-      : 'Then choose one of your recent tasks, or another.';
-
-    var used = [];
-    weekTree().forEach(function (s) { sitesTasks(s).forEach(function (t) { used.push(t.code); }); });
-    var available = TASKS.filter(function (t) { return used.indexOf(t.code) === -1; });
-
-    document.getElementById('recent-tasks').innerHTML = available.length
-      ? available.map(function (t) {
-          var when = lastWorked(t.code);
-          return '<button class="recent-row" type="button" data-pick="' + t.code + '">' +
-            '<span class="rr-code">' + Shell.esc(t.code) + ' · ' + Shell.esc(t.name) + '</span>' +
-            '<span class="rr-sub">' + Shell.esc(t.sup) + ' · ' + Shell.esc(t.site) +
-              (when ? ' · last ' + DOW[when.getDay()] + ' ' + fmtDay(when) : ' · not worked yet') +
-            '</span></button>';
-        }).join('')
-      : '<span class="recent-empty">Everything you work on is already on this week.</span>';
-
-    var sites = [], sups = [];
-    TASKS.forEach(function (t) {
-      if (sites.indexOf(t.site) === -1) sites.push(t.site);
-      if (sups.indexOf(t.sup) === -1) sups.push(t.sup);
-    });
-    document.getElementById('add-sup').innerHTML = sups.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
-    document.getElementById('add-site').innerHTML = sites.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
-    fillJobCodes();
-    if (!addForDay) syncDateHint();
+    shifts = [{ start: '', finish: '', hours: '' }];
+    renderShifts();
+    setStep(1);
     addModal.classList.add('open');
   }
 
-  /* Job codes follow the supervisor and site, the way the real form does. */
-  function fillJobCodes() {
-    var sup = document.getElementById('add-sup').value;
-    var site = document.getElementById('add-site').value;
-    var opts = TASKS.filter(function (t) { return t.sup === sup && t.site === site; });
-    document.getElementById('add-task').innerHTML = opts.length
-      ? opts.map(function (t) { return '<option value="' + t.code + '">' + Shell.esc(t.code + ' — ' + t.name) + '</option>'; }).join('')
-      : '<option value="">No job codes for this pairing</option>';
-    addPick = opts.length ? opts[0].code : null;
+  el('add-date').addEventListener('change', function () { fillSupervisors(supervisorOn(this.value)); syncDayHint(); });
+  el('add-site').addEventListener('change', function () { fillSupervisors(null); renderLevelFields(null); });
 
-    var when = lastWorked(TASKS.filter(function (t) { return t.sup === sup; }).map(function (t) { return t.code; })[0] || '');
-    document.getElementById('sup-hint').textContent = when
-      ? 'Last timesheet with them ' + DOW[when.getDay()] + ' ' + fmtDay(when)
-      : 'No timesheets with them yet';
+  el('quick-tasks').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-quick]');
+    if (!b) return;
+    var m = taskMeta[b.getAttribute('data-quick')];
+    el('add-site').value = m.site;
+    fillSupervisors(m.sup);
+    renderLevelFields(m.levels);
+  });
+
+  /* ─── Shifts ──────────────────────────────────────────────────── */
+  function parseTime(v) {
+    var m = /^(\d{1,2})[:.]?(\d{2})?$/.exec(v.trim());
+    if (!m) return null;
+    return Number(m[1]) * 60 + Number(m[2] || 0);
   }
-  ['add-sup', 'add-site'].forEach(function (id) {
-    document.getElementById(id).addEventListener('change', fillJobCodes);
+  function shiftHours(sh) {
+    var a = parseTime(sh.start), b = parseTime(sh.finish);
+    if (a == null || b == null) return sh.hours === '' ? 0 : Number(sh.hours) || 0;
+    var mins = b - a;
+    if (mins <= 0) mins += 24 * 60;                 // finished after midnight
+    return Math.round((mins / 60) * 100) / 100;
+  }
+  function renderShifts() {
+    el('shift-sub').innerHTML = 'Record the hours for <b>' +
+      DOW[fromIso(el('add-date').value).getDay()] + ' ' + fmtDay(fromIso(el('add-date').value)) +
+      '</b>. Leave the times blank if you only record totals.';
+    el('shifts').innerHTML = shifts.map(function (sh, i) {
+      return '<div class="shift" data-shift="' + i + '">' +
+        '<div><label class="fld-label">Start</label><input type="text" placeholder="07:00" data-f="start" value="' + Shell.esc(sh.start) + '" /></div>' +
+        '<div><label class="fld-label">Finish</label><input type="text" placeholder="19:00" data-f="finish" value="' + Shell.esc(sh.finish) + '" /></div>' +
+        '<div><label class="fld-label">Hours</label><input type="text" inputmode="decimal" data-f="hours" value="' + Shell.esc(sh.hours) + '" /></div>' +
+        (shifts.length > 1
+          ? '<button class="shift-drop" type="button" data-drop="' + i + '" aria-label="Remove shift"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>'
+          : '<span></span>') +
+      '</div>';
+    }).join('');
+    el('shift-total').textContent = fmtHours(shifts.reduce(function (n, sh) { return n + shiftHours(sh); }, 0));
+  }
+  el('shifts').addEventListener('input', function (e) {
+    var row = e.target.closest('[data-shift]');
+    if (!row) return;
+    var i = Number(row.getAttribute('data-shift')), f = e.target.getAttribute('data-f');
+    shifts[i][f] = e.target.value;
+    if (f !== 'hours') {
+      var h = shiftHours(shifts[i]);
+      if (h) { shifts[i].hours = fmtHours(h); row.querySelector('[data-f="hours"]').value = fmtHours(h); }
+    }
+    el('shift-total').textContent = fmtHours(shifts.reduce(function (n, sh) { return n + shiftHours(sh); }, 0));
   });
-  document.getElementById('add-task').addEventListener('change', function () { addPick = this.value || null; });
-
-  document.getElementById('add-another').addEventListener('click', function () {
-    anotherBox.classList.add('open');
-    this.style.display = 'none';
-    document.getElementById('recent-tasks').querySelectorAll('.recent-row').forEach(function (b) { b.classList.remove('sel'); });
-    fillJobCodes();
+  el('shifts').addEventListener('click', function (e) {
+    var drop = e.target.closest('[data-drop]');
+    if (!drop) return;
+    shifts.splice(Number(drop.getAttribute('data-drop')), 1);
+    renderShifts();
+  });
+  el('add-shift').addEventListener('click', function () {
+    shifts.push({ start: '', finish: '', hours: '' });
+    renderShifts();
   });
 
-  document.getElementById('btn-add-task').addEventListener('click', function () { openAdd(null); });
-  document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null); });
+  /* ─── Steps ───────────────────────────────────────────────────── */
+  function currentLevels() {
+    return Array.prototype.map.call(el('level-fields').querySelectorAll('[data-lvl]'), function (sel) { return sel.value; });
+  }
+  el('add-next').addEventListener('click', function () {
+    var levels = currentLevels();
+    if (!levels[0]) {
+      Shell.snackbar('Choose the ' + fieldsFor(el('add-site').value)[0].name.toLowerCase() + ' first.');
+      return;
+    }
+    renderShifts();
+    setStep(2);
+  });
+  el('add-back').addEventListener('click', function () { setStep(1); });
+
+  el('add-save').addEventListener('click', function () {
+    var total = shifts.reduce(function (n, sh) { return n + shiftHours(sh); }, 0);
+    if (!total) { Shell.snackbar('Add some hours first.'); return; }
+    var date = el('add-date').value, site = el('add-site').value, sup = el('add-sup').value;
+    var levels = currentLevels();
+    var k = keyOf(site, sup, levels);
+    taskMeta[k] = { site: site, sup: sup, levels: levels };
+    shifts.forEach(function (sh) {
+      var h = shiftHours(sh);
+      if (h > 0) entries.push({ date: date, key: k, hours: h, start: sh.start, finish: sh.finish });
+    });
+    addModal.classList.remove('open');
+    state.selDay = date;
+    if (days().map(iso).indexOf(date) === -1) goToWeek(mondayOf(fromIso(date)));
+    render();
+    Shell.snackbar(fmtHours(total) + ' h added to ' + DOW[fromIso(date).getDay()] + ' ' + fmtDay(fromIso(date)) + '.');
+  });
 
   addModal.addEventListener('click', function (e) {
-    if (e.target === addModal || e.target.closest('[data-close]')) { addModal.classList.remove('open'); return; }
-    var pick = e.target.closest('[data-pick]');
-    if (pick) {
-      addPick = pick.getAttribute('data-pick');
-      addModal.querySelectorAll('[data-pick]').forEach(function (b) { b.classList.toggle('sel', b === pick); });
-    }
+    if (e.target === addModal || e.target.closest('[data-close]')) addModal.classList.remove('open');
   });
-
-  document.getElementById('add-confirm').addEventListener('click', function () {
-    if (!addPick) { Shell.snackbar('Choose a task first.'); return; }
-    if (extraRows.indexOf(addPick) === -1) extraRows.push(addPick);
-    var day = addForDay || document.getElementById('add-date').value;
-    if (day) {
-      state.selDay = day;
-      addForDay = day;
-      /* The week has to be showing the day we just picked. */
-      if (days().map(iso).indexOf(day) === -1) goToWeek(mondayOf(new Date(day.replace(/-/g, '/'))));
-    }
-    addModal.classList.remove('open');
-    if (!state.editing) enterEdit(); else render();
-    var sel = addForDay
-      ? '.day-card .hr-input[data-code="' + addPick + '"][data-date="' + addForDay + '"]'
-      : '.hr-input[data-code="' + addPick + '"]';
-    var first = document.querySelector(sel) || document.querySelector('.hr-input[data-code="' + addPick + '"]');
-    if (first) first.focus();
-  });
+  document.getElementById('btn-add-task').addEventListener('click', function () { openAdd(state.selDay); });
+  document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null); });
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
@@ -1104,7 +1160,6 @@
   });
 
   render();
-  syncCollapseBtn();
   applyViewport();
 })();
 </script>
