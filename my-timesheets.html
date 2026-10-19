@@ -248,8 +248,24 @@
   @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
   body.is-narrow .modal-backdrop.open .modal { animation: sheet-up 0.24s ease; }
 
-  .edit-meta { font-size: 13px; line-height: 19px; color: var(--grey-600); margin: 0; }
-  .edit-meta b { color: var(--text-main); font-weight: 500; }
+  /* What this sheet is about, told apart by label and weight rather than
+     by one run of grey text. */
+  .facts {
+    margin: 0 0 16px; border: 1px solid var(--grey-300); border-radius: 10px;
+    overflow: hidden; background: var(--white);
+  }
+  .facts .fact {
+    display: grid; grid-template-columns: 88px 1fr; gap: 12px;
+    padding: 10px 12px; align-items: baseline;
+  }
+  .facts .fact + .fact { border-top: 1px solid var(--grey-200); }
+  .facts dt {
+    font-size: 12px; font-weight: 500; line-height: 18px; color: var(--grey-600);
+  }
+  .facts dd { margin: 0; font-size: 14px; font-weight: 500; line-height: 19px; color: var(--text-main); }
+  .facts dd .fact-name { display: block; font-size: 15px; font-weight: 600; line-height: 20px; }
+  .facts dd .fact-sub { display: block; font-size: 13px; font-weight: 400; line-height: 18px; color: var(--grey-600); margin-top: 1px; }
+  .facts .fact-date dd { color: var(--primary); }
   .edit-modal .modal-footer-actions .btn-delete {
     margin-right: auto; background: none; border: none; cursor: pointer;
     font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--error);
@@ -272,13 +288,21 @@
     color: var(--grey-600); display: flex; align-items: center; justify-content: center; border-radius: 8px;
   }
   .shift-drop:hover { background: var(--grey-100); color: var(--error); }
-  .add-shift { font-size: 14px; }
-  .shift-foot {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; margin-top: 12px;
+  /* The running total sits at the head of the hours, where it is read
+     rather than hunted for at the bottom of the sheet. */
+  .shift-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-bottom: 8px;
   }
-  .shift-total { text-align: right; font-size: 14px; color: var(--grey-700); }
-  .shift-total b { color: var(--text-main); font-size: 16px; }
+  .shift-head-label { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .shift-total { font-size: 14px; color: var(--grey-600); white-space: nowrap; }
+  .shift-total b { color: var(--text-main); font-size: 16px; font-weight: 600; }
+
+  /* Its own line, full width — a thumb reaches it anywhere along the row. */
+  .add-shift {
+    width: 100%; justify-content: center; margin-top: 12px;
+    color: var(--primary); border-style: dashed;
+  }
   .fld { display: flex; flex-direction: column; gap: 6px; }
   .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
   .fld select {
@@ -382,6 +406,8 @@
   /* The toolbar keeps its search on a phone; the grid-only controls go. */
   body.is-narrow .period-bar { order: 3; display: block; margin: 0; }
   body.is-narrow .period-bar .search-wrap { width: 100%; }
+  body.is-narrow .period-bar .search-bar { height: 40px; }
+  body.is-narrow .m-date .dd-trigger { height: 40px; }
   body.is-narrow .period-bar .period-actions { display: none; }
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
@@ -394,22 +420,58 @@
 
   /* A sheet, not a box: flush to the bottom with a grabber on top. */
   body.is-narrow .modal-backdrop { align-items: flex-end; padding: 0; }
-  body.is-narrow .modal.add-modal, body.is-narrow .modal.edit-modal {
+  body.is-narrow .modal.add-modal, body.is-narrow .modal.edit-modal, body.is-narrow .modal.confirm-modal {
     max-width: 390px; width: 100%; max-height: 92vh;
     border-radius: 18px 18px 0 0; padding-top: 8px;
   }
-  body.is-narrow .modal.add-modal::before, body.is-narrow .modal.edit-modal::before {
+  body.is-narrow .modal.add-modal::before, body.is-narrow .modal.edit-modal::before,
+  body.is-narrow .modal.confirm-modal::before {
     content: ''; display: block; width: 38px; height: 4px; margin: 0 auto 4px;
     border-radius: 2px; background: var(--grey-350);
   }
-  body.is-narrow .add-modal .modal-footer, body.is-narrow .edit-modal .modal-footer {
+  body.is-narrow .add-modal .modal-footer, body.is-narrow .edit-modal .modal-footer,
+  body.is-narrow .confirm-modal .modal-footer {
     padding-bottom: 22px;
   }
+  body.is-narrow .stepper { padding: 12px 20px; }
 
-  /* ─── Stepper ───────────────────────────────────────────────────── */
-  .stepper { display: flex; align-items: center; gap: 6px; }
+  /* ─── Confirm ─────────────────────────────────────────────────────
+     Removing the last shift takes the task with it, and the last task
+     takes the day's timesheet — the dialog says so before it happens. */
+  .modal.confirm-modal { max-width: 416px; }
+  .confirm-modal .modal-body { flex: 0 1 auto; padding: 16px 24px 20px; }
+  .confirm-lead { margin: 0; font-size: 14px; line-height: 20px; color: var(--text-main); }
+  .consequence { margin: 12px 0 0; padding: 0; list-style: none; }
+  .consequence li {
+    position: relative; padding: 0 0 0 24px; margin-top: 8px;
+    font-size: 14px; line-height: 20px; color: var(--grey-700);
+  }
+  .consequence li::before {
+    content: ''; position: absolute; left: 7px; top: 8px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--error);
+  }
+  .consequence b { color: var(--text-main); font-weight: 500; }
+  .btn-danger {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 16px; border-radius: 8px; border: none;
+    background: var(--error); color: var(--white); cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
+  }
+  .btn-danger:hover { background: #8a0a19; }
+  body.is-narrow .confirm-modal .modal-footer-actions { width: 100%; }
+  body.is-narrow .confirm-modal .modal-footer-actions .btn-ghost,
+  body.is-narrow .confirm-modal .modal-footer-actions .btn-danger { flex: 1; justify-content: center; }
+
+  /* ─── Stepper ─────────────────────────────────────────────────────
+     A band of its own under the title, so the header stays the title and
+     the close button. The three steps share the width evenly. */
+  .stepper {
+    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    padding: 14px 24px; border-bottom: 1px solid var(--grey-300);
+  }
   .stp {
-    display: inline-flex; align-items: center; gap: 7px; padding: 0; border: none; background: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    flex: 1 1 0; min-width: 0; padding: 0; border: none; background: none;
     font-family: var(--fs-sans); font-size: 13px; color: var(--grey-600); cursor: default;
   }
   .stp .n {
@@ -422,7 +484,7 @@
   .stp.done .n { background: var(--bg-blue-light); color: var(--primary); }
   .stp.now { color: var(--text-main); font-weight: 500; }
   .stp.now .n { background: var(--primary); color: var(--white); }
-  .stp-sep { width: 14px; height: 1px; background: var(--grey-350); flex-shrink: 0; }
+  .stp-sep { flex: 0 1 28px; height: 1px; background: var(--grey-350); min-width: 10px; }
   .stp:disabled { cursor: default; }
 
   /* ─── Selects: the chevron sits as far from the edge as the text ── */
@@ -577,17 +639,19 @@
     <div class="modal-header">
       <div class="modal-heading">
         <span class="modal-title" id="add-title">Add task</span>
-        <div class="stepper" id="stepper">
-          <button class="stp" type="button" data-goto="1"><span class="n">1</span>Details</button>
-          <span class="stp-sep"></span>
-          <button class="stp" type="button" data-goto="2"><span class="n">2</span>Task</button>
-          <span class="stp-sep"></span>
-          <button class="stp" type="button" data-goto="3"><span class="n">3</span>Hours</button>
-        </div>
       </div>
       <button class="modal-close" type="button" data-close aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
+    </div>
+
+    <!-- Its own band under the title: the three steps spread the full width. -->
+    <div class="stepper" id="stepper">
+      <button class="stp" type="button" data-goto="1"><span class="n">1</span>Details</button>
+      <span class="stp-sep"></span>
+      <button class="stp" type="button" data-goto="2"><span class="n">2</span>Task</button>
+      <span class="stp-sep"></span>
+      <button class="stp" type="button" data-goto="3"><span class="n">3</span>Hours</button>
     </div>
 
     <div class="modal-body">
@@ -621,14 +685,15 @@
       <!-- Step 3 — the hours -->
       <div class="wiz-step" id="step-3" hidden>
         <p class="add-sub" id="shift-sub"></p>
-        <div class="shifts" id="shifts"></div>
-        <div class="shift-foot">
-          <button class="btn-text add-shift" type="button" id="add-shift">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add another shift
-          </button>
-          <div class="shift-total">Total <b id="shift-total">0</b> h</div>
+        <div class="shift-head">
+          <span class="shift-head-label">Hours</span>
+          <span class="shift-total">Total <b id="shift-total">0</b> h</span>
         </div>
+        <div class="shifts" id="shifts"></div>
+        <button class="btn-ghost add-shift" type="button" id="add-shift">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Add another shift
+        </button>
       </div>
     </div>
 
@@ -648,27 +713,51 @@
     <div class="modal-header">
       <div class="modal-heading">
         <span class="modal-title" id="edit-title">Edit hours</span>
-        <span class="modal-meta"><span class="meta-item" id="edit-when"></span></span>
       </div>
       <button class="modal-close" type="button" data-close aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
     </div>
     <div class="modal-body">
-      <p class="edit-meta" id="edit-task"></p>
-      <div class="shifts" id="edit-shifts"></div>
-      <div class="shift-foot">
-        <button class="btn-text add-shift" type="button" id="edit-add-shift">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          Add another shift
-        </button>
-        <div class="shift-total">Total <b id="edit-total">0</b> h</div>
+      <dl class="facts" id="edit-facts"></dl>
+      <div class="shift-head">
+        <span class="shift-head-label">Hours</span>
+        <span class="shift-total">Total <b id="edit-total">0</b> h</span>
       </div>
+      <div class="shifts" id="edit-shifts"></div>
+      <button class="btn-ghost add-shift" type="button" id="edit-add-shift">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Add another shift
+      </button>
     </div>
     <div class="modal-footer">
       <div class="modal-footer-actions">
         <button class="btn-ghost" type="button" data-close>Cancel</button>
         <button class="btn-primary" type="button" id="edit-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Confirm a removal, and say how far it reaches ────────────── -->
+<div class="modal-backdrop" id="confirm-sheet" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+  <div class="modal confirm-modal">
+    <div class="modal-header">
+      <div class="modal-heading">
+        <span class="modal-title" id="confirm-title">Remove this shift?</span>
+      </div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-lead" id="confirm-lead"></p>
+      <ul class="consequence" id="confirm-list"></ul>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-actions">
+        <button class="btn-ghost" type="button" data-close>Keep it</button>
+        <button class="btn-danger" type="button" id="confirm-ok">Remove</button>
       </div>
     </div>
   </div>
@@ -1564,9 +1653,10 @@
     el(boxId).addEventListener('click', function (e) {
       var drop = e.target.closest('[data-drop]');
       if (!drop) return;
-      var list = listFor();
-      list.splice(Number(drop.getAttribute('data-drop')), 1);
-      if (!list.length && onEmpty) { onEmpty(); return; }
+      var list = listFor(), i = Number(drop.getAttribute('data-drop'));
+      /* The last shift takes its task with it, so that one is confirmed. */
+      if (list.length === 1 && onEmpty) { onEmpty(); return; }
+      list.splice(i, 1);
       if (!list.length) list.push({ start: '', finish: '', hours: '' });
       redraw();
     });
@@ -1588,9 +1678,7 @@
     el('edit-shifts').innerHTML = shiftRows(editShifts);
     el('edit-total').textContent = fmtHours(totalOf(editShifts));
   }
-  wireShifts('edit-shifts', 'edit-total', function () { return editShifts; }, renderEditShifts, function () {
-    removeEntry();
-  });
+  wireShifts('edit-shifts', 'edit-total', function () { return editShifts; }, renderEditShifts, confirmLastShift);
   el('edit-add-shift').addEventListener('click', function () {
     editShifts.push({ start: '', finish: '', hours: '' });
     renderEditShifts();
@@ -1599,10 +1687,12 @@
   function openEdit(key, date) {
     editCtx = { key: key, date: date };
     var m = taskMeta[key], d = fromIso(date);
-    el('edit-when').textContent = DOW[d.getDay()] + ' ' + fmtDay(d) + ' ' + d.getFullYear();
-    el('edit-task').innerHTML = '<b>' + Shell.esc(taskTitle(m)) + '</b><br>' +
-      (taskRest(m) ? Shell.esc(taskRest(m)) + '<br>' : '') +
-      Shell.esc(m.sup) + ' · ' + Shell.esc(m.site);
+    el('edit-facts').innerHTML =
+      '<div class="fact"><dt>Task</dt><dd><span class="fact-name">' + Shell.esc(taskTitle(m)) + '</span>' +
+        (taskRest(m) ? '<span class="fact-sub">' + Shell.esc(taskRest(m)) + '</span>' : '') + '</dd></div>' +
+      '<div class="fact"><dt>Site</dt><dd>' + Shell.esc(m.site) + '</dd></div>' +
+      '<div class="fact"><dt>Supervisor</dt><dd>' + Shell.esc(m.sup) + '</dd></div>' +
+      '<div class="fact fact-date"><dt>Date</dt><dd>' + DOW[d.getDay()] + ' ' + fmtDay(d) + ' ' + d.getFullYear() + '</dd></div>';
 
     editShifts = entries.filter(function (e) { return e.key === key && e.date === date; })
                         .map(function (e) { return { start: e.start || '', finish: e.finish || '', hours: fmtHours(e.hours) }; });
@@ -1629,6 +1719,60 @@
     render();
     Shell.snackbar('Saved — ' + fmtHours(total) + ' h.');
   });
+
+  /* ─── Confirming a removal ────────────────────────────────────────
+     One shift is the whole record of a task on a day, and one task can be
+     the whole timesheet for that day — so the dialog names what goes. */
+  var confirmSheet = document.getElementById('confirm-sheet');
+  var confirmAction = null;
+
+  function askConfirm(title, lead, points, onYes) {
+    el('confirm-title').textContent = title;
+    el('confirm-lead').textContent = lead;
+    el('confirm-list').innerHTML = points.map(function (p) { return '<li>' + p + '</li>'; }).join('');
+    confirmAction = onYes;
+    confirmSheet.classList.add('open');
+  }
+  el('confirm-ok').addEventListener('click', function () {
+    var run = confirmAction;
+    confirmAction = null;
+    confirmSheet.classList.remove('open');
+    if (run) run();
+  });
+  confirmSheet.addEventListener('click', function (e) {
+    if (e.target === confirmSheet || e.target.closest('[data-close]')) {
+      confirmAction = null;
+      confirmSheet.classList.remove('open');
+    }
+  });
+
+  /* Other tasks booked on the same day, this one aside. */
+  function otherTasksOn(isoDate, key) {
+    var seen = Object.create(null), n = 0;
+    entries.forEach(function (e) {
+      if (e.date !== isoDate || e.key === key || seen[e.key]) return;
+      seen[e.key] = true; n++;
+    });
+    return n;
+  }
+
+  function confirmLastShift() {
+    var m = taskMeta[editCtx.key], d = fromIso(editCtx.date);
+    var when = DOW[d.getDay()] + ' ' + fmtDay(d);
+    var others = otherTasksOn(editCtx.date, editCtx.key);
+    var points = ['<b>' + Shell.esc(taskTitle(m)) + '</b> will be removed from ' + when + '.'];
+
+    if (others) {
+      points.push(others === 1
+        ? 'The other task booked on ' + when + ' stays as it is.'
+        : 'The ' + others + ' other tasks booked on ' + when + ' stay as they are.');
+    } else {
+      points.push('It is the only task on that day, so the <b>timesheet for ' + when +
+        '</b> is removed as well.');
+    }
+    askConfirm('Remove this shift?',
+      'This is the only shift on this task.', points, removeEntry);
+  }
 
   function removeEntry() {
     dropEntries(editCtx.key, editCtx.date);
