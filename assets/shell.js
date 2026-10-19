@@ -37,7 +37,7 @@
     { id: 'search',     label: 'Search',           icon: 'search',     action: 'global-search' },
     { id: 'home',       label: 'Home',             icon: 'home' },
     { id: 'documents',  label: 'Documents',        icon: 'documents' },
-    { id: 'workers',    label: 'Workers',          icon: 'workers',    href: 'index.html' },
+    { id: 'workers',    label: 'Workers',          icon: 'workers',    href: 'workers/index.html' },
     { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
     { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
@@ -305,10 +305,50 @@
     }
   }
 
+  /* ─── Instant tooltip ────────────────────────────────────────────────
+     Shows data-tip the moment the pointer enters, rather than after the
+     browser's own ~1s delay on title. */
+  var tipEl = null;
+
+  function placeTip(target) {
+    var r = target.getBoundingClientRect();
+    var x = r.left, y = r.top - tipEl.offsetHeight - 6;
+    if (y < 4) y = r.bottom + 6;
+    var max = window.innerWidth - tipEl.offsetWidth - 8;
+    if (x > max) x = max;
+    if (x < 8) x = 8;
+    tipEl.style.left = Math.round(x) + 'px';
+    tipEl.style.top = Math.round(y) + 'px';
+  }
+
+  function initTips(host) {
+    host = host || document;
+    if (!tipEl) {
+      tipEl = document.createElement('div');
+      tipEl.className = 'row-tip';
+      document.body.appendChild(tipEl);
+    }
+    host.addEventListener('mouseover', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (!t || !t.getAttribute('data-tip')) return;
+      tipEl.textContent = t.getAttribute('data-tip');
+      tipEl.classList.add('on');
+      placeTip(t);
+    });
+    host.addEventListener('mouseout', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (!t) return;
+      if (e.relatedTarget && t.contains(e.relatedTarget)) return;
+      tipEl.classList.remove('on');
+    });
+    window.addEventListener('scroll', function () { if (tipEl) tipEl.classList.remove('on'); }, true);
+  }
+
   /* ─── Boot ──────────────────────────────────────────────────────────── */
   function init() {
     renderSidebar(document.body.getAttribute('data-module'));
     initDropdowns(document);
+    initTips(document);
   }
 
   if (document.readyState === 'loading') {
@@ -326,6 +366,7 @@
     initials: initials,
     snackbar: snackbar,
     initDropdowns: initDropdowns,
+    initTips: initTips,
     setViewport: setViewport,
     closeAllDropdowns: closeAllDropdowns
   };

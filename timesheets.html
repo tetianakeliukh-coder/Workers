@@ -287,6 +287,10 @@
      left the dates a few pixels off their own numbers. */
   .pd-table thead th.pd-day, .pd-table thead th.pd-total { padding-right: 16px; }
 
+  /* Today reads as a tint down the whole column, not as something clickable. */
+  .pd-table td.tdy, .pd-table thead th.tdy { background: var(--bg-blue-light); }
+  .pd-table tbody tr:hover td.tdy { background: #e4ecf7; }
+
   /* Secondary actions read as actions. */
   .toolbar .btn-ghost, .btn-columns { color: var(--primary); }
 
@@ -377,8 +381,14 @@
             <div class="dd-panel" id="date-dd-panel"></div>
           </div>
           <div class="seg" id="modeswitch">
-            <button class="seg-btn active" type="button" data-mode="list">Timesheets</button>
-            <button class="seg-btn" type="button" data-mode="period">Period</button>
+            <button class="seg-btn active" type="button" data-mode="list">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="2" width="11" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 6h5M5.5 9h5M5.5 12h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Timesheets
+            </button>
+            <button class="seg-btn" type="button" data-mode="period">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3.5" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5h12M5.5 2v3M10.5 2v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Period
+            </button>
           </div>
           <button class="btn-primary" type="button" id="btn-create">Create Timesheet</button>
         </div>
@@ -397,12 +407,24 @@
         <div class="toolbar-right">
           <span class="seg-label">Group by</span>
           <div class="seg" id="groupby">
-            <button class="seg-btn active" type="button" data-group="none">Timesheet</button>
-            <button class="seg-btn" type="button" data-group="worker">Worker</button>
-            <button class="seg-btn" type="button" data-group="flat">No Grouping</button>
+            <button class="seg-btn active" type="button" data-group="none">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="2" width="11" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 6h5M5.5 9h5M5.5 12h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Timesheet
+            </button>
+            <button class="seg-btn" type="button" data-group="worker">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 13.5c0-2.5 2.2-4.2 5-4.2s5 1.7 5 4.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Worker
+            </button>
+            <button class="seg-btn" type="button" data-group="flat">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              No Grouping
+            </button>
           </div>
-          <button class="btn-ghost" type="button" id="pd-edit">Edit</button>
-          <button class="btn-ghost" type="button" id="expand-all">Expand all</button>
+          <button class="btn-ghost" type="button" id="pd-edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            Edit
+          </button>
+          <button class="btn-ghost" type="button" id="expand-all"></button>
           <div class="col-panel-wrap" id="columns-wrap">
             <button class="btn-columns" id="btn-columns" type="button" aria-expanded="false" aria-haspopup="true">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -1229,12 +1251,13 @@
     ds.forEach(function (d) { n += sumOn(leaves, toIso(d)); });
     return n;
   }
+  function todayCls(isoDate) { return isoDate === daysAgoIso(0) ? ' tdy' : ''; }
   function hoursCell(n, leaf, isoDate) {
     if (pdEditing && leaf) {
-      return '<td class="pd-day"><input class="pd-input" type="text" inputmode="decimal" ' +
+      return '<td class="pd-day' + todayCls(isoDate) + '"><input class="pd-input" type="text" inputmode="decimal" ' +
         'data-cell="' + Shell.esc(pdCellKey(leaf.id, isoDate)) + '" value="' + (n > 0 ? fmtHours(n) : '') + '" aria-label="Hours" /></td>';
     }
-    return '<td class="pd-day">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+    return '<td class="pd-day' + todayCls(isoDate) + '">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
   function pdCaret() {
     return '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
@@ -1258,7 +1281,7 @@
       '<th class="pf-worker">Worker</th><th class="pf-task">Task</th>' +
       ds.map(function (d) {
         var today = toIso(d) === daysAgoIso(0);
-        return '<th class="pd-day"><span class="pd-day-head' + (today ? ' is-today' : '') + '">' +
+        return '<th class="pd-day' + (today ? ' tdy' : '') + '"><span class="pd-day-head' + (today ? ' is-today' : '') + '">' +
           '<span class="dow">' + DOW_P[d.getDay()] + '</span><span class="dnum">' + fmtDay_(d) + '</span></span></th>';
       }).join('') + '<th class="pd-total">Total</th></tr>';
 
@@ -1275,10 +1298,10 @@
             var newSup = newSite || sup.name !== prev.sup;
             var newWorker = newSup || wk.name !== prev.worker;
             out.push('<tr class="pd-row' + (newSite && count ? ' pf-top' : '') + '">' +
-              '<td class="pf-site" title="' + Shell.esc(site.name) + '">' + (newSite ? Shell.highlight(site.name, state.query) : '') + '</td>' +
+              '<td class="pf-site" data-tip="Site — ' + Shell.esc(site.name) + '">' + (newSite ? Shell.highlight(site.name, state.query) : '') + '</td>' +
               '<td class="pf-sup">' + (newSup ? Shell.highlight(sup.name, state.query) : '') + '</td>' +
               '<td class="pf-worker">' + (newWorker ? Shell.highlight(wk.name, state.query) : '') + '</td>' +
-              '<td class="pf-task" title="' + Shell.esc(task.name) + '">' + Shell.highlight(task.name, state.query) + '</td>' +
+              '<td class="pf-task" data-tip="Task — ' + Shell.esc(task.name) + '">' + Shell.highlight(task.name, state.query) + '</td>' +
               ds.map(function (d) { return hoursCell(leafHours(task, toIso(d)), task, toIso(d)); }).join('') +
               '<td class="pd-total">' + fmtHours(sumAll([task], ds)) + '</td>' +
             '</tr>');
@@ -1317,7 +1340,7 @@
       '<th class="pd-label">Breakdown</th>' +
       ds.map(function (d) {
         var today = toIso(d) === daysAgoIso(0);
-        return '<th class="pd-day"><span class="pd-day-head' + (today ? ' is-today' : '') + '">' +
+        return '<th class="pd-day' + (today ? ' tdy' : '') + '"><span class="pd-day-head' + (today ? ' is-today' : '') + '">' +
           '<span class="dow">' + DOW_P[d.getDay()] + '</span>' +
           '<span class="dnum">' + fmtDay_(d) + '</span></span></th>';
       }).join('') +
@@ -1337,7 +1360,7 @@
       var kind = ['Site', 'Supervisor', 'Worker', 'Task'][level] || '';
       out.push('<tr class="pd-row ' + cls + (open ? '' : ' pd-closed') + '"' +
           (key ? ' data-pd="' + Shell.esc(key) + '"' : '') + '>' +
-        '<td class="pd-label" title="' + kind + ' — ' + Shell.esc(node.name) + '">' +
+        '<td class="pd-label" data-tip="' + kind + ' — ' + Shell.esc(node.name) + '">' +
           '<span class="pd-tree" style="padding-left:' + (level * 22) + 'px">' +
           (node.kids ? pdCaret() : '') + (icon || '') +
           '<span class="name">' + Shell.highlight(node.name, state.query) + '</span></span></td>' +
@@ -1501,6 +1524,12 @@
         [j.a.allow1, j.a.allow2].forEach(function (x) { if (x) allowances[x] = true; });
       });
       function tally(m) { var n = Object.keys(m).length; return n ? String(n) : ''; }
+      /* A bare number sitting in the Site column can read as a value, so the
+         cell says what it counts on hover. */
+      function tip(m, noun) {
+        var n = Object.keys(m).length;
+        return n ? ' data-tip="' + n + ' ' + noun + (n === 1 ? '' : 's') + '"' : '';
+      }
 
       out.push('<tr class="ts-parent' + (allPicked ? ' selected' : '') + (isCollapsed ? ' collapsed' : '') +
             '" data-sheet="' + Shell.esc(name) + '">' +
@@ -1513,14 +1542,14 @@
           '<a class="worker-link" href="#" data-worker="' + Shell.esc(name) + '">' +
             Shell.highlight(name, state.query) + '</a></span></td>' +
         '<td class="col-issued ts-count">' + jobs.length + '</td>' +
-        '<td class="col-site ts-count">' + tally(sites) + '</td>' +
+        '<td class="col-site ts-count"' + tip(sites, 'site') + '>' + tally(sites) + '</td>' +
         '<td class="col-super"></td>' +
         '<td class="col-status"></td>' +
         '<td class="col-position">' + Shell.esc(position) + '</td>' +
         '<td class="col-worktype"></td>' +
-        '<td class="col-project ts-count">' + tally(projects) + '</td>' +
-        '<td class="col-task ts-count">' + tally(tasks) + '</td>' +
-        '<td class="col-allow ts-count">' + tally(allowances) + '</td>' +
+        '<td class="col-project ts-count"' + tip(projects, 'project') + '>' + tally(projects) + '</td>' +
+        '<td class="col-task ts-count"' + tip(tasks, 'task') + '>' + tally(tasks) + '</td>' +
+        '<td class="col-allow ts-count"' + tip(allowances, 'allowance') + '>' + tally(allowances) + '</td>' +
         '<td class="col-times"></td>' +
         '<td class="col-updated"></td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
@@ -1594,6 +1623,10 @@
         var n = Object.keys(map).length;
         return n ? String(n) : '';
       }
+      function tip(map, noun) {
+        var n = Object.keys(map).length;
+        return n ? ' data-tip="' + n + ' ' + noun + (n === 1 ? '' : 's') + '"' : '';
+      }
 
       out.push('<tr class="ts-parent' + (checked ? ' selected' : '') + (isCollapsed ? ' collapsed' : '') +
             '" data-id="' + t.id + '" data-sheet="' + t.id + '">' +
@@ -1604,11 +1637,11 @@
         '<td class="col-site" title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
         '<td class="col-super">' + Shell.highlight(t.supervisor, q) + '</td>' +
         '<td class="col-status">' + statusChip(t.status) + '</td>' +
-        '<td class="col-worker ts-count">' + tally(people) + '</td>' +
+        '<td class="col-worker ts-count"' + tip(people, 'worker') + '>' + tally(people) + '</td>' +
         '<td class="col-position"></td><td class="col-worktype"></td>' +
-        '<td class="col-project ts-count">' + tally(projects) + '</td>' +
-        '<td class="col-task ts-count">' + tally(tasks) + '</td>' +
-        '<td class="col-allow ts-count">' + tally(allowances) + '</td>' +
+        '<td class="col-project ts-count"' + tip(projects, 'project') + '>' + tally(projects) + '</td>' +
+        '<td class="col-task ts-count"' + tip(tasks, 'task') + '>' + tally(tasks) + '</td>' +
+        '<td class="col-allow ts-count"' + tip(allowances, 'allowance') + '>' + tally(allowances) + '</td>' +
         '<td class="col-times"></td>' +
         '<td class="col-updated">' + updatedCell(t) + '</td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
@@ -1707,12 +1740,19 @@
      rows are opened or closed one at a time. */
   function pdClosed(k) { return pdCollapsed[k] === true; }
 
+
+  /* Collapse points the chevrons inward, expand points them out. */
+  var ICO_COLLAPSE = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M4.7 2.7L8 6l3.3-3.3M4.7 13.3L8 10l3.3 3.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ICO_EXPAND = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M4.7 6L8 2.7 11.3 6M4.7 10L8 13.3 11.3 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
   function syncExpandBtn() {
     var btn = document.getElementById('expand-all');
     if (!openKeys.length) { btn.style.display = 'none'; return; }
     btn.style.display = '';
     var anyClosed = state.mode === 'period' ? openKeys.some(pdClosed) : openKeys.some(isCollapsed_);
-    btn.textContent = anyClosed ? 'Expand all' : 'Collapse all';
+    btn.innerHTML = anyClosed ? ICO_EXPAND + 'Expand all' : ICO_COLLAPSE + 'Collapse all';
   }
 
   document.getElementById('expand-all').addEventListener('click', function () {
