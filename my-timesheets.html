@@ -37,15 +37,26 @@
   .period-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
   /* ─── Edit bar ─────────────────────────────────────────────────── */
+  /* Matches the selection bar on Team Timesheets: plain white, outlined
+     actions on the right. */
   .edit-bar {
-    display: none; align-items: center; gap: 12px; flex-wrap: wrap;
-    padding: 10px 12px; border-radius: 8px;
-    background: var(--bg-blue-light); border: 1px solid var(--primary);
+    display: none; align-items: center; gap: 16px; flex-wrap: wrap;
+    height: 52px; padding: 0 2px; background: var(--white);
   }
   body.editing .edit-bar { display: flex; }
   body.editing .period-actions { display: none; }
-  .edit-status { font-size: 14px; font-weight: 500; color: var(--primary); }
+  .edit-status { font-size: 14px; color: var(--text-main); white-space: nowrap; }
   .edit-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .edit-actions .btn-outline {
+    height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--white); border: 1px solid var(--primary); color: var(--primary);
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
+    white-space: nowrap; transition: background var(--t-fast);
+  }
+  .edit-actions .btn-outline:hover { background: var(--bg-blue-light); }
+  .edit-actions .btn-outline:disabled { border-color: var(--grey-350); color: var(--grey-400); cursor: default; }
+  .edit-actions .btn-outline:disabled:hover { background: var(--white); }
 
   /* ─── Period grid (desktop) ────────────────────────────────────── */
   .grid-card table { min-width: 980px; }
@@ -55,6 +66,14 @@
     position: sticky; left: 0; z-index: 2; background: inherit;
     overflow: hidden; text-overflow: ellipsis;
   }
+  /* Same hairline the frozen columns use on Team Timesheets. */
+  .sx-left th.col-label, .sx-left td.col-label { overflow: visible; }
+  .sx-left th.col-label::after, .sx-left td.col-label::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: 100%; width: 1px;
+    background: var(--grey-400); pointer-events: none;
+  }
+  .sx-left th.col-label .tree, .sx-left td.col-label .tree,
+  .sx-left td.col-label > .code { max-width: 100%; }
   th.col-day, td.col-day, th.col-total, td.col-total { text-align: right; }
   th.col-total, td.col-total { font-weight: 600; }
   .grid-card thead th {
@@ -66,11 +85,10 @@
   .day-head .dnum { font-size: 14px; font-weight: 500; color: var(--text-main); }
   .day-head.is-today .dow, .day-head.is-today .dnum { color: var(--primary); }
 
+  /* No fills on the parent rows — the Team Timesheets table settled on
+     indent, weight and icon for hierarchy, and these two sit side by side. */
   #grid tbody tr { background: var(--white); }
-  #grid tbody tr.row-site { background: var(--grey-100); }
-  #grid tbody tr.row-sup { background: #fafbfe; }
-  #grid tbody tr:hover { background: #f6f8fd; }
-  #grid tbody tr.row-site:hover { background: var(--grey-200); }
+  #grid tbody tr:hover { background: #fafbfe; }
 
   .tree { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
   .tree .caret {
@@ -85,7 +103,7 @@
   .row-task td.col-label { padding-left: 62px; }
   .row-task .code { font-weight: 500; }
   .row-task .what { color: var(--grey-600); }
-  td.zero { color: var(--grey-400); }
+  td.col-day, td.col-total { font-variant-numeric: tabular-nums; }
 
   #grid tfoot td {
     position: sticky; bottom: 0; background: var(--white);
@@ -149,24 +167,36 @@
 
   /* ─── Add task ─────────────────────────────────────────────────── */
   .modal.add-modal { max-width: 460px; width: 100%; }
-  .add-modal .modal-body { padding: 18px 24px 4px; display: flex; flex-direction: column; gap: 16px; }
+  .add-modal .modal-body { padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 14px; }
+  .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
+  .add-sub b { color: var(--text-main); font-weight: 500; }
+
+  /* Recents are rows, not chips — each one has to carry who you worked for
+     and when, which is what makes them pickable without thinking. */
+  .recent-list { display: flex; flex-direction: column; gap: 6px; }
+  .recent-row {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    width: 100%; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-align: left;
+    background: var(--white); border: 1px solid var(--grey-350); font-family: var(--fs-sans);
+    transition: border-color var(--t-fast), background var(--t-fast);
+  }
+  .recent-row:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
+  .recent-row.sel { border-color: var(--primary); background: var(--bg-blue-light); }
+  .rr-code { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .rr-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); }
+  .recent-empty { font-size: 13px; color: var(--grey-600); }
+
+  .another { display: none; flex-direction: column; gap: 14px; }
+  .another.open { display: flex; }
   .fld { display: flex; flex-direction: column; gap: 6px; }
-  .fld label { font-size: 14px; font-weight: 500; }
+  .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
   .fld select {
-    height: 40px; padding: 0 10px; font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    width: 100%; height: 40px; padding: 0 10px;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
     background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
   }
   .fld select:focus { outline: none; border-color: var(--primary); }
-  .recent { display: flex; flex-wrap: wrap; gap: 8px; }
-  .recent button {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-    padding: 8px 12px; border-radius: 8px; cursor: pointer; text-align: left;
-    background: var(--white); border: 1px solid var(--grey-350); font-family: var(--fs-sans);
-  }
-  .recent button:hover { border-color: var(--primary); background: var(--bg-blue-light); }
-  .recent button.sel { border-color: var(--primary); background: var(--bg-blue-light); }
-  .recent .c { font-size: 13px; font-weight: 600; color: var(--text-main); }
-  .recent .n { font-size: 12px; color: var(--grey-600); }
+  .fld-hint { font-size: 12px; color: var(--grey-600); }
 
   @media (max-width: 860px) {
     .grid-card { display: none; }
@@ -217,11 +247,11 @@
       <div class="edit-bar" id="edit-bar">
         <span class="edit-status" id="edit-status">Editing · no changes yet</span>
         <div class="edit-actions">
-          <button class="btn-ghost" type="button" id="btn-add-task">
+          <button class="btn-outline" type="button" id="btn-add-task">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             Add task
           </button>
-          <button class="btn-ghost" type="button" id="btn-cancel">Cancel</button>
+          <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
           <button class="btn-primary" type="button" id="btn-save" disabled>Save</button>
         </div>
       </div>
@@ -263,26 +293,29 @@
       </button>
     </div>
     <div class="modal-body">
-      <div class="fld">
-        <label>Recently worked on</label>
-        <div class="recent" id="recent-tasks"></div>
-      </div>
-      <div class="fld">
-        <label for="add-task">Or choose another</label>
-        <select id="add-task"></select>
-      </div>
-      <div class="fld">
-        <label for="add-site">Site</label>
-        <select id="add-site"></select>
-      </div>
-      <div class="fld">
-        <label for="add-sup">Supervisor</label>
-        <select id="add-sup"></select>
+      <p class="add-sub" id="add-sub"></p>
+      <div class="recent-list" id="recent-tasks"></div>
+
+      <div class="another" id="another">
+        <div class="fld">
+          <label class="fld-label" for="add-sup">Supervisor</label>
+          <select id="add-sup"></select>
+          <span class="fld-hint" id="sup-hint"></span>
+        </div>
+        <div class="fld">
+          <label class="fld-label" for="add-site">Site</label>
+          <select id="add-site"></select>
+        </div>
+        <div class="fld">
+          <label class="fld-label" for="add-task">Job code</label>
+          <select id="add-task"></select>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
       <div class="modal-footer-actions">
         <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-ghost" type="button" id="add-another">Choose another task</button>
         <button class="btn-primary" type="button" id="add-confirm">Add task</button>
       </div>
     </div>
@@ -338,6 +371,10 @@
   // This week has begun.
   seed(THIS_MON, 'WORK-00123', 8);
   seed(THIS_MON, 'WORK-00201', 4);
+  /* Older work, so the recents list can say when each task was last
+     touched — that date is what makes a recent worth tapping. */
+  seed(addDays(THIS_MON, -24), 'WORK-00187', 10);
+  seed(addDays(THIS_MON, -38), 'JOB-00451', 7.5);
 
   /* ─── State ───────────────────────────────────────────────────── */
   var state = { weekStart: new Date(THIS_MON.getTime()), editing: false, selDay: iso(TODAY) };
@@ -404,7 +441,7 @@
       return '<td class="col-day"><input class="hr-input" type="text" inputmode="decimal" ' +
         'data-code="' + code + '" data-date="' + isoDate + '" value="' + v + '" aria-label="Hours" /></td>';
     }
-    return '<td class="col-day' + (value > 0 ? '' : ' zero') + '">' + (value > 0 ? fmtHours(value) : '–') + '</td>';
+    return '<td class="col-day">' + (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
 
   function caret() {
@@ -482,7 +519,7 @@
       '<td class="col-label">Total hours</td>' +
       ds.map(function (d) {
         var n = sumRow(allTasks, iso(d));
-        return '<td class="col-day' + (n > 0 ? '' : ' zero') + '">' + (n > 0 ? fmtHours(n) : '–') + '</td>';
+        return '<td class="col-day">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
       }).join('') +
       '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(allTasks, iso(d)); }, 0)) + '</td>' +
     '</tr>';
@@ -514,7 +551,7 @@
       return '<button class="' + cls + '" type="button" data-day="' + key + '">' +
         '<span class="d">' + DOW_SHORT[d.getDay()] + '</span>' +
         '<span class="n">' + d.getDate() + '</span>' +
-        '<span class="h' + (n > 0 ? '' : ' none') + '">' + (n > 0 ? fmtHours(n) : '–') + '</span>' +
+        '<span class="h' + (n > 0 ? '' : ' none') + '">' + (n > 0 ? fmtHours(n) : '&mdash;') + '</span>' +
       '</button>';
     }).join('');
 
@@ -549,7 +586,9 @@
           '<span class="tot">' + fmtHours(total) + ' h</span>' +
           '<button class="btn-text" type="button" data-edit-day="' + key + '">' + (open ? 'Done' : 'Edit') + '</button>' +
         '</div>' + body +
-        (open ? '<div class="day-card-foot"><button class="btn-ghost" type="button" id="card-add">Add task</button></div>' : '') +
+        (open ? '<div class="day-card-foot"><button class="btn-text" type="button" id="card-add" data-day="' + key + '">' +
+            '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:4px"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+            'Add task</button></div>' : '') +
       '</div>';
     }).join('');
   }
@@ -564,11 +603,18 @@
     document.getElementById('period-chip').classList.toggle('visible', iso(state.weekStart) === iso(THIS_MON));
   }
 
+  var scrollBox = document.querySelector('.grid-card .table-scroll');
+  function syncScrollEdge() {
+    scrollBox.classList.toggle('sx-left', scrollBox.scrollLeft > 0);
+  }
+  scrollBox.addEventListener('scroll', syncScrollEdge);
+
   function render() {
     syncPeriod();
     renderGrid();
     renderWeek();
     syncEditBar();
+    syncScrollEdge();
   }
 
   document.querySelectorAll('[data-step]').forEach(function (b) {
@@ -692,39 +738,92 @@
       return;
     }
 
-    if (e.target.closest('#card-add')) openAdd();
+    var cardAdd = e.target.closest('#card-add');
+    if (cardAdd) openAdd(cardAdd.getAttribute('data-day'));
   });
 
-  /* ─── Add task ────────────────────────────────────────────────── */
+  /* ─── Add task ──────────────────────────────────────────────────
+     Recents first, the way a worker thinks: the same job, again. Picking
+     "Choose another task" opens the supervisor › site › job code path. */
   var addModal = document.getElementById('add-modal');
+  var anotherBox = document.getElementById('another');
   var addPick = null;
+  var addForDay = null;                 // set when opened from a day card
 
-  function openAdd() {
+  /* When the worker last booked time against a task, for the recents list. */
+  function lastWorked(code) {
+    var dates = entries.filter(function (e) { return e.code === code; })
+                       .map(function (e) { return e.date; }).sort();
+    if (!dates.length) return null;
+    var parts = dates[dates.length - 1].split('-');
+    return new Date(+parts[0], +parts[1] - 1, +parts[2]);
+  }
+
+  function openAdd(dayIso) {
     addPick = null;
+    addForDay = dayIso || null;
+    anotherBox.classList.remove('open');
+    document.getElementById('add-another').style.display = '';
+
+    document.getElementById('add-sub').innerHTML = addForDay
+      ? 'Choose one of your recent tasks for <b>' + FULL_DOW[new Date(addForDay.replace(/-/g, '/')).getDay()] +
+        ' ' + fmtDay(new Date(addForDay.replace(/-/g, '/'))) + '</b>, or another.'
+      : 'Choose one of your recent tasks to add to <b>this week</b>, or another.';
+
     var used = [];
     weekTree().forEach(function (s) { sitesTasks(s).forEach(function (t) { used.push(t.code); }); });
     var available = TASKS.filter(function (t) { return used.indexOf(t.code) === -1; });
 
-    document.getElementById('recent-tasks').innerHTML = available.slice(0, 3).map(function (t) {
-      return '<button type="button" data-pick="' + t.code + '">' +
-        '<span class="c">' + Shell.esc(t.code) + '</span>' +
-        '<span class="n">' + Shell.esc(t.name) + '</span></button>';
-    }).join('') || '<span class="hint" style="font-size:13px;color:var(--grey-600)">Everything you work on is already on this week.</span>';
-
-    document.getElementById('add-task').innerHTML = '<option value="">Select a task…</option>' +
-      available.map(function (t) { return '<option value="' + t.code + '">' + Shell.esc(t.code + ' — ' + t.name) + '</option>'; }).join('');
+    document.getElementById('recent-tasks').innerHTML = available.length
+      ? available.map(function (t) {
+          var when = lastWorked(t.code);
+          return '<button class="recent-row" type="button" data-pick="' + t.code + '">' +
+            '<span class="rr-code">' + Shell.esc(t.code) + ' · ' + Shell.esc(t.name) + '</span>' +
+            '<span class="rr-sub">' + Shell.esc(t.sup) + ' · ' + Shell.esc(t.site) +
+              (when ? ' · last ' + DOW[when.getDay()] + ' ' + fmtDay(when) : ' · not worked yet') +
+            '</span></button>';
+        }).join('')
+      : '<span class="recent-empty">Everything you work on is already on this week.</span>';
 
     var sites = [], sups = [];
     TASKS.forEach(function (t) {
       if (sites.indexOf(t.site) === -1) sites.push(t.site);
       if (sups.indexOf(t.sup) === -1) sups.push(t.sup);
     });
-    document.getElementById('add-site').innerHTML = sites.map(function (s) { return '<option>' + Shell.esc(s) + '</option>'; }).join('');
-    document.getElementById('add-sup').innerHTML = sups.map(function (s) { return '<option>' + Shell.esc(s) + '</option>'; }).join('');
+    document.getElementById('add-sup').innerHTML = sups.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    document.getElementById('add-site').innerHTML = sites.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    fillJobCodes();
     addModal.classList.add('open');
   }
 
-  document.getElementById('btn-add-task').addEventListener('click', openAdd);
+  /* Job codes follow the supervisor and site, the way the real form does. */
+  function fillJobCodes() {
+    var sup = document.getElementById('add-sup').value;
+    var site = document.getElementById('add-site').value;
+    var opts = TASKS.filter(function (t) { return t.sup === sup && t.site === site; });
+    document.getElementById('add-task').innerHTML = opts.length
+      ? opts.map(function (t) { return '<option value="' + t.code + '">' + Shell.esc(t.code + ' — ' + t.name) + '</option>'; }).join('')
+      : '<option value="">No job codes for this pairing</option>';
+    addPick = opts.length ? opts[0].code : null;
+
+    var when = lastWorked(TASKS.filter(function (t) { return t.sup === sup; }).map(function (t) { return t.code; })[0] || '');
+    document.getElementById('sup-hint').textContent = when
+      ? 'Last timesheet with them ' + DOW[when.getDay()] + ' ' + fmtDay(when)
+      : 'No timesheets with them yet';
+  }
+  ['add-sup', 'add-site'].forEach(function (id) {
+    document.getElementById(id).addEventListener('change', fillJobCodes);
+  });
+  document.getElementById('add-task').addEventListener('change', function () { addPick = this.value || null; });
+
+  document.getElementById('add-another').addEventListener('click', function () {
+    anotherBox.classList.add('open');
+    this.style.display = 'none';
+    document.getElementById('recent-tasks').querySelectorAll('.recent-row').forEach(function (b) { b.classList.remove('sel'); });
+    fillJobCodes();
+  });
+
+  document.getElementById('btn-add-task').addEventListener('click', function () { openAdd(null); });
 
   addModal.addEventListener('click', function (e) {
     if (e.target === addModal || e.target.closest('[data-close]')) { addModal.classList.remove('open'); return; }
@@ -732,28 +831,19 @@
     if (pick) {
       addPick = pick.getAttribute('data-pick');
       addModal.querySelectorAll('[data-pick]').forEach(function (b) { b.classList.toggle('sel', b === pick); });
-      var t = taskBy(addPick);
-      document.getElementById('add-task').value = addPick;
-      document.getElementById('add-site').value = t.site;
-      document.getElementById('add-sup').value = t.sup;
-    }
-  });
-  document.getElementById('add-task').addEventListener('change', function () {
-    addPick = this.value || null;
-    addModal.querySelectorAll('[data-pick]').forEach(function (b) { b.classList.toggle('sel', b.getAttribute('data-pick') === addPick); });
-    if (addPick) {
-      var t = taskBy(addPick);
-      document.getElementById('add-site').value = t.site;
-      document.getElementById('add-sup').value = t.sup;
     }
   });
 
   document.getElementById('add-confirm').addEventListener('click', function () {
     if (!addPick) { Shell.snackbar('Choose a task first.'); return; }
     if (extraRows.indexOf(addPick) === -1) extraRows.push(addPick);
+    if (addForDay) state.selDay = addForDay;
     addModal.classList.remove('open');
-    render();
-    var first = document.querySelector('.hr-input[data-code="' + addPick + '"]');
+    if (!state.editing) enterEdit(); else render();
+    var sel = addForDay
+      ? '.day-card .hr-input[data-code="' + addPick + '"][data-date="' + addForDay + '"]'
+      : '.hr-input[data-code="' + addPick + '"]';
+    var first = document.querySelector(sel) || document.querySelector('.hr-input[data-code="' + addPick + '"]');
     if (first) first.focus();
   });
 
