@@ -111,6 +111,23 @@
   }
   #grid tfoot td.col-label { z-index: 3; color: var(--grey-700); font-weight: 500; }
 
+  /* Flat rows: the three label columns stay put while the days scroll. */
+  th.col-site, td.col-site { position: sticky; left: 0; z-index: 2; background: inherit; }
+  th.col-sup,  td.col-sup  { position: sticky; left: 200px; z-index: 2; background: inherit; }
+  th.col-task, td.col-task { position: sticky; left: 350px; z-index: 2; background: inherit; }
+  th.col-site, td.col-site, th.col-sup, td.col-sup, th.col-task, td.col-task {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  td.col-site { font-weight: 600; }
+  td.col-sup { font-weight: 500; }
+  td.col-task { color: var(--grey-700); }
+  #grid tbody tr.group-top > td { border-top: 1px solid var(--grey-350); }
+  .sx-left td.col-task::after, .sx-left th.col-task::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: 100%; width: 1px;
+    background: var(--grey-400); pointer-events: none;
+  }
+  .sx-left td.col-task, .sx-left th.col-task { overflow: visible; }
+
   .hr-input {
     width: 100%; max-width: 72px; height: 32px; padding: 0 8px; text-align: right;
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
@@ -294,6 +311,8 @@
   body.is-narrow .add-modal .modal-footer-actions .btn-ghost,
   body.is-narrow .add-modal .modal-footer-actions .btn-primary { flex: 1; justify-content: center; }
 
+  /* Two floating switchers: row layout, then preview size. */
+  body.is-narrow .rows-switch { display: none; }
   .vp-switch {
     position: fixed; right: 20px; bottom: 20px; z-index: 400;
     display: inline-flex; padding: 4px; gap: 2px; border-radius: 10px;
@@ -307,6 +326,8 @@
   }
   .vp-switch button:hover { background: var(--grey-100); color: var(--text-main); }
   .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
+  /* Sits to the left of the preview switcher — needs to outrank .vp-switch. */
+  .vp-switch.rows-switch { right: 216px; }
 
   /* ─── Week dropdown ────────────────────────────────────────────── */
   .period-dd .dd-trigger { min-width: 232px; }
@@ -415,6 +436,17 @@
 </div>
 
 <!-- ── Prototype viewport switcher ──────────────────────────────── -->
+<div class="vp-switch rows-switch" id="rows-switch" role="group" aria-label="Row layout">
+  <button type="button" data-rows="nested" class="on">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 3.5h11M5 8h8.5M7.5 12.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    Nested
+  </button>
+  <button type="button" data-rows="flat">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.4" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 3v10M10 3v10" stroke="currentColor" stroke-width="1.3"/></svg>
+    Flat
+  </button>
+</div>
+
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
   <button type="button" data-vp="desktop" class="on">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 14h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -677,7 +709,64 @@
   var ICO_SITE = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V3.5l5-1.5V14M3 14h10V6.5H8M3 14H1.5M13 14h1.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
+  var rowsMode = 'nested';
+
+  function dayHeadCells(ds) {
+    return ds.map(function (d) {
+      var today = iso(d) === iso(TODAY);
+      return '<th class="col-day"><span class="day-head' + (today ? ' is-today' : '') + '">' +
+        '<span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + fmtDay(d) + '</span></span></th>';
+    }).join('');
+  }
+
+  /* Flat: site, supervisor and task each get their own column, and a value
+     is printed only when it changes — the hierarchy without the nesting. */
+  function renderFlat() {
+    var ds = days();
+    gridCols.innerHTML = '<col style="width:200px" /><col style="width:150px" /><col style="width:260px" />' +
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
+
+    gridHead.innerHTML = '<tr>' +
+      '<th class="col-site">Site</th><th class="col-sup">Supervisor</th><th class="col-task">Task</th>' +
+      dayHeadCells(ds) + '<th class="col-total">Total</th></tr>';
+
+    var rows = [], prevSite = null, prevSup = null, count = 0;
+    weekTree().forEach(function (site) {
+      site.sups.forEach(function (sup) {
+        sup.tasks.forEach(function (t) {
+          var showSite = site.name !== prevSite;
+          var showSup = showSite || sup.name !== prevSup;
+          rows.push('<tr class="row-flat' + (showSite && count ? ' group-top' : '') + '">' +
+            '<td class="col-site" title="' + Shell.esc(site.name) + '">' + (showSite ? Shell.esc(site.name) : '') + '</td>' +
+            '<td class="col-sup">' + (showSup ? Shell.esc(sup.name) : '') + '</td>' +
+            '<td class="col-task" title="' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
+            ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
+            '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
+          '</tr>');
+          prevSite = site.name; prevSup = sup.name; count++;
+        });
+      });
+    });
+
+    if (!rows.length) {
+      rows.push('<tr><td colspan="' + (ds.length + 4) + '" style="color:var(--grey-600)">No hours recorded this week.</td></tr>');
+    }
+    gridBody.innerHTML = rows.join('');
+
+    var allTasks = [];
+    weekTree().forEach(function (s) { allTasks = allTasks.concat(tasksOfSite(s)); });
+    gridFoot.innerHTML = '<tr><td class="col-site">Total hours</td><td class="col-sup"></td><td class="col-task"></td>' +
+      ds.map(function (d) {
+        var n = sumRow(allTasks, iso(d));
+        return '<td class="col-day">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+      }).join('') +
+      '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(allTasks, iso(d)); }, 0)) + '</td></tr>';
+
+    document.getElementById('grid-count').textContent = 'Displaying ' + count + ' row' + (count === 1 ? '' : 's');
+  }
+
   function renderGrid() {
+    if (rowsMode === 'flat') return renderFlat();
     var ds = days();
     gridCols.innerHTML = '<col style="width:360px" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
@@ -897,6 +986,18 @@
     });
     renderWeek();
   }
+  var rowsSwitch = document.getElementById('rows-switch');
+  rowsSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rows]');
+    if (!b) return;
+    rowsMode = b.getAttribute('data-rows');
+    rowsSwitch.querySelectorAll('[data-rows]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    /* Nothing nests in the flat table, so its control goes quiet. */
+    document.getElementById('btn-collapse').style.display = rowsMode === 'flat' ? 'none' : '';
+    renderGrid();
+    syncScrollEdge();
+  });
+
   vp.addEventListener('click', function (e) {
     var b = e.target.closest('[data-vp]');
     if (!b) return;

@@ -310,6 +310,38 @@
   .pd-input:focus { outline: none; border-color: var(--primary); }
   .pd-input.changed { border-color: var(--primary); background: var(--bg-blue-light); }
 
+  /* ─── Row layout switcher (Period only) ────────────────────────── */
+  .rows-switch {
+    display: none; position: fixed; right: 20px; bottom: 20px; z-index: 400;
+    padding: 4px; gap: 2px; border-radius: 10px;
+    background: var(--white); border: 1px solid var(--grey-350); box-shadow: var(--shadow-dropdown);
+  }
+  body.mode-period .rows-switch { display: inline-flex; }
+  .rows-switch button {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 12px; border: none; border-radius: 7px; cursor: pointer;
+    background: none; color: var(--grey-700);
+    font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+  }
+  .rows-switch button:hover { background: var(--grey-100); color: var(--text-main); }
+  .rows-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
+
+  /* Flat period rows: a column each, printed only when the value changes. */
+  .pd-table th.pf-site, .pd-table td.pf-site { position: sticky; left: 0; z-index: 2; background: inherit; }
+  .pd-table th.pf-sup,  .pd-table td.pf-sup  { position: sticky; left: 190px; z-index: 2; background: inherit; }
+  .pd-table th.pf-worker, .pd-table td.pf-worker { position: sticky; left: 340px; z-index: 2; background: inherit; }
+  .pd-table th.pf-task, .pd-table td.pf-task { position: sticky; left: 490px; z-index: 2; background: inherit; }
+  .pd-table th.pf-site, .pd-table td.pf-site, .pd-table th.pf-sup, .pd-table td.pf-sup,
+  .pd-table th.pf-worker, .pd-table td.pf-worker, .pd-table th.pf-task, .pd-table td.pf-task {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pd-table thead th.pf-site, .pd-table thead th.pf-sup,
+  .pd-table thead th.pf-worker, .pd-table thead th.pf-task { z-index: 4; }
+  td.pf-site { font-weight: 600; }
+  td.pf-sup, td.pf-worker { font-weight: 500; }
+  td.pf-task { color: var(--grey-700); }
+  #tbody tr.pf-top > td { border-top: 1px solid var(--grey-350); }
+
 </style>
 </head>
 <body data-module="timesheets">
@@ -422,6 +454,17 @@
 
     </div>
   </main>
+</div>
+
+<div class="rows-switch" id="rows-switch" role="group" aria-label="Row layout">
+  <button type="button" data-rows="nested" class="on">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 3.5h11M5 8h8.5M7.5 12.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    Nested
+  </button>
+  <button type="button" data-rows="flat">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.4" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 3v10M10 3v10" stroke="currentColor" stroke-width="1.3"/></svg>
+    Flat
+  </button>
 </div>
 
 <script src="assets/shell.js"></script>
@@ -1204,9 +1247,69 @@
     worker: '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
   };
 
+  var pdRowsMode = 'nested';
+
+  /* Flat: every level gets its own column and repeats are left blank, so
+     the hierarchy reads without any nesting. */
+  function renderPeriodFlat(rows, ds, tree) {
+    mainColgroup.innerHTML = '<col style="width:190px" /><col style="width:150px" /><col style="width:150px" /><col style="width:260px" />' +
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
+
+    mainThead.innerHTML = '<tr>' +
+      '<th class="pf-site">Site</th><th class="pf-sup">Supervisor</th>' +
+      '<th class="pf-worker">Worker</th><th class="pf-task">Task</th>' +
+      ds.map(function (d) {
+        var today = toIso(d) === daysAgoIso(0);
+        return '<th class="pd-day"><span class="pd-day-head' + (today ? ' is-today' : '') + '">' +
+          '<span class="dow">' + DOW_P[d.getDay()] + '</span><span class="dnum">' + fmtDay_(d) + '</span></span></th>';
+      }).join('') + '<th class="pd-total">Total</th></tr>';
+
+    mainTable.classList.remove('frozen');
+    mainTable.classList.add('pd-table');
+    mainTable.style.minWidth = (750 + ds.length * 92 + 96) + 'px';
+
+    var out = [], prev = { site: null, sup: null, worker: null }, count = 0;
+    tree.forEach(function (site) {
+      site.kids.forEach(function (sup) {
+        sup.kids.forEach(function (wk) {
+          wk.kids.forEach(function (task) {
+            var newSite = site.name !== prev.site;
+            var newSup = newSite || sup.name !== prev.sup;
+            var newWorker = newSup || wk.name !== prev.worker;
+            out.push('<tr class="pd-row' + (newSite && count ? ' pf-top' : '') + '">' +
+              '<td class="pf-site" title="' + Shell.esc(site.name) + '">' + (newSite ? Shell.highlight(site.name, state.query) : '') + '</td>' +
+              '<td class="pf-sup">' + (newSup ? Shell.highlight(sup.name, state.query) : '') + '</td>' +
+              '<td class="pf-worker">' + (newWorker ? Shell.highlight(wk.name, state.query) : '') + '</td>' +
+              '<td class="pf-task" title="' + Shell.esc(task.name) + '">' + Shell.highlight(task.name, state.query) + '</td>' +
+              ds.map(function (d) { return hoursCell(leafHours(task, toIso(d)), task, toIso(d)); }).join('') +
+              '<td class="pd-total">' + fmtHours(sumAll([task], ds)) + '</td>' +
+            '</tr>');
+            prev = { site: site.name, sup: sup.name, worker: wk.name };
+            count++;
+          });
+        });
+      });
+    });
+
+    if (!out.length) {
+      out.push('<tr><td class="pf-site" colspan="' + (ds.length + 5) + '" style="color:var(--grey-600)">No hours in this period.</td></tr>');
+    }
+
+    var allLeaves = [];
+    tree.forEach(function (s) { allLeaves = allLeaves.concat(leavesOf(s)); });
+    out.push('<tr class="pd-foot">' +
+      '<td class="pf-site">Total hours</td><td class="pf-sup"></td><td class="pf-worker"></td><td class="pf-task"></td>' +
+      ds.map(function (d) { return hoursCell(sumOn(allLeaves, toIso(d))); }).join('') +
+      '<td class="pd-total">' + fmtHours(sumAll(allLeaves, ds)) + '</td></tr>');
+
+    openKeys = [];
+    return out.join('');
+  }
+
   function renderPeriod(rows) {
     var ds = periodDays(rows);
     var tree = periodTree(rows);
+    if (pdRowsMode === 'flat') return renderPeriodFlat(rows, ds, tree);
 
     mainColgroup.innerHTML = '<col style="width:360px" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') +
@@ -1913,6 +2016,16 @@
     syncPdBar();
     var again = tbody.querySelector('.pd-input[data-cell="' + cell.replace(/"/g, '\\"') + '"]');
     if (again) { again.focus(); try { again.setSelectionRange(caretPos, caretPos); } catch (err) {} }
+  });
+
+  var rowsSwitch = document.getElementById('rows-switch');
+  rowsSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rows]');
+    if (!b) return;
+    pdRowsMode = b.getAttribute('data-rows');
+    rowsSwitch.querySelectorAll('[data-rows]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    render();
+    syncExpandBtn();
   });
 
   /* The period tree keeps its own open/closed map. */
