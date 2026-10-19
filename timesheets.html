@@ -78,7 +78,7 @@
   .ts-parent-main { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--text-main); }
   .ts-caret { display: inline-flex; color: var(--grey-500); transition: transform var(--t-fast); }
   tr.ts-parent.collapsed .ts-caret { transform: rotate(-90deg); }
-  td.ts-count { font-weight: 600; color: var(--text-main); }
+  td.ts-count { font-weight: 400; color: var(--grey-600); }
   td.ts-total { font-weight: 700; }
 
   /* Frozen cells inherit their row's background, so each row state must set
@@ -286,6 +286,14 @@
   /* Headers carry the shell's 24px right padding, the cells 16px — which
      left the dates a few pixels off their own numbers. */
   .pd-table thead th.pd-day, .pd-table thead th.pd-total { padding-right: 16px; }
+
+  /* The line that opens each site + supervisor block in the flat layout. */
+  .pd-table tr.pf-summary td { background: var(--grey-100); }
+  .pd-table tr.pf-summary td.pf-site, .pd-table tr.pf-summary td.pf-sup { font-weight: 600; }
+  .pd-table tr.pf-summary:hover td { background: var(--grey-200); }
+  .pd-table tr.pf-summary td.tdy { background: #dfe7f3; }
+  .pd-table tr.pf-summary:hover td.tdy { background: #d6e0ef; }
+  .count-pill { color: var(--grey-600); }
 
   /* Today reads as a tint down the whole column, not as something clickable. */
   .pd-table td.tdy, .pd-table thead th.tdy { background: var(--bg-blue-light); }
@@ -1252,6 +1260,9 @@
     return n;
   }
   function todayCls(isoDate) { return isoDate === daysAgoIso(0) ? ' tdy' : ''; }
+  /* A bare number in a column of names reads as a value, so counts say
+     what they count. */
+  function countText(n, noun) { return n + ' ' + noun + (n === 1 ? '' : 's'); }
   function hoursCell(n, leaf, isoDate) {
     if (pdEditing && leaf) {
       return '<td class="pd-day' + todayCls(isoDate) + '"><input class="pd-input" type="text" inputmode="decimal" ' +
@@ -1289,23 +1300,35 @@
     mainTable.classList.add('pd-table');
     mainTable.style.minWidth = (750 + ds.length * 92 + 96) + 'px';
 
-    var out = [], prev = { site: null, sup: null, worker: null }, count = 0;
+    /* Each site + supervisor opens with a summary line carrying how many
+       workers and tasks sit under it, then the task rows. The worker name
+       repeats on every row rather than blanking out, so a row read on its
+       own still says who did the work. */
+    var out = [], count = 0, first = true;
     tree.forEach(function (site) {
       site.kids.forEach(function (sup) {
+        var leaves = leavesOf(sup), nTasks = 0;
+        sup.kids.forEach(function (wk) { nTasks += wk.kids.length; });
+
+        out.push('<tr class="pd-row pf-summary' + (first ? '' : ' pf-top') + '">' +
+          '<td class="pf-site" data-tip="Site — ' + Shell.esc(site.name) + '">' + Shell.highlight(site.name, state.query) + '</td>' +
+          '<td class="pf-sup">' + Shell.highlight(sup.name, state.query) + '</td>' +
+          '<td class="pf-worker"><span class="count-pill">' + countText(sup.kids.length, 'worker') + '</span></td>' +
+          '<td class="pf-task"><span class="count-pill">' + countText(nTasks, 'task') + '</span></td>' +
+          ds.map(function (d) { return hoursCell(sumOn(leaves, toIso(d))); }).join('') +
+          '<td class="pd-total">' + fmtHours(sumAll(leaves, ds)) + '</td>' +
+        '</tr>');
+        first = false; count++;
+
         sup.kids.forEach(function (wk) {
           wk.kids.forEach(function (task) {
-            var newSite = site.name !== prev.site;
-            var newSup = newSite || sup.name !== prev.sup;
-            var newWorker = newSup || wk.name !== prev.worker;
-            out.push('<tr class="pd-row' + (newSite && count ? ' pf-top' : '') + '">' +
-              '<td class="pf-site" data-tip="Site — ' + Shell.esc(site.name) + '">' + (newSite ? Shell.highlight(site.name, state.query) : '') + '</td>' +
-              '<td class="pf-sup">' + (newSup ? Shell.highlight(sup.name, state.query) : '') + '</td>' +
-              '<td class="pf-worker">' + (newWorker ? Shell.highlight(wk.name, state.query) : '') + '</td>' +
+            out.push('<tr class="pd-row">' +
+              '<td class="pf-site"></td><td class="pf-sup"></td>' +
+              '<td class="pf-worker" data-tip="Worker — ' + Shell.esc(wk.name) + '">' + Shell.highlight(wk.name, state.query) + '</td>' +
               '<td class="pf-task" data-tip="Task — ' + Shell.esc(task.name) + '">' + Shell.highlight(task.name, state.query) + '</td>' +
               ds.map(function (d) { return hoursCell(leafHours(task, toIso(d)), task, toIso(d)); }).join('') +
               '<td class="pd-total">' + fmtHours(sumAll([task], ds)) + '</td>' +
             '</tr>');
-            prev = { site: site.name, sup: sup.name, worker: wk.name };
             count++;
           });
         });
@@ -1523,12 +1546,11 @@
         if (path) tasks[path] = true;
         [j.a.allow1, j.a.allow2].forEach(function (x) { if (x) allowances[x] = true; });
       });
-      function tally(m) { var n = Object.keys(m).length; return n ? String(n) : ''; }
-      /* A bare number sitting in the Site column can read as a value, so the
-         cell says what it counts on hover. */
-      function tip(m, noun) {
+      /* The count says what it counts — a bare number sitting in the Site
+         column would read as a value. */
+      function tally(m, noun) {
         var n = Object.keys(m).length;
-        return n ? ' data-tip="' + n + ' ' + noun + (n === 1 ? '' : 's') + '"' : '';
+        return n ? countText(n, noun) : '';
       }
 
       out.push('<tr class="ts-parent' + (allPicked ? ' selected' : '') + (isCollapsed ? ' collapsed' : '') +
@@ -1541,15 +1563,15 @@
           '<span class="avatar avatar-sm" style="background:' + g.color + '">' + Shell.initials(name) + '</span>' +
           '<a class="worker-link" href="#" data-worker="' + Shell.esc(name) + '">' +
             Shell.highlight(name, state.query) + '</a></span></td>' +
-        '<td class="col-issued ts-count">' + jobs.length + '</td>' +
-        '<td class="col-site ts-count"' + tip(sites, 'site') + '>' + tally(sites) + '</td>' +
+        '<td class="col-issued ts-count">' + countText(jobs.length, 'sheet') + '</td>' +
+        '<td class="col-site ts-count">' + tally(sites, 'site') + '</td>' +
         '<td class="col-super"></td>' +
         '<td class="col-status"></td>' +
         '<td class="col-position">' + Shell.esc(position) + '</td>' +
         '<td class="col-worktype"></td>' +
-        '<td class="col-project ts-count"' + tip(projects, 'project') + '>' + tally(projects) + '</td>' +
-        '<td class="col-task ts-count"' + tip(tasks, 'task') + '>' + tally(tasks) + '</td>' +
-        '<td class="col-allow ts-count"' + tip(allowances, 'allowance') + '>' + tally(allowances) + '</td>' +
+        '<td class="col-project ts-count">' + tally(projects, 'project') + '</td>' +
+        '<td class="col-task ts-count">' + tally(tasks, 'task') + '</td>' +
+        '<td class="col-allow ts-count">' + tally(allowances, 'allowance') + '</td>' +
         '<td class="col-times"></td>' +
         '<td class="col-updated"></td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +
@@ -1619,13 +1641,9 @@
       /* Each summary number counts distinct values among the jobs beneath, so
          it answers "how many different X are on this sheet" under its own
          heading. Blank cells don't count toward any of them. */
-      function tally(map) {
+      function tally(map, noun) {
         var n = Object.keys(map).length;
-        return n ? String(n) : '';
-      }
-      function tip(map, noun) {
-        var n = Object.keys(map).length;
-        return n ? ' data-tip="' + n + ' ' + noun + (n === 1 ? '' : 's') + '"' : '';
+        return n ? countText(n, noun) : '';
       }
 
       out.push('<tr class="ts-parent' + (checked ? ' selected' : '') + (isCollapsed ? ' collapsed' : '') +
@@ -1637,11 +1655,11 @@
         '<td class="col-site" title="' + Shell.esc(t.site) + '">' + Shell.highlight(t.site, q) + '</td>' +
         '<td class="col-super">' + Shell.highlight(t.supervisor, q) + '</td>' +
         '<td class="col-status">' + statusChip(t.status) + '</td>' +
-        '<td class="col-worker ts-count"' + tip(people, 'worker') + '>' + tally(people) + '</td>' +
+        '<td class="col-worker ts-count">' + tally(people, 'worker') + '</td>' +
         '<td class="col-position"></td><td class="col-worktype"></td>' +
-        '<td class="col-project ts-count"' + tip(projects, 'project') + '>' + tally(projects) + '</td>' +
-        '<td class="col-task ts-count"' + tip(tasks, 'task') + '>' + tally(tasks) + '</td>' +
-        '<td class="col-allow ts-count"' + tip(allowances, 'allowance') + '>' + tally(allowances) + '</td>' +
+        '<td class="col-project ts-count">' + tally(projects, 'project') + '</td>' +
+        '<td class="col-task ts-count">' + tally(tasks, 'task') + '</td>' +
+        '<td class="col-allow ts-count">' + tally(allowances, 'allowance') + '</td>' +
         '<td class="col-times"></td>' +
         '<td class="col-updated">' + updatedCell(t) + '</td>' +
         '<td class="col-hrs ts-total">' + fmtHours(total) + '</td>' +

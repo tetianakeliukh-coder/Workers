@@ -185,8 +185,9 @@
   .entry + .entry { border-top: 1px solid var(--grey-200); }
   .entry:hover { background: #fafbfe; }
   .entry-main { min-width: 0; flex: 1; }
-  .entry-code { display: block; font-size: 14px; font-weight: 500; color: var(--text-main); }
-  .entry-sub { display: block; font-size: 12px; line-height: 17px; color: var(--grey-600); margin-top: 2px; }
+  .entry-code { display: block; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
+  .entry-sub { display: block; font-size: 13px; line-height: 18px; color: var(--grey-700); margin-top: 1px; }
+  .entry-where { display: block; font-size: 12px; line-height: 17px; color: var(--grey-500); margin-top: 1px; }
   .entry-hrs { font-size: 14px; font-weight: 600; white-space: nowrap; }
   .entry-go { width: 16px; height: 16px; color: var(--grey-400); flex-shrink: 0; }
   .dd-chev { width: 12px; height: 12px; margin-left: auto; color: var(--grey-600); }
@@ -257,7 +258,7 @@
 
   .shifts { display: flex; flex-direction: column; gap: 10px; }
   .shift {
-    display: grid; grid-template-columns: 1fr 1fr 88px 28px; gap: 8px; align-items: end;
+    display: grid; grid-template-columns: 1fr 1fr 1fr 36px; gap: 8px; align-items: end;
   }
   .shift .fld-label { font-size: 12px; font-weight: 500; color: var(--grey-700); }
   .shift input {
@@ -267,11 +268,15 @@
   }
   .shift input:focus { outline: none; border-color: var(--primary); }
   .shift-drop {
-    width: 28px; height: 40px; border: none; background: none; cursor: pointer;
-    color: var(--grey-600); display: flex; align-items: center; justify-content: center; border-radius: 6px;
+    width: 36px; height: 40px; border: none; background: none; cursor: pointer;
+    color: var(--grey-600); display: flex; align-items: center; justify-content: center; border-radius: 8px;
   }
   .shift-drop:hover { background: var(--grey-100); color: var(--error); }
-  .add-shift { align-self: flex-start; font-size: 14px; }
+  .add-shift { font-size: 14px; }
+  .shift-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-top: 12px;
+  }
   .shift-total { text-align: right; font-size: 14px; color: var(--grey-700); }
   .shift-total b { color: var(--text-main); font-size: 16px; }
   .fld { display: flex; flex-direction: column; gap: 6px; }
@@ -296,7 +301,6 @@
   day card carries its own Edit. */
   /* The phone header carries its own actions and date, so the desktop
      toolbar row stands down entirely. */
-  body.is-narrow .period-bar { display: none; }
   body.is-narrow .edit-actions { width: 100%; margin-left: 0; }
   body.is-narrow .edit-actions .btn-outline,
   body.is-narrow .edit-actions .btn-primary { flex: 1; justify-content: center; }
@@ -362,16 +366,29 @@
   #week-cal .cal-cell.wk-end { border-radius: 0 16px 16px 0; }
   #week-cal .cal-foot { margin-top: 6px; padding: 8px 6px 2px; border-top: 1px solid var(--grey-300); font-size: 12px; color: var(--grey-600); }
 
-  /* ─── Mobile header + sheet ─────────────────────────────────────── */
-  body.is-narrow .page-header { display: block; }
-  body.is-narrow .page-header .header-actions { display: none; }
-  body.is-narrow .m-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-  body.is-narrow .m-actions .btn-ghost, body.is-narrow .m-actions .btn-primary {
-    width: 100%; justify-content: center; height: 36px;
+  /* ─── Mobile header + sheet ───────────────────────────────────────
+     Three bands, told apart by the space between them: the page title
+     stands alone, the controls sit 12px apart as one group, and the list
+     of days starts 16px below them with 8px between cards. */
+  body.is-narrow .content {
+    display: flex; flex-direction: column; gap: 12px;
   }
-  body.is-narrow .m-date { display: block; margin-top: 8px; }
+  body.is-narrow .page-header { display: block; margin-bottom: 4px; order: 1; }
+  body.is-narrow .page-header .header-actions { display: none; }
+  body.is-narrow .m-actions { order: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; }
+  body.is-narrow .m-actions .btn-ghost, body.is-narrow .m-actions .btn-primary {
+    width: 100%; justify-content: center; height: 40px;
+  }
+  /* The toolbar keeps its search on a phone; the grid-only controls go. */
+  body.is-narrow .period-bar { order: 3; display: block; margin: 0; }
+  body.is-narrow .period-bar .search-wrap { width: 100%; }
+  body.is-narrow .period-bar .period-actions { display: none; }
+  body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
   body.is-narrow .m-date .dd-panel { left: 0; right: 0; }
+  body.is-narrow .edit-bar { order: 5; }
+  body.is-narrow .week-view { order: 6; margin-top: 4px; }
+  body.is-narrow .day-list { gap: 8px; }
   body.is-narrow .week-total { display: none; }
   .m-actions, .m-date { display: none; }
 
@@ -605,11 +622,13 @@
       <div class="wiz-step" id="step-3" hidden>
         <p class="add-sub" id="shift-sub"></p>
         <div class="shifts" id="shifts"></div>
-        <button class="btn-text add-shift" type="button" id="add-shift">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          Add another shift
-        </button>
-        <div class="shift-total">Total <b id="shift-total">0</b> h</div>
+        <div class="shift-foot">
+          <button class="btn-text add-shift" type="button" id="add-shift">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Add another shift
+          </button>
+          <div class="shift-total">Total <b id="shift-total">0</b> h</div>
+        </div>
       </div>
     </div>
 
@@ -638,15 +657,16 @@
     <div class="modal-body">
       <p class="edit-meta" id="edit-task"></p>
       <div class="shifts" id="edit-shifts"></div>
-      <button class="btn-text add-shift" type="button" id="edit-add-shift">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        Add another shift
-      </button>
-      <div class="shift-total">Total <b id="edit-total">0</b> h</div>
+      <div class="shift-foot">
+        <button class="btn-text add-shift" type="button" id="edit-add-shift">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Add another shift
+        </button>
+        <div class="shift-total">Total <b id="edit-total">0</b> h</div>
+      </div>
     </div>
     <div class="modal-footer">
       <div class="modal-footer-actions">
-        <button class="btn-delete" type="button" id="edit-delete">Remove</button>
         <button class="btn-ghost" type="button" data-close>Cancel</button>
         <button class="btn-primary" type="button" id="edit-save">Save</button>
       </div>
@@ -699,6 +719,28 @@
     ]
   };
   var SITES = Object.keys(SITE_FIELDS);
+
+  /* Which field names the work, per site. A site with no descriptive field
+     falls back to its reference, which is index 0 everywhere. */
+  var TITLE_FIELD = {
+    'MMA VIGILANT – 360': 1,    // Task
+    'MMA VIGILANT ROV':   1,    // Activity
+    'SA BHP OLYMPIC DAM': 0     // Work Order — the rest are codes
+  };
+  function titleIdx(site) {
+    var i = TITLE_FIELD[site];
+    return typeof i === 'number' ? i : 0;
+  }
+  /* "Repair the machine" — what the worker calls the job. */
+  function taskTitle(meta) {
+    var i = titleIdx(meta.site);
+    return meta.levels[i] || meta.levels[0] || 'No task';
+  }
+  /* "WORK-00123 · Labour" — everything else, in field order. */
+  function taskRest(meta) {
+    var i = titleIdx(meta.site);
+    return meta.levels.filter(function (v, n) { return v && n !== i; }).join(' · ');
+  }
   var SUPS_BY_SITE = {
     'MMA VIGILANT – 360': ['Grace Okafor', 'Tom Halloran'],
     'MMA VIGILANT ROV':   ['Priya Nair'],
@@ -983,8 +1025,9 @@
       var body = rows.length ? rows.map(function (r) {
         return '<button class="entry" type="button" data-entry="' + Shell.esc(r.task.key) + '" data-date="' + key + '">' +
           '<span class="entry-main">' +
-            '<span class="entry-code">' + Shell.esc(r.task.label) + '</span>' +
-            '<span class="entry-sub">' + Shell.esc(r.task.meta.sup) + ' · ' + Shell.esc(r.task.meta.site) + '</span>' +
+            '<span class="entry-code">' + Shell.esc(taskTitle(r.task.meta)) + '</span>' +
+            '<span class="entry-sub">' + Shell.esc(taskRest(r.task.meta)) + '</span>' +
+            '<span class="entry-where">' + Shell.esc(r.task.meta.sup) + ' · ' + Shell.esc(r.task.meta.site) + '</span>' +
           '</span>' +
           '<span class="entry-hrs">' + fmtHours(r.hours) + ' h</span>' + CHEV +
         '</button>';
@@ -1399,7 +1442,7 @@
 
     el('quick-tasks').innerHTML = recent.map(function (r) {
       return '<button type="button" data-quick="' + Shell.esc(r.key) + '">' +
-        Shell.esc(pathOf(r.meta.levels).split(' | ')[0]) + ' · ' + Shell.esc(r.meta.sup) +
+        Shell.esc(taskTitle(r.meta)) + ' · ' + Shell.esc(r.meta.sup) +
         (r.when ? ' · ' + fmtDay(r.when) : '') + '</button>';
     }).join('');
   }
@@ -1490,9 +1533,9 @@
         '<div><label class="fld-label">Start</label><input type="text" placeholder="07:00" data-f="start" value="' + Shell.esc(sh.start) + '" /></div>' +
         '<div><label class="fld-label">Finish</label><input type="text" placeholder="19:00" data-f="finish" value="' + Shell.esc(sh.finish) + '" /></div>' +
         '<div><label class="fld-label">Hours</label><input type="text" inputmode="decimal" data-f="hours" value="' + Shell.esc(sh.hours) + '" /></div>' +
-        (list.length > 1
-          ? '<button class="shift-drop" type="button" data-drop="' + i + '" aria-label="Remove shift"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>'
-          : '<span></span>') +
+        '<button class="shift-drop" type="button" data-drop="' + i + '" aria-label="Remove shift" title="Remove shift">' +
+          '<svg width="18" height="18" viewBox="0 0 16 16" fill="none"><path d="M2.5 4.5h11M6 4.5V3h4v1.5M4 4.5l.6 8.2a1 1 0 001 .8h4.8a1 1 0 001-.8l.6-8.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.6 7v4M9.4 7v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
+        '</button>' +
       '</div>';
     }).join('');
   }
@@ -1505,7 +1548,7 @@
     el('shifts').innerHTML = shiftRows(shifts);
     el('shift-total').textContent = fmtHours(totalOf(shifts));
   }
-  function wireShifts(boxId, totalId, listFor, redraw) {
+  function wireShifts(boxId, totalId, listFor, redraw, onEmpty) {
     el(boxId).addEventListener('input', function (e) {
       var row = e.target.closest('[data-shift]');
       if (!row) return;
@@ -1521,7 +1564,10 @@
     el(boxId).addEventListener('click', function (e) {
       var drop = e.target.closest('[data-drop]');
       if (!drop) return;
-      listFor().splice(Number(drop.getAttribute('data-drop')), 1);
+      var list = listFor();
+      list.splice(Number(drop.getAttribute('data-drop')), 1);
+      if (!list.length && onEmpty) { onEmpty(); return; }
+      if (!list.length) list.push({ start: '', finish: '', hours: '' });
       redraw();
     });
   }
@@ -1542,7 +1588,9 @@
     el('edit-shifts').innerHTML = shiftRows(editShifts);
     el('edit-total').textContent = fmtHours(totalOf(editShifts));
   }
-  wireShifts('edit-shifts', 'edit-total', function () { return editShifts; }, renderEditShifts);
+  wireShifts('edit-shifts', 'edit-total', function () { return editShifts; }, renderEditShifts, function () {
+    removeEntry();
+  });
   el('edit-add-shift').addEventListener('click', function () {
     editShifts.push({ start: '', finish: '', hours: '' });
     renderEditShifts();
@@ -1552,7 +1600,8 @@
     editCtx = { key: key, date: date };
     var m = taskMeta[key], d = fromIso(date);
     el('edit-when').textContent = DOW[d.getDay()] + ' ' + fmtDay(d) + ' ' + d.getFullYear();
-    el('edit-task').innerHTML = '<b>' + Shell.esc(pathOf(m.levels) || 'No task') + '</b><br>' +
+    el('edit-task').innerHTML = '<b>' + Shell.esc(taskTitle(m)) + '</b><br>' +
+      (taskRest(m) ? Shell.esc(taskRest(m)) + '<br>' : '') +
       Shell.esc(m.sup) + ' · ' + Shell.esc(m.site);
 
     editShifts = entries.filter(function (e) { return e.key === key && e.date === date; })
@@ -1581,12 +1630,12 @@
     Shell.snackbar('Saved — ' + fmtHours(total) + ' h.');
   });
 
-  el('edit-delete').addEventListener('click', function () {
+  function removeEntry() {
     dropEntries(editCtx.key, editCtx.date);
     editSheet.classList.remove('open');
     render();
     Shell.snackbar('Task removed from this day.');
-  });
+  }
 
   editSheet.addEventListener('click', function (e) {
     if (e.target === editSheet || e.target.closest('[data-close]')) editSheet.classList.remove('open');
