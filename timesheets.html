@@ -384,7 +384,7 @@
           </div>
           <div class="dd-wrap" id="date-dd">
             <button class="dd-trigger" type="button">
-              <span>Date: <span id="date-dd-value">Last 7 days</span></span>
+              <span>Date: <span id="date-dd-value">Current week</span></span>
               <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <div class="dd-panel" id="date-dd-panel"></div>
@@ -549,6 +549,14 @@
     d.setDate(d.getDate() - n);
     return toIso(d);
   }
+  /* n weeks back, Monday to Sunday — the unit a timesheet week runs in. */
+  function weekDay(n, offset) {
+    var d = new Date(TODAY.getTime());
+    d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 7 * n + offset);
+    return toIso(d);
+  }
+  function weekStartIso(n) { return weekDay(n, 0); }
+  function weekEndIso(n) { return weekDay(n, 6); }
 
   TIMESHEETS.forEach(function (t) {
     t.issued  = daysAgoIso(t.ago);
@@ -564,7 +572,7 @@
   }
 
   /* ─── State ───────────────────────────────────────────────────────── */
-  var state = { query: '', range: 'last7', from: null, to: null, supervisor: 'all', group: 'none', mode: 'list' };
+  var state = { query: '', range: 'week', from: null, to: null, supervisor: 'all', group: 'none', mode: 'list' };
 
   /* Columns the user has switched off. Position and Work Type ship hidden. */
   var hiddenCols = { position: true, worktype: true, project: true };
@@ -653,10 +661,11 @@
   var dateValue = document.getElementById('date-dd-value');
   var dateTrigger = document.querySelector('#date-dd .dd-trigger');
 
+  /* A timesheet week is the unit people work in, so the quick ranges are
+     weeks — anything else is a custom range. */
   var QUICK = [
-    { k: 'today', label: 'Today' },
-    { k: 'last7', label: 'Last 7 days' },
-    { k: 'month', label: 'Last month' }
+    { k: 'week',     label: 'Current week' },
+    { k: 'lastweek', label: 'Last week' }
   ];
   var CHEV = '<svg class="dd-chev" viewBox="0 0 12 12" fill="none"><path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
@@ -667,8 +676,6 @@
           CHECK + r.label + '</button>';
       }).join('') +
       '<button class="dd-item" type="button" data-range="custom">' + CHECK + 'Custom' + CHEV + '</button>' +
-      '<hr class="dd-divider" />' +
-      '<button class="dd-item" type="button" data-range="all">' + CHECK + 'All time</button>' +
     '</div>' +
     '<div class="cal" id="date-cal"></div>';
 
@@ -679,15 +686,13 @@
   }
   function syncDateLabel() {
     if (state.range === 'custom') { dateValue.textContent = fmtRange(state.from, state.to); return; }
-    if (state.range === 'all')    { dateValue.textContent = 'All time'; return; }
     dateValue.textContent = QUICK.filter(function (r) { return r.k === state.range; })[0].label;
   }
 
   /* The date window every filter reads. null means no date limit. */
   function rangeBounds() {
-    if (state.range === 'today')  return { from: daysAgoIso(0),  to: daysAgoIso(0) };
-    if (state.range === 'last7')  return { from: daysAgoIso(6),  to: daysAgoIso(0) };
-    if (state.range === 'month')  return { from: daysAgoIso(29), to: daysAgoIso(0) };
+    if (state.range === 'week')     return { from: weekStartIso(0), to: weekEndIso(0) };
+    if (state.range === 'lastweek') return { from: weekStartIso(1), to: weekEndIso(1) };
     if (state.range === 'custom') return { from: state.from, to: state.to };
     return null;
   }

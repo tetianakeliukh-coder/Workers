@@ -265,12 +265,17 @@
   .facts.quiet dd { font-size: 13px; font-weight: 500; line-height: 19px; color: var(--grey-800); }
   .facts.quiet dd .fact-sub { font-size: 13px; line-height: 19px; color: var(--grey-600); }
 
-  /* What this step is for, said once at the top of it. */
+  /* What this step is for, said once at the top of it. It borrows the
+     dialog title's face a size down, so it cannot be mistaken for a field
+     label — 15/600 sans sat too close to the 14/500 labels below it. */
   .step-head {
     display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-    margin-bottom: -2px;
+    margin: 2px 0 -4px;
   }
-  .step-title { font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
+  .step-title {
+    font-family: var(--fs-roboto); font-size: 16px; font-weight: 700;
+    line-height: 22px; letter-spacing: 0.2px; color: var(--black);
+  }
   /* Two type styles only: a grey label and a dark value. Anything
      secondary borrows the label's style rather than inventing a third. */
   .facts dt { font-size: 13px; font-weight: 400; line-height: 20px; color: var(--grey-600); }
@@ -307,7 +312,10 @@
     display: flex; align-items: baseline; justify-content: space-between;
     gap: 12px; margin-bottom: 8px;
   }
-  .shift-head-label { font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
+  .shift-head-label {
+    font-family: var(--fs-roboto); font-size: 16px; font-weight: 700;
+    line-height: 22px; letter-spacing: 0.2px; color: var(--black);
+  }
   .shift-total { font-size: 14px; color: var(--grey-600); white-space: nowrap; }
   .shift-total b { color: var(--text-main); font-size: 16px; font-weight: 600; }
 
@@ -551,7 +559,7 @@
         <div class="header-actions">
           <div class="dd-wrap" id="date-dd">
             <button class="dd-trigger" type="button">
-              <span>Date: <span id="date-dd-value">Last 7 days</span></span>
+              <span>Date: <span id="date-dd-value">Current week</span></span>
               <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
             <div class="dd-panel" id="date-dd-panel"></div>
@@ -889,7 +897,7 @@
   add(addDays(THIS_MON, -38), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1155', 'Labour', 'Day'], 7.5);
 
   /* ─── State ───────────────────────────────────────────────────── */
-  var state = { range: 'last7', from: null, to: null, query: '', editing: false, selDay: iso(TODAY) };
+  var state = { range: 'week', from: null, to: null, query: '', editing: false, selDay: iso(TODAY) };
   var collapsed = Object.create(null);
   var draft = null;          // 'key|date' -> hours, while editing
   var extraRows = [];        // keys added during this edit
@@ -1182,18 +1190,21 @@
   var dateTrigger = document.querySelector('#date-dd .dd-trigger');
   var CHECK = '<svg class="dd-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var DD_CHEV = '<svg class="dd-chev" viewBox="0 0 12 12" fill="none"><path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  /* A timesheet week is the unit people work in, so the quick ranges are
+     weeks — anything else is a custom range. */
   var QUICK = [
-    { k: 'today', label: 'Today' },
-    { k: 'last7', label: 'Last 7 days' },
-    { k: 'month', label: 'Last month' }
+    { k: 'week',     label: 'Current week' },
+    { k: 'lastweek', label: 'Last week' }
   ];
 
   function daysAgoIso(n) { return iso(addDays(TODAY, -n)); }
+  /* n weeks back: Monday to Sunday. */
+  function weekStartIso(n) { return iso(addDays(mondayOf(TODAY), -7 * n)); }
+  function weekEndIso(n) { return iso(addDays(mondayOf(TODAY), -7 * n + 6)); }
 
   function rangeBounds() {
-    if (state.range === 'today')  return { from: daysAgoIso(0),  to: daysAgoIso(0) };
-    if (state.range === 'last7')  return { from: daysAgoIso(6),  to: daysAgoIso(0) };
-    if (state.range === 'month')  return { from: daysAgoIso(29), to: daysAgoIso(0) };
+    if (state.range === 'week')     return { from: weekStartIso(0), to: weekEndIso(0) };
+    if (state.range === 'lastweek') return { from: weekStartIso(1), to: weekEndIso(1) };
     if (state.range === 'custom') return { from: state.from, to: state.to };
     return null;
   }
@@ -1211,7 +1222,6 @@
   }
   function syncDateLabel() {
     if (state.range === 'custom') { dateValue.textContent = fmtRange(state.from, state.to); return; }
-    if (state.range === 'all') { dateValue.textContent = 'All time'; return; }
     dateValue.textContent = QUICK.filter(function (r) { return r.k === state.range; })[0].label;
   }
 
@@ -1222,8 +1232,6 @@
           CHECK + r.label + '</button>';
       }).join('') +
       '<button class="dd-item" type="button" data-range="custom">' + CHECK + 'Custom' + DD_CHEV + '</button>' +
-      '<hr class="dd-divider" />' +
-      '<button class="dd-item" type="button" data-range="all">' + CHECK + 'All time</button>' +
     '</div><div class="cal" id="date-cal"></div>';
 
   /* ─── Custom range calendar ───────────────────────────────────── */
