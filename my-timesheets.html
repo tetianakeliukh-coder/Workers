@@ -308,6 +308,10 @@
     background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
   }
   .fld select:focus { outline: none; border-color: var(--primary); }
+  /* A field the flow has already settled — shown, but not up for grabs. */
+  .fld select:disabled {
+    background-color: var(--grey-100); color: var(--grey-700); cursor: default;
+  }
   .fld-hint { font-size: 12px; color: var(--grey-600); }
 
   /* The phone layout is a class, not only a media query, so the prototype's
@@ -1504,9 +1508,10 @@
   function fillSupervisors(preset) {
     var site = el('add-site').value;
     var list = SUPS_BY_SITE[site] || [];
-    el('add-sup').innerHTML = list.map(function (x) {
+    el('add-sup').innerHTML = '<option value="">Select…</option>' + list.map(function (x) {
       return '<option' + (x === preset ? ' selected' : '') + '>' + Shell.esc(x) + '</option>';
     }).join('');
+    if (!preset) el('add-sup').value = '';
   }
 
   /* One timesheet is one day on one site, and it belongs to one
@@ -1521,9 +1526,14 @@
     return found;
   }
   function syncDayHint() {
-    var site = el('add-site').value;
-    var locked = supervisorOn(el('add-date').value, site);
+    var site = el('add-site').value, date = el('add-date').value;
     var sel = el('add-sup');
+    if (!site || !date) {
+      sel.disabled = !site;
+      el('date-hint').textContent = '';
+      return;
+    }
+    var locked = supervisorOn(date, site);
     if (locked) {
       sel.value = locked;
       sel.disabled = true;
@@ -1540,15 +1550,19 @@
   function factRow(label, value, cls) {
     return '<div class="fact' + (cls ? ' ' + cls : '') + '"><dt>' + label + '</dt><dd>' + value + '</dd></div>';
   }
+  var DASH = '<span class="cell-empty">&mdash;</span>';
   function renderFacts() {
-    var d = fromIso(el('add-date').value);
-    var when = DOW[d.getDay()] + ' ' + fmtDay(d) + ' ' + d.getFullYear();
+    var iso0 = el('add-date').value, when = DASH;
+    if (iso0) {
+      var d = fromIso(iso0);
+      when = DOW[d.getDay()] + ' ' + fmtDay(d) + ' ' + d.getFullYear();
+    }
     var site = el('add-site').value, sup = el('add-sup').value;
 
     el('facts-2').innerHTML =
-      factRow('Date', when, 'fact-date') +
-      factRow('Site', Shell.esc(site)) +
-      factRow('Supervisor', Shell.esc(sup));
+      factRow('Date', when) +
+      factRow('Site', site ? Shell.esc(site) : DASH) +
+      factRow('Supervisor', sup ? Shell.esc(sup) : DASH);
 
     var levels = currentLevels(), meta = { site: site, sup: sup, levels: levels };
     var name = levels[0] ? taskTitle(meta) : '—';
@@ -1556,9 +1570,9 @@
     el('facts-3').innerHTML =
       '<div class="fact"><dt>Task</dt><dd><span class="fact-name">' + Shell.esc(name) + '</span>' +
         (rest ? '<span class="fact-sub">' + Shell.esc(rest) + '</span>' : '') + '</dd></div>' +
-      factRow('Site', Shell.esc(site)) +
-      factRow('Supervisor', Shell.esc(sup)) +
-      factRow('Date', when, 'fact-date');
+      factRow('Site', site ? Shell.esc(site) : DASH) +
+      factRow('Supervisor', sup ? Shell.esc(sup) : DASH) +
+      factRow('Date', when);
   }
 
   function renderQuick() {
@@ -1577,7 +1591,7 @@
     setQuickOpen(false);
   }
 
-  var lockStep1 = false;        // opened from a card: the day is already set
+  var dayLocked = false;        // opened from a day card: that day is fixed
 
   function setStep(n) {
     addStep = n;
@@ -1587,7 +1601,7 @@
 
     document.querySelectorAll('#stepper .stp').forEach(function (b) {
       var i = Number(b.getAttribute('data-goto'));
-      var reachable = i < n && !(i === 1 && lockStep1);
+      var reachable = i < n;
       b.classList.toggle('now', i === n);
       b.classList.toggle('done', reachable);
       b.disabled = !reachable;
@@ -1604,24 +1618,29 @@
 
   function openAdd(dayIso) {
     var ds = days();
-    el('add-date').innerHTML = ds.map(function (d) {
+    /* Nothing is pre-filled — a guessed day or site is a wrong timesheet
+       waiting to be saved without being read. */
+    el('add-date').innerHTML = '<option value="">Select…</option>' + ds.map(function (d) {
       return '<option value="' + iso(d) + '">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</option>';
     }).join('');
-    el('add-date').value = dayIso || (ds.map(iso).indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : iso(ds[0]));
+    el('add-date').value = dayIso || '';
 
-    el('add-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
-    fillSupervisors(supervisorOn(el('add-date').value, el('add-site').value));
+    el('add-site').innerHTML = '<option value="">Select…</option>' +
+      SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    el('add-site').value = '';
+    fillSupervisors(null);
     renderLevelFields(null);
     renderQuick();
     renderFacts();
     syncDayHint();
 
     shifts = [{ start: '', finish: '', hours: '' }];
-    /* Adding from inside a day card means the day is already chosen, so the
-       sheet opens on the task and cannot walk back to it. */
-    lockStep1 = !!dayIso;
+    /* From a day card the day is settled and stays put, but the site and
+       supervisor are still open — a day holds one timesheet per site. */
+    dayLocked = !!dayIso;
+    el('add-date').disabled = dayLocked;
     el('add-title').textContent = dayIso ? 'Add task' : 'Add timesheet';
-    setStep(dayIso ? 2 : 1);
+    setStep(1);
     addModal.classList.add('open');
   }
 
@@ -1860,7 +1879,12 @@
     return Array.prototype.map.call(el('level-fields').querySelectorAll('[data-lvl]'), function (sel) { return sel.value; });
   }
   el('add-next').addEventListener('click', function () {
-    if (addStep === 1) { setStep(2); return; }
+    if (addStep === 1) {
+      var missing = !el('add-date').value ? 'date' : (!el('add-site').value ? 'site' : (!el('add-sup').value ? 'supervisor' : ''));
+      if (missing) { Shell.snackbar('Choose the ' + missing + ' first.'); return; }
+      setStep(2);
+      return;
+    }
     var levels = currentLevels();
     if (!levels[0]) {
       Shell.snackbar('Choose the ' + fieldsFor(el('add-site').value)[0].name.toLowerCase() + ' first.');
