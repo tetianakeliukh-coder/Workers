@@ -125,45 +125,48 @@
   }
   .grid-foot .count { margin-left: auto; }
 
-  /* ─── Week view (mobile) ───────────────────────────────────────── */
+  /* ─── Mobile list ───────────────────────────────────────────────
+     One list for the whole week, broken by date. A day is a timesheet,
+     so the date is the heading and it collapses to its total. */
   .week-view { display: none; }
-  .week-strip {
-    display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
-  }
-  .day-chip {
-    display: flex; flex-direction: column; align-items: center; gap: 2px;
-    padding: 8px 2px; border-radius: 10px; cursor: pointer;
-    background: var(--white); border: 1px solid var(--grey-300);
-  }
-  .day-chip .d { font-size: 11px; color: var(--grey-600); }
-  .day-chip .n { font-size: 16px; font-weight: 600; color: var(--text-main); }
-  .day-chip .h { font-size: 12px; color: var(--primary); font-weight: 500; }
-  .day-chip .h.none { color: var(--grey-400); font-weight: 400; }
-  .day-chip.today { border-color: var(--primary); }
-  .day-chip.sel { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
-  .day-chip.weekend { background: var(--grey-100); }
-
-  .week-total { text-align: right; font-size: 13px; color: var(--grey-600); margin-top: 8px; }
+  .week-total { text-align: right; font-size: 13px; color: var(--grey-600); margin: 2px 0 10px; }
   .week-total b { color: var(--text-main); }
 
-  .day-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
-  .day-card { background: var(--white); border: 1px solid var(--grey-300); border-radius: 12px; }
-  .day-card-head {
-    display: flex; align-items: baseline; gap: 10px;
-    padding: 14px 16px 10px; border-bottom: 1px solid var(--grey-200);
+  .day-list { display: flex; flex-direction: column; gap: 10px; }
+  .day-group { background: var(--white); border: 1px solid var(--grey-300); border-radius: 12px; overflow: hidden; }
+  .dgroup-head {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 12px 14px; background: none; border: none; cursor: pointer;
+    font-family: var(--fs-sans); text-align: left;
   }
-  .day-card-head .dt { font-size: 15px; font-weight: 600; }
-  .day-card-head .tot { margin-left: auto; font-size: 14px; font-weight: 600; }
-  .day-card-head .btn-text { font-size: 14px; }
-  .entry { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; }
+  .dgroup-head .caret {
+    width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--grey-600); transition: transform var(--t-fast);
+  }
+  .day-group.closed .caret { transform: rotate(-90deg); }
+  .dgroup-head .dt { font-size: 15px; font-weight: 600; color: var(--text-main); }
+  .dgroup-head .today-chip {
+    height: 20px; display: inline-flex; align-items: center; padding: 0 7px; border-radius: 5px;
+    background: var(--bg-blue-light); color: var(--primary); font-size: 11px; font-weight: 500;
+  }
+  .dgroup-head .tot { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--text-main); }
+  .day-group.closed .day-rows { display: none; }
+  .day-rows { border-top: 1px solid var(--grey-200); }
+
+  .entry {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 12px 14px; background: none; border: none; cursor: pointer;
+    font-family: var(--fs-sans); text-align: left;
+  }
   .entry + .entry { border-top: 1px solid var(--grey-200); }
+  .entry:hover { background: #fafbfe; }
   .entry-main { min-width: 0; flex: 1; }
-  .entry-code { display: block; font-size: 14px; font-weight: 500; }
+  .entry-code { display: block; font-size: 14px; font-weight: 500; color: var(--text-main); }
   .entry-sub { display: block; font-size: 12px; line-height: 17px; color: var(--grey-600); margin-top: 2px; }
   .entry-hrs { font-size: 14px; font-weight: 600; white-space: nowrap; }
-  .entry .hr-input { max-width: 86px; }
-  .day-card-foot { padding: 0 16px 14px; display: flex; gap: 8px; }
-  .day-empty { padding: 16px; font-size: 14px; color: var(--grey-600); }
+  .entry-go { color: var(--grey-400); flex-shrink: 0; }
+  .day-empty { padding: 14px; font-size: 14px; color: var(--grey-600); }
+  .day-add { padding: 10px 14px 14px; }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
   .modal.add-modal { max-width: 460px; width: 100%; }
@@ -215,6 +218,18 @@
   }
   .quick-row button:hover { border-color: var(--primary); background: var(--bg-blue-light); color: var(--primary); }
 
+  /* Sheets rise from the bottom on a phone. */
+  @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+  body.is-narrow .modal-backdrop.open .modal { animation: sheet-up 0.24s ease; }
+
+  .edit-meta { font-size: 13px; line-height: 19px; color: var(--grey-600); margin: 0; }
+  .edit-meta b { color: var(--text-main); font-weight: 500; }
+  .edit-modal .modal-footer-actions .btn-delete {
+    margin-right: auto; background: none; border: none; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--error);
+  }
+  .edit-modal .modal-footer-actions .btn-delete:hover { text-decoration: underline; }
+
   .shifts { display: flex; flex-direction: column; gap: 10px; }
   .shift {
     display: grid; grid-template-columns: 1fr 1fr 88px 28px; gap: 8px; align-items: end;
@@ -254,7 +269,9 @@
   body.is-narrow .period-chip.visible { display: none; }
   /* Collapse all and the global Edit belong to the grid; on a phone each
   day card carries its own Edit. */
-  body.is-narrow .period-actions { display: none; }
+  body.is-narrow #btn-edit { display: none; }
+  body.is-narrow .period-actions { margin-left: 0; width: 100%; }
+  body.is-narrow .period-actions .btn-ghost { flex: 1; justify-content: center; }
   body.is-narrow .edit-actions { width: 100%; margin-left: 0; }
   body.is-narrow .edit-actions .btn-outline,
   body.is-narrow .edit-actions .btn-primary { flex: 1; justify-content: center; }
@@ -393,9 +410,8 @@
 
       <!-- ── Mobile: week strip + a card per day ── -->
       <div class="week-view">
-        <div class="week-strip" id="week-strip"></div>
         <div class="week-total" id="week-total"></div>
-        <div class="day-cards" id="day-cards"></div>
+        <div class="day-list" id="day-list"></div>
       </div>
 
     </div>
@@ -473,6 +489,37 @@
         <button class="btn-ghost" type="button" id="add-back" hidden>Back</button>
         <button class="btn-primary" type="button" id="add-next">Next</button>
         <button class="btn-primary" type="button" id="add-save" hidden>Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit an entry ────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="edit-sheet" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+  <div class="modal add-modal edit-modal">
+    <div class="modal-header">
+      <div class="modal-heading">
+        <span class="modal-title" id="edit-title">Edit hours</span>
+        <span class="modal-meta"><span class="meta-item" id="edit-when"></span></span>
+      </div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="edit-meta" id="edit-task"></p>
+      <div class="shifts" id="edit-shifts"></div>
+      <button class="btn-text add-shift" type="button" id="edit-add-shift">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Add another shift
+      </button>
+      <div class="shift-total">Total <b id="edit-total">0</b> h</div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-actions">
+        <button class="btn-delete" type="button" id="edit-delete">Remove</button>
+        <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-primary" type="button" id="edit-save">Save</button>
       </div>
     </div>
   </div>
@@ -698,57 +745,61 @@
     document.getElementById('grid-count').textContent = 'Displaying ' + shown + ' row' + (shown === 1 ? '' : 's');
   }
 
-  /* ─── Mobile week view ────────────────────────────────────────── */
-  var strip = document.getElementById('week-strip');
+  /* ─── Mobile list ─────────────────────────────────────────────────
+     Everything in the week as one list, broken by date. Each date is a
+     timesheet and collapses to its total; tapping an entry opens the
+     edit sheet. */
+  var dayList = document.getElementById('day-list');
   var weekTotalEl = document.getElementById('week-total');
-  var dayCards = document.getElementById('day-cards');
+  var dayClosed = Object.create(null);
 
   function entriesOn(isoDate) {
     var all = [];
     weekTree().forEach(function (s) { all = all.concat(tasksOfSite(s)); });
     return all.map(function (t) { return { task: t, hours: hoursFor(t.key, isoDate) }; })
-              .filter(function (r) { return r.hours > 0 || (state.editing && extraRows.indexOf(r.task.key) !== -1); });
+              .filter(function (r) { return r.hours > 0; });
   }
+
+  var CHEV = '<svg class="entry-go" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function renderWeek() {
     var ds = days(), weekTotal = 0;
-    strip.innerHTML = ds.map(function (d) {
-      var key = iso(d), n = 0;
-      Object.keys(taskMeta).forEach(function (k) { n += hoursFor(k, key); });
-      weekTotal += n;
-      var cls = 'day-chip' + (key === iso(TODAY) ? ' today' : '') + (key === state.selDay ? ' sel' : '') +
-                (d.getDay() === 0 || d.getDay() === 6 ? ' weekend' : '');
-      return '<button class="' + cls + '" type="button" data-day="' + key + '">' +
-        '<span class="d">' + DOW_SHORT[d.getDay()] + '</span><span class="n">' + d.getDate() + '</span>' +
-        '<span class="h' + (n > 0 ? '' : ' none') + '">' + (n > 0 ? fmtHours(n) : '&mdash;') + '</span></button>';
-    }).join('');
+    ds.forEach(function (d) {
+      Object.keys(taskMeta).forEach(function (k) { weekTotal += hoursFor(k, iso(d)); });
+    });
     weekTotalEl.innerHTML = 'Week total <b>' + fmtHours(weekTotal) + ' h</b>';
 
-    var cards = ds.slice().reverse().filter(function (d) {
-      return entriesOn(iso(d)).length || iso(d) === state.selDay;
+    /* Most recent first — you fill in the day you just worked. */
+    var shown = ds.slice().reverse().filter(function (d) {
+      return entriesOn(iso(d)).length || iso(d) === iso(TODAY);
     });
-    dayCards.innerHTML = cards.map(function (d) {
+
+    dayList.innerHTML = shown.map(function (d) {
       var key = iso(d), rows = entriesOn(key);
       var total = rows.reduce(function (n, r) { return n + r.hours; }, 0);
-      var open = state.editing && key === state.selDay;
+      var closed = dayClosed[key] === true;
+
       var body = rows.length ? rows.map(function (r) {
-        return '<div class="entry"><span class="entry-main">' +
+        return '<button class="entry" type="button" data-entry="' + Shell.esc(r.task.key) + '" data-date="' + key + '">' +
+          '<span class="entry-main">' +
             '<span class="entry-code">' + Shell.esc(r.task.label) + '</span>' +
             '<span class="entry-sub">' + Shell.esc(r.task.meta.sup) + ' · ' + Shell.esc(r.task.meta.site) + '</span>' +
           '</span>' +
-          (open
-            ? '<input class="hr-input" type="text" inputmode="decimal" data-key="' + Shell.esc(r.task.key) + '" data-date="' + key + '" value="' + (r.hours > 0 ? fmtHours(r.hours) : '') + '" aria-label="Hours" />'
-            : '<span class="entry-hrs">' + fmtHours(r.hours) + ' h</span>') +
-        '</div>';
+          '<span class="entry-hrs">' + fmtHours(r.hours) + ' h</span>' + CHEV +
+        '</button>';
       }).join('') : '<div class="day-empty">No hours recorded.</div>';
 
-      return '<div class="day-card"><div class="day-card-head">' +
-          '<span class="dt">' + FULL_DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
+      return '<div class="day-group' + (closed ? ' closed' : '') + '">' +
+        '<button class="dgroup-head" type="button" data-dayhead="' + key + '">' +
+          '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+          '<span class="dt">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
+          (key === iso(TODAY) ? '<span class="today-chip">Today</span>' : '') +
           '<span class="tot">' + fmtHours(total) + ' h</span>' +
-          '<button class="btn-text" type="button" data-edit-day="' + key + '">' + (open ? 'Done' : 'Edit') + '</button>' +
-        '</div>' + body +
-        '<div class="day-card-foot"><button class="btn-text" type="button" data-card-add="' + key + '">' +
-          '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:4px"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Add task</button></div>' +
+        '</button>' +
+        '<div class="day-rows">' + body +
+          '<div class="day-add"><button class="btn-text" type="button" data-card-add="' + key + '">' +
+            '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:4px"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Add task</button></div>' +
+        '</div>' +
       '</div>';
     }).join('');
   }
@@ -955,14 +1006,15 @@
   });
 
   document.addEventListener('click', function (e) {
-    var chip = e.target.closest('[data-day]');
-    if (chip) { state.selDay = chip.getAttribute('data-day'); renderWeek(); return; }
-    var dayEdit = e.target.closest('[data-edit-day]');
-    if (dayEdit) {
-      state.selDay = dayEdit.getAttribute('data-edit-day');
-      if (!state.editing) enterEdit(); else renderWeek();
+    var head = e.target.closest('[data-dayhead]');
+    if (head) {
+      var hk = head.getAttribute('data-dayhead');
+      dayClosed[hk] = dayClosed[hk] !== true;
+      renderWeek();
       return;
     }
+    var entry = e.target.closest('[data-entry]');
+    if (entry) { openEdit(entry.getAttribute('data-entry'), entry.getAttribute('data-date')); return; }
     var cardAdd = e.target.closest('[data-card-add]');
     if (cardAdd) openAdd(cardAdd.getAttribute('data-card-add'));
   });
@@ -1076,42 +1128,112 @@
     if (mins <= 0) mins += 24 * 60;                 // finished after midnight
     return Math.round((mins / 60) * 100) / 100;
   }
-  function renderShifts() {
-    el('shift-sub').innerHTML = 'Record the hours for <b>' +
-      DOW[fromIso(el('add-date').value).getDay()] + ' ' + fmtDay(fromIso(el('add-date').value)) +
-      '</b>. Leave the times blank if you only record totals.';
-    el('shifts').innerHTML = shifts.map(function (sh, i) {
+  function shiftRows(list) {
+    return list.map(function (sh, i) {
       return '<div class="shift" data-shift="' + i + '">' +
         '<div><label class="fld-label">Start</label><input type="text" placeholder="07:00" data-f="start" value="' + Shell.esc(sh.start) + '" /></div>' +
         '<div><label class="fld-label">Finish</label><input type="text" placeholder="19:00" data-f="finish" value="' + Shell.esc(sh.finish) + '" /></div>' +
         '<div><label class="fld-label">Hours</label><input type="text" inputmode="decimal" data-f="hours" value="' + Shell.esc(sh.hours) + '" /></div>' +
-        (shifts.length > 1
+        (list.length > 1
           ? '<button class="shift-drop" type="button" data-drop="' + i + '" aria-label="Remove shift"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>'
           : '<span></span>') +
       '</div>';
     }).join('');
-    el('shift-total').textContent = fmtHours(shifts.reduce(function (n, sh) { return n + shiftHours(sh); }, 0));
   }
-  el('shifts').addEventListener('input', function (e) {
-    var row = e.target.closest('[data-shift]');
-    if (!row) return;
-    var i = Number(row.getAttribute('data-shift')), f = e.target.getAttribute('data-f');
-    shifts[i][f] = e.target.value;
-    if (f !== 'hours') {
-      var h = shiftHours(shifts[i]);
-      if (h) { shifts[i].hours = fmtHours(h); row.querySelector('[data-f="hours"]').value = fmtHours(h); }
-    }
-    el('shift-total').textContent = fmtHours(shifts.reduce(function (n, sh) { return n + shiftHours(sh); }, 0));
-  });
-  el('shifts').addEventListener('click', function (e) {
-    var drop = e.target.closest('[data-drop]');
-    if (!drop) return;
-    shifts.splice(Number(drop.getAttribute('data-drop')), 1);
-    renderShifts();
-  });
+  function totalOf(list) { return list.reduce(function (n, sh) { return n + shiftHours(sh); }, 0); }
+
+  function renderShifts() {
+    var d = fromIso(el('add-date').value);
+    el('shift-sub').innerHTML = 'Record the hours for <b>' + DOW[d.getDay()] + ' ' + fmtDay(d) +
+      '</b>. Leave the times blank if you only record totals.';
+    el('shifts').innerHTML = shiftRows(shifts);
+    el('shift-total').textContent = fmtHours(totalOf(shifts));
+  }
+  function wireShifts(boxId, totalId, listFor, redraw) {
+    el(boxId).addEventListener('input', function (e) {
+      var row = e.target.closest('[data-shift]');
+      if (!row) return;
+      var list = listFor();
+      var i = Number(row.getAttribute('data-shift')), f = e.target.getAttribute('data-f');
+      list[i][f] = e.target.value;
+      if (f !== 'hours') {
+        var h = shiftHours(list[i]);
+        if (h) { list[i].hours = fmtHours(h); row.querySelector('[data-f="hours"]').value = fmtHours(h); }
+      }
+      el(totalId).textContent = fmtHours(totalOf(list));
+    });
+    el(boxId).addEventListener('click', function (e) {
+      var drop = e.target.closest('[data-drop]');
+      if (!drop) return;
+      listFor().splice(Number(drop.getAttribute('data-drop')), 1);
+      redraw();
+    });
+  }
+  wireShifts('shifts', 'shift-total', function () { return shifts; }, renderShifts);
   el('add-shift').addEventListener('click', function () {
     shifts.push({ start: '', finish: '', hours: '' });
     renderShifts();
+  });
+
+  /* ─── Edit an entry ───────────────────────────────────────────────
+     The same sheet as adding, opened on what is already there: the task
+     for context, its shifts to change, and a way to take the day off. */
+  var editSheet = document.getElementById('edit-sheet');
+  var editShifts = [];
+  var editCtx = null;        // { key, date }
+
+  function renderEditShifts() {
+    el('edit-shifts').innerHTML = shiftRows(editShifts);
+    el('edit-total').textContent = fmtHours(totalOf(editShifts));
+  }
+  wireShifts('edit-shifts', 'edit-total', function () { return editShifts; }, renderEditShifts);
+  el('edit-add-shift').addEventListener('click', function () {
+    editShifts.push({ start: '', finish: '', hours: '' });
+    renderEditShifts();
+  });
+
+  function openEdit(key, date) {
+    editCtx = { key: key, date: date };
+    var m = taskMeta[key], d = fromIso(date);
+    el('edit-when').textContent = DOW[d.getDay()] + ' ' + fmtDay(d) + ' ' + d.getFullYear();
+    el('edit-task').innerHTML = '<b>' + Shell.esc(pathOf(m.levels) || 'No task') + '</b><br>' +
+      Shell.esc(m.sup) + ' · ' + Shell.esc(m.site);
+
+    editShifts = entries.filter(function (e) { return e.key === key && e.date === date; })
+                        .map(function (e) { return { start: e.start || '', finish: e.finish || '', hours: fmtHours(e.hours) }; });
+    if (!editShifts.length) editShifts = [{ start: '', finish: '', hours: '' }];
+    renderEditShifts();
+    editSheet.classList.add('open');
+  }
+
+  function dropEntries(key, date) {
+    for (var i = entries.length - 1; i >= 0; i--) {
+      if (entries[i].key === key && entries[i].date === date) entries.splice(i, 1);
+    }
+  }
+
+  el('edit-save').addEventListener('click', function () {
+    var total = totalOf(editShifts);
+    if (!total) { Shell.snackbar('Add some hours, or remove the task.'); return; }
+    dropEntries(editCtx.key, editCtx.date);
+    editShifts.forEach(function (sh) {
+      var h = shiftHours(sh);
+      if (h > 0) entries.push({ date: editCtx.date, key: editCtx.key, hours: h, start: sh.start, finish: sh.finish });
+    });
+    editSheet.classList.remove('open');
+    render();
+    Shell.snackbar('Saved — ' + fmtHours(total) + ' h.');
+  });
+
+  el('edit-delete').addEventListener('click', function () {
+    dropEntries(editCtx.key, editCtx.date);
+    editSheet.classList.remove('open');
+    render();
+    Shell.snackbar('Task removed from this day.');
+  });
+
+  editSheet.addEventListener('click', function (e) {
+    if (e.target === editSheet || e.target.closest('[data-close]')) editSheet.classList.remove('open');
   });
 
   /* ─── Steps ───────────────────────────────────────────────────── */
@@ -1155,6 +1277,7 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
+    if (editSheet.classList.contains('open')) { editSheet.classList.remove('open'); return; }
     if (addModal.classList.contains('open')) { addModal.classList.remove('open'); return; }
     if (state.editing) exitEdit();
   });
