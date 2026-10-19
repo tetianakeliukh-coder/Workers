@@ -166,6 +166,12 @@ body.shell-mobile .shell-scrim.open { display: block; }
   transition: background var(--t-fast);
 }
 .btn-primary:hover { background: var(--primary-dark); }
+/* A disabled action has to look unavailable, not merely refuse the click. */
+.btn-primary:disabled, .btn-primary:disabled:hover {
+  background: var(--grey-300); color: var(--grey-600); cursor: default;
+}
+.btn-ghost:disabled, .btn-outline:disabled { opacity: 0.5; cursor: default; }
+.btn-ghost:disabled:hover { border-color: var(--grey-350); background: var(--white); }
 
 .btn-ghost {
   display: inline-flex; align-items: center; gap: 6px;

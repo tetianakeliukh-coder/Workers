@@ -197,6 +197,12 @@
     padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 14px;
     flex: 0 1 auto; max-height: 68vh; overflow: auto;
   }
+  /* One height for all three steps: the dialog must not jump as you move
+     through them, so a short step leaves space and a long one scrolls.
+     A sheet on a phone keeps growing with its content. */
+  .add-modal .modal-body { height: 420px; max-height: 56vh; flex: 0 0 auto; }
+  .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
+  body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
 
@@ -220,24 +226,16 @@
   [hidden] { display: none !important; }
   .wiz-step { display: flex; flex-direction: column; gap: 14px; }
   .fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .lvl-head {
-    font-size: 11px; font-weight: 600; letter-spacing: 0.7px; text-transform: uppercase;
-    color: var(--grey-600); padding-top: 2px;
-  }
+  /* The level selects carry the same 14px rhythm as every other field. */
+  #level-fields { display: flex; flex-direction: column; gap: 14px; }
 
-  /* Recents are a quiet helper under the form, not the way in. */
-  .quick { border-top: 1px solid var(--grey-300); padding-top: 12px; }
+  /* Recents are a quiet helper under the form, not the way in — and they
+     go once one is picked, since the fields then hold the answer. */
+  .quick { border-top: 1px solid var(--grey-300); padding-top: 14px; }
   .quick-label {
-    display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.7px;
-    text-transform: uppercase; color: var(--grey-600); margin-bottom: 8px;
+    display: block; font-size: 14px; font-weight: 500; line-height: 18px;
+    color: var(--text-main); margin-bottom: 8px;
   }
-  .quick-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .quick-row button {
-    padding: 6px 10px; border-radius: 999px; cursor: pointer;
-    background: var(--white); border: 1px solid var(--grey-350);
-    font-family: var(--fs-sans); font-size: 12px; color: var(--grey-800); white-space: nowrap;
-  }
-  .quick-row button:hover { border-color: var(--primary); background: var(--bg-blue-light); color: var(--primary); }
 
   /* Sheets rise from the bottom on a phone. */
   @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
@@ -460,7 +458,7 @@
      the close button. The three steps share the width evenly. */
   .stepper {
     display: flex; align-items: center; gap: 8px; flex-shrink: 0;
-    padding: 14px 24px; border-bottom: 1px solid var(--grey-300);
+    padding: 14px 24px 2px;
   }
   .stp {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -664,16 +662,17 @@
 
       <!-- Step 2 — the task -->
       <div class="wiz-step" id="step-2" hidden>
+        <dl class="facts" id="facts-2"></dl>
         <div id="level-fields"></div>
         <div class="quick" id="quick-wrap">
-          <span class="quick-label">Recent</span>
-          <div class="quick-row" id="quick-tasks"></div>
+          <span class="quick-label">Recent tasks</span>
+          <div class="recent-list" id="quick-tasks"></div>
         </div>
       </div>
 
       <!-- Step 3 — the hours -->
       <div class="wiz-step" id="step-3" hidden>
-        <p class="add-sub" id="shift-sub"></p>
+        <dl class="facts" id="facts-3"></dl>
         <div class="shift-head">
           <span class="shift-head-label">Hours</span>
           <span class="shift-total">Total <b id="shift-total">0</b> h</span>
@@ -1466,7 +1465,7 @@
 
   function renderLevelFields(preset) {
     var site = el('add-site').value, fields = fieldsFor(site);
-    el('level-fields').innerHTML = '<div class="lvl-head">Task</div>' + fields.map(function (f, i) {
+    el('level-fields').innerHTML = fields.map(function (f, i) {
       var val = preset && preset[i] ? preset[i] : '';
       return '<div class="fld"><label class="fld-label" for="lvl-' + i + '">' + Shell.esc(f.name) +
         (i === 0 ? '<span style="color:var(--error)">*</span>' : ' <span style="color:var(--grey-600);font-weight:400">(optional)</span>') + '</label>' +
@@ -1510,16 +1509,45 @@
     }
   }
 
+  /* Each step opens with what the step before it settled, in the same
+     block the edit sheet uses. */
+  function factRow(label, value, cls) {
+    return '<div class="fact' + (cls ? ' ' + cls : '') + '"><dt>' + label + '</dt><dd>' + value + '</dd></div>';
+  }
+  function renderFacts() {
+    var d = fromIso(el('add-date').value);
+    var when = DOW[d.getDay()] + ' ' + fmtDay(d) + ' ' + d.getFullYear();
+    var site = el('add-site').value, sup = el('add-sup').value;
+
+    el('facts-2').innerHTML =
+      factRow('Date', when, 'fact-date') +
+      factRow('Site', Shell.esc(site)) +
+      factRow('Supervisor', Shell.esc(sup));
+
+    var levels = currentLevels(), meta = { site: site, sup: sup, levels: levels };
+    var name = levels[0] ? taskTitle(meta) : '—';
+    var rest = levels[0] ? taskRest(meta) : '';
+    el('facts-3').innerHTML =
+      '<div class="fact"><dt>Task</dt><dd><span class="fact-name">' + Shell.esc(name) + '</span>' +
+        (rest ? '<span class="fact-sub">' + Shell.esc(rest) + '</span>' : '') + '</dd></div>' +
+      factRow('Site', Shell.esc(site)) +
+      factRow('Supervisor', Shell.esc(sup)) +
+      factRow('Date', when, 'fact-date');
+  }
+
   function renderQuick() {
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 3);
 
     el('quick-tasks').innerHTML = recent.map(function (r) {
-      return '<button type="button" data-quick="' + Shell.esc(r.key) + '">' +
-        Shell.esc(taskTitle(r.meta)) + ' · ' + Shell.esc(r.meta.sup) +
-        (r.when ? ' · ' + fmtDay(r.when) : '') + '</button>';
+      var sub = [taskRest(r.meta), r.meta.sup, r.when ? 'last used ' + fmtDay(r.when) : '']
+                  .filter(Boolean).join(' · ');
+      return '<button class="recent-row" type="button" data-quick="' + Shell.esc(r.key) + '">' +
+        '<span class="rr-code">' + Shell.esc(taskTitle(r.meta)) + '</span>' +
+        '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
     }).join('');
+    el('quick-wrap').hidden = !recent.length;
   }
 
   var lockStep1 = false;        // opened from a card: the day is already set
@@ -1537,6 +1565,7 @@
       b.classList.toggle('done', reachable);
       b.disabled = !reachable;
     });
+    if (n === 2 || n === 3) renderFacts();
     if (n === 3) renderShifts();
   }
 
@@ -1557,6 +1586,7 @@
     fillSupervisors(supervisorOn(el('add-date').value, el('add-site').value));
     renderLevelFields(null);
     renderQuick();
+    renderFacts();
     syncDayHint();
 
     shifts = [{ start: '', finish: '', hours: '' }];
@@ -1570,13 +1600,18 @@
 
   el('add-date').addEventListener('change', function () {
     fillSupervisors(supervisorOn(this.value, el('add-site').value));
+    renderFacts();
     syncDayHint();
   });
   el('add-site').addEventListener('change', function () {
     fillSupervisors(supervisorOn(el('add-date').value, this.value));
     renderLevelFields(null);
+    renderQuick();
+    renderFacts();
     syncDayHint();
   });
+
+  el('level-fields').addEventListener('change', renderFacts);
 
   el('quick-tasks').addEventListener('click', function (e) {
     var b = e.target.closest('[data-quick]');
@@ -1587,6 +1622,11 @@
     fillSupervisors(locked || m.sup);
     renderLevelFields(m.levels);
     syncDayHint();
+    renderFacts();
+    el('quick-wrap').hidden = true;
+    var blank = [].slice.call(document.querySelectorAll('#level-fields select'))
+                  .filter(function (sel) { return !sel.value; })[0];
+    if (blank) blank.focus();
   });
 
   /* ─── Shifts ──────────────────────────────────────────────────── */
@@ -1617,12 +1657,13 @@
   function totalOf(list) { return list.reduce(function (n, sh) { return n + shiftHours(sh); }, 0); }
 
   function renderShifts() {
-    var d = fromIso(el('add-date').value);
-    el('shift-sub').innerHTML = 'Record the hours for <b>' + DOW[d.getDay()] + ' ' + fmtDay(d) +
-      '</b>. Leave the times blank if you only record totals.';
     el('shifts').innerHTML = shiftRows(shifts);
     el('shift-total').textContent = fmtHours(totalOf(shifts));
+    syncAddSave();
   }
+  /* Blank times record nothing, so there is nothing to save until the
+     shifts add up to something. */
+  function syncAddSave() { el('add-save').disabled = totalOf(shifts) <= 0; }
   function wireShifts(boxId, totalId, listFor, redraw, onEmpty) {
     el(boxId).addEventListener('input', function (e) {
       var row = e.target.closest('[data-shift]');
@@ -1635,6 +1676,7 @@
         if (h) { list[i].hours = fmtHours(h); row.querySelector('[data-f="hours"]').value = fmtHours(h); }
       }
       el(totalId).textContent = fmtHours(totalOf(list));
+      if (boxId === 'shifts') syncAddSave();
     });
     el(boxId).addEventListener('click', function (e) {
       var drop = e.target.closest('[data-drop]');
