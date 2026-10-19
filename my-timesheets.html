@@ -771,7 +771,7 @@
     gridCols.innerHTML = '<col style="width:360px" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
 
-    gridHead.innerHTML = '<tr><th class="col-label">Site › Supervisor › Task</th>' +
+    gridHead.innerHTML = '<tr><th class="col-label">Breakdown</th>' +
       ds.map(function (d) {
         var today = iso(d) === iso(TODAY);
         return '<th class="col-day"><span class="day-head' + (today ? ' is-today' : '') + '">' +
