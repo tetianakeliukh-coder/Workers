@@ -233,6 +233,56 @@
   }
   .table-scroll::-webkit-scrollbar-thumb:hover { background: var(--grey-600); background-clip: padding-box; }
 
+  /* ─── Period view ───────────────────────────────────────────────────
+     Same data as the list, laid out with the days as columns. One fixed
+     hierarchy — site › supervisor › worker › task — so Group by and the
+     column picker step aside while it is showing. */
+  body.mode-period #groupby,
+  body.mode-period .seg-label,
+  body.mode-period #columns-wrap { display: none; }
+
+  #modeswitch .seg-btn { display: inline-flex; align-items: center; gap: 6px; }
+
+  .pd-table { min-width: 100%; }
+  .pd-table th, .pd-table td { white-space: nowrap; }
+  .pd-table th.pd-label, .pd-table td.pd-label {
+    position: sticky; left: 0; z-index: 2; background: inherit;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .pd-table thead th { position: sticky; top: 0; z-index: 3; background: var(--white); vertical-align: bottom; }
+  .pd-table thead th.pd-label { z-index: 4; }
+  .pd-table th.pd-day, .pd-table td.pd-day,
+  .pd-table th.pd-total, .pd-table td.pd-total { text-align: right; }
+  .pd-table td.pd-day, .pd-table td.pd-total { font-variant-numeric: tabular-nums; }
+  .pd-table th.pd-total, .pd-table td.pd-total {
+    position: sticky; right: 0; z-index: 2; background: inherit; font-weight: 600;
+  }
+  .pd-table thead th.pd-total { z-index: 4; }
+  .pd-day-head { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 16px; }
+  .pd-day-head .dow { font-size: 12px; font-weight: 400; color: var(--grey-600); }
+  .pd-day-head .dnum { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .pd-day-head.is-today .dow, .pd-day-head.is-today .dnum { color: var(--primary); }
+
+  #tbody tr.pd-row { background: var(--white); }
+  #tbody tr.pd-row:hover { background: #fafbfe; }
+  .pd-tree { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+  .pd-tree .caret {
+    width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--grey-600); transition: transform var(--t-fast);
+  }
+  tr.pd-closed .caret { transform: rotate(-90deg); }
+  .pd-tree .ico { flex-shrink: 0; color: var(--grey-600); }
+  .pd-tree .name { overflow: hidden; text-overflow: ellipsis; }
+  .pd-site .name { font-weight: 600; }
+  .pd-sup .name, .pd-worker .name { font-weight: 500; }
+  .pd-task td.pd-label { padding-left: 86px; color: var(--grey-700); }
+  .pd-foot td {
+    position: sticky; bottom: 0; background: var(--white);
+    border-top: 1px solid var(--grey-350); font-weight: 600;
+  }
+  .pd-foot td.pd-label { z-index: 3; color: var(--grey-700); font-weight: 500; }
+  .pd-foot td.pd-total { z-index: 3; }
+
 </style>
 </head>
 <body data-module="timesheets">
@@ -282,7 +332,7 @@
             <button class="seg-btn" type="button" data-group="flat">No Grouping</button>
           </div>
           <button class="btn-ghost" type="button" id="expand-all">Expand all</button>
-          <div class="col-panel-wrap">
+          <div class="col-panel-wrap" id="columns-wrap">
             <button class="btn-columns" id="btn-columns" type="button" aria-expanded="false" aria-haspopup="true">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
@@ -292,6 +342,17 @@
               Columns
             </button>
             <div class="col-panel" id="col-panel"></div>
+          </div>
+
+          <div class="seg" id="modeswitch">
+            <button class="seg-btn active" type="button" data-mode="list">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="2.8" cy="4" r="1" fill="currentColor"/><circle cx="2.8" cy="8" r="1" fill="currentColor"/><circle cx="2.8" cy="12" r="1" fill="currentColor"/></svg>
+              Timesheets
+            </button>
+            <button class="seg-btn" type="button" data-mode="period">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M6 6v7.5M10 6v7.5" stroke="currentColor" stroke-width="1.3"/></svg>
+              Period
+            </button>
           </div>
         </div>
       </div>
@@ -397,7 +458,7 @@
   }
 
   /* ─── State ───────────────────────────────────────────────────────── */
-  var state = { query: '', range: 'last7', from: null, to: null, supervisor: 'all', group: 'none' };
+  var state = { query: '', range: 'last7', from: null, to: null, supervisor: 'all', group: 'none', mode: 'list' };
 
   /* Columns the user has switched off. Position and Work Type ship hidden. */
   var hiddenCols = { position: true, worktype: true, project: true };
@@ -1005,6 +1066,155 @@
     syncScrollEdges();
   });
 
+  /* ─── Period view ─────────────────────────────────────────────────
+     The same filtered timesheets, pivoted: one column per day in the
+     active date range, one row per task under site › supervisor › worker. */
+  var DOW_P = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var pdCollapsed = Object.create(null);
+
+  function periodDays(rows) {
+    var b = rangeBounds(), from, to;
+    if (b) { from = parseIso(b.from); to = parseIso(b.to); }
+    else {
+      /* No date filter: span whatever the data covers. */
+      var all = rows.map(function (t) { return t.issued; }).sort();
+      if (!all.length) return [];
+      from = parseIso(all[0]); to = parseIso(all[all.length - 1]);
+    }
+    var out = [], cur = new Date(from.getTime());
+    while (cur <= to && out.length < 400) { out.push(new Date(cur.getTime())); cur.setDate(cur.getDate() + 1); }
+    return out;
+  }
+
+  /* site › supervisor › worker › task, each leaf holding hours by date. */
+  function periodTree(rows) {
+    var sites = [], bySite = Object.create(null), q = state.query.toLowerCase();
+
+    rows.forEach(function (t) {
+      var fields = fieldsFor(t.site);
+      workersFor(t).forEach(function (w) {
+        w.assignments.forEach(function (a) {
+          /* Some entries carry no custom-field path; fall back to the
+             project so the row still says what the work was. */
+          var path = taskPath(a, fields) || a.project || 'No task';
+          if (q) {
+            var hay = [t.site, t.supervisor, w.worker, path, a.project].join(' ').toLowerCase();
+            if (hay.indexOf(q) === -1) return;
+          }
+          if (!bySite[t.site]) { bySite[t.site] = { name: t.site, kids: [], by: Object.create(null) }; sites.push(bySite[t.site]); }
+          var S = bySite[t.site];
+          if (!S.by[t.supervisor]) { S.by[t.supervisor] = { name: t.supervisor, kids: [], by: Object.create(null) }; S.kids.push(S.by[t.supervisor]); }
+          var P = S.by[t.supervisor];
+          if (!P.by[w.worker]) { P.by[w.worker] = { name: w.worker, kids: [], by: Object.create(null) }; P.kids.push(P.by[w.worker]); }
+          var W = P.by[w.worker];
+          if (!W.by[path]) { W.by[path] = { name: path, hours: Object.create(null) }; W.kids.push(W.by[path]); }
+          var L = W.by[path];
+          L.hours[t.issued] = (L.hours[t.issued] || 0) + (Number(a.hours) || 0);
+        });
+      });
+    });
+    return sites;
+  }
+
+  function leavesOf(node) {
+    if (!node.kids) return [node];
+    var out = [];
+    node.kids.forEach(function (k) { out = out.concat(leavesOf(k)); });
+    return out;
+  }
+  function sumOn(leaves, isoDate) {
+    var n = 0;
+    leaves.forEach(function (l) { n += l.hours[isoDate] || 0; });
+    return n;
+  }
+  function sumAll(leaves, ds) {
+    var n = 0;
+    ds.forEach(function (d) { n += sumOn(leaves, toIso(d)); });
+    return n;
+  }
+  function hoursCell(n) {
+    return '<td class="pd-day">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+  }
+  function pdCaret() {
+    return '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+  }
+  var PD_ICONS = {
+    site: '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V3.5l5-1.5V14M3 14h10V6.5H8M3 14H1.5M13 14h1.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>',
+    sup:  '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+    worker: '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
+  };
+
+  function renderPeriod(rows) {
+    var ds = periodDays(rows);
+    var tree = periodTree(rows);
+
+    mainColgroup.innerHTML = '<col style="width:360px" />' +
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') +
+      '<col style="width:96px" />';
+
+    mainThead.innerHTML = '<tr>' +
+      '<th class="pd-label">Site › Supervisor › Worker › Task</th>' +
+      ds.map(function (d) {
+        var today = toIso(d) === daysAgoIso(0);
+        return '<th class="pd-day"><span class="pd-day-head' + (today ? ' is-today' : '') + '">' +
+          '<span class="dow">' + DOW_P[d.getDay()] + '</span>' +
+          '<span class="dnum">' + fmtDay_(d) + '</span></span></th>';
+      }).join('') +
+      '<th class="pd-total">Total</th>' +
+    '</tr>';
+
+    mainTable.classList.remove('frozen');
+    mainTable.classList.add('pd-table');
+    mainTable.style.minWidth = (360 + ds.length * 92 + 96) + 'px';
+
+    var out = [], keys = [];
+    function row(node, level, cls, icon, key) {
+      var leaves = leavesOf(node);
+      var open = pdCollapsed[key] !== true;
+      if (key) keys.push(key);
+      out.push('<tr class="pd-row ' + cls + (open ? '' : ' pd-closed') + '"' +
+          (key ? ' data-pd="' + Shell.esc(key) + '"' : '') + '>' +
+        '<td class="pd-label"><span class="pd-tree" style="padding-left:' + (level * 22) + 'px">' +
+          (node.kids ? pdCaret() : '') + (icon || '') +
+          '<span class="name">' + Shell.highlight(node.name, state.query) + '</span></span></td>' +
+        ds.map(function (d) { return hoursCell(sumOn(leaves, toIso(d))); }).join('') +
+        '<td class="pd-total">' + fmtHours(sumAll(leaves, ds)) + '</td>' +
+      '</tr>');
+      return open;
+    }
+
+    tree.forEach(function (site) {
+      var sk = 'p:' + site.name;
+      if (!row(site, 0, 'pd-site', PD_ICONS.site, sk)) return;
+      site.kids.forEach(function (sup) {
+        var pk = sk + '|' + sup.name;
+        if (!row(sup, 1, 'pd-sup', PD_ICONS.sup, pk)) return;
+        sup.kids.forEach(function (wk) {
+          var wkey = pk + '|' + wk.name;
+          if (!row(wk, 2, 'pd-worker', PD_ICONS.worker, wkey)) return;
+          wk.kids.forEach(function (task) { row(task, 3, 'pd-task', '', null); });
+        });
+      });
+    });
+
+    if (!out.length) {
+      out.push('<tr><td class="pd-label" colspan="' + (ds.length + 2) + '" style="color:var(--grey-600)">No hours in this period.</td></tr>');
+    }
+
+    var allLeaves = [];
+    tree.forEach(function (s) { allLeaves = allLeaves.concat(leavesOf(s)); });
+    out.push('<tr class="pd-foot">' +
+      '<td class="pd-label">Total hours</td>' +
+      ds.map(function (d) { return hoursCell(sumOn(allLeaves, toIso(d))); }).join('') +
+      '<td class="pd-total">' + fmtHours(sumAll(allLeaves, ds)) + '</td>' +
+    '</tr>');
+
+    openKeys = keys;
+    return out.join('');
+  }
+
+  function fmtDay_(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+
   /* ─── Rendering ───────────────────────────────────────────────────── */
   function statusChip(status) {
     return '<span class="status-sec status-sec-' + STATUS_COLOR[status] + '">' +
@@ -1331,15 +1541,24 @@
 
   /* The button reflects what clicking it will do, so it stays honest after
      rows are opened or closed one at a time. */
+  function pdClosed(k) { return pdCollapsed[k] === true; }
+
   function syncExpandBtn() {
     var btn = document.getElementById('expand-all');
     if (!openKeys.length) { btn.style.display = 'none'; return; }
     btn.style.display = '';
-    var anyClosed = openKeys.some(isCollapsed_);
+    var anyClosed = state.mode === 'period' ? openKeys.some(pdClosed) : openKeys.some(isCollapsed_);
     btn.textContent = anyClosed ? 'Expand all' : 'Collapse all';
   }
 
   document.getElementById('expand-all').addEventListener('click', function () {
+    if (state.mode === 'period') {
+      var anyShut = openKeys.some(pdClosed);
+      openKeys.forEach(function (k) { pdCollapsed[k] = !anyShut; });
+      render();
+      syncExpandBtn();
+      return;
+    }
     var anyClosed = openKeys.some(isCollapsed_);
     openKeys.forEach(function (k) { setCollapsed_(k, !anyClosed); });
     render();
@@ -1366,12 +1585,37 @@
   window.addEventListener('resize', sizeTableBox);
 
   function render() {
-    renderHead();
     var rows = TIMESHEETS.filter(matches);
     renderedKeys = [];
     renderedSheets = Object.create(null);
     childHtml = Object.create(null);
     var html = '';
+
+    /* Period is its own table: a fixed hierarchy and a column per day, so
+       it builds its own head rather than going through the column model. */
+    if (state.mode === 'period') {
+      html = renderPeriod(rows);
+      tbody.innerHTML = html;
+      rows.forEach(function (t) { renderedSheets[t.id] = true; });
+      shownIds = Object.keys(renderedSheets);
+      syncExpandBtn();
+      var noneP = !tbody.querySelector('.pd-row');
+      empty.classList.toggle('visible', noneP);
+      tbody.closest('.table-scroll').style.display = noneP ? 'none' : '';
+      if (noneP) {
+        emptySub.textContent = state.query
+          ? 'Nothing matches “' + state.query + '” in this period.'
+          : 'No hours recorded in this period.';
+      }
+      syncSelectAll();
+      syncSelectionBar();
+      sizeTableBox();
+      syncScrollEdges();
+      return;
+    }
+
+    mainTable.classList.remove('pd-table');
+    renderHead();
 
     if (state.group === 'flat') {
       html = flatJobRows(rows);
@@ -1544,6 +1788,31 @@
 
     var kebab = e.target.closest('[data-kebab]');
     if (kebab) { Shell.snackbar('Row actions for ' + kebab.getAttribute('data-kebab') + ' — menu not designed yet.'); return; }
+  });
+
+  /* ─── Timesheets / Period ─────────────────────────────────────────
+     Group by and the column picker belong to the list; Period has one
+     hierarchy of its own. The list's grouping is remembered either way. */
+  document.getElementById('modeswitch').addEventListener('click', function (e) {
+    var btn = e.target.closest('.seg-btn');
+    if (!btn) return;
+    this.querySelectorAll('.seg-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    state.mode = btn.getAttribute('data-mode');
+    document.body.classList.toggle('mode-period', state.mode === 'period');
+    collapsed = Object.create(null);
+    render();
+    syncExpandBtn();
+  });
+
+  /* The period tree keeps its own open/closed map. */
+  tbody.addEventListener('click', function (e) {
+    var pd = e.target.closest('[data-pd]');
+    if (!pd || state.mode !== 'period') return;
+    var k = pd.getAttribute('data-pd');
+    pdCollapsed[k] = pdCollapsed[k] !== true;
+    render();
+    syncExpandBtn();
   });
 
   /* ─── Group by ────────────────────────────────────────────────────── */
