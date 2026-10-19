@@ -231,39 +231,42 @@
 
   /* Recents are a quiet helper under the form, not the way in — and they
      go once one is picked, since the fields then hold the answer. */
-  .quick { border-top: 1px solid var(--grey-300); padding-top: 12px; }
-  .quick-toggle {
-    display: flex; align-items: center; gap: 8px; padding: 0; border: none; background: none;
-    cursor: pointer; font-family: var(--fs-sans); font-size: 14px; font-weight: 500;
-    line-height: 20px; color: var(--text-main);
+  /* Filling the fields and picking a recent answer the same question, so
+     they are two sections of one accordion — opening either closes the
+     other, and neither looks like a step you also have to do. */
+  .acc { display: flex; flex-direction: column; }
+  .acc-sec + .acc-sec { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--grey-300); }
+  .acc-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; padding: 0; border: none; background: none; cursor: pointer;
+    font-family: var(--fs-sans); text-align: left;
   }
-  .quick-chev { color: var(--grey-600); transition: transform var(--t-fast); }
-  .quick-toggle[aria-expanded="true"] .quick-chev { transform: rotate(0deg); }
-  .quick-toggle[aria-expanded="false"] .quick-chev { transform: rotate(-90deg); }
-  .recent-list { margin-top: 10px; }
+  .acc-chev { flex-shrink: 0; color: var(--grey-600); transition: transform var(--t-fast); }
+  .acc-head[aria-expanded="false"] .acc-chev { transform: rotate(-90deg); }
+  .acc-body { margin-top: 12px; }
 
   /* Sheets rise from the bottom on a phone. */
   @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
   body.is-narrow .modal-backdrop.open .modal { animation: sheet-up 0.24s ease; }
 
-  /* What this sheet is about, told apart by label and weight rather than
-     by one run of grey text. */
+  /* What the sheet is about — the same card whether a timesheet is being
+     created or edited. It sits a step back from the form: settled
+     context, not another thing to fill in. Two type styles only, a grey
+     label and a darker value, so neither competes with the field labels
+     below. */
   .facts {
-    margin: 0; padding-bottom: 12px; border-bottom: 1px solid var(--grey-300);
+    margin: 0 0 2px; padding: 10px 12px; border-radius: 8px; background: var(--grey-100);
   }
   .facts .fact {
-    display: grid; grid-template-columns: 92px 1fr; gap: 12px;
-    padding: 2px 0; align-items: baseline;
+    display: grid; grid-template-columns: 84px 1fr; gap: 12px;
+    padding: 1px 0; align-items: baseline;
   }
-  /* Carried over from an earlier step: settled, so it sits a step back
-     from the form. Without this its values matched the field labels
-     below exactly, and the two read as one undifferentiated block. */
-  .facts.quiet { padding: 10px 12px; margin-bottom: 2px; border: none;
-    border-radius: 8px; background: var(--grey-100); }
-  .facts.quiet .fact { grid-template-columns: 84px 1fr; padding: 1px 0; }
-  .facts.quiet dt { font-size: 13px; line-height: 19px; color: var(--grey-600); }
-  .facts.quiet dd { font-size: 13px; font-weight: 500; line-height: 19px; color: var(--grey-800); }
-  .facts.quiet dd .fact-sub { font-size: 13px; line-height: 19px; color: var(--grey-600); }
+  .facts dt { font-size: 13px; font-weight: 400; line-height: 19px; color: var(--grey-600); }
+  .facts dd { margin: 0; font-size: 13px; font-weight: 500; line-height: 19px; color: var(--grey-800); }
+  .facts dd .fact-name { display: block; }
+  .facts dd .fact-sub {
+    display: block; font-size: 13px; font-weight: 400; line-height: 19px; color: var(--grey-600);
+  }
 
   /* What this step is for, said once at the top of it. It borrows the
      dialog title's face a size down, so it cannot be mistaken for a field
@@ -275,14 +278,6 @@
   .step-title {
     font-family: var(--fs-roboto); font-size: 16px; font-weight: 700;
     line-height: 22px; letter-spacing: 0.2px; color: var(--black);
-  }
-  /* Two type styles only: a grey label and a dark value. Anything
-     secondary borrows the label's style rather than inventing a third. */
-  .facts dt { font-size: 13px; font-weight: 400; line-height: 20px; color: var(--grey-600); }
-  .facts dd { margin: 0; font-size: 14px; font-weight: 500; line-height: 20px; color: var(--text-main); }
-  .facts dd .fact-name { display: block; }
-  .facts dd .fact-sub {
-    display: block; font-size: 13px; font-weight: 400; line-height: 20px; color: var(--grey-600);
   }
   .edit-modal .modal-footer-actions .btn-delete {
     margin-right: auto; background: none; border: none; cursor: pointer;
@@ -726,23 +721,27 @@
 
       <!-- Step 2 — the task -->
       <div class="wiz-step" id="step-2" hidden>
-        <dl class="facts quiet" id="facts-2"></dl>
-        <div class="step-head">
-          <span class="step-title">Choose the task</span>
-        </div>
-        <div id="level-fields"></div>
-        <div class="quick" id="quick-wrap">
-          <button class="quick-toggle" type="button" id="quick-toggle" aria-expanded="false" aria-controls="quick-tasks">
-            <svg class="quick-chev" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span id="quick-label">Or pick a recent task</span>
-          </button>
-          <div class="recent-list" id="quick-tasks" hidden></div>
+        <dl class="facts" id="facts-2"></dl>
+        <!-- Two ways to answer the same question, so only one is open. -->
+        <div class="acc">
+          <div class="acc-sec">
+            <button class="acc-head" type="button" data-acc="fields" aria-expanded="true" aria-controls="level-fields">
+              <span class="step-title">Choose the task</span><svg class="acc-chev" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="acc-body" id="level-fields"></div>
+          </div>
+          <div class="acc-sec" id="sec-recent">
+            <button class="acc-head" type="button" data-acc="recent" aria-expanded="false" aria-controls="quick-tasks">
+              <span class="step-title" id="quick-label">Or pick a recent task</span><svg class="acc-chev" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="acc-body recent-list" id="quick-tasks" hidden></div>
+          </div>
         </div>
       </div>
 
       <!-- Step 3 — the hours -->
       <div class="wiz-step" id="step-3" hidden>
-        <dl class="facts quiet" id="facts-3"></dl>
+        <dl class="facts" id="facts-3"></dl>
         <div class="step-head">
           <span class="step-title">Enter the hours</span>
           <span class="shift-total">Total <b id="shift-total">0</b> h</span>
@@ -1647,8 +1646,8 @@
         '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
     }).join('');
     el('quick-label').textContent = 'Or pick a recent task (' + recent.length + ')';
-    el('quick-wrap').hidden = !recent.length;
-    setQuickOpen(false);
+    el('sec-recent').hidden = !recent.length;
+    setAcc('fields');
   }
 
   var dayLocked = false;        // opened from a day card: that day is fixed
@@ -1724,14 +1723,19 @@
 
   el('level-fields').addEventListener('change', renderFacts);
 
-  /* Recents stay folded away until asked for, so the step never looks
-     like it is waiting on a choice from that list. */
-  function setQuickOpen(open) {
-    el('quick-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
-    el('quick-tasks').hidden = !open;
+  /* One section of step 2 is open at a time: fill the fields, or pick
+     something already used. */
+  function setAcc(which) {
+    document.querySelectorAll('#step-2 .acc-head').forEach(function (h) {
+      var on = h.getAttribute('data-acc') === which;
+      h.setAttribute('aria-expanded', on ? 'true' : 'false');
+      document.getElementById(h.getAttribute('aria-controls')).hidden = !on;
+    });
   }
-  el('quick-toggle').addEventListener('click', function () {
-    setQuickOpen(el('quick-tasks').hidden);
+  document.querySelector('#step-2 .acc').addEventListener('click', function (e) {
+    var h = e.target.closest('.acc-head');
+    if (!h) return;
+    setAcc(h.getAttribute('aria-expanded') === 'true' ? null : h.getAttribute('data-acc'));
   });
 
   el('quick-tasks').addEventListener('click', function (e) {
@@ -1744,7 +1748,8 @@
     renderLevelFields(m.levels);
     syncDayHint();
     renderFacts();
-    el('quick-wrap').hidden = true;
+    /* The pick answers the question, so the filled fields come back up. */
+    setAcc('fields');
     var blank = [].slice.call(document.querySelectorAll('#level-fields select'))
                   .filter(function (sel) { return !sel.value; })[0];
     if (blank) blank.focus();
