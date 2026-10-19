@@ -255,6 +255,22 @@
     display: grid; grid-template-columns: 92px 1fr; gap: 12px;
     padding: 2px 0; align-items: baseline;
   }
+  /* Carried over from an earlier step: settled, so it sits a step back
+     from the form. Without this its values matched the field labels
+     below exactly, and the two read as one undifferentiated block. */
+  .facts.quiet { padding: 10px 12px; margin-bottom: 2px; border: none;
+    border-radius: 8px; background: var(--grey-100); }
+  .facts.quiet .fact { grid-template-columns: 84px 1fr; padding: 1px 0; }
+  .facts.quiet dt { font-size: 13px; line-height: 19px; color: var(--grey-600); }
+  .facts.quiet dd { font-size: 13px; font-weight: 500; line-height: 19px; color: var(--grey-800); }
+  .facts.quiet dd .fact-sub { font-size: 13px; line-height: 19px; color: var(--grey-600); }
+
+  /* What this step is for, said once at the top of it. */
+  .step-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin-bottom: -2px;
+  }
+  .step-title { font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
   /* Two type styles only: a grey label and a dark value. Anything
      secondary borrows the label's style rather than inventing a third. */
   .facts dt { font-size: 13px; font-weight: 400; line-height: 20px; color: var(--grey-600); }
@@ -291,7 +307,7 @@
     display: flex; align-items: baseline; justify-content: space-between;
     gap: 12px; margin-bottom: 8px;
   }
-  .shift-head-label { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .shift-head-label { font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
   .shift-total { font-size: 14px; color: var(--grey-600); white-space: nowrap; }
   .shift-total b { color: var(--text-main); font-size: 16px; font-weight: 600; }
 
@@ -670,12 +686,15 @@
 
       <!-- Step 2 — the task -->
       <div class="wiz-step" id="step-2" hidden>
-        <dl class="facts" id="facts-2"></dl>
+        <dl class="facts quiet" id="facts-2"></dl>
+        <div class="step-head">
+          <span class="step-title">Choose the task</span>
+        </div>
         <div id="level-fields"></div>
         <div class="quick" id="quick-wrap">
           <button class="quick-toggle" type="button" id="quick-toggle" aria-expanded="false" aria-controls="quick-tasks">
             <svg class="quick-chev" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Recent tasks
+            <span id="quick-label">Or pick a recent task</span>
           </button>
           <div class="recent-list" id="quick-tasks" hidden></div>
         </div>
@@ -683,9 +702,9 @@
 
       <!-- Step 3 — the hours -->
       <div class="wiz-step" id="step-3" hidden>
-        <dl class="facts" id="facts-3"></dl>
-        <div class="shift-head">
-          <span class="shift-head-label">Hours</span>
+        <dl class="facts quiet" id="facts-3"></dl>
+        <div class="step-head">
+          <span class="step-title">Enter the hours</span>
           <span class="shift-total">Total <b id="shift-total">0</b> h</span>
         </div>
         <div class="shifts" id="shifts"></div>
@@ -1587,6 +1606,7 @@
         '<span class="rr-code">' + Shell.esc(taskTitle(r.meta)) + '</span>' +
         '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
     }).join('');
+    el('quick-label').textContent = 'Or pick a recent task (' + recent.length + ')';
     el('quick-wrap').hidden = !recent.length;
     setQuickOpen(false);
   }
