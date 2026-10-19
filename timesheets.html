@@ -209,6 +209,13 @@
     margin-top: 8px; padding: 10px 16px; border-top: 1px solid var(--grey-300);
     font-size: 13px; color: var(--grey-600);
   }
+  /* A phone has no room for two months side by side — show one, and let
+     the arrows walk between them. */
+  body.is-narrow .dd-panel.cal-mode { left: 0; right: 0; }
+  body.is-narrow .cal { width: auto; max-width: 100%; }
+  body.is-narrow .cal .cal-months { gap: 0; }
+  body.is-narrow .cal .cal-month + .cal-month { display: none; }
+  body.is-narrow .cal .cal-head .cal-title + .cal-title { display: none; }
 
   /* The table scrolls inside the card rather than with the page, so the
      header row and the timesheet being read can stay pinned to the top. */

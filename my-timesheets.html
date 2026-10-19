@@ -392,28 +392,60 @@
   /* ─── Week dropdown ────────────────────────────────────────────── */
   .period-dd .dd-trigger { min-width: 232px; }
   .dd-item .sub { margin-left: auto; font-size: 12px; color: var(--grey-600); }
-  #week-cal { padding: 8px; min-width: 268px; }
-  #week-cal .cal-head { display: flex; align-items: center; padding: 2px 4px 8px; }
-  #week-cal .cal-nav {
-    width: 28px; height: 28px; flex-shrink: 0; border: none; border-radius: 50%;
+  /* ─── Date range calendar ─────────────────────────────────────────
+     The same two-month picker Team Timesheets uses. Its markup came over
+     when the two date controls were unified; these rules did not, so the
+     calendar was rendering as one unstyled column. Scoped to #date-cal so
+     nothing collides with the week picker's own rules. */
+  .dd-panel.cal-mode { min-width: 0; padding: 0; }
+  .dd-panel.cal-mode #date-quick { display: none; }
+  #date-cal { display: none; }
+  .dd-panel.cal-mode #date-cal { display: block; }
+
+  #date-cal { width: 600px; padding: 8px 8px 0; }
+  #date-cal .cal-head { display: flex; align-items: center; padding: 4px 8px 6px; }
+  #date-cal .cal-nav {
+    width: 32px; height: 32px; flex-shrink: 0; border: none; border-radius: 50%;
     background: none; cursor: pointer; color: var(--grey-700);
     display: flex; align-items: center; justify-content: center;
   }
-  #week-cal .cal-nav:hover { background: var(--grey-200); }
-  #week-cal .cal-title { flex: 1; text-align: center; font-size: 14px; font-weight: 500; }
-  #week-cal .cal-dow, #week-cal .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-  #week-cal .cal-dow span { height: 24px; line-height: 24px; text-align: center; font-size: 11px; color: var(--grey-600); }
-  #week-cal .cal-cell { height: 32px; display: flex; align-items: center; justify-content: center; }
-  #week-cal .cal-day {
-    width: 30px; height: 30px; border: none; border-radius: 50%; background: none; cursor: pointer;
-    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
-  }
-  #week-cal .cal-day:hover { background: var(--grey-200); }
-  #week-cal .cal-cell.inweek { background: var(--bg-blue-light); }
-  #week-cal .cal-cell.wk-start { border-radius: 16px 0 0 16px; }
-  #week-cal .cal-cell.wk-end { border-radius: 0 16px 16px 0; }
-  #week-cal .cal-foot { margin-top: 6px; padding: 8px 6px 2px; border-top: 1px solid var(--grey-300); font-size: 12px; color: var(--grey-600); }
+  #date-cal .cal-nav:hover { background: var(--grey-200); }
+  #date-cal .cal-nav.next svg { transform: rotate(180deg); }
+  #date-cal .cal-title { flex: 1; text-align: center; font-size: 15px; font-weight: 500; color: var(--text-main); }
 
+  #date-cal .cal-months { display: flex; gap: 24px; padding: 0 8px; }
+  #date-cal .cal-month { flex: 1; }
+  #date-cal .cal-dow, #date-cal .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  #date-cal .cal-dow span {
+    height: 30px; line-height: 30px; text-align: center; font-size: 12px; color: var(--grey-600);
+  }
+
+  /* The cell carries the range band; the button carries the day circle. */
+  #date-cal .cal-cell { height: 36px; display: flex; align-items: center; justify-content: center; }
+  #date-cal .cal-cell.in { background: var(--bg-blue-light); }
+  #date-cal .cal-cell.start { border-radius: 18px 0 0 18px; }
+  #date-cal .cal-cell.end { border-radius: 0 18px 18px 0; }
+  #date-cal .cal-cell.start.end { border-radius: 18px; }
+  #date-cal .cal-day {
+    width: 34px; height: 34px; border: none; border-radius: 50%; background: none;
+    cursor: pointer; font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
+  }
+  #date-cal .cal-day:hover { background: var(--grey-200); }
+  #date-cal .cal-day.today { border: 1px solid var(--grey-400); }
+  #date-cal .cal-cell.sel .cal-day { background: var(--primary); color: var(--white); font-weight: 500; }
+  #date-cal .cal-cell.sel .cal-day.today { border-color: var(--primary); }
+
+  #date-cal .cal-foot {
+    margin-top: 8px; padding: 10px 16px; border-top: 1px solid var(--grey-300);
+    font-size: 13px; color: var(--grey-600);
+  }
+  /* A phone has no room for two months side by side — show one, and let
+     the arrows walk between them. */
+  body.is-narrow .dd-panel.cal-mode { left: 0; right: 0; }
+  body.is-narrow #date-cal { width: auto; max-width: 100%; }
+  body.is-narrow #date-cal .cal-months { gap: 0; }
+  body.is-narrow #date-cal .cal-month + .cal-month { display: none; }
+  body.is-narrow #date-cal .cal-head .cal-title + .cal-title { display: none; }
   /* ─── Mobile header + sheet ───────────────────────────────────────
      Three bands, told apart by the space between them: the page title
      stands alone, the controls sit 12px apart as one group, and the list
