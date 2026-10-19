@@ -98,6 +98,8 @@
     color: var(--grey-600); transition: transform var(--t-fast); cursor: pointer;
   }
   tr.collapsed .caret { transform: rotate(-90deg); }
+  .row-summary .tree .name { font-weight: 600; }
+  .row-summary td.col-site { cursor: pointer; }
   .tree .ico { flex-shrink: 0; color: var(--grey-600); }
   .tree .name { overflow: hidden; text-overflow: ellipsis; }
   .row-site .name { font-weight: 600; }
@@ -1068,14 +1070,18 @@
     weekTree().forEach(function (site) {
       site.sups.forEach(function (sup) {
         var n = sup.tasks.length;
-        rows.push('<tr class="row-flat row-summary' + (first ? '' : ' group-top') + '">' +
-          '<td class="col-site" data-tip="Site &mdash; ' + Shell.esc(site.name) + '">' + Shell.esc(site.name) + '</td>' +
+        var fk = flatKey(site.name, sup.name), open = collapsed[fk] !== true;
+        rows.push('<tr class="row-flat row-summary' + (open ? '' : ' collapsed') + (first ? '' : ' group-top') +
+            '" data-key="' + Shell.esc(fk) + '">' +
+          '<td class="col-site" data-tip="Site &mdash; ' + Shell.esc(site.name) + '">' +
+            '<span class="tree">' + caret() + '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
           '<td class="col-sup">' + Shell.esc(sup.name) + '</td>' +
           '<td class="col-task"><span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
           ds.map(function (d) { return dayCell(sumRow(sup.tasks, iso(d)), iso(d)); }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
         '</tr>');
         first = false; count++;
+        if (!open) return;
 
         sup.tasks.forEach(function (t) {
           rows.push('<tr class="row-flat">' +
@@ -1357,15 +1363,23 @@
   syncDateLabel();
 
   /* The phone header carries its own pair of buttons. */
+  function shownDayKeys() {
+    return [].slice.call(document.querySelectorAll('#day-list [data-dayhead]'))
+             .map(function (b) { return b.getAttribute('data-dayhead'); });
+  }
   function syncMobileActions() {
     var collapse = document.getElementById('m-collapse');
-    collapse.innerHTML = document.getElementById('btn-collapse').innerHTML;
-    collapse.style.display = rowsMode === 'flat' ? 'none' : '';
-    document.querySelector('.m-actions').style.gridTemplateColumns =
-      rowsMode === 'flat' ? '1fr' : '1fr 1fr';
+    var anyOpen = shownDayKeys().some(function (k) { return dayClosed[k] !== true; });
+    collapse.innerHTML = anyOpen ? ICO_COLLAPSE + 'Collapse all' : ICO_EXPAND + 'Expand all';
+    document.querySelector('.m-actions').style.gridTemplateColumns = '1fr 1fr';
   }
+  /* The phone shows a list of days, so this folds the days — the grid it
+     used to drive is not even on screen here. */
   document.getElementById('m-collapse').addEventListener('click', function () {
-    document.getElementById('btn-collapse').click();
+    var keys = shownDayKeys();
+    var anyOpen = keys.some(function (k) { return dayClosed[k] !== true; });
+    keys.forEach(function (k) { dayClosed[k] = anyOpen; });
+    renderWeek();
     syncMobileActions();
   });
   document.getElementById('m-add').addEventListener('click', function () { openAdd(null); });
@@ -1415,10 +1429,11 @@
     if (!b) return;
     rowsMode = b.getAttribute('data-rows');
     rowsSwitch.querySelectorAll('[data-rows]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    /* Nothing nests in the flat table, so its control goes quiet. */
-    document.getElementById('btn-collapse').style.display = rowsMode === 'flat' ? 'none' : '';
-    syncMobileActions();
+    /* The two layouts fold at different levels, so the button re-reads
+       the one now on screen. */
     renderGrid();
+    syncCollapseBtn();
+    syncMobileActions();
     syncScrollEdge();
   });
 
@@ -1441,6 +1456,7 @@
     syncEditBar();
     syncScrollEdge();
     syncCollapseBtn();
+    syncMobileActions();
   }
 
   /* ─── Collapse ────────────────────────────────────────────────── */
@@ -1449,15 +1465,21 @@
     if (!row || e.target.closest('.hr-input')) return;
     var k = row.getAttribute('data-key');
     collapsed[k] = collapsed[k] !== true;
-    renderGrid();
+    render();
     syncCollapseBtn();
   });
+  /* Flat folds at the one level it has — the site + supervisor summary —
+     so its keys live apart from the tree's. */
+  function flatKey(site, sup) { return 'f:' + site + '|' + sup; }
+
   function allKeys() {
     var keys = [];
     weekTree().forEach(function (site) {
       var sk = 's:' + site.name;
-      keys.push(sk);
-      site.sups.forEach(function (sup) { keys.push(sk + '|' + sup.name); });
+      if (rowsMode !== 'flat') keys.push(sk);
+      site.sups.forEach(function (sup) {
+        keys.push(rowsMode === 'flat' ? flatKey(site.name, sup.name) : sk + '|' + sup.name);
+      });
     });
     return keys;
   }
@@ -1534,6 +1556,7 @@
       var hk = head.getAttribute('data-dayhead');
       dayClosed[hk] = dayClosed[hk] !== true;
       renderWeek();
+      syncMobileActions();
       return;
     }
     var entry = e.target.closest('[data-entry]');
@@ -1987,7 +2010,6 @@
     if (state.editing) exitEdit();
   });
 
-  document.getElementById('btn-collapse').style.display = rowsMode === 'flat' ? 'none' : '';
   render();
   applyViewport();
 })();

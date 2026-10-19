@@ -277,7 +277,9 @@
     width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     color: var(--grey-600); transition: transform var(--t-fast);
   }
-  tr.pd-closed .caret { transform: rotate(-90deg); }
+  tr.pd-closed .caret, tr.pf-summary.collapsed .caret { transform: rotate(-90deg); }
+  .pf-summary .pd-tree .name { font-weight: 600; }
+  .pf-summary td.pf-site { cursor: pointer; }
   .pd-tree .ico { flex-shrink: 0; color: var(--grey-600); }
   .pd-tree .name { overflow: hidden; text-overflow: ellipsis; }
   .pd-site .name { font-weight: 600; }
@@ -1342,14 +1344,19 @@
        workers and tasks sit under it, then the task rows. The worker name
        repeats on every row rather than blanking out, so a row read on its
        own still says who did the work. */
-    var out = [], count = 0, first = true;
+    var out = [], count = 0, first = true, keys = [];
     tree.forEach(function (site) {
       site.kids.forEach(function (sup) {
         var leaves = leavesOf(sup), nTasks = 0;
         sup.kids.forEach(function (wk) { nTasks += wk.kids.length; });
+        var fk = 'f:' + site.name + '|' + sup.name, open = pdCollapsed[fk] !== true;
+        keys.push(fk);
 
-        out.push('<tr class="pd-row pf-summary' + (first ? '' : ' pf-top') + '">' +
-          '<td class="pf-site" data-tip="Site — ' + Shell.esc(site.name) + '">' + Shell.highlight(site.name, state.query) + '</td>' +
+        out.push('<tr class="pd-row pf-summary' + (open ? '' : ' collapsed') + (first ? '' : ' pf-top') +
+            '" data-pd="' + Shell.esc(fk) + '">' +
+          '<td class="pf-site" data-tip="Site — ' + Shell.esc(site.name) + '">' +
+            '<span class="pd-tree">' + pdCaret() +
+            '<span class="name">' + Shell.highlight(site.name, state.query) + '</span></span></td>' +
           '<td class="pf-sup">' + Shell.highlight(sup.name, state.query) + '</td>' +
           '<td class="pf-worker"><span class="count-pill">' + countText(sup.kids.length, 'worker') + '</span></td>' +
           '<td class="pf-task"><span class="count-pill">' + countText(nTasks, 'task') + '</span></td>' +
@@ -1357,6 +1364,7 @@
           '<td class="pd-total">' + fmtHours(sumAll(leaves, ds)) + '</td>' +
         '</tr>');
         first = false; count++;
+        if (!open) return;
 
         sup.kids.forEach(function (wk) {
           wk.kids.forEach(function (task) {
@@ -1384,7 +1392,7 @@
       ds.map(function (d) { return hoursCell(sumOn(allLeaves, toIso(d))); }).join('') +
       '<td class="pd-total">' + fmtHours(sumAll(allLeaves, ds)) + '</td></tr>');
 
-    openKeys = [];
+    openKeys = keys;
     return out.join('');
   }
 
