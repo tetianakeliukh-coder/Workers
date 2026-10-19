@@ -19,6 +19,8 @@
     rostering:  '<rect x="2" y="2" width="12" height="12" rx="1.5" ' + S + '/><path d="M5 2v2M11 2v2" ' + S + ' stroke-linecap="round"/><path d="M2 6h12" ' + S + '/><path d="M6 6v8M10 6v8" ' + S + '/><path d="M2 10h12" ' + S + '/>',
     travel:     '<path d="M13 3.5 10 8h2L8.5 14 4 8.5H6L3 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>',
     timesheets: '<circle cx="8" cy="8.5" r="5.5" ' + S + '/><path d="M8 5.5v3.3l2.2 2" ' + S + ' stroke-linecap="round" stroke-linejoin="round"/>',
+    mytime:     '<circle cx="6.5" cy="5" r="2.5" ' + S + '/><path d="M2 13.2c0-2.2 2-4 4.5-4" ' + S + ' stroke-linecap="round"/>' +
+                '<circle cx="11" cy="10.5" r="3.8" ' + S + '/><path d="M11 8.8v1.9l1.3.9" ' + S + ' stroke-linecap="round" stroke-linejoin="round"/>',
     reports:    '<rect x="1.5" y="8.5" width="3" height="5.5" rx="0.6" stroke="currentColor" stroke-width="1.2"/><rect x="6" y="6" width="3" height="8" rx="0.6" stroke="currentColor" stroke-width="1.2"/><rect x="10.5" y="2.5" width="3" height="11.5" rx="0.6" stroke="currentColor" stroke-width="1.2"/>',
     orgdocs:    '<path d="M2 5.5c0-.8.7-1.5 1.5-1.5H7l1.5 2H13c.8 0 1.5.7 1.5 1.5V13c0 .8-.7 1.5-1.5 1.5H3.5C2.7 14.5 2 13.8 2 13V5.5z" ' + S + '/>',
     notifs:     '<path d="M8 2a4.5 4.5 0 0 1 4.5 4.5V9l1.5 2H2l1.5-2V6.5A4.5 4.5 0 0 1 8 2z" ' + S + ' stroke-linejoin="round"/><path d="M6.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" ' + S + ' stroke-linecap="round"/>'
@@ -39,7 +41,8 @@
     { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
     { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
-    { id: 'timesheets', label: 'Timesheets',       icon: 'timesheets', r4: true, href: 'timesheets.html' },
+    { id: 'timesheets', label: 'Team Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets.html' },
+    { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html' },
     { id: 'reports',    label: 'Reports',          icon: 'reports',    r4: true }
   ];
 
@@ -90,6 +93,57 @@
     btn.setAttribute('title', text);
     btn.setAttribute('aria-label', text);
     btn.setAttribute('aria-expanded', String(!collapsed));
+  }
+
+  /* ─── Responsive shell ──────────────────────────────────────────────
+     > 900px: the user's own collapsed/expanded choice.
+     641–900px: forced to the icon rail, choice remembered for later.
+     <= 640px: off-canvas behind a top bar. */
+  function initResponsive(host) {
+    var bar = document.createElement('header');
+    bar.className = 'shell-topbar';
+    bar.innerHTML =
+      '<button class="topbar-menu" type="button" aria-label="Open menu" aria-expanded="false">' +
+        '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+      '</button>' +
+      '<span class="logo-mark">' + LOGO + '</span>';
+    var scrim = document.createElement('div');
+    scrim.className = 'shell-scrim';
+    document.body.appendChild(bar);
+    document.body.appendChild(scrim);
+
+    function closeDrawer() {
+      host.classList.remove('open');
+      scrim.classList.remove('open');
+      bar.querySelector('.topbar-menu').setAttribute('aria-expanded', 'false');
+    }
+    bar.querySelector('.topbar-menu').addEventListener('click', function () {
+      var open = host.classList.toggle('open');
+      scrim.classList.toggle('open', open);
+      this.setAttribute('aria-expanded', String(open));
+    });
+    scrim.addEventListener('click', closeDrawer);
+    host.addEventListener('click', function (e) {
+      if (e.target.closest('a[href]')) closeDrawer();
+    });
+
+    function sync() {
+      var w = window.innerWidth;
+      var mobile = w <= 640;
+      document.body.classList.toggle('shell-mobile', mobile);
+      if (!mobile) closeDrawer();
+      if (w <= 900) {
+        host.classList.toggle('collapsed', !mobile);
+      } else {
+        host.classList.toggle('collapsed', readCollapsed());
+      }
+      syncSidebarTitles(host);
+    }
+    window.addEventListener('resize', sync);
+    sync();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { document.body.classList.add('shell-animate'); });
+    });
   }
 
   function initSidebarToggle(host) {
@@ -157,6 +211,7 @@
       '</div>';
 
     initSidebarToggle(host);
+    initResponsive(host);
   }
 
   /* ─── Shared behaviours ─────────────────────────────────────────────── */

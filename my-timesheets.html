@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Timesheets — OPMS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/shell.css" />
+<style>
+  /* ─── My Timesheets ─────────────────────────────────────────────────
+     The worker's own week. Desktop is the period grid — site › supervisor
+     › task down the side, days across the top. Below 860px it becomes a
+     week strip and a card per day, which is the view that matters most:
+     workers enter their hours on a phone. */
+
+  /* ─── Period bar ───────────────────────────────────────────────── */
+  .period-bar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .step {
+    width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    color: var(--grey-700); cursor: pointer; transition: border-color var(--t-fast), background var(--t-fast);
+  }
+  .step:hover { border-color: var(--border-hover); background: var(--bg-blue-light); color: var(--text-main); }
+  .period-range {
+    font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap;
+    min-width: 210px; text-align: center;
+  }
+  .period-meta { font-size: 13px; color: var(--grey-600); white-space: nowrap; }
+  .period-chip {
+    display: none; height: 22px; align-items: center; padding: 0 8px; border-radius: 6px;
+    background: var(--bg-blue-light); color: var(--primary);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+  }
+  .period-chip.visible { display: inline-flex; }
+  .period-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+  /* ─── Edit bar ─────────────────────────────────────────────────── */
+  .edit-bar {
+    display: none; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 10px 12px; border-radius: 8px;
+    background: var(--bg-blue-light); border: 1px solid var(--primary);
+  }
+  body.editing .edit-bar { display: flex; }
+  body.editing .period-actions { display: none; }
+  .edit-status { font-size: 14px; font-weight: 500; color: var(--primary); }
+  .edit-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+  /* ─── Period grid (desktop) ────────────────────────────────────── */
+  .grid-card table { min-width: 980px; }
+  .grid-card th, .grid-card td { white-space: nowrap; }
+
+  th.col-label, td.col-label {
+    position: sticky; left: 0; z-index: 2; background: inherit;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  th.col-day, td.col-day, th.col-total, td.col-total { text-align: right; }
+  th.col-total, td.col-total { font-weight: 600; }
+  .grid-card thead th {
+    position: sticky; top: 0; z-index: 3; background: var(--white); vertical-align: bottom;
+  }
+  .grid-card thead th.col-label { z-index: 4; }
+  .day-head { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 16px; }
+  .day-head .dow { font-size: 12px; font-weight: 400; color: var(--grey-600); }
+  .day-head .dnum { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .day-head.is-today .dow, .day-head.is-today .dnum { color: var(--primary); }
+
+  #grid tbody tr { background: var(--white); }
+  #grid tbody tr.row-site { background: var(--grey-100); }
+  #grid tbody tr.row-sup { background: #fafbfe; }
+  #grid tbody tr:hover { background: #f6f8fd; }
+  #grid tbody tr.row-site:hover { background: var(--grey-200); }
+
+  .tree { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
+  .tree .caret {
+    width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--grey-600); transition: transform var(--t-fast); cursor: pointer;
+  }
+  tr.collapsed .caret { transform: rotate(-90deg); }
+  .tree .ico { flex-shrink: 0; color: var(--grey-600); }
+  .tree .name { overflow: hidden; text-overflow: ellipsis; }
+  .row-site .name { font-weight: 600; }
+  .row-sup .name { font-weight: 500; }
+  .row-task td.col-label { padding-left: 62px; }
+  .row-task .code { font-weight: 500; }
+  .row-task .what { color: var(--grey-600); }
+  td.zero { color: var(--grey-400); }
+
+  #grid tfoot td {
+    position: sticky; bottom: 0; background: var(--white);
+    border-top: 1px solid var(--grey-350); font-weight: 600;
+  }
+  #grid tfoot td.col-label { z-index: 3; color: var(--grey-700); font-weight: 500; }
+
+  .hr-input {
+    width: 100%; max-width: 72px; height: 32px; padding: 0 8px; text-align: right;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+  }
+  .hr-input:focus { outline: none; border-color: var(--primary); }
+  .hr-input.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+
+  .grid-foot {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    border-top: 1px solid var(--grey-300); font-size: 13px; color: var(--grey-600);
+  }
+  .grid-foot .count { margin-left: auto; }
+
+  /* ─── Week view (mobile) ───────────────────────────────────────── */
+  .week-view { display: none; }
+  .week-strip {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+  }
+  .day-chip {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 8px 2px; border-radius: 10px; cursor: pointer;
+    background: var(--white); border: 1px solid var(--grey-300);
+  }
+  .day-chip .d { font-size: 11px; color: var(--grey-600); }
+  .day-chip .n { font-size: 16px; font-weight: 600; color: var(--text-main); }
+  .day-chip .h { font-size: 12px; color: var(--primary); font-weight: 500; }
+  .day-chip .h.none { color: var(--grey-400); font-weight: 400; }
+  .day-chip.today { border-color: var(--primary); }
+  .day-chip.sel { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+  .day-chip.weekend { background: var(--grey-100); }
+
+  .week-total { text-align: right; font-size: 13px; color: var(--grey-600); margin-top: 8px; }
+  .week-total b { color: var(--text-main); }
+
+  .day-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+  .day-card { background: var(--white); border: 1px solid var(--grey-300); border-radius: 12px; }
+  .day-card-head {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 14px 16px 10px; border-bottom: 1px solid var(--grey-200);
+  }
+  .day-card-head .dt { font-size: 15px; font-weight: 600; }
+  .day-card-head .tot { margin-left: auto; font-size: 14px; font-weight: 600; }
+  .day-card-head .btn-text { font-size: 14px; }
+  .entry { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; }
+  .entry + .entry { border-top: 1px solid var(--grey-200); }
+  .entry-main { min-width: 0; flex: 1; }
+  .entry-code { display: block; font-size: 14px; font-weight: 500; }
+  .entry-sub { display: block; font-size: 12px; line-height: 17px; color: var(--grey-600); margin-top: 2px; }
+  .entry-hrs { font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .entry .hr-input { max-width: 86px; }
+  .day-card-foot { padding: 0 16px 14px; display: flex; gap: 8px; }
+  .day-empty { padding: 16px; font-size: 14px; color: var(--grey-600); }
+
+  /* ─── Add task ─────────────────────────────────────────────────── */
+  .modal.add-modal { max-width: 460px; width: 100%; }
+  .add-modal .modal-body { padding: 18px 24px 4px; display: flex; flex-direction: column; gap: 16px; }
+  .fld { display: flex; flex-direction: column; gap: 6px; }
+  .fld label { font-size: 14px; font-weight: 500; }
+  .fld select {
+    height: 40px; padding: 0 10px; font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+  }
+  .fld select:focus { outline: none; border-color: var(--primary); }
+  .recent { display: flex; flex-wrap: wrap; gap: 8px; }
+  .recent button {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+    padding: 8px 12px; border-radius: 8px; cursor: pointer; text-align: left;
+    background: var(--white); border: 1px solid var(--grey-350); font-family: var(--fs-sans);
+  }
+  .recent button:hover { border-color: var(--primary); background: var(--bg-blue-light); }
+  .recent button.sel { border-color: var(--primary); background: var(--bg-blue-light); }
+  .recent .c { font-size: 13px; font-weight: 600; color: var(--text-main); }
+  .recent .n { font-size: 12px; color: var(--grey-600); }
+
+  @media (max-width: 860px) {
+    .grid-card { display: none; }
+    .week-view { display: block; }
+    .period-range { min-width: 0; flex: 1; font-size: 14px; }
+    .period-meta, .period-chip { display: none; }
+    .period-chip.visible { display: none; }
+    /* Collapse all and the global Edit belong to the grid; on a phone each
+       day card carries its own Edit. */
+    .period-actions { display: none; }
+    .edit-actions { width: 100%; margin-left: 0; }
+    .edit-actions .btn-ghost, .edit-actions .btn-primary { flex: 1; justify-content: center; }
+  }
+</style>
+</head>
+<body data-module="mytime">
+
+<div class="page">
+  <aside id="shell-sidebar"></aside>
+
+  <main class="main">
+    <div class="content">
+
+      <div class="page-header">
+        <h1 class="page-title">My Timesheets</h1>
+      </div>
+
+      <div class="period-bar">
+        <button class="step" type="button" data-step="-1" aria-label="Previous week">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="period-range" id="period-range"></span>
+        <button class="step" type="button" data-step="1" aria-label="Next week">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="period-meta">7 days</span>
+        <span class="period-chip" id="period-chip">Current period</span>
+
+        <div class="period-actions">
+          <button class="btn-ghost" type="button" id="btn-edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            Edit
+          </button>
+          <button class="btn-ghost" type="button" id="btn-collapse">Collapse all</button>
+        </div>
+      </div>
+
+      <div class="edit-bar" id="edit-bar">
+        <span class="edit-status" id="edit-status">Editing · no changes yet</span>
+        <div class="edit-actions">
+          <button class="btn-ghost" type="button" id="btn-add-task">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Add task
+          </button>
+          <button class="btn-ghost" type="button" id="btn-cancel">Cancel</button>
+          <button class="btn-primary" type="button" id="btn-save" disabled>Save</button>
+        </div>
+      </div>
+
+      <!-- ── Desktop: the period grid ── -->
+      <div class="table-card grid-card">
+        <div class="table-scroll">
+          <table id="grid">
+            <colgroup id="grid-cols"></colgroup>
+            <thead id="grid-head"></thead>
+            <tbody id="grid-body"></tbody>
+            <tfoot id="grid-foot"></tfoot>
+          </table>
+        </div>
+        <div class="grid-foot">
+          <span id="grid-hint">Hours you enter are saved against the day's timesheet.</span>
+          <span class="count" id="grid-count"></span>
+        </div>
+      </div>
+
+      <!-- ── Mobile: week strip + a card per day ── -->
+      <div class="week-view">
+        <div class="week-strip" id="week-strip"></div>
+        <div class="week-total" id="week-total"></div>
+        <div class="day-cards" id="day-cards"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ── Add task ─────────────────────────────────────────────────── -->
+<div class="modal-backdrop" id="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-title">
+  <div class="modal add-modal">
+    <div class="modal-header">
+      <div class="modal-heading"><span class="modal-title" id="add-title">Add task</span></div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="fld">
+        <label>Recently worked on</label>
+        <div class="recent" id="recent-tasks"></div>
+      </div>
+      <div class="fld">
+        <label for="add-task">Or choose another</label>
+        <select id="add-task"></select>
+      </div>
+      <div class="fld">
+        <label for="add-site">Site</label>
+        <select id="add-site"></select>
+      </div>
+      <div class="fld">
+        <label for="add-sup">Supervisor</label>
+        <select id="add-sup"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-actions">
+        <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-primary" type="button" id="add-confirm">Add task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var DOW_SHORT = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  var FULL_DOW = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+  function startOfDay(d) { var x = new Date(d.getTime()); x.setHours(0, 0, 0, 0); return x; }
+  function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+  function iso(d) {
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  function mondayOf(d) {
+    var x = startOfDay(d), back = (x.getDay() + 6) % 7;   // Monday starts the week
+    return addDays(x, -back);
+  }
+  function fmtDay(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+  function fmtHours(n) { return n % 1 === 0 ? String(n) : n.toFixed(1); }
+
+  var TODAY = startOfDay(new Date());
+  var THIS_MON = mondayOf(TODAY);
+
+  /* ─── The worker's tasks and their week ───────────────────────────
+     Generated around today so the screen never ages out: last week is a
+     full week, this week has started. */
+  var TASKS = [
+    { code: 'WORK-00123', name: 'Repair the machine',    site: 'MMA VIGILANT – 360', sup: 'Grace Okafor' },
+    { code: 'WORK-00201', name: 'Deck plating repair',   site: 'MMA VIGILANT – 360', sup: 'Grace Okafor' },
+    { code: 'JOB-00492',  name: 'Tooling change-out',    site: 'MMA VIGILANT ROV',   sup: 'Priya Nair' },
+    { code: 'WORK-00187', name: 'Weld handrail section', site: 'MMA VIGILANT – 360', sup: 'Tom Halloran' },
+    { code: 'JOB-00451',  name: 'ROV mobilisation',      site: 'MMA VIGILANT ROV',   sup: 'Priya Nair' }
+  ];
+  function taskBy(code) { return TASKS.filter(function (t) { return t.code === code; })[0]; }
+
+  var entries = [];                     // { date, code, hours }
+  function seed(day, code, hours) { entries.push({ date: iso(day), code: code, hours: hours }); }
+  var lastMon = addDays(THIS_MON, -7);
+  for (var i = 0; i < 5; i++) {
+    seed(addDays(lastMon, i), 'WORK-00123', 8);
+    seed(addDays(lastMon, i), 'WORK-00201', 4);
+  }
+  seed(addDays(lastMon, 4), 'JOB-00492', 2.5);
+  seed(addDays(lastMon, 3), 'JOB-00492', 3);
+  // This week has begun.
+  seed(THIS_MON, 'WORK-00123', 8);
+  seed(THIS_MON, 'WORK-00201', 4);
+
+  /* ─── State ───────────────────────────────────────────────────── */
+  var state = { weekStart: new Date(THIS_MON.getTime()), editing: false, selDay: iso(TODAY) };
+  var collapsed = Object.create(null);
+  var draft = null;        // { 'code|date': hours } while editing
+  var extraRows = [];      // task codes added during this edit
+
+  function days() {
+    var out = [];
+    for (var i = 0; i < 7; i++) out.push(addDays(state.weekStart, i));
+    return out;
+  }
+  function hoursFor(code, isoDate) {
+    if (draft) {
+      var k = code + '|' + isoDate;
+      if (k in draft) return draft[k];
+    }
+    var sum = 0;
+    entries.forEach(function (e) { if (e.code === code && e.date === isoDate) sum += e.hours; });
+    return sum;
+  }
+
+  /* Rows that belong to this week: anything with hours, plus anything
+     added during the current edit. */
+  function weekTree() {
+    var ds = days().map(iso);
+    var codes = [];
+    TASKS.forEach(function (t) {
+      var any = ds.some(function (d) { return hoursFor(t.code, d) > 0; });
+      if (any || extraRows.indexOf(t.code) !== -1) codes.push(t.code);
+    });
+
+    var sites = [], bySite = Object.create(null);
+    codes.forEach(function (code) {
+      var t = taskBy(code);
+      if (!bySite[t.site]) { bySite[t.site] = { name: t.site, sups: [], bySup: Object.create(null) }; sites.push(bySite[t.site]); }
+      var s = bySite[t.site];
+      if (!s.bySup[t.sup]) { s.bySup[t.sup] = { name: t.sup, tasks: [] }; s.sups.push(s.bySup[t.sup]); }
+      s.bySup[t.sup].tasks.push(t);
+    });
+    return sites;
+  }
+
+  function sumRow(tasks, isoDate) {
+    var n = 0;
+    tasks.forEach(function (t) { n += hoursFor(t.code, isoDate); });
+    return n;
+  }
+  function sitesTasks(site) {
+    var out = [];
+    site.sups.forEach(function (s) { out = out.concat(s.tasks); });
+    return out;
+  }
+
+  /* ─── Desktop grid ────────────────────────────────────────────── */
+  var gridCols = document.getElementById('grid-cols');
+  var gridHead = document.getElementById('grid-head');
+  var gridBody = document.getElementById('grid-body');
+  var gridFoot = document.getElementById('grid-foot');
+
+  function cellHtml(value, code, isoDate) {
+    if (state.editing && code) {
+      var v = value > 0 ? fmtHours(value) : '';
+      return '<td class="col-day"><input class="hr-input" type="text" inputmode="decimal" ' +
+        'data-code="' + code + '" data-date="' + isoDate + '" value="' + v + '" aria-label="Hours" /></td>';
+    }
+    return '<td class="col-day' + (value > 0 ? '' : ' zero') + '">' + (value > 0 ? fmtHours(value) : '–') + '</td>';
+  }
+
+  function caret() {
+    return '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+  }
+  var ICO_SITE = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V3.5l5-1.5V14M3 14h10V6.5H8M3 14H1.5M13 14h1.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+  var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+
+  function renderGrid() {
+    var ds = days();
+
+    gridCols.innerHTML = '<col style="width:340px" />' +
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') +
+      '<col style="width:96px" />';
+
+    gridHead.innerHTML = '<tr>' +
+      '<th class="col-label">Site › Supervisor › Task</th>' +
+      ds.map(function (d) {
+        var today = iso(d) === iso(TODAY);
+        return '<th class="col-day"><span class="day-head' + (today ? ' is-today' : '') + '">' +
+          '<span class="dow">' + DOW[d.getDay()] + '</span>' +
+          '<span class="dnum">' + fmtDay(d) + '</span></span></th>';
+      }).join('') +
+      '<th class="col-total">Total</th>' +
+    '</tr>';
+
+    var tree = weekTree(), rows = [], shown = 0;
+    tree.forEach(function (site) {
+      var all = sitesTasks(site);
+      var siteKey = 's:' + site.name;
+      var siteOpen = collapsed[siteKey] !== true;
+
+      rows.push('<tr class="row-site' + (siteOpen ? '' : ' collapsed') + '" data-key="' + Shell.esc(siteKey) + '">' +
+        '<td class="col-label"><span class="tree">' + caret() + ICO_SITE +
+          '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
+        ds.map(function (d) { return cellHtml(sumRow(all, iso(d))); }).join('') +
+        '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(all, iso(d)); }, 0)) + '</td>' +
+      '</tr>');
+      shown++;
+      if (!siteOpen) return;
+
+      site.sups.forEach(function (sup) {
+        var supKey = siteKey + '|' + sup.name;
+        var supOpen = collapsed[supKey] !== true;
+        rows.push('<tr class="row-sup' + (supOpen ? '' : ' collapsed') + '" data-key="' + Shell.esc(supKey) + '">' +
+          '<td class="col-label"><span class="tree" style="padding-left:20px">' + caret() + ICO_SUP +
+            '<span class="name">' + Shell.esc(sup.name) + '</span></span></td>' +
+          ds.map(function (d) { return cellHtml(sumRow(sup.tasks, iso(d))); }).join('') +
+          '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
+        '</tr>');
+        shown++;
+        if (!supOpen) return;
+
+        sup.tasks.forEach(function (t) {
+          rows.push('<tr class="row-task">' +
+            '<td class="col-label" title="' + Shell.esc(t.code + ' — ' + t.name) + '">' +
+              '<span class="code">' + Shell.esc(t.code) + '</span> <span class="what">' + Shell.esc(t.name) + '</span></td>' +
+            ds.map(function (d) { return cellHtml(hoursFor(t.code, iso(d)), t.code, iso(d)); }).join('') +
+            '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.code, iso(d)); }, 0)) + '</td>' +
+          '</tr>');
+          shown++;
+        });
+      });
+    });
+
+    if (!rows.length) {
+      rows.push('<tr><td class="col-label" colspan="' + (ds.length + 2) + '" style="color:var(--grey-600)">' +
+        'No hours recorded this week.' + (state.editing ? ' Use Add task to start.' : '') + '</td></tr>');
+    }
+    gridBody.innerHTML = rows.join('');
+
+    var allTasks = [];
+    tree.forEach(function (s) { allTasks = allTasks.concat(sitesTasks(s)); });
+    gridFoot.innerHTML = '<tr>' +
+      '<td class="col-label">Total hours</td>' +
+      ds.map(function (d) {
+        var n = sumRow(allTasks, iso(d));
+        return '<td class="col-day' + (n > 0 ? '' : ' zero') + '">' + (n > 0 ? fmtHours(n) : '–') + '</td>';
+      }).join('') +
+      '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(allTasks, iso(d)); }, 0)) + '</td>' +
+    '</tr>';
+
+    document.getElementById('grid-count').textContent = 'Displaying ' + shown + ' row' + (shown === 1 ? '' : 's');
+  }
+
+  /* ─── Mobile week view ────────────────────────────────────────── */
+  var strip = document.getElementById('week-strip');
+  var weekTotalEl = document.getElementById('week-total');
+  var dayCards = document.getElementById('day-cards');
+
+  function entriesOn(isoDate) {
+    var tree = weekTree(), all = [];
+    tree.forEach(function (s) { all = all.concat(sitesTasks(s)); });
+    return all.map(function (t) { return { task: t, hours: hoursFor(t.code, isoDate) }; })
+              .filter(function (r) { return r.hours > 0 || (state.editing && extraRows.indexOf(r.task.code) !== -1); });
+  }
+
+  function renderWeek() {
+    var ds = days(), weekTotal = 0;
+
+    strip.innerHTML = ds.map(function (d) {
+      var key = iso(d), n = 0;
+      TASKS.forEach(function (t) { n += hoursFor(t.code, key); });
+      weekTotal += n;
+      var cls = 'day-chip' + (key === iso(TODAY) ? ' today' : '') + (key === state.selDay ? ' sel' : '') +
+                (d.getDay() === 0 || d.getDay() === 6 ? ' weekend' : '');
+      return '<button class="' + cls + '" type="button" data-day="' + key + '">' +
+        '<span class="d">' + DOW_SHORT[d.getDay()] + '</span>' +
+        '<span class="n">' + d.getDate() + '</span>' +
+        '<span class="h' + (n > 0 ? '' : ' none') + '">' + (n > 0 ? fmtHours(n) : '–') + '</span>' +
+      '</button>';
+    }).join('');
+
+    weekTotalEl.innerHTML = 'Week total <b>' + fmtHours(weekTotal) + ' h</b>';
+
+    /* Most recent day first — the day you are filling in is the one you
+       just worked. */
+    var cards = ds.slice().reverse().filter(function (d) {
+      return entriesOn(iso(d)).length || iso(d) === state.selDay;
+    });
+
+    dayCards.innerHTML = cards.map(function (d) {
+      var key = iso(d), rows = entriesOn(key);
+      var total = rows.reduce(function (n, r) { return n + r.hours; }, 0);
+      var open = state.editing && key === state.selDay;
+
+      var body = rows.length ? rows.map(function (r) {
+        return '<div class="entry">' +
+          '<span class="entry-main">' +
+            '<span class="entry-code">' + Shell.esc(r.task.code) + '</span>' +
+            '<span class="entry-sub">' + Shell.esc(r.task.name) + ' · ' + Shell.esc(r.task.sup) + ' · ' + Shell.esc(r.task.site) + '</span>' +
+          '</span>' +
+          (open
+            ? '<input class="hr-input" type="text" inputmode="decimal" data-code="' + r.task.code + '" data-date="' + key + '" value="' + (r.hours > 0 ? fmtHours(r.hours) : '') + '" aria-label="Hours" />'
+            : '<span class="entry-hrs">' + fmtHours(r.hours) + ' h</span>') +
+        '</div>';
+      }).join('') : '<div class="day-empty">No hours recorded.</div>';
+
+      return '<div class="day-card">' +
+        '<div class="day-card-head">' +
+          '<span class="dt">' + FULL_DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
+          '<span class="tot">' + fmtHours(total) + ' h</span>' +
+          '<button class="btn-text" type="button" data-edit-day="' + key + '">' + (open ? 'Done' : 'Edit') + '</button>' +
+        '</div>' + body +
+        (open ? '<div class="day-card-foot"><button class="btn-ghost" type="button" id="card-add">Add task</button></div>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  /* ─── Period bar ──────────────────────────────────────────────── */
+  function syncPeriod() {
+    var ds = days(), a = ds[0], b = ds[6];
+    var sameYear = a.getFullYear() === b.getFullYear();
+    document.getElementById('period-range').textContent =
+      DOW[a.getDay()] + ' ' + fmtDay(a) + (sameYear ? '' : ' ' + a.getFullYear()) +
+      ' – ' + DOW[b.getDay()] + ' ' + fmtDay(b) + ' ' + b.getFullYear();
+    document.getElementById('period-chip').classList.toggle('visible', iso(state.weekStart) === iso(THIS_MON));
+  }
+
+  function render() {
+    syncPeriod();
+    renderGrid();
+    renderWeek();
+    syncEditBar();
+  }
+
+  document.querySelectorAll('[data-step]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (state.editing) return;
+      state.weekStart = addDays(state.weekStart, 7 * Number(b.getAttribute('data-step')));
+      var ds = days().map(iso);
+      if (ds.indexOf(state.selDay) === -1) state.selDay = ds[0];
+      render();
+    });
+  });
+
+  /* ─── Collapse ────────────────────────────────────────────────── */
+  gridBody.addEventListener('click', function (e) {
+    var row = e.target.closest('[data-key]');
+    if (!row || e.target.closest('.hr-input')) return;
+    var k = row.getAttribute('data-key');
+    collapsed[k] = collapsed[k] !== true;
+    renderGrid();
+    syncCollapseBtn();
+  });
+
+  function allKeys() {
+    var keys = [];
+    weekTree().forEach(function (site) {
+      var sk = 's:' + site.name;
+      keys.push(sk);
+      site.sups.forEach(function (sup) { keys.push(sk + '|' + sup.name); });
+    });
+    return keys;
+  }
+  function syncCollapseBtn() {
+    var keys = allKeys();
+    var anyOpen = keys.some(function (k) { return collapsed[k] !== true; });
+    document.getElementById('btn-collapse').textContent = anyOpen ? 'Collapse all' : 'Expand all';
+  }
+  document.getElementById('btn-collapse').addEventListener('click', function () {
+    var keys = allKeys();
+    var anyOpen = keys.some(function (k) { return collapsed[k] !== true; });
+    keys.forEach(function (k) { collapsed[k] = anyOpen; });
+    renderGrid();
+    syncCollapseBtn();
+  });
+
+  /* ─── Edit mode ───────────────────────────────────────────────── */
+  function changeCount() { return draft ? Object.keys(draft).length : 0; }
+
+  function syncEditBar() {
+    var n = changeCount();
+    document.getElementById('edit-status').textContent =
+      n === 0 ? 'Editing · no changes yet' : 'Editing · ' + n + ' change' + (n === 1 ? '' : 's');
+    document.getElementById('btn-save').disabled = n === 0;
+  }
+
+  function enterEdit() {
+    state.editing = true;
+    draft = Object.create(null);
+    extraRows = [];
+    document.body.classList.add('editing');
+    render();
+  }
+  function exitEdit() {
+    state.editing = false;
+    draft = null;
+    extraRows = [];
+    document.body.classList.remove('editing');
+    render();
+  }
+
+  document.getElementById('btn-edit').addEventListener('click', enterEdit);
+  document.getElementById('btn-cancel').addEventListener('click', exitEdit);
+
+  document.getElementById('btn-save').addEventListener('click', function () {
+    var n = changeCount();
+    Object.keys(draft).forEach(function (k) {
+      var parts = k.split('|'), code = parts[0], date = parts[1], hours = draft[k];
+      for (var i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].code === code && entries[i].date === date) entries.splice(i, 1);
+      }
+      if (hours > 0) entries.push({ date: date, code: code, hours: hours });
+    });
+    exitEdit();
+    Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved to your timesheets.');
+  });
+
+  /* Typing anywhere in the week updates the draft and the totals. */
+  document.addEventListener('input', function (e) {
+    var box = e.target.closest('.hr-input');
+    if (!box || !draft) return;
+    var raw = box.value.trim().replace(',', '.');
+    var val = raw === '' ? 0 : Number(raw);
+    if (isNaN(val) || val < 0) return;
+    var key = box.getAttribute('data-code') + '|' + box.getAttribute('data-date');
+    draft[key] = val;
+    box.classList.add('changed');
+
+    // Totals have to follow the typing, but re-rendering would steal focus.
+    var active = document.activeElement;
+    var caret = active && active.selectionStart;
+    renderGrid();
+    renderWeek();
+    syncEditBar();
+    var again = document.querySelector('.hr-input[data-code="' + box.getAttribute('data-code') +
+      '"][data-date="' + box.getAttribute('data-date') + '"]');
+    if (again) {
+      again.focus();
+      if (caret != null) { try { again.setSelectionRange(caret, caret); } catch (err) {} }
+    }
+  });
+
+  /* ─── Mobile: edit one day at a time ──────────────────────────── */
+  document.addEventListener('click', function (e) {
+    var chip = e.target.closest('[data-day]');
+    if (chip) { state.selDay = chip.getAttribute('data-day'); renderWeek(); return; }
+
+    var dayEdit = e.target.closest('[data-edit-day]');
+    if (dayEdit) {
+      var key = dayEdit.getAttribute('data-edit-day');
+      state.selDay = key;
+      if (!state.editing) enterEdit(); else renderWeek();
+      return;
+    }
+
+    if (e.target.closest('#card-add')) openAdd();
+  });
+
+  /* ─── Add task ────────────────────────────────────────────────── */
+  var addModal = document.getElementById('add-modal');
+  var addPick = null;
+
+  function openAdd() {
+    addPick = null;
+    var used = [];
+    weekTree().forEach(function (s) { sitesTasks(s).forEach(function (t) { used.push(t.code); }); });
+    var available = TASKS.filter(function (t) { return used.indexOf(t.code) === -1; });
+
+    document.getElementById('recent-tasks').innerHTML = available.slice(0, 3).map(function (t) {
+      return '<button type="button" data-pick="' + t.code + '">' +
+        '<span class="c">' + Shell.esc(t.code) + '</span>' +
+        '<span class="n">' + Shell.esc(t.name) + '</span></button>';
+    }).join('') || '<span class="hint" style="font-size:13px;color:var(--grey-600)">Everything you work on is already on this week.</span>';
+
+    document.getElementById('add-task').innerHTML = '<option value="">Select a task…</option>' +
+      available.map(function (t) { return '<option value="' + t.code + '">' + Shell.esc(t.code + ' — ' + t.name) + '</option>'; }).join('');
+
+    var sites = [], sups = [];
+    TASKS.forEach(function (t) {
+      if (sites.indexOf(t.site) === -1) sites.push(t.site);
+      if (sups.indexOf(t.sup) === -1) sups.push(t.sup);
+    });
+    document.getElementById('add-site').innerHTML = sites.map(function (s) { return '<option>' + Shell.esc(s) + '</option>'; }).join('');
+    document.getElementById('add-sup').innerHTML = sups.map(function (s) { return '<option>' + Shell.esc(s) + '</option>'; }).join('');
+    addModal.classList.add('open');
+  }
+
+  document.getElementById('btn-add-task').addEventListener('click', openAdd);
+
+  addModal.addEventListener('click', function (e) {
+    if (e.target === addModal || e.target.closest('[data-close]')) { addModal.classList.remove('open'); return; }
+    var pick = e.target.closest('[data-pick]');
+    if (pick) {
+      addPick = pick.getAttribute('data-pick');
+      addModal.querySelectorAll('[data-pick]').forEach(function (b) { b.classList.toggle('sel', b === pick); });
+      var t = taskBy(addPick);
+      document.getElementById('add-task').value = addPick;
+      document.getElementById('add-site').value = t.site;
+      document.getElementById('add-sup').value = t.sup;
+    }
+  });
+  document.getElementById('add-task').addEventListener('change', function () {
+    addPick = this.value || null;
+    addModal.querySelectorAll('[data-pick]').forEach(function (b) { b.classList.toggle('sel', b.getAttribute('data-pick') === addPick); });
+    if (addPick) {
+      var t = taskBy(addPick);
+      document.getElementById('add-site').value = t.site;
+      document.getElementById('add-sup').value = t.sup;
+    }
+  });
+
+  document.getElementById('add-confirm').addEventListener('click', function () {
+    if (!addPick) { Shell.snackbar('Choose a task first.'); return; }
+    if (extraRows.indexOf(addPick) === -1) extraRows.push(addPick);
+    addModal.classList.remove('open');
+    render();
+    var first = document.querySelector('.hr-input[data-code="' + addPick + '"]');
+    if (first) first.focus();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (addModal.classList.contains('open')) { addModal.classList.remove('open'); return; }
+    if (state.editing) exitEdit();
+  });
+
+  render();
+  syncCollapseBtn();
+})();
+</script>
+</body>
+</html>

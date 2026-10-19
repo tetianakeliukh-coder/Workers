@@ -102,6 +102,46 @@ body { font-family: var(--fs-sans); -webkit-font-smoothing: antialiased; }
   background: #d42c40; border: 1.125px solid var(--white);
 }
 
+/* ─── Narrow screens ──────────────────────────────────────────────────
+   Workers fill in their own hours on a phone, so the shell has to give
+   the content the screen. Tablet width drops the sidebar to its icon
+   rail; phone width takes it off-canvas behind a top bar. */
+.shell-topbar { display: none; }
+
+body.shell-mobile .shell-topbar {
+  display: flex; align-items: center; gap: 12px;
+  position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 120;
+  padding: 0 12px; background: var(--white); border-bottom: 1px solid var(--grey-350);
+}
+.topbar-menu {
+  width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: 8px; color: var(--text-main); cursor: pointer;
+}
+.topbar-menu:hover { background: var(--grey-100); }
+
+body.shell-mobile .main { padding-top: 72px; }
+body.shell-mobile .sidebar {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 140;
+  width: 264px; height: 100%; transform: translateX(-100%);
+  box-shadow: var(--shadow-dialog);
+}
+/* The slide is added a frame after boot, so the drawer doesn't animate
+   itself off-screen on first paint. */
+body.shell-mobile.shell-animate .sidebar { transition: transform var(--t-normal); }
+body.shell-mobile .sidebar.open { transform: translateX(0); }
+body.shell-mobile .sidebar.collapsed { width: 264px; }
+body.shell-mobile .sidebar.collapsed .nav-label,
+body.shell-mobile .sidebar.collapsed .ac-info { display: block; }
+body.shell-mobile .sidebar.collapsed .nav-item { justify-content: flex-start; padding: 8px 16px; height: auto; }
+body.shell-mobile .sidebar.collapsed .logo-mark { width: 87px; }
+body.shell-mobile .sidebar .sidebar-toggle { display: none; }
+
+.shell-scrim {
+  display: none; position: fixed; inset: 0; z-index: 130;
+  background: rgba(8, 17, 21, 0.45);
+}
+body.shell-mobile .shell-scrim.open { display: block; }
+
 /* ─── Main / page header ──────────────────────────────────────────────── */
 .main { flex: 1; padding: 24px; overflow-x: auto; min-width: 0; }
 .content { display: flex; flex-direction: column; gap: 12px; }
