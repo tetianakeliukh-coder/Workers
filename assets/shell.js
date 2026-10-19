@@ -344,6 +344,51 @@
     window.addEventListener('scroll', function () { if (tipEl) tipEl.classList.remove('on'); }, true);
   }
 
+  /* ─── Resizable columns ──────────────────────────────────────────────
+     A grip on the right edge of a header cell drags its <col> wider or
+     narrower. The header must carry data-w="<key>" and the table a
+     <colgroup> whose children line up with the header cells. */
+  function colGrip() {
+    return '<span class="col-rs" aria-hidden="true"></span>';
+  }
+
+  function initColResize(table, opts) {
+    opts = opts || {};
+    var min = opts.min || 90;
+
+    table.addEventListener('mousedown', function (e) {
+      var grip = e.target.closest ? e.target.closest('.col-rs') : null;
+      if (!grip) return;
+      var th = grip.closest('th');
+      var group = table.querySelector('colgroup');
+      var col = group && group.children[th.cellIndex];
+      if (!col) return;
+
+      e.preventDefault();
+      var startX = e.pageX, startW = th.getBoundingClientRect().width;
+      var key = th.getAttribute('data-w');
+      document.body.classList.add('col-resizing');
+
+      function move(ev) {
+        var w = Math.max(min, Math.round(startW + (ev.pageX - startX)));
+        col.style.width = w + 'px';
+        if (opts.onResize) opts.onResize(key, w);
+      }
+      function up() {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        document.body.classList.remove('col-resizing');
+      }
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+
+    /* A drag that starts on the grip must not also sort or collapse. */
+    table.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('.col-rs')) e.stopPropagation();
+    }, true);
+  }
+
   /* ─── Boot ──────────────────────────────────────────────────────────── */
   function init() {
     renderSidebar(document.body.getAttribute('data-module'));
@@ -367,6 +412,8 @@
     snackbar: snackbar,
     initDropdowns: initDropdowns,
     initTips: initTips,
+    initColResize: initColResize,
+    colGrip: colGrip,
     setViewport: setViewport,
     closeAllDropdowns: closeAllDropdowns
   };

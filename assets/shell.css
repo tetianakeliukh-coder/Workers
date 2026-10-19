@@ -461,3 +461,19 @@ tbody td {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .row-tip.on { display: block; }
+
+/* ─── Resizable columns ─────────────────────────────────────────────────
+   A grip sitting on the header cell's right edge. It only shows when the
+   pointer is over that header, so the row stays quiet otherwise. */
+.col-rs {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 9px;
+  cursor: col-resize; user-select: none; z-index: 3;
+}
+.col-rs::after {
+  content: ''; position: absolute; top: 6px; bottom: 6px; right: 4px; width: 1px;
+  background: var(--grey-400); opacity: 0; transition: opacity var(--t-fast);
+}
+th:hover > .col-rs::after, .col-rs:hover::after { opacity: 1; }
+.col-rs:hover::after { background: var(--primary); width: 2px; }
+body.col-resizing { cursor: col-resize; user-select: none; }
+body.col-resizing .col-rs::after { opacity: 1; background: var(--primary); width: 2px; }

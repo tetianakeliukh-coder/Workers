@@ -115,8 +115,8 @@
 
   /* Flat rows: the three label columns stay put while the days scroll. */
   th.col-site, td.col-site { position: sticky; left: 0; z-index: 2; background: inherit; }
-  th.col-sup,  td.col-sup  { position: sticky; left: 200px; z-index: 2; background: inherit; }
-  th.col-task, td.col-task { position: sticky; left: 350px; z-index: 2; background: inherit; }
+  th.col-sup,  td.col-sup  { position: sticky; left: var(--x-sup, 200px); z-index: 2; background: inherit; }
+  th.col-task, td.col-task { position: sticky; left: var(--x-task, 350px); z-index: 2; background: inherit; }
   th.col-site, td.col-site, th.col-sup, td.col-sup, th.col-task, td.col-task {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
@@ -200,7 +200,7 @@
   /* One height for all three steps: the dialog must not jump as you move
      through them, so a short step leaves space and a long one scrolls.
      A sheet on a phone keeps growing with its content. */
-  .add-modal .modal-body { height: 420px; max-height: 56vh; flex: 0 0 auto; }
+  .add-modal .modal-body { height: 448px; max-height: 60vh; flex: 0 0 auto; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
@@ -231,11 +231,16 @@
 
   /* Recents are a quiet helper under the form, not the way in — and they
      go once one is picked, since the fields then hold the answer. */
-  .quick { border-top: 1px solid var(--grey-300); padding-top: 14px; }
-  .quick-label {
-    display: block; font-size: 14px; font-weight: 500; line-height: 18px;
-    color: var(--text-main); margin-bottom: 8px;
+  .quick { border-top: 1px solid var(--grey-300); padding-top: 12px; }
+  .quick-toggle {
+    display: flex; align-items: center; gap: 8px; padding: 0; border: none; background: none;
+    cursor: pointer; font-family: var(--fs-sans); font-size: 14px; font-weight: 500;
+    line-height: 20px; color: var(--text-main);
   }
+  .quick-chev { color: var(--grey-600); transition: transform var(--t-fast); }
+  .quick-toggle[aria-expanded="true"] .quick-chev { transform: rotate(0deg); }
+  .quick-toggle[aria-expanded="false"] .quick-chev { transform: rotate(-90deg); }
+  .recent-list { margin-top: 10px; }
 
   /* Sheets rise from the bottom on a phone. */
   @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
@@ -244,21 +249,20 @@
   /* What this sheet is about, told apart by label and weight rather than
      by one run of grey text. */
   .facts {
-    margin: 0 0 16px; border: 1px solid var(--grey-300); border-radius: 10px;
-    overflow: hidden; background: var(--white);
+    margin: 0; padding-bottom: 12px; border-bottom: 1px solid var(--grey-300);
   }
   .facts .fact {
-    display: grid; grid-template-columns: 88px 1fr; gap: 12px;
-    padding: 10px 12px; align-items: baseline;
+    display: grid; grid-template-columns: 92px 1fr; gap: 12px;
+    padding: 2px 0; align-items: baseline;
   }
-  .facts .fact + .fact { border-top: 1px solid var(--grey-200); }
-  .facts dt {
-    font-size: 12px; font-weight: 500; line-height: 18px; color: var(--grey-600);
+  /* Two type styles only: a grey label and a dark value. Anything
+     secondary borrows the label's style rather than inventing a third. */
+  .facts dt { font-size: 13px; font-weight: 400; line-height: 20px; color: var(--grey-600); }
+  .facts dd { margin: 0; font-size: 14px; font-weight: 500; line-height: 20px; color: var(--text-main); }
+  .facts dd .fact-name { display: block; }
+  .facts dd .fact-sub {
+    display: block; font-size: 13px; font-weight: 400; line-height: 20px; color: var(--grey-600);
   }
-  .facts dd { margin: 0; font-size: 14px; font-weight: 500; line-height: 19px; color: var(--text-main); }
-  .facts dd .fact-name { display: block; font-size: 15px; font-weight: 600; line-height: 20px; }
-  .facts dd .fact-sub { display: block; font-size: 13px; font-weight: 400; line-height: 18px; color: var(--grey-600); margin-top: 1px; }
-  .facts .fact-date dd { color: var(--primary); }
   .edit-modal .modal-footer-actions .btn-delete {
     margin-right: auto; background: none; border: none; cursor: pointer;
     font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--error);
@@ -665,8 +669,11 @@
         <dl class="facts" id="facts-2"></dl>
         <div id="level-fields"></div>
         <div class="quick" id="quick-wrap">
-          <span class="quick-label">Recent tasks</span>
-          <div class="recent-list" id="quick-tasks"></div>
+          <button class="quick-toggle" type="button" id="quick-toggle" aria-expanded="false" aria-controls="quick-tasks">
+            <svg class="quick-chev" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Recent tasks
+          </button>
+          <div class="recent-list" id="quick-tasks" hidden></div>
         </div>
       </div>
 
@@ -808,14 +815,18 @@
     var i = TITLE_FIELD[site];
     return typeof i === 'number' ? i : 0;
   }
-  /* "Repair the machine" — what the worker calls the job. */
-  function taskTitle(meta) {
+  /* Which level ends up as the title — the naming field when it is
+     filled in, otherwise the reference. */
+  function titleAt(meta) {
     var i = titleIdx(meta.site);
-    return meta.levels[i] || meta.levels[0] || 'No task';
+    return meta.levels[i] ? i : 0;
   }
-  /* "WORK-00123 · Labour" — everything else, in field order. */
+  /* "Repair the machine" — what the worker calls the job. */
+  function taskTitle(meta) { return meta.levels[titleAt(meta)] || 'No task'; }
+  /* "WORK-00123 · Labour" — everything else, in field order, never
+     repeating the title. */
   function taskRest(meta) {
-    var i = titleIdx(meta.site);
+    var i = titleAt(meta);
     return meta.levels.filter(function (v, n) { return v && n !== i; }).join(' · ');
   }
   var SUPS_BY_SITE = {
@@ -955,6 +966,17 @@
 
   var rowsMode = 'flat';
 
+  /* The label columns are draggable: narrow them and the day columns get
+     the space back. */
+  var colW = { site: 200, sup: 150, task: 260, label: 360 };
+  function wPx(k) { return colW[k] + 'px'; }
+  /* The frozen columns start where the ones before them end. */
+  function syncStickyX() {
+    var g = document.getElementById('grid');
+    g.style.setProperty('--x-sup', colW.site + 'px');
+    g.style.setProperty('--x-task', (colW.site + colW.sup) + 'px');
+  }
+
   function dayHeadCells(ds) {
     return ds.map(function (d) {
       var today = iso(d) === iso(TODAY);
@@ -967,12 +989,16 @@
      is printed only when it changes — the hierarchy without the nesting. */
   function renderFlat() {
     var ds = days();
-    gridCols.innerHTML = '<col style="width:200px" /><col style="width:150px" /><col style="width:260px" />' +
+    gridCols.innerHTML = '<col style="width:' + wPx('site') + '" /><col style="width:' + wPx('sup') + '" />' +
+      '<col style="width:' + wPx('task') + '" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
 
     gridHead.innerHTML = '<tr>' +
-      '<th class="col-site">Site</th><th class="col-sup">Supervisor</th><th class="col-task">Task</th>' +
+      '<th class="col-site" data-w="site">Site' + Shell.colGrip() + '</th>' +
+      '<th class="col-sup" data-w="sup">Supervisor' + Shell.colGrip() + '</th>' +
+      '<th class="col-task" data-w="task">Task' + Shell.colGrip() + '</th>' +
       dayHeadCells(ds) + '<th class="col-total">Total</th></tr>';
+    syncStickyX();
 
     /* Every site + supervisor opens with its own summary line — how many tasks
        sit under it and what they add up to — and the tasks follow beneath. */
@@ -1013,10 +1039,10 @@
   function renderGrid() {
     if (rowsMode === 'flat') return renderFlat();
     var ds = days();
-    gridCols.innerHTML = '<col style="width:360px" />' +
+    gridCols.innerHTML = '<col style="width:' + wPx('label') + '" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
 
-    gridHead.innerHTML = '<tr><th class="col-label">Breakdown</th>' +
+    gridHead.innerHTML = '<tr><th class="col-label" data-w="label">Breakdown' + Shell.colGrip() + '</th>' +
       ds.map(function (d) {
         var today = iso(d) === iso(TODAY);
         return '<th class="col-day' + (today ? ' tdy' : '') + '"><span class="day-head' + (today ? ' is-today' : '') + '">' +
@@ -1548,6 +1574,7 @@
         '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
     }).join('');
     el('quick-wrap').hidden = !recent.length;
+    setQuickOpen(false);
   }
 
   var lockStep1 = false;        // opened from a card: the day is already set
@@ -1611,7 +1638,22 @@
     syncDayHint();
   });
 
+  Shell.initColResize(document.getElementById('grid'), {
+    min: 110,
+    onResize: function (key, w) { if (key) { colW[key] = w; syncStickyX(); } }
+  });
+
   el('level-fields').addEventListener('change', renderFacts);
+
+  /* Recents stay folded away until asked for, so the step never looks
+     like it is waiting on a choice from that list. */
+  function setQuickOpen(open) {
+    el('quick-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+    el('quick-tasks').hidden = !open;
+  }
+  el('quick-toggle').addEventListener('click', function () {
+    setQuickOpen(el('quick-tasks').hidden);
+  });
 
   el('quick-tasks').addEventListener('click', function (e) {
     var b = e.target.closest('[data-quick]');

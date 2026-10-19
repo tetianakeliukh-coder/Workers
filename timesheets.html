@@ -348,9 +348,9 @@
 
   /* Flat period rows: a column each, printed only when the value changes. */
   .pd-table th.pf-site, .pd-table td.pf-site { position: sticky; left: 0; z-index: 2; background: inherit; }
-  .pd-table th.pf-sup,  .pd-table td.pf-sup  { position: sticky; left: 190px; z-index: 2; background: inherit; }
-  .pd-table th.pf-worker, .pd-table td.pf-worker { position: sticky; left: 340px; z-index: 2; background: inherit; }
-  .pd-table th.pf-task, .pd-table td.pf-task { position: sticky; left: 490px; z-index: 2; background: inherit; }
+  .pd-table th.pf-sup,  .pd-table td.pf-sup  { position: sticky; left: var(--x-sup, 190px); z-index: 2; background: inherit; }
+  .pd-table th.pf-worker, .pd-table td.pf-worker { position: sticky; left: var(--x-worker, 340px); z-index: 2; background: inherit; }
+  .pd-table th.pf-task, .pd-table td.pf-task { position: sticky; left: var(--x-task, 490px); z-index: 2; background: inherit; }
   .pd-table th.pf-site, .pd-table td.pf-site, .pd-table th.pf-sup, .pd-table td.pf-sup,
   .pd-table th.pf-worker, .pd-table td.pf-worker, .pd-table th.pf-task, .pd-table td.pf-task {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -1277,15 +1277,44 @@
 
   var pdRowsMode = 'flat';
 
+  /* The label columns are draggable, so a supervisor can trade their width
+     for more day columns on screen. */
+  var pdColW = { site: 190, sup: 150, worker: 150, task: 260, label: 360 };
+  function pdW(k) { return pdColW[k] + 'px'; }
+  function syncPdStickyX() {
+    var t = mainTable;
+    t.style.setProperty('--x-sup', pdColW.site + 'px');
+    t.style.setProperty('--x-worker', (pdColW.site + pdColW.sup) + 'px');
+    t.style.setProperty('--x-task', (pdColW.site + pdColW.sup + pdColW.worker) + 'px');
+  }
+  function pdLabelWidth() {
+    return pdRowsMode === 'flat'
+      ? pdColW.site + pdColW.sup + pdColW.worker + pdColW.task
+      : pdColW.label;
+  }
+  Shell.initColResize(mainTable, {
+    min: 110,
+    onResize: function (key, w) {
+      if (!key) return;
+      pdColW[key] = w;
+      syncPdStickyX();
+      mainTable.style.minWidth = (pdLabelWidth() +
+        (mainThead.querySelectorAll('th.pd-day').length * 92) + 96) + 'px';
+    }
+  });
+
   /* Flat: every level gets its own column and repeats are left blank, so
      the hierarchy reads without any nesting. */
   function renderPeriodFlat(rows, ds, tree) {
-    mainColgroup.innerHTML = '<col style="width:190px" /><col style="width:150px" /><col style="width:150px" /><col style="width:260px" />' +
+    mainColgroup.innerHTML = '<col style="width:' + pdW('site') + '" /><col style="width:' + pdW('sup') + '" />' +
+      '<col style="width:' + pdW('worker') + '" /><col style="width:' + pdW('task') + '" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
 
     mainThead.innerHTML = '<tr>' +
-      '<th class="pf-site">Site</th><th class="pf-sup">Supervisor</th>' +
-      '<th class="pf-worker">Worker</th><th class="pf-task">Task</th>' +
+      '<th class="pf-site" data-w="site">Site' + Shell.colGrip() + '</th>' +
+      '<th class="pf-sup" data-w="sup">Supervisor' + Shell.colGrip() + '</th>' +
+      '<th class="pf-worker" data-w="worker">Worker' + Shell.colGrip() + '</th>' +
+      '<th class="pf-task" data-w="task">Task' + Shell.colGrip() + '</th>' +
       ds.map(function (d) {
         var today = toIso(d) === daysAgoIso(0);
         return '<th class="pd-day' + (today ? ' tdy' : '') + '"><span class="pd-day-head' + (today ? ' is-today' : '') + '">' +
@@ -1294,7 +1323,8 @@
 
     mainTable.classList.remove('frozen');
     mainTable.classList.add('pd-table');
-    mainTable.style.minWidth = (750 + ds.length * 92 + 96) + 'px';
+    mainTable.style.minWidth = (pdLabelWidth() + ds.length * 92 + 96) + 'px';
+    syncPdStickyX();
 
     /* Each site + supervisor opens with a summary line carrying how many
        workers and tasks sit under it, then the task rows. The worker name
@@ -1351,12 +1381,12 @@
     var tree = periodTree(rows);
     if (pdRowsMode === 'flat') return renderPeriodFlat(rows, ds, tree);
 
-    mainColgroup.innerHTML = '<col style="width:360px" />' +
+    mainColgroup.innerHTML = '<col style="width:' + pdW('label') + '" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') +
       '<col style="width:96px" />';
 
     mainThead.innerHTML = '<tr>' +
-      '<th class="pd-label">Breakdown</th>' +
+      '<th class="pd-label" data-w="label">Breakdown' + Shell.colGrip() + '</th>' +
       ds.map(function (d) {
         var today = toIso(d) === daysAgoIso(0);
         return '<th class="pd-day' + (today ? ' tdy' : '') + '"><span class="pd-day-head' + (today ? ' is-today' : '') + '">' +
@@ -1368,7 +1398,7 @@
 
     mainTable.classList.remove('frozen');
     mainTable.classList.add('pd-table');
-    mainTable.style.minWidth = (360 + ds.length * 92 + 96) + 'px';
+    mainTable.style.minWidth = (pdLabelWidth() + ds.length * 92 + 96) + 'px';
 
     var out = [], keys = [];
     function row(node, level, cls, icon, key) {
