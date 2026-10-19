@@ -383,10 +383,6 @@
       <div class="edit-bar" id="edit-bar">
         <span class="edit-status" id="edit-status">Editing · no changes yet</span>
         <div class="edit-actions">
-          <button class="btn-outline" type="button" id="btn-add-task">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            Add task
-          </button>
           <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
           <button class="btn-primary" type="button" id="btn-save" disabled>Save</button>
         </div>
@@ -446,15 +442,13 @@
     <div class="modal-body">
       <!-- Step 1 -->
       <div class="wiz-step" id="step-1">
-        <div class="fld-row">
-          <div class="fld">
-            <label class="fld-label" for="add-date">Date</label>
-            <select id="add-date"></select>
-          </div>
-          <div class="fld">
-            <label class="fld-label" for="add-site">Site</label>
-            <select id="add-site"></select>
-          </div>
+        <div class="fld">
+          <label class="fld-label" for="add-date">Date</label>
+          <select id="add-date"></select>
+        </div>
+        <div class="fld">
+          <label class="fld-label" for="add-site">Site</label>
+          <select id="add-site"></select>
         </div>
         <div class="fld">
           <label class="fld-label" for="add-sup">Supervisor</label>
@@ -1048,18 +1042,30 @@
     }).join('');
   }
 
-  function supervisorOn(isoDate) {
+  /* One timesheet is one day on one site, and it belongs to one
+     supervisor. Work the same day on another site and that is a second
+     timesheet, with its own supervisor. */
+  function supervisorOn(isoDate, site) {
     var found = null;
     entries.forEach(function (e) {
-      if (e.date === isoDate && !found) found = taskMeta[e.key] && taskMeta[e.key].sup;
+      var m = taskMeta[e.key];
+      if (!found && e.date === isoDate && m && m.site === site) found = m.sup;
     });
     return found;
   }
   function syncDayHint() {
-    var sup = supervisorOn(el('add-date').value);
-    el('date-hint').textContent = sup
-      ? 'This day already has a timesheet with ' + sup + '.'
-      : 'No timesheet for this day yet — one will be created.';
+    var site = el('add-site').value;
+    var locked = supervisorOn(el('add-date').value, site);
+    var sel = el('add-sup');
+    if (locked) {
+      sel.value = locked;
+      sel.disabled = true;
+      el('date-hint').textContent = 'This day already has a timesheet for ' + site + ' with ' + locked +
+        '. One site, one supervisor per day.';
+    } else {
+      sel.disabled = false;
+      el('date-hint').textContent = 'No timesheet for this site yet on this day — one will be created.';
+    }
   }
 
   function renderQuick() {
@@ -1092,7 +1098,7 @@
     el('add-date').value = dayIso || (ds.map(iso).indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : iso(ds[0]));
 
     el('add-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
-    fillSupervisors(supervisorOn(el('add-date').value));
+    fillSupervisors(supervisorOn(el('add-date').value, el('add-site').value));
     renderLevelFields(null);
     renderQuick();
     syncDayHint();
@@ -1103,16 +1109,25 @@
     addModal.classList.add('open');
   }
 
-  el('add-date').addEventListener('change', function () { fillSupervisors(supervisorOn(this.value)); syncDayHint(); });
-  el('add-site').addEventListener('change', function () { fillSupervisors(null); renderLevelFields(null); });
+  el('add-date').addEventListener('change', function () {
+    fillSupervisors(supervisorOn(this.value, el('add-site').value));
+    syncDayHint();
+  });
+  el('add-site').addEventListener('change', function () {
+    fillSupervisors(supervisorOn(el('add-date').value, this.value));
+    renderLevelFields(null);
+    syncDayHint();
+  });
 
   el('quick-tasks').addEventListener('click', function (e) {
     var b = e.target.closest('[data-quick]');
     if (!b) return;
     var m = taskMeta[b.getAttribute('data-quick')];
     el('add-site').value = m.site;
-    fillSupervisors(m.sup);
+    var locked = supervisorOn(el('add-date').value, m.site);
+    fillSupervisors(locked || m.sup);
     renderLevelFields(m.levels);
+    syncDayHint();
   });
 
   /* ─── Shifts ──────────────────────────────────────────────────── */
@@ -1272,7 +1287,6 @@
   addModal.addEventListener('click', function (e) {
     if (e.target === addModal || e.target.closest('[data-close]')) addModal.classList.remove('open');
   });
-  document.getElementById('btn-add-task').addEventListener('click', function () { openAdd(state.selDay); });
   document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null); });
 
   document.addEventListener('keydown', function (e) {

@@ -283,6 +283,33 @@
   .pd-foot td.pd-label { z-index: 3; color: var(--grey-700); font-weight: 500; }
   .pd-foot td.pd-total { z-index: 3; }
 
+  /* ─── Period edit bar ──────────────────────────────────────────── */
+  #pd-edit { display: none; }
+  body.mode-period #pd-edit { display: inline-flex; }
+  .edit-bar {
+    display: none; align-items: center; gap: 16px; flex-wrap: wrap;
+    height: 52px; padding: 0 2px; background: var(--white);
+  }
+  body.pd-editing .edit-bar { display: flex; }
+  body.pd-editing .toolbar { display: none; }
+  .edit-status { font-size: 14px; color: var(--text-main); white-space: nowrap; }
+  .edit-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .edit-actions .btn-outline {
+    height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--white); border: 1px solid var(--primary); color: var(--primary);
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
+    white-space: nowrap; transition: background var(--t-fast);
+  }
+  .edit-actions .btn-outline:hover { background: var(--bg-blue-light); }
+  .pd-input {
+    width: 100%; max-width: 72px; height: 32px; padding: 0 8px; text-align: right;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+  }
+  .pd-input:focus { outline: none; border-color: var(--primary); }
+  .pd-input.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+
 </style>
 </head>
 <body data-module="timesheets">
@@ -310,6 +337,16 @@
             </button>
             <div class="dd-panel" id="date-dd-panel"></div>
           </div>
+          <div class="seg" id="modeswitch">
+            <button class="seg-btn active" type="button" data-mode="list">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="2.8" cy="4" r="1" fill="currentColor"/><circle cx="2.8" cy="8" r="1" fill="currentColor"/><circle cx="2.8" cy="12" r="1" fill="currentColor"/></svg>
+              Timesheets
+            </button>
+            <button class="seg-btn" type="button" data-mode="period">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M6 6v7.5M10 6v7.5" stroke="currentColor" stroke-width="1.3"/></svg>
+              Period
+            </button>
+          </div>
           <button class="btn-primary" type="button" id="btn-create">Create Timesheet</button>
         </div>
       </div>
@@ -331,6 +368,10 @@
             <button class="seg-btn" type="button" data-group="worker">Worker</button>
             <button class="seg-btn" type="button" data-group="flat">No Grouping</button>
           </div>
+          <button class="btn-ghost" type="button" id="pd-edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            Edit
+          </button>
           <button class="btn-ghost" type="button" id="expand-all">Expand all</button>
           <div class="col-panel-wrap" id="columns-wrap">
             <button class="btn-columns" id="btn-columns" type="button" aria-expanded="false" aria-haspopup="true">
@@ -344,16 +385,14 @@
             <div class="col-panel" id="col-panel"></div>
           </div>
 
-          <div class="seg" id="modeswitch">
-            <button class="seg-btn active" type="button" data-mode="list">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="2.8" cy="4" r="1" fill="currentColor"/><circle cx="2.8" cy="8" r="1" fill="currentColor"/><circle cx="2.8" cy="12" r="1" fill="currentColor"/></svg>
-              Timesheets
-            </button>
-            <button class="seg-btn" type="button" data-mode="period">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M6 6v7.5M10 6v7.5" stroke="currentColor" stroke-width="1.3"/></svg>
-              Period
-            </button>
-          </div>
+        </div>
+      </div>
+
+      <div class="edit-bar" id="pd-edit-bar">
+        <span class="edit-status" id="pd-status">Editing · no changes yet</span>
+        <div class="edit-actions">
+          <button class="btn-outline" type="button" id="pd-cancel">Cancel</button>
+          <button class="btn-primary" type="button" id="pd-save" disabled>Save</button>
         </div>
       </div>
 
@@ -1071,6 +1110,19 @@
      active date range, one row per task under site › supervisor › worker. */
   var DOW_P = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   var pdCollapsed = Object.create(null);
+  /* Hours typed into the period grid. Saved edits land in pdSaved; pdDraft
+     holds what is being typed right now. */
+  var pdSaved = Object.create(null);
+  var pdDraft = null;
+  var pdEditing = false;
+
+  function pdCellKey(leafKey, isoDate) { return leafKey + '@' + isoDate; }
+  function leafHours(leaf, isoDate) {
+    var ck = pdCellKey(leaf.id, isoDate);
+    if (pdDraft && ck in pdDraft) return pdDraft[ck];
+    if (ck in pdSaved) return pdSaved[ck];
+    return leaf.hours[isoDate] || 0;
+  }
 
   function periodDays(rows) {
     var b = rangeBounds(), from, to;
@@ -1107,7 +1159,11 @@
           var P = S.by[t.supervisor];
           if (!P.by[w.worker]) { P.by[w.worker] = { name: w.worker, kids: [], by: Object.create(null) }; P.kids.push(P.by[w.worker]); }
           var W = P.by[w.worker];
-          if (!W.by[path]) { W.by[path] = { name: path, hours: Object.create(null) }; W.kids.push(W.by[path]); }
+          if (!W.by[path]) {
+            W.by[path] = { name: path, hours: Object.create(null),
+                           id: t.site + '§' + t.supervisor + '§' + w.worker + '§' + path };
+            W.kids.push(W.by[path]);
+          }
           var L = W.by[path];
           L.hours[t.issued] = (L.hours[t.issued] || 0) + (Number(a.hours) || 0);
         });
@@ -1124,7 +1180,7 @@
   }
   function sumOn(leaves, isoDate) {
     var n = 0;
-    leaves.forEach(function (l) { n += l.hours[isoDate] || 0; });
+    leaves.forEach(function (l) { n += leafHours(l, isoDate); });
     return n;
   }
   function sumAll(leaves, ds) {
@@ -1132,7 +1188,11 @@
     ds.forEach(function (d) { n += sumOn(leaves, toIso(d)); });
     return n;
   }
-  function hoursCell(n) {
+  function hoursCell(n, leaf, isoDate) {
+    if (pdEditing && leaf) {
+      return '<td class="pd-day"><input class="pd-input" type="text" inputmode="decimal" ' +
+        'data-cell="' + Shell.esc(pdCellKey(leaf.id, isoDate)) + '" value="' + (n > 0 ? fmtHours(n) : '') + '" aria-label="Hours" /></td>';
+    }
     return '<td class="pd-day">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
   function pdCaret() {
@@ -1170,6 +1230,7 @@
     var out = [], keys = [];
     function row(node, level, cls, icon, key) {
       var leaves = leavesOf(node);
+      var leaf = node.kids ? null : node;
       var open = pdCollapsed[key] !== true;
       if (key) keys.push(key);
       out.push('<tr class="pd-row ' + cls + (open ? '' : ' pd-closed') + '"' +
@@ -1177,7 +1238,7 @@
         '<td class="pd-label"><span class="pd-tree" style="padding-left:' + (level * 22) + 'px">' +
           (node.kids ? pdCaret() : '') + (icon || '') +
           '<span class="name">' + Shell.highlight(node.name, state.query) + '</span></span></td>' +
-        ds.map(function (d) { return hoursCell(sumOn(leaves, toIso(d))); }).join('') +
+        ds.map(function (d) { return hoursCell(sumOn(leaves, toIso(d)), leaf, toIso(d)); }).join('') +
         '<td class="pd-total">' + fmtHours(sumAll(leaves, ds)) + '</td>' +
       '</tr>');
       return open;
@@ -1800,15 +1861,64 @@
     btn.classList.add('active');
     state.mode = btn.getAttribute('data-mode');
     document.body.classList.toggle('mode-period', state.mode === 'period');
+    if (state.mode !== 'period' && pdEditing) { pdEditing = false; pdDraft = null; document.body.classList.remove('pd-editing'); }
     collapsed = Object.create(null);
     render();
     syncExpandBtn();
   });
 
+  /* ─── Period edit mode ────────────────────────────────────────────
+     Only the task rows take input; everything above them is a total, and
+     saving keeps the typed hours against that cell. */
+  function pdChanges() { return pdDraft ? Object.keys(pdDraft).length : 0; }
+  function syncPdBar() {
+    var n = pdChanges();
+    document.getElementById('pd-status').textContent =
+      n === 0 ? 'Editing · no changes yet' : 'Editing · ' + n + ' change' + (n === 1 ? '' : 's');
+    document.getElementById('pd-save').disabled = n === 0;
+  }
+  function enterPdEdit() {
+    pdEditing = true;
+    pdDraft = Object.create(null);
+    document.body.classList.add('pd-editing');
+    render();
+    syncPdBar();
+  }
+  function exitPdEdit() {
+    pdEditing = false;
+    pdDraft = null;
+    document.body.classList.remove('pd-editing');
+    render();
+  }
+  document.getElementById('pd-edit').addEventListener('click', enterPdEdit);
+  document.getElementById('pd-cancel').addEventListener('click', exitPdEdit);
+  document.getElementById('pd-save').addEventListener('click', function () {
+    var n = pdChanges();
+    Object.keys(pdDraft).forEach(function (k) { pdSaved[k] = pdDraft[k]; });
+    exitPdEdit();
+    Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved to the timesheets.');
+  });
+
+  tbody.addEventListener('input', function (e) {
+    var box = e.target.closest('.pd-input');
+    if (!box || !pdDraft) return;
+    var raw = box.value.trim().replace(',', '.');
+    var val = raw === '' ? 0 : Number(raw);
+    if (isNaN(val) || val < 0) return;
+    var cell = box.getAttribute('data-cell');
+    pdDraft[cell] = val;
+    box.classList.add('changed');
+    var caretPos = box.selectionStart;
+    render();
+    syncPdBar();
+    var again = tbody.querySelector('.pd-input[data-cell="' + cell.replace(/"/g, '\\"') + '"]');
+    if (again) { again.focus(); try { again.setSelectionRange(caretPos, caretPos); } catch (err) {} }
+  });
+
   /* The period tree keeps its own open/closed map. */
   tbody.addEventListener('click', function (e) {
     var pd = e.target.closest('[data-pd]');
-    if (!pd || state.mode !== 'period') return;
+    if (!pd || state.mode !== 'period' || e.target.closest('.pd-input')) return;
     var k = pd.getAttribute('data-pd');
     pdCollapsed[k] = pdCollapsed[k] !== true;
     render();
