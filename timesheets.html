@@ -283,6 +283,13 @@
   .pd-foot td.pd-label { z-index: 3; color: var(--grey-700); font-weight: 500; }
   .pd-foot td.pd-total { z-index: 3; }
 
+  /* Headers carry the shell's 24px right padding, the cells 16px — which
+     left the dates a few pixels off their own numbers. */
+  .pd-table thead th.pd-day, .pd-table thead th.pd-total { padding-right: 16px; }
+
+  /* Secondary actions read as actions. */
+  .toolbar .btn-ghost, .btn-columns { color: var(--primary); }
+
   /* ─── Period edit bar ──────────────────────────────────────────── */
   #pd-edit { display: none; }
   body.mode-period #pd-edit { display: inline-flex; }
@@ -370,14 +377,8 @@
             <div class="dd-panel" id="date-dd-panel"></div>
           </div>
           <div class="seg" id="modeswitch">
-            <button class="seg-btn active" type="button" data-mode="list">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5.5 4h8M5.5 8h8M5.5 12h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="2.8" cy="4" r="1" fill="currentColor"/><circle cx="2.8" cy="8" r="1" fill="currentColor"/><circle cx="2.8" cy="12" r="1" fill="currentColor"/></svg>
-              Timesheets
-            </button>
-            <button class="seg-btn" type="button" data-mode="period">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2.5" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6h12M6 6v7.5M10 6v7.5" stroke="currentColor" stroke-width="1.3"/></svg>
-              Period
-            </button>
+            <button class="seg-btn active" type="button" data-mode="list">Timesheets</button>
+            <button class="seg-btn" type="button" data-mode="period">Period</button>
           </div>
           <button class="btn-primary" type="button" id="btn-create">Create Timesheet</button>
         </div>
@@ -400,10 +401,7 @@
             <button class="seg-btn" type="button" data-group="worker">Worker</button>
             <button class="seg-btn" type="button" data-group="flat">No Grouping</button>
           </div>
-          <button class="btn-ghost" type="button" id="pd-edit">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-            Edit
-          </button>
+          <button class="btn-ghost" type="button" id="pd-edit">Edit</button>
           <button class="btn-ghost" type="button" id="expand-all">Expand all</button>
           <div class="col-panel-wrap" id="columns-wrap">
             <button class="btn-columns" id="btn-columns" type="button" aria-expanded="false" aria-haspopup="true">
@@ -457,11 +455,11 @@
 </div>
 
 <div class="rows-switch" id="rows-switch" role="group" aria-label="Row layout">
-  <button type="button" data-rows="nested" class="on">
+  <button type="button" data-rows="nested">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 3.5h11M5 8h8.5M7.5 12.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     Nested
   </button>
-  <button type="button" data-rows="flat">
+  <button type="button" data-rows="flat" class="on">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.4" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 3v10M10 3v10" stroke="currentColor" stroke-width="1.3"/></svg>
     Flat
   </button>
@@ -1247,7 +1245,7 @@
     worker: '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3 13.5c0-2.5 2.2-4.5 5-4.5s5 2 5 4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>'
   };
 
-  var pdRowsMode = 'nested';
+  var pdRowsMode = 'flat';
 
   /* Flat: every level gets its own column and repeats are left blank, so
      the hierarchy reads without any nesting. */
@@ -1336,9 +1334,11 @@
       var leaf = node.kids ? null : node;
       var open = pdCollapsed[key] !== true;
       if (key) keys.push(key);
+      var kind = ['Site', 'Supervisor', 'Worker', 'Task'][level] || '';
       out.push('<tr class="pd-row ' + cls + (open ? '' : ' pd-closed') + '"' +
           (key ? ' data-pd="' + Shell.esc(key) + '"' : '') + '>' +
-        '<td class="pd-label"><span class="pd-tree" style="padding-left:' + (level * 22) + 'px">' +
+        '<td class="pd-label" title="' + kind + ' — ' + Shell.esc(node.name) + '">' +
+          '<span class="pd-tree" style="padding-left:' + (level * 22) + 'px">' +
           (node.kids ? pdCaret() : '') + (icon || '') +
           '<span class="name">' + Shell.highlight(node.name, state.query) + '</span></span></td>' +
         ds.map(function (d) { return hoursCell(sumOn(leaves, toIso(d)), leaf, toIso(d)); }).join('') +

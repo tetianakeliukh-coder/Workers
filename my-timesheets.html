@@ -17,6 +17,12 @@
   .period-bar {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   }
+  .period-bar .search-wrap { width: 300px; }
+  /* Headers take the shell's 24px right padding, cells 16px — which left
+     the dates off their own numbers. */
+  .grid-card thead th.col-day, .grid-card thead th.col-total { padding-right: 16px; }
+  /* Secondary actions read as actions. */
+  .period-bar .btn-ghost { color: var(--primary); }
   .step {
     width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
     background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
@@ -375,20 +381,23 @@
             </button>
             <div class="dd-panel" id="date-dd-panel"></div>
           </div>
-          <button class="btn-primary" type="button" id="btn-new-task">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add task
-          </button>
+          <button class="btn-primary" type="button" id="btn-new-task">Add task</button>
         </div>
       </div>
 
       <div class="period-bar">
+        <div class="search-wrap">
+          <label class="search-bar">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <input class="search-input-el" id="search" type="text" placeholder="Search" autocomplete="off" />
+            <button class="search-clear" id="search-clear" type="button" aria-label="Clear search">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </button>
+          </label>
+        </div>
         <div class="period-actions">
-          <button class="btn-ghost" type="button" id="btn-edit">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-            Edit
-          </button>
           <button class="btn-ghost" type="button" id="btn-collapse">Collapse all</button>
+          <button class="btn-ghost" type="button" id="btn-edit">Edit</button>
         </div>
       </div>
 
@@ -428,11 +437,11 @@
 
 <!-- ── Prototype viewport switcher ──────────────────────────────── -->
 <div class="vp-switch rows-switch" id="rows-switch" role="group" aria-label="Row layout">
-  <button type="button" data-rows="nested" class="on">
+  <button type="button" data-rows="nested">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 3.5h11M5 8h8.5M7.5 12.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     Nested
   </button>
-  <button type="button" data-rows="flat">
+  <button type="button" data-rows="flat" class="on">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.4" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 3v10M10 3v10" stroke="currentColor" stroke-width="1.3"/></svg>
     Flat
   </button>
@@ -624,7 +633,7 @@
   add(addDays(THIS_MON, -38), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1155', 'Labour', 'Day'], 7.5);
 
   /* ─── State ───────────────────────────────────────────────────── */
-  var state = { range: 'last7', from: null, to: null, editing: false, selDay: iso(TODAY) };
+  var state = { range: 'last7', from: null, to: null, query: '', editing: false, selDay: iso(TODAY) };
   var collapsed = Object.create(null);
   var draft = null;          // 'key|date' -> hours, while editing
   var extraRows = [];        // keys added during this edit
@@ -659,9 +668,15 @@
 
   /* Tasks on screen this week: anything with hours, plus anything added
      during the current edit. */
+  function matchesQuery(k) {
+    if (!state.query) return true;
+    var m = taskMeta[k];
+    return [m.site, m.sup, pathOf(m.levels)].join(' ').toLowerCase().indexOf(state.query.toLowerCase()) !== -1;
+  }
   function weekKeys() {
     var ds = days().map(iso), out = [];
     Object.keys(taskMeta).forEach(function (k) {
+      if (!matchesQuery(k)) return;
       var any = ds.some(function (d) { return hoursFor(k, d) > 0; });
       if (any || extraRows.indexOf(k) !== -1) out.push(k);
     });
@@ -709,7 +724,7 @@
   var ICO_SITE = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V3.5l5-1.5V14M3 14h10V6.5H8M3 14H1.5M13 14h1.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
-  var rowsMode = 'nested';
+  var rowsMode = 'flat';
 
   function dayHeadCells(ds) {
     return ds.map(function (d) {
@@ -753,15 +768,7 @@
     }
     gridBody.innerHTML = rows.join('');
 
-    var allTasks = [];
-    weekTree().forEach(function (s) { allTasks = allTasks.concat(tasksOfSite(s)); });
-    gridFoot.innerHTML = '<tr><td class="col-site">Total hours</td><td class="col-sup"></td><td class="col-task"></td>' +
-      ds.map(function (d) {
-        var n = sumRow(allTasks, iso(d));
-        return '<td class="col-day">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
-      }).join('') +
-      '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(allTasks, iso(d)); }, 0)) + '</td></tr>';
-
+    gridFoot.innerHTML = '';
     document.getElementById('grid-count').textContent = 'Displaying ' + count + ' row' + (count === 1 ? '' : 's');
   }
 
@@ -816,15 +823,7 @@
     }
     gridBody.innerHTML = rows.join('');
 
-    var allTasks = [];
-    tree.forEach(function (s) { allTasks = allTasks.concat(tasksOfSite(s)); });
-    gridFoot.innerHTML = '<tr><td class="col-label">Total hours</td>' +
-      ds.map(function (d) {
-        var n = sumRow(allTasks, iso(d));
-        return '<td class="col-day">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
-      }).join('') +
-      '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(allTasks, iso(d)); }, 0)) + '</td></tr>';
-
+    gridFoot.innerHTML = '';
     document.getElementById('grid-count').textContent = 'Displaying ' + shown + ' row' + (shown === 1 ? '' : 's');
   }
 
@@ -1029,6 +1028,22 @@
   });
   dateTrigger.addEventListener('click', function () { datePanel.classList.remove('cal-mode'); });
   syncDateLabel();
+
+  /* ─── Search ──────────────────────────────────────────────────── */
+  var searchEl = document.getElementById('search');
+  var clearBtn = document.getElementById('search-clear');
+  searchEl.addEventListener('input', function () {
+    state.query = this.value.trim();
+    clearBtn.classList.toggle('visible', this.value.length > 0);
+    render();
+  });
+  clearBtn.addEventListener('click', function () {
+    searchEl.value = '';
+    state.query = '';
+    clearBtn.classList.remove('visible');
+    searchEl.focus();
+    render();
+  });
 
   /* ─── Viewport switcher (prototype aid) ───────────────────────── */
   var vp = document.getElementById('vp-switch');
@@ -1453,6 +1468,7 @@
     if (state.editing) exitEdit();
   });
 
+  document.getElementById('btn-collapse').style.display = rowsMode === 'flat' ? 'none' : '';
   render();
   applyViewport();
 })();
