@@ -172,15 +172,21 @@
   }
   .dgroup-head .tot { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--text-main); }
   .day-group.closed .day-rows { display: none; }
-  .day-rows { border-top: 1px solid var(--grey-200); }
+  /* Each task is its own card, the same object as a recent task in the
+     Add dialog — no dividers, the gaps do that work. */
+  .day-rows {
+    border-top: 1px solid var(--grey-200);
+    padding: 10px; display: flex; flex-direction: column; gap: 8px;
+  }
 
   .entry {
     display: flex; align-items: center; gap: 12px; width: 100%;
-    padding: 12px 14px; background: none; border: none; cursor: pointer;
-    font-family: var(--fs-sans); text-align: left;
+    padding: 10px 12px; cursor: pointer; text-align: left;
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    font-family: var(--fs-sans);
+    transition: border-color var(--t-fast), background var(--t-fast);
   }
-  .entry + .entry { border-top: 1px solid var(--grey-200); }
-  .entry:hover { background: #fafbfe; }
+  .entry:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
   .entry-main { min-width: 0; flex: 1; }
   .entry-code { display: block; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
   .entry-sub { display: block; font-size: 13px; line-height: 18px; color: var(--grey-700); margin-top: 1px; }
@@ -188,8 +194,7 @@
   .entry-hrs { font-size: 14px; font-weight: 600; white-space: nowrap; }
   .entry-go { width: 16px; height: 16px; color: var(--grey-400); flex-shrink: 0; }
   .dd-chev { width: 12px; height: 12px; margin-left: auto; color: var(--grey-600); }
-  .day-empty { padding: 14px; font-size: 14px; color: var(--grey-600); }
-  .day-add { padding: 10px 14px 14px; }
+  .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
   .modal.add-modal { max-width: 460px; width: 100%; }
@@ -317,10 +322,10 @@
   .shift-total b { color: var(--text-main); font-size: 16px; font-weight: 600; }
 
   /* Its own line, full width — a thumb reaches it anywhere along the row. */
-  .add-shift {
-    width: 100%; justify-content: center; margin-top: 12px;
-    color: var(--primary); border-style: dashed;
+  .add-shift, .day-add {
+    width: 100%; justify-content: center; color: var(--primary);
   }
+  .add-shift { margin-top: 12px; }
   .fld { display: flex; flex-direction: column; gap: 6px; }
   .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
   .fld select {
@@ -1212,8 +1217,9 @@
           '<span class="tot">' + fmtHours(total) + ' h</span>' +
         '</button>' +
         '<div class="day-rows">' + body +
-          '<div class="day-add"><button class="btn-text" type="button" data-card-add="' + key + '">' +
-            '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" style="vertical-align:-2px;margin-right:4px"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Add task</button></div>' +
+          '<button class="btn-ghost day-add" type="button" data-card-add="' + key + '">' +
+            '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+            'Add task</button>' +
         '</div>' +
       '</div>';
     }).join('');
