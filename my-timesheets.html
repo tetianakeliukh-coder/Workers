@@ -169,7 +169,7 @@
     height: 20px; display: inline-flex; align-items: center; padding: 0 7px; border-radius: 5px;
     background: var(--bg-blue-light); color: var(--primary); font-size: 11px; font-weight: 500;
   }
-  .dgroup-head .tot { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--text-main); }
+  .dgroup-head .tot { margin-left: auto; font-size: 14px; font-weight: 500; color: var(--text-main); }
   .day-group.closed .day-rows { display: none; }
   /* Each task is its own card, the same object as a recent task in the
      Add dialog — no dividers, the gaps do that work. */
@@ -186,10 +186,15 @@
   }
   .entry:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
   .entry-main { min-width: 0; flex: 1; }
-  .entry-code { display: block; font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
-  .entry-sub { display: block; font-size: 13px; line-height: 18px; color: var(--grey-700); margin-top: 1px; }
-  .entry-where { display: block; font-size: 12px; line-height: 17px; color: var(--grey-500); margin-top: 1px; }
-  .entry-hrs { font-size: 14px; font-weight: 600; white-space: nowrap; }
+  /* Three styles carry the whole list: a 15/600 day heading, a 14/600
+     card heading, and one grey 13/400 for everything underneath. Numbers
+     sit at 14/500 — read as values, not as more headings. */
+  .entry-code { display: block; font-size: 14px; font-weight: 600; line-height: 19px; color: var(--text-main); }
+  .entry-sub, .entry-where {
+    display: block; font-size: 13px; font-weight: 400; line-height: 18px; color: var(--grey-600);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .entry-hrs { font-size: 14px; font-weight: 500; color: var(--text-main); white-space: nowrap; }
   .entry-go { width: 16px; height: 16px; color: var(--grey-400); flex-shrink: 0; }
   .dd-chev { width: 12px; height: 12px; margin-left: auto; color: var(--grey-600); }
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
@@ -324,6 +329,7 @@
     width: 100%; justify-content: center; color: var(--primary);
     border-color: var(--grey-300);
   }
+  .day-add { border-color: var(--grey-200); }
   .add-shift { margin-top: 12px; }
   .fld { display: flex; flex-direction: column; gap: 6px; }
   .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
@@ -469,7 +475,7 @@
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
   body.is-narrow .m-date .dd-panel { left: 0; right: 0; }
-  body.is-narrow .week-view { order: 6; margin-top: 4px; }
+  body.is-narrow .week-view { order: 6; margin-top: 12px; }
   body.is-narrow .day-list { gap: 8px; }
   body.is-narrow .week-total { display: none; }
   .m-actions, .m-date { display: none; }
