@@ -293,9 +293,9 @@
   body.is-narrow .period-chip.visible { display: none; }
   /* Collapse all and the global Edit belong to the grid; on a phone each
   day card carries its own Edit. */
-  body.is-narrow #btn-edit { display: none; }
-  body.is-narrow .period-actions { margin-left: 0; width: 100%; }
-  body.is-narrow .period-actions .btn-ghost { flex: 1; justify-content: center; }
+  /* The phone header carries its own actions and date, so the desktop
+     toolbar row stands down entirely. */
+  body.is-narrow .period-bar { display: none; }
   body.is-narrow .edit-actions { width: 100%; margin-left: 0; }
   body.is-narrow .edit-actions .btn-outline,
   body.is-narrow .edit-actions .btn-primary { flex: 1; justify-content: center; }
@@ -361,6 +361,60 @@
   #week-cal .cal-cell.wk-end { border-radius: 0 16px 16px 0; }
   #week-cal .cal-foot { margin-top: 6px; padding: 8px 6px 2px; border-top: 1px solid var(--grey-300); font-size: 12px; color: var(--grey-600); }
 
+  /* ─── Mobile header + sheet ─────────────────────────────────────── */
+  body.is-narrow .page-header { display: block; }
+  body.is-narrow .page-header .header-actions { display: none; }
+  body.is-narrow .m-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  body.is-narrow .m-actions .btn-ghost, body.is-narrow .m-actions .btn-primary {
+    width: 100%; justify-content: center; height: 36px;
+  }
+  body.is-narrow .m-date { display: block; margin-top: 8px; }
+  body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
+  body.is-narrow .m-date .dd-panel { left: 0; right: 0; }
+  body.is-narrow .week-total { display: none; }
+  .m-actions, .m-date { display: none; }
+
+  /* A sheet, not a box: flush to the bottom with a grabber on top. */
+  body.is-narrow .modal-backdrop { align-items: flex-end; padding: 0; }
+  body.is-narrow .modal.add-modal, body.is-narrow .modal.edit-modal {
+    max-width: 390px; width: 100%; max-height: 92vh;
+    border-radius: 18px 18px 0 0; padding-top: 8px;
+  }
+  body.is-narrow .modal.add-modal::before, body.is-narrow .modal.edit-modal::before {
+    content: ''; display: block; width: 38px; height: 4px; margin: 0 auto 4px;
+    border-radius: 2px; background: var(--grey-350);
+  }
+  body.is-narrow .add-modal .modal-footer, body.is-narrow .edit-modal .modal-footer {
+    padding-bottom: 22px;
+  }
+
+  /* ─── Stepper ───────────────────────────────────────────────────── */
+  .stepper { display: flex; align-items: center; gap: 6px; }
+  .stp {
+    display: inline-flex; align-items: center; gap: 7px; padding: 0; border: none; background: none;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--grey-600); cursor: default;
+  }
+  .stp .n {
+    width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    background: var(--grey-200); color: var(--grey-600);
+  }
+  .stp.done { color: var(--primary); cursor: pointer; }
+  .stp.done .n { background: var(--bg-blue-light); color: var(--primary); }
+  .stp.now { color: var(--text-main); font-weight: 500; }
+  .stp.now .n { background: var(--primary); color: var(--white); }
+  .stp-sep { width: 14px; height: 1px; background: var(--grey-350); flex-shrink: 0; }
+  .stp:disabled { cursor: default; }
+
+  /* ─── Selects: the chevron sits as far from the edge as the text ── */
+  .fld select, .add-modal select {
+    appearance: none; -webkit-appearance: none;
+    padding-right: 34px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23757575' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+
 </style>
 </head>
 <body data-module="mytime">
@@ -384,6 +438,12 @@
           <button class="btn-primary" type="button" id="btn-new-task">Add task</button>
         </div>
       </div>
+
+      <div class="m-actions">
+        <button class="btn-ghost" type="button" id="m-collapse">Collapse all</button>
+        <button class="btn-primary" type="button" id="m-add">Add timesheet</button>
+      </div>
+      <div class="m-date" id="m-date"></div>
 
       <div class="period-bar">
         <div class="search-wrap">
@@ -464,7 +524,13 @@
     <div class="modal-header">
       <div class="modal-heading">
         <span class="modal-title" id="add-title">Add task</span>
-        <span class="modal-meta"><span class="meta-item" id="add-step-label">Step 1 of 2 · Where and what</span></span>
+        <div class="stepper" id="stepper">
+          <button class="stp" type="button" data-goto="1"><span class="n">1</span>Details</button>
+          <span class="stp-sep"></span>
+          <button class="stp" type="button" data-goto="2"><span class="n">2</span>Task</button>
+          <span class="stp-sep"></span>
+          <button class="stp" type="button" data-goto="3"><span class="n">3</span>Hours</button>
+        </div>
       </div>
       <button class="modal-close" type="button" data-close aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -488,17 +554,19 @@
           <span class="fld-hint" id="date-hint"></span>
         </div>
 
-        <!-- One to four fields, named by the site -->
-        <div id="level-fields"></div>
+      </div>
 
+      <!-- Step 2 — the task -->
+      <div class="wiz-step" id="step-2" hidden>
+        <div id="level-fields"></div>
         <div class="quick" id="quick-wrap">
           <span class="quick-label">Recent</span>
           <div class="quick-row" id="quick-tasks"></div>
         </div>
       </div>
 
-      <!-- Step 2 -->
-      <div class="wiz-step" id="step-2" hidden>
+      <!-- Step 3 — the hours -->
+      <div class="wiz-step" id="step-3" hidden>
         <p class="add-sub" id="shift-sub"></p>
         <div class="shifts" id="shifts"></div>
         <button class="btn-text add-shift" type="button" id="add-shift">
@@ -512,7 +580,6 @@
     <div class="modal-footer">
       <div class="modal-footer-actions">
         <button class="btn-ghost" type="button" data-close id="add-cancel">Cancel</button>
-        <button class="btn-ghost" type="button" id="add-back" hidden>Back</button>
         <button class="btn-primary" type="button" id="add-next">Next</button>
         <button class="btn-primary" type="button" id="add-save" hidden>Save</button>
       </div>
@@ -1029,6 +1096,20 @@
   dateTrigger.addEventListener('click', function () { datePanel.classList.remove('cal-mode'); });
   syncDateLabel();
 
+  /* The phone header carries its own pair of buttons. */
+  function syncMobileActions() {
+    var collapse = document.getElementById('m-collapse');
+    collapse.textContent = document.getElementById('btn-collapse').textContent;
+    collapse.style.display = rowsMode === 'flat' ? 'none' : '';
+    document.querySelector('.m-actions').style.gridTemplateColumns =
+      rowsMode === 'flat' ? '1fr' : '1fr 1fr';
+  }
+  document.getElementById('m-collapse').addEventListener('click', function () {
+    document.getElementById('btn-collapse').click();
+    syncMobileActions();
+  });
+  document.getElementById('m-add').addEventListener('click', function () { openAdd(null); });
+
   /* ─── Search ──────────────────────────────────────────────────── */
   var searchEl = document.getElementById('search');
   var clearBtn = document.getElementById('search-clear');
@@ -1049,10 +1130,19 @@
   var vp = document.getElementById('vp-switch');
   var narrowQuery = window.matchMedia('(max-width: 860px)');
   var vpMode = 'auto';
+  /* The date control is one element; on a phone it moves under the buttons
+     and goes full width rather than being duplicated. */
+  var dateDD = document.getElementById('date-dd');
+  var headerActions = document.querySelector('.header-actions');
+  var mDate = document.getElementById('m-date');
+
   function applyViewport() {
     var narrow = vpMode === 'mobile' ? true : vpMode === 'desktop' ? false : narrowQuery.matches;
     document.body.classList.toggle('is-narrow', narrow);
     document.body.classList.toggle('force-mobile', vpMode === 'mobile');
+    if (narrow && dateDD.parentNode !== mDate) mDate.appendChild(dateDD);
+    if (!narrow && dateDD.parentNode !== headerActions) headerActions.insertBefore(dateDD, headerActions.firstChild);
+    syncMobileActions();
     if (Shell.setViewport) Shell.setViewport(vpMode === 'mobile' ? 'mobile' : vpMode === 'desktop' ? 'desktop' : 'auto');
     vp.querySelectorAll('[data-vp]').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-vp') === (vpMode === 'auto' ? (narrow ? 'mobile' : 'desktop') : vpMode));
@@ -1067,6 +1157,7 @@
     rowsSwitch.querySelectorAll('[data-rows]').forEach(function (x) { x.classList.toggle('on', x === b); });
     /* Nothing nests in the flat table, so its control goes quiet. */
     document.getElementById('btn-collapse').style.display = rowsMode === 'flat' ? 'none' : '';
+    syncMobileActions();
     renderGrid();
     syncScrollEdge();
   });
@@ -1244,7 +1335,7 @@
   function renderQuick() {
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
-    }).sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 4);
+    }).sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 3);
 
     el('quick-tasks').innerHTML = recent.map(function (r) {
       return '<button type="button" data-quick="' + Shell.esc(r.key) + '">' +
@@ -1253,15 +1344,29 @@
     }).join('');
   }
 
+  var lockStep1 = false;        // opened from a card: the day is already set
+
   function setStep(n) {
     addStep = n;
-    el('step-1').hidden = n !== 1;
-    el('step-2').hidden = n !== 2;
-    el('add-step-label').textContent = n === 1 ? 'Step 1 of 2 · Where and what' : 'Step 2 of 2 · Hours';
-    el('add-next').hidden = n !== 1;
-    el('add-save').hidden = n !== 2;
-    el('add-back').hidden = n !== 2;
+    [1, 2, 3].forEach(function (i) { el('step-' + i).hidden = n !== i; });
+    el('add-next').hidden = n === 3;
+    el('add-save').hidden = n !== 3;
+
+    document.querySelectorAll('#stepper .stp').forEach(function (b) {
+      var i = Number(b.getAttribute('data-goto'));
+      var reachable = i < n && !(i === 1 && lockStep1);
+      b.classList.toggle('now', i === n);
+      b.classList.toggle('done', reachable);
+      b.disabled = !reachable;
+    });
+    if (n === 3) renderShifts();
   }
+
+  document.getElementById('stepper').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-goto]');
+    if (!b || b.disabled) return;
+    setStep(Number(b.getAttribute('data-goto')));
+  });
 
   function openAdd(dayIso) {
     var ds = days();
@@ -1277,8 +1382,11 @@
     syncDayHint();
 
     shifts = [{ start: '', finish: '', hours: '' }];
-    renderShifts();
-    setStep(1);
+    /* Adding from inside a day card means the day is already chosen, so the
+       sheet opens on the task and cannot walk back to it. */
+    lockStep1 = !!dayIso;
+    el('add-title').textContent = dayIso ? 'Add task' : 'Add timesheet';
+    setStep(dayIso ? 2 : 1);
     addModal.classList.add('open');
   }
 
@@ -1429,15 +1537,14 @@
     return Array.prototype.map.call(el('level-fields').querySelectorAll('[data-lvl]'), function (sel) { return sel.value; });
   }
   el('add-next').addEventListener('click', function () {
+    if (addStep === 1) { setStep(2); return; }
     var levels = currentLevels();
     if (!levels[0]) {
       Shell.snackbar('Choose the ' + fieldsFor(el('add-site').value)[0].name.toLowerCase() + ' first.');
       return;
     }
-    renderShifts();
-    setStep(2);
+    setStep(3);
   });
-  el('add-back').addEventListener('click', function () { setStep(1); });
 
   el('add-save').addEventListener('click', function () {
     var total = shifts.reduce(function (n, sh) { return n + shiftHours(sh); }, 0);
