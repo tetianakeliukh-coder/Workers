@@ -175,14 +175,13 @@
   /* Each task is its own card, the same object as a recent task in the
      Add dialog — no dividers, the gaps do that work. */
   .day-rows {
-    border-top: 1px solid var(--grey-200);
-    padding: 10px; display: flex; flex-direction: column; gap: 8px;
+    padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px;
   }
 
   .entry {
     display: flex; align-items: center; gap: 12px; width: 100%;
     padding: 10px 12px; cursor: pointer; text-align: left;
-    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    background: var(--white); border: 1px solid var(--grey-200); border-radius: 8px;
     font-family: var(--fs-sans);
     transition: border-color var(--t-fast), background var(--t-fast);
   }
@@ -324,6 +323,7 @@
   /* Its own line, full width — a thumb reaches it anywhere along the row. */
   .add-shift, .day-add {
     width: 100%; justify-content: center; color: var(--primary);
+    border-color: var(--grey-300);
   }
   .add-shift { margin-top: 12px; }
   .fld { display: flex; flex-direction: column; gap: 6px; }
@@ -459,13 +459,13 @@
   body.is-narrow .page-header .header-actions { display: none; }
   body.is-narrow .m-actions { order: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; }
   body.is-narrow .m-actions .btn-ghost, body.is-narrow .m-actions .btn-primary {
-    width: 100%; justify-content: center; height: 40px;
+    width: 100%; justify-content: center; height: 32px;
   }
   /* The toolbar keeps its search on a phone; the grid-only controls go. */
   body.is-narrow .period-bar { order: 3; display: block; margin: 0; }
   body.is-narrow .period-bar .search-wrap { width: 100%; }
-  body.is-narrow .period-bar .search-bar { height: 40px; }
-  body.is-narrow .m-date .dd-trigger { height: 40px; }
+  body.is-narrow .period-bar .search-bar { height: 32px; }
+  body.is-narrow .m-date .dd-trigger { height: 32px; }
   body.is-narrow .period-bar .period-actions { display: none; }
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
