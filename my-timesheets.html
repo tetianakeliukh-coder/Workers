@@ -42,17 +42,12 @@
   .period-chip.visible { display: inline-flex; }
   .period-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
-  /* ─── Edit bar ─────────────────────────────────────────────────── */
-  /* Matches the selection bar on Team Timesheets: plain white, outlined
-     actions on the right. */
-  .edit-bar {
-    display: none; align-items: center; gap: 16px; flex-wrap: wrap;
-    height: 52px; padding: 0 2px; background: var(--white);
-  }
-  body.editing .edit-bar { display: flex; }
+  /* ─── Edit mode ────────────────────────────────────────────────── */
+  /* Editing takes over the toolbar's right-hand side rather than opening
+     a bar of its own, so the search stays where it was. */
+  .edit-actions { display: none; align-items: center; gap: 8px; margin-left: auto; }
   body.editing .period-actions { display: none; }
-  .edit-status { font-size: 14px; color: var(--text-main); white-space: nowrap; }
-  .edit-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  body.editing .edit-actions { display: flex; }
   .edit-actions .btn-outline {
     height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
@@ -328,7 +323,6 @@
   body.is-narrow .edit-actions { width: 100%; margin-left: 0; }
   body.is-narrow .edit-actions .btn-outline,
   body.is-narrow .edit-actions .btn-primary { flex: 1; justify-content: center; }
-  body.is-narrow .edit-bar { height: auto; padding: 10px 0; }
   /* ─── Phone preview frame + viewport switcher (prototype only) ──── */
   /* Clears the fixed phone top bar the shell puts in at this size. */
   body.force-mobile .main { background: var(--grey-200); display: flex; justify-content: center; padding: 80px 16px 48px; }
@@ -412,7 +406,6 @@
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
   body.is-narrow .m-date .dd-panel { left: 0; right: 0; }
-  body.is-narrow .edit-bar { order: 5; }
   body.is-narrow .week-view { order: 6; margin-top: 4px; }
   body.is-narrow .day-list { gap: 8px; }
   body.is-narrow .week-total { display: none; }
@@ -574,11 +567,7 @@
             Edit
           </button>
         </div>
-      </div>
-
-      <div class="edit-bar" id="edit-bar">
-        <span class="edit-status" id="edit-status">Editing · no changes yet</span>
-        <div class="edit-actions">
+        <div class="edit-actions" id="edit-actions">
           <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
           <button class="btn-primary" type="button" id="btn-save" disabled>Save</button>
         </div>
@@ -1409,10 +1398,7 @@
   /* ─── Edit mode ───────────────────────────────────────────────── */
   function changeCount() { return draft ? Object.keys(draft).length : 0; }
   function syncEditBar() {
-    var n = changeCount();
-    document.getElementById('edit-status').textContent =
-      n === 0 ? 'Editing · no changes yet' : 'Editing · ' + n + ' change' + (n === 1 ? '' : 's');
-    document.getElementById('btn-save').disabled = n === 0;
+    document.getElementById('btn-save').disabled = changeCount() === 0;
   }
   function enterEdit() {
     state.editing = true; draft = Object.create(null); extraRows = [];

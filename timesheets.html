@@ -305,14 +305,15 @@
   /* ─── Period edit bar ──────────────────────────────────────────── */
   #pd-edit { display: none; }
   body.mode-period #pd-edit { display: inline-flex; }
-  .edit-bar {
-    display: none; align-items: center; gap: 16px; flex-wrap: wrap;
-    height: 52px; padding: 0 2px; background: var(--white);
-  }
-  body.pd-editing .edit-bar { display: flex; }
-  body.pd-editing .toolbar { display: none; }
-  .edit-status { font-size: 14px; color: var(--text-main); white-space: nowrap; }
-  .edit-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  /* Editing takes over the toolbar's right-hand side rather than opening
+     a bar of its own, so the search stays where it was. */
+  .edit-actions { display: none; align-items: center; gap: 8px; margin-left: auto; }
+  body.pd-editing .edit-actions { display: flex; }
+  body.pd-editing .toolbar-right > .seg-label,
+  body.pd-editing .toolbar-right > #groupby,
+  body.pd-editing .toolbar-right > #pd-edit,
+  body.pd-editing .toolbar-right > #expand-all,
+  body.pd-editing .toolbar-right > #columns-wrap { display: none; }
   .edit-actions .btn-outline {
     height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
@@ -444,15 +445,10 @@
             </button>
             <div class="col-panel" id="col-panel"></div>
           </div>
-
-        </div>
-      </div>
-
-      <div class="edit-bar" id="pd-edit-bar">
-        <span class="edit-status" id="pd-status">Editing · no changes yet</span>
-        <div class="edit-actions">
-          <button class="btn-outline" type="button" id="pd-cancel">Cancel</button>
-          <button class="btn-primary" type="button" id="pd-save" disabled>Save</button>
+          <div class="edit-actions" id="pd-edit-actions">
+            <button class="btn-outline" type="button" id="pd-cancel">Cancel</button>
+            <button class="btn-primary" type="button" id="pd-save" disabled>Save</button>
+          </div>
         </div>
       </div>
 
@@ -2033,10 +2029,7 @@
      saving keeps the typed hours against that cell. */
   function pdChanges() { return pdDraft ? Object.keys(pdDraft).length : 0; }
   function syncPdBar() {
-    var n = pdChanges();
-    document.getElementById('pd-status').textContent =
-      n === 0 ? 'Editing · no changes yet' : 'Editing · ' + n + ' change' + (n === 1 ? '' : 's');
-    document.getElementById('pd-save').disabled = n === 0;
+    document.getElementById('pd-save').disabled = pdChanges() === 0;
   }
   function enterPdEdit() {
     pdEditing = true;
