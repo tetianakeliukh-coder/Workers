@@ -99,6 +99,12 @@
      > 900px: the user's own collapsed/expanded choice.
      641–900px: forced to the icon rail, choice remembered for later.
      <= 640px: off-canvas behind a top bar. */
+  /* Screens can force the shell into phone or desktop chrome regardless of
+     the window — the prototype's viewport switcher uses this. */
+  var viewportMode = 'auto';
+  var syncResponsive = function () {};
+  function setViewport(mode) { viewportMode = mode; syncResponsive(); }
+
   function initResponsive(host) {
     var bar = document.createElement('header');
     bar.className = 'shell-topbar';
@@ -129,16 +135,21 @@
 
     function sync() {
       var w = window.innerWidth;
-      var mobile = w <= 640;
+      var mobile = viewportMode === 'mobile' ? true
+                 : viewportMode === 'desktop' ? false
+                 : w <= 640;
       document.body.classList.toggle('shell-mobile', mobile);
       if (!mobile) closeDrawer();
-      if (w <= 900) {
+      if (viewportMode === 'desktop') {
+        host.classList.toggle('collapsed', readCollapsed());
+      } else if (w <= 900 || mobile) {
         host.classList.toggle('collapsed', !mobile);
       } else {
         host.classList.toggle('collapsed', readCollapsed());
       }
       syncSidebarTitles(host);
     }
+    syncResponsive = sync;
     window.addEventListener('resize', sync);
     sync();
     requestAnimationFrame(function () {
@@ -315,6 +326,7 @@
     initials: initials,
     snackbar: snackbar,
     initDropdowns: initDropdowns,
+    setViewport: setViewport,
     closeAllDropdowns: closeAllDropdowns
   };
 })();

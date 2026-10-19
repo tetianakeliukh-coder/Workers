@@ -198,18 +198,78 @@
   .fld select:focus { outline: none; border-color: var(--primary); }
   .fld-hint { font-size: 12px; color: var(--grey-600); }
 
-  @media (max-width: 860px) {
-    .grid-card { display: none; }
-    .week-view { display: block; }
-    .period-range { min-width: 0; flex: 1; font-size: 14px; }
-    .period-meta, .period-chip { display: none; }
-    .period-chip.visible { display: none; }
-    /* Collapse all and the global Edit belong to the grid; on a phone each
-       day card carries its own Edit. */
-    .period-actions { display: none; }
-    .edit-actions { width: 100%; margin-left: 0; }
-    .edit-actions .btn-ghost, .edit-actions .btn-primary { flex: 1; justify-content: center; }
+  /* The phone layout is a class, not only a media query, so the prototype's
+     viewport switcher can show it on a desktop screen. */
+  body.is-narrow .grid-card { display: none; }
+  body.is-narrow .week-view { display: block; }
+  body.is-narrow .period-range { min-width: 0; flex: 1; font-size: 14px; }
+  body.is-narrow .period-meta,
+  body.is-narrow .period-chip,
+  body.is-narrow .period-chip.visible { display: none; }
+  /* Collapse all and the global Edit belong to the grid; on a phone each
+  day card carries its own Edit. */
+  body.is-narrow .period-actions { display: none; }
+  body.is-narrow .edit-actions { width: 100%; margin-left: 0; }
+  body.is-narrow .edit-actions .btn-outline,
+  body.is-narrow .edit-actions .btn-primary { flex: 1; justify-content: center; }
+  body.is-narrow .edit-bar { height: auto; padding: 10px 0; }
+  /* ─── Phone preview frame + viewport switcher (prototype only) ──── */
+  /* Clears the fixed phone top bar the shell puts in at this size. */
+  body.force-mobile .main { background: var(--grey-200); display: flex; justify-content: center; padding: 80px 16px 48px; }
+  body.force-mobile .content {
+    width: 390px; max-width: 100%; background: var(--white);
+    border: 1px solid var(--grey-350); border-radius: 20px;
+    padding: 16px; box-shadow: var(--shadow-dialog);
   }
+
+  /* In the phone preview the sheet should read like a phone sheet. */
+  body.is-narrow .modal-backdrop { align-items: flex-end; padding: 0; }
+  body.is-narrow .modal.add-modal {
+    max-width: 390px; max-height: 88vh; border-radius: 16px 16px 0 0;
+  }
+  body.is-narrow .add-modal .modal-footer-actions { width: 100%; }
+  body.is-narrow .add-modal .modal-footer-actions .btn-ghost,
+  body.is-narrow .add-modal .modal-footer-actions .btn-primary { flex: 1; justify-content: center; }
+
+  .vp-switch {
+    position: fixed; right: 20px; bottom: 20px; z-index: 400;
+    display: inline-flex; padding: 4px; gap: 2px; border-radius: 10px;
+    background: var(--white); border: 1px solid var(--grey-350); box-shadow: var(--shadow-dropdown);
+  }
+  .vp-switch button {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 30px; padding: 0 12px; border: none; border-radius: 7px; cursor: pointer;
+    background: none; color: var(--grey-700);
+    font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+  }
+  .vp-switch button:hover { background: var(--grey-100); color: var(--text-main); }
+  .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
+
+  /* ─── Week dropdown ────────────────────────────────────────────── */
+  .period-dd .dd-trigger { min-width: 232px; }
+  .dd-item .sub { margin-left: auto; font-size: 12px; color: var(--grey-600); }
+  #week-cal { padding: 8px; min-width: 268px; }
+  #week-cal .cal-head { display: flex; align-items: center; padding: 2px 4px 8px; }
+  #week-cal .cal-nav {
+    width: 28px; height: 28px; flex-shrink: 0; border: none; border-radius: 50%;
+    background: none; cursor: pointer; color: var(--grey-700);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #week-cal .cal-nav:hover { background: var(--grey-200); }
+  #week-cal .cal-title { flex: 1; text-align: center; font-size: 14px; font-weight: 500; }
+  #week-cal .cal-dow, #week-cal .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  #week-cal .cal-dow span { height: 24px; line-height: 24px; text-align: center; font-size: 11px; color: var(--grey-600); }
+  #week-cal .cal-cell { height: 32px; display: flex; align-items: center; justify-content: center; }
+  #week-cal .cal-day {
+    width: 30px; height: 30px; border: none; border-radius: 50%; background: none; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
+  }
+  #week-cal .cal-day:hover { background: var(--grey-200); }
+  #week-cal .cal-cell.inweek { background: var(--bg-blue-light); }
+  #week-cal .cal-cell.wk-start { border-radius: 16px 0 0 16px; }
+  #week-cal .cal-cell.wk-end { border-radius: 0 16px 16px 0; }
+  #week-cal .cal-foot { margin-top: 6px; padding: 8px 6px 2px; border-top: 1px solid var(--grey-300); font-size: 12px; color: var(--grey-600); }
+
 </style>
 </head>
 <body data-module="mytime">
@@ -222,18 +282,31 @@
 
       <div class="page-header">
         <h1 class="page-title">My Timesheets</h1>
+        <div class="header-actions">
+          <button class="btn-primary" type="button" id="btn-new-task">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Add task
+          </button>
+        </div>
       </div>
 
       <div class="period-bar">
         <button class="step" type="button" data-step="-1" aria-label="Previous week">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="period-range" id="period-range"></span>
+
+        <div class="dd-wrap period-dd" id="week-dd">
+          <button class="dd-trigger" type="button">
+            <span>Week: <span id="period-range"></span></span>
+            <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="dd-panel align-left" id="week-dd-panel"></div>
+        </div>
+
         <button class="step" type="button" data-step="1" aria-label="Next week">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <span class="period-meta">7 days</span>
-        <span class="period-chip" id="period-chip">Current period</span>
+        <span class="period-chip" id="period-chip">Current week</span>
 
         <div class="period-actions">
           <button class="btn-ghost" type="button" id="btn-edit">
@@ -283,6 +356,18 @@
   </main>
 </div>
 
+<!-- ── Prototype viewport switcher ──────────────────────────────── -->
+<div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
+  <button type="button" data-vp="desktop" class="on">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 14h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Desktop
+  </button>
+  <button type="button" data-vp="mobile">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="4.5" y="1.5" width="7" height="13" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M7 12.8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Mobile
+  </button>
+</div>
+
 <!-- ── Add task ─────────────────────────────────────────────────── -->
 <div class="modal-backdrop" id="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-title">
   <div class="modal add-modal">
@@ -293,6 +378,11 @@
       </button>
     </div>
     <div class="modal-body">
+      <div class="fld" id="date-fld">
+        <label class="fld-label" for="add-date">Date</label>
+        <select id="add-date"></select>
+        <span class="fld-hint" id="date-hint"></span>
+      </div>
       <p class="add-sub" id="add-sub"></p>
       <div class="recent-list" id="recent-tasks"></div>
 
@@ -594,14 +684,132 @@
   }
 
   /* ─── Period bar ──────────────────────────────────────────────── */
-  function syncPeriod() {
-    var ds = days(), a = ds[0], b = ds[6];
-    var sameYear = a.getFullYear() === b.getFullYear();
-    document.getElementById('period-range').textContent =
-      DOW[a.getDay()] + ' ' + fmtDay(a) + (sameYear ? '' : ' ' + a.getFullYear()) +
-      ' – ' + DOW[b.getDay()] + ' ' + fmtDay(b) + ' ' + b.getFullYear();
-    document.getElementById('period-chip').classList.toggle('visible', iso(state.weekStart) === iso(THIS_MON));
+  function weekLabel(start) {
+    var a = start, b = addDays(start, 6);
+    return fmtDay(a) + ' – ' + fmtDay(b) + ' ' + b.getFullYear();
   }
+
+  function syncPeriod() {
+    document.getElementById('period-range').textContent = weekLabel(state.weekStart);
+    document.getElementById('period-chip').classList.toggle('visible', iso(state.weekStart) === iso(THIS_MON));
+    renderWeekMenu();
+  }
+
+  /* ─── Week dropdown ───────────────────────────────────────────────
+     The period control Team Timesheets uses, scoped to whole weeks —
+     a timesheet is a day, and a worker fills one week at a time. */
+  var weekPanel = document.getElementById('week-dd-panel');
+  var CHECK = '<svg class="dd-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var calMonth = null;
+
+  function quickWeeks() {
+    return [
+      { k: 'this', label: 'This week',     start: THIS_MON },
+      { k: 'last', label: 'Last week',     start: addDays(THIS_MON, -7) },
+      { k: 'prev', label: 'Two weeks ago', start: addDays(THIS_MON, -14) }
+    ];
+  }
+
+  function renderWeekMenu() {
+    if (weekPanel.classList.contains('cal-mode')) return;
+    var cur = iso(state.weekStart);
+    weekPanel.innerHTML = quickWeeks().map(function (w) {
+      return '<button class="dd-item' + (iso(w.start) === cur ? ' active' : '') + '" type="button" data-week="' + iso(w.start) + '">' +
+        CHECK + w.label + '<span class="sub">' + weekLabel(w.start) + '</span></button>';
+    }).join('') +
+    '<hr class="dd-divider" />' +
+    '<button class="dd-item" type="button" data-week="pick">' + CHECK + 'Choose a week…</button>';
+  }
+
+  function renderWeekCal() {
+    var y = calMonth.getFullYear(), m = calMonth.getMonth();
+    var lead = (new Date(y, m, 1).getDay() + 6) % 7;      // Monday-first grid
+    var count = new Date(y, m + 1, 0).getDate();
+    var selStart = iso(state.weekStart), selEnd = iso(addDays(state.weekStart, 6));
+
+    var cells = '';
+    for (var i = 0; i < lead; i++) cells += '<div class="cal-cell"></div>';
+    for (var d = 1; d <= count; d++) {
+      var cur = new Date(y, m, d), key = iso(cur);
+      var inWeek = key >= selStart && key <= selEnd;
+      var cls = 'cal-cell' + (inWeek ? ' inweek' : '') +
+                (key === selStart ? ' wk-start' : '') + (key === selEnd ? ' wk-end' : '');
+      cells += '<div class="' + cls + '"><button class="cal-day" type="button" data-pickday="' + key + '">' + d + '</button></div>';
+    }
+    weekPanel.innerHTML = '<div id="week-cal">' +
+      '<div class="cal-head">' +
+        '<button class="cal-nav" type="button" data-cal="-1" aria-label="Previous month"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+        '<div class="cal-title">' + ['January','February','March','April','May','June','July','August','September','October','November','December'][m] + ' ' + y + '</div>' +
+        '<button class="cal-nav" type="button" data-cal="1" aria-label="Next month"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      '</div>' +
+      '<div class="cal-dow">' + ['M','T','W','T','F','S','S'].map(function (w) { return '<span>' + w + '</span>'; }).join('') + '</div>' +
+      '<div class="cal-grid">' + cells + '</div>' +
+      '<div class="cal-foot">Pick any day — the week it belongs to opens.</div>' +
+    '</div>';
+  }
+
+  weekPanel.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var nav = e.target.closest('[data-cal]');
+    if (nav) {
+      calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + Number(nav.getAttribute('data-cal')), 1);
+      renderWeekCal();
+      return;
+    }
+    var day = e.target.closest('[data-pickday]');
+    if (day) {
+      goToWeek(mondayOf(new Date(day.getAttribute('data-pickday').replace(/-/g, '/'))));
+      weekPanel.classList.remove('cal-mode');
+      Shell.closeAllDropdowns();
+      return;
+    }
+    var item = e.target.closest('[data-week]');
+    if (!item) return;
+    var v = item.getAttribute('data-week');
+    if (v === 'pick') {
+      calMonth = new Date(state.weekStart.getFullYear(), state.weekStart.getMonth(), 1);
+      weekPanel.classList.add('cal-mode');
+      renderWeekCal();
+      return;
+    }
+    goToWeek(new Date(v.replace(/-/g, '/')));
+    Shell.closeAllDropdowns();
+  });
+
+  document.querySelector('#week-dd .dd-trigger').addEventListener('click', function () {
+    weekPanel.classList.remove('cal-mode');
+    renderWeekMenu();
+  });
+
+  function goToWeek(start) {
+    state.weekStart = startOfDay(start);
+    var ds = days().map(iso);
+    if (ds.indexOf(state.selDay) === -1) state.selDay = ds[0];
+    render();
+  }
+
+  /* ─── Viewport switcher (prototype aid, not product UI) ─────────── */
+  var vp = document.getElementById('vp-switch');
+  var narrowQuery = window.matchMedia('(max-width: 860px)');
+  var vpMode = 'auto';
+
+  function applyViewport() {
+    var narrow = vpMode === 'mobile' ? true : vpMode === 'desktop' ? false : narrowQuery.matches;
+    document.body.classList.toggle('is-narrow', narrow);
+    document.body.classList.toggle('force-mobile', vpMode === 'mobile');
+    if (Shell.setViewport) Shell.setViewport(vpMode === 'mobile' ? 'mobile' : vpMode === 'desktop' ? 'desktop' : 'auto');
+    vp.querySelectorAll('[data-vp]').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-vp') === (vpMode === 'auto' ? (narrow ? 'mobile' : 'desktop') : vpMode));
+    });
+    renderWeek();
+  }
+  vp.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-vp]');
+    if (!b) return;
+    vpMode = b.getAttribute('data-vp');
+    applyViewport();
+  });
+  narrowQuery.addEventListener('change', function () { if (vpMode === 'auto') applyViewport(); });
 
   var scrollBox = document.querySelector('.grid-card .table-scroll');
   function syncScrollEdge() {
@@ -620,10 +828,7 @@
   document.querySelectorAll('[data-step]').forEach(function (b) {
     b.addEventListener('click', function () {
       if (state.editing) return;
-      state.weekStart = addDays(state.weekStart, 7 * Number(b.getAttribute('data-step')));
-      var ds = days().map(iso);
-      if (ds.indexOf(state.selDay) === -1) state.selDay = ds[0];
-      render();
+      goToWeek(addDays(state.weekStart, 7 * Number(b.getAttribute('data-step'))));
     });
   });
 
@@ -759,16 +964,53 @@
     return new Date(+parts[0], +parts[1] - 1, +parts[2]);
   }
 
+  /* A timesheet is one day, so adding work starts with the date. Opened
+     from a day card the date is already known and the field is hidden. */
+  function supervisorOn(dayIso) {
+    var found = null;
+    entries.forEach(function (e) {
+      if (e.date === dayIso && !found) found = taskBy(e.code).sup;
+    });
+    return found;
+  }
+
+  function syncDateHint() {
+    var day = document.getElementById('add-date').value;
+    var sup = supervisorOn(day);
+    document.getElementById('date-hint').textContent = sup
+      ? 'This day already has a timesheet with ' + sup + '.'
+      : 'No timesheet for this day yet — one will be created.';
+    if (sup) {
+      var sel = document.getElementById('add-sup');
+      if (Array.prototype.some.call(sel.options, function (o) { return o.value === sup || o.text === sup; })) {
+        sel.value = sup;
+        fillJobCodes();
+      }
+    }
+  }
+  document.getElementById('add-date').addEventListener('change', syncDateHint);
+
   function openAdd(dayIso) {
     addPick = null;
     addForDay = dayIso || null;
     anotherBox.classList.remove('open');
     document.getElementById('add-another').style.display = '';
 
+    var dateFld = document.getElementById('date-fld');
+    dateFld.style.display = addForDay ? 'none' : '';
+    if (!addForDay) {
+      var ds = days();
+      var preferred = ds.filter(function (d) { return iso(d) === iso(TODAY); })[0] || ds[0];
+      document.getElementById('add-date').innerHTML = ds.map(function (d) {
+        return '<option value="' + iso(d) + '">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</option>';
+      }).join('');
+      document.getElementById('add-date').value = iso(preferred);
+    }
+
     document.getElementById('add-sub').innerHTML = addForDay
       ? 'Choose one of your recent tasks for <b>' + FULL_DOW[new Date(addForDay.replace(/-/g, '/')).getDay()] +
         ' ' + fmtDay(new Date(addForDay.replace(/-/g, '/'))) + '</b>, or another.'
-      : 'Choose one of your recent tasks to add to <b>this week</b>, or another.';
+      : 'Then choose one of your recent tasks, or another.';
 
     var used = [];
     weekTree().forEach(function (s) { sitesTasks(s).forEach(function (t) { used.push(t.code); }); });
@@ -793,6 +1035,7 @@
     document.getElementById('add-sup').innerHTML = sups.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
     document.getElementById('add-site').innerHTML = sites.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
     fillJobCodes();
+    if (!addForDay) syncDateHint();
     addModal.classList.add('open');
   }
 
@@ -824,6 +1067,7 @@
   });
 
   document.getElementById('btn-add-task').addEventListener('click', function () { openAdd(null); });
+  document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null); });
 
   addModal.addEventListener('click', function (e) {
     if (e.target === addModal || e.target.closest('[data-close]')) { addModal.classList.remove('open'); return; }
@@ -837,7 +1081,13 @@
   document.getElementById('add-confirm').addEventListener('click', function () {
     if (!addPick) { Shell.snackbar('Choose a task first.'); return; }
     if (extraRows.indexOf(addPick) === -1) extraRows.push(addPick);
-    if (addForDay) state.selDay = addForDay;
+    var day = addForDay || document.getElementById('add-date').value;
+    if (day) {
+      state.selDay = day;
+      addForDay = day;
+      /* The week has to be showing the day we just picked. */
+      if (days().map(iso).indexOf(day) === -1) goToWeek(mondayOf(new Date(day.replace(/-/g, '/'))));
+    }
     addModal.classList.remove('open');
     if (!state.editing) enterEdit(); else render();
     var sel = addForDay
@@ -855,6 +1105,7 @@
 
   render();
   syncCollapseBtn();
+  applyViewport();
 })();
 </script>
 </body>
