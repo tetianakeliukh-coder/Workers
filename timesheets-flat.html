@@ -135,12 +135,10 @@
   }
   .sx-right .col-hrs { overflow: visible; }
 
-  /* Only the top level is tinted. Three shades of grey stacked read as a
-     gradient rather than as a hierarchy, and the deeper headings are
-     already told apart by which column their value sits in, by its
-     weight, and by the counts around it being grey. */
-  tr.g-row.d1 > td { background: var(--grey-100); }
-  tr.g-row.d1:hover > td { background: var(--grey-200); }
+  /* No tint on a heading row — the Supervisor screen has none either.
+     A heading is told apart by having a value in a column the rows under
+     it leave blank, by that value's weight, and by the counts beside it
+     being grey. */
   tr.g-row.d1 .g-name { font-weight: 600; }
   tr.g-row.d2 .g-name, tr.g-row.d3 .g-name { font-weight: 500; }
   .g-btn {
