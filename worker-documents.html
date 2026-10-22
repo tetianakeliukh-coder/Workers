@@ -46,8 +46,12 @@
   }
 
   /* ─── Table ────────────────────────────────────────────────────── */
-  .doc-table { min-width: 1420px; }
+  /* Fixed layout so the colgroup widths are the widths, which is what a
+     dragged column edge has to land on. */
+  .doc-table { min-width: 1420px; table-layout: fixed; }
   .doc-table th, .doc-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The drag grip is pinned to the header's own right edge. */
+  .doc-table th { position: relative; }
   .doc-table td { color: var(--text-main); }
   .doc-table td.muted { color: var(--grey-700); }
   .doc-table th.col-act, .doc-table td.col-act { text-align: right; }
@@ -524,7 +528,9 @@
   function tableHtml(rows, q) {
     return '<div class="table-card"><div class="table-scroll"><table class="doc-table">' +
       '<colgroup>' + COLS.map(function (c) { return '<col class="col-' + c.k + '" style="width:' + c.w + 'px" />'; }).join('') + '</colgroup>' +
-      '<thead><tr>' + COLS.map(function (c) { return '<th class="col-' + c.k + '">' + c.label + '</th>'; }).join('') + '</tr></thead>' +
+      '<thead><tr>' + COLS.map(function (c) {
+        return '<th class="col-' + c.k + '" data-w="' + c.k + '">' + c.label + Shell.colGrip() + '</th>';
+      }).join('') + '</tr></thead>' +
       '<tbody>' + rows.map(function (r) { return rowHtml(r, q); }).join('') + '</tbody>' +
     '</table></div></div>';
   }
@@ -551,6 +557,25 @@
     panel.innerHTML =
       sectionHtml('Outstanding Pending Docs', a, state.query, 'outstanding') +
       sectionHtml('Non &ndash; outstanding Pending Docs', b, state.query, 'non-outstanding');
+    armResize();
+  }
+
+  /* Both sections are rebuilt on every render, so the grips are re-armed
+     with them and a width set on one section applies to the other. */
+  var MIN_W = {
+    doc: 160, sub: 150, expiry: 120, level: 150, who: 130, type: 110,
+    reason: 160, act: 150
+  };
+  function armResize() {
+    [].forEach.call(panel.querySelectorAll('table.doc-table'), function (t) {
+      Shell.initColResize(t, {
+        min: function (k) { return MIN_W[k] || 110; },
+        onResize: function (k, w) {
+          COLS.forEach(function (c) { if (c.k === k) c.w = w; });
+        },
+        onDone: render
+      });
+    });
   }
 
   /* ─── Search ──────────────────────────────────────────────────────── */

@@ -389,7 +389,11 @@
 
   function initColResize(table, opts) {
     opts = opts || {};
-    var min = opts.min || 90;
+    /* A single minimum for the table, or one per column when some of them
+       genuinely need more room than others. */
+    function minFor(k) {
+      return typeof opts.min === 'function' ? (opts.min(k) || 60) : (opts.min || 90);
+    }
 
     table.addEventListener('mousedown', function (e) {
       var grip = e.target.closest ? e.target.closest('.col-rs') : null;
@@ -402,6 +406,7 @@
       e.preventDefault();
       var startX = e.pageX, startW = th.getBoundingClientRect().width;
       var key = th.getAttribute('data-w');
+      var min = minFor(key);
       document.body.classList.add('col-resizing');
 
       function move(ev) {
@@ -413,6 +418,9 @@
         document.removeEventListener('mousemove', move);
         document.removeEventListener('mouseup', up);
         document.body.classList.remove('col-resizing');
+        /* Re-rendering on every mousemove is wasteful; tables that compute
+           frozen offsets from live widths catch up once the drag ends. */
+        if (opts.onDone) opts.onDone(key);
       }
       document.addEventListener('mousemove', move);
       document.addEventListener('mouseup', up);

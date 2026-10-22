@@ -1116,6 +1116,14 @@
      the space back. */
   var colW = { site: 200, sup: 150, task: 260, label: 360 };
   function wPx(k) { return colW[k] + 'px'; }
+  /* Each column gets its own floor — a Site dragged down to a Hours-sized
+     stub reads as a bug, not as a narrow column. */
+  var MIN_W = { site: 140, sup: 130, task: 160, label: 170 };
+  Shell.initColResize(el('grid'), {
+    min: function (k) { return MIN_W[k] || 110; },
+    onResize: function (k, w) { if (k && colW[k] != null) { colW[k] = w; syncStickyX(); } },
+    onDone: renderGrid
+  });
   /* The frozen columns start where the ones before them end. */
   function syncStickyX() {
     var g = document.getElementById('grid');
@@ -1845,6 +1853,12 @@
     if (!state.editing) enterEdit();
     if (extraRows.indexOf(k) === -1) extraRows.push(k);
     justAdded = k;
+    /* Dropping a row inside a folded group hides the thing you just did,
+       so whichever group it lands in is opened — site and supervisor in
+       the nested layout, the pair in the flat one. */
+    delete collapsed['s:' + site];
+    delete collapsed['s:' + site + '|' + sup];
+    delete collapsed[flatKey(site, sup)];
     addModal.classList.remove('open');
     render();
 

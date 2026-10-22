@@ -38,9 +38,10 @@
   }
   .gb-trigger:hover { border-color: var(--border-hover); }
   .gb-wrap.open .gb-trigger { border-color: var(--primary); }
-  /* The count and the clear keep their room whether or not there is
-     anything in them, so the control never shifts under the cursor. */
-  #gb-trigger { border-radius: 8px 0 0 8px; border-right: none; padding-right: 10px; }
+  /* The count keeps its room whether or not it holds anything, and the
+     trigger reserves the clear's, so the control never shifts under the
+     cursor. */
+  #gb-trigger { padding-right: 32px; }
   .is-off { visibility: hidden; pointer-events: none; }
   .gb-count {
     display: inline-flex; align-items: center; justify-content: center;
@@ -48,14 +49,16 @@
     background: var(--primary); color: var(--white);
     font-size: 11px; font-weight: 600; line-height: 18px;
   }
+  /* The clear sits over the trigger's right end rather than being a
+     second box beside it: the control keeps one unbroken outline whether
+     or not there is anything to clear, and one width either way. */
   .gb-clear {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
     display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 32px; padding: 0; cursor: pointer; color: var(--grey-600);
-    border: 1px solid var(--grey-350); border-radius: 0 8px 8px 0; border-left: 1px solid var(--grey-300);
-    background: var(--white);
+    width: 20px; height: 20px; padding: 0; cursor: pointer; border-radius: 5px;
+    border: none; background: none; color: var(--grey-600);
   }
-  .gb-clear:hover { color: var(--text-main); background: var(--grey-100); }
-  .gb-wrap.open .gb-clear { border-color: var(--primary); border-left-color: var(--grey-300); }
+  .gb-clear:hover { color: var(--text-main); background: var(--grey-200); }
 
   .gb-panel {
     display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 300;
@@ -108,6 +111,7 @@
   #grid td { padding: 0 24px 0 16px; font-size: 14px; color: var(--text-main); }
   /* The grouped columns are the ones the headings live in, so they stay
      put while the rest scrolls. */
+  #grid th { position: relative; }
   th.col-lead, td.col-lead { position: sticky; z-index: 2; background: inherit; }
   #grid thead th.col-lead { z-index: 4; }
   /* A hairline where the frozen band ends, so the scroll is legible. */
@@ -654,6 +658,9 @@
     { k: 'hours',   label: 'Hours',      w: 90,  group: false, num: true, get: function (e) { return e.hours === '' ? '' : fmtHours(e.hours); } }
   ];
   function field(k) { return FIELDS.filter(function (f) { return f.k === k; })[0]; }
+  /* A column cannot be dragged below what its own content needs. */
+  var MIN_W = { date: 120, site: 140, sup: 130, worker: 120, project: 130,
+                status: 110, task: 160, times: 120, allow: 140, hours: 80 };
 
   function allowText(e) {
     return (e.allowances || []).map(function (x) {
@@ -901,15 +908,17 @@
 
     el('grid-head').innerHTML = '<tr>' +
       cols.map(function (c, i) {
-        return '<th class="col-lead' + (i === cols.length - 1 ? ' last' : '') + '" style="left:' + offs[i] + 'px">' +
-          Shell.esc(c.label) + '</th>';
+        return '<th class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
+          '" data-w="' + c.k + '" style="left:' + offs[i] + 'px">' +
+          Shell.esc(c.label) + Shell.colGrip() + '</th>';
       }).join('') +
       ds.map(function (d) {
         var t = iso(d) === iso(TODAY);
         return '<th class="col-day' + (t ? ' tdy' : '') + '"><span class="dh"><span class="dw">' +
           DOW[d.getDay()] + '</span><span>' + d.getDate() + ' ' + MONTHS[d.getMonth()] + '</span></span></th>';
       }).join('') +
-      '<th class="num col-hrs">Total</th>' + (state.editing ? '<th class="col-act"></th>' : '') + '</tr>';
+      '<th class="num col-hrs" data-w="hours">Total' + Shell.colGrip() + '</th>' +
+      (state.editing ? '<th class="col-act"></th>' : '') + '</tr>';
 
     el('grid').style.minWidth = (off + ds.length * 92 + 92 + (state.editing ? 44 : 0)) + 'px';
 
@@ -1052,9 +1061,9 @@
     el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
       var isLead = i < lead.length;
       return '<th class="' + (isLead ? 'col-lead' + (i === lead.length - 1 ? ' last' : '') : '') +
-        (c.num ? ' num' : '') + (c.k === 'hours' ? ' col-hrs' : '') + '"' +
+        (c.num ? ' num' : '') + (c.k === 'hours' ? ' col-hrs' : '') + '" data-w="' + c.k + '"' +
         (isLead ? ' style="left:' + offsets[i] + 'px"' : '') + '>' +
-        Shell.esc(c.label) + '</th>';
+        Shell.esc(c.label) + Shell.colGrip() + '</th>';
     }).join('') + (state.editing ? '<th class="col-act"></th>' : '') + '</tr>';
 
     var out = [], shown = 0, openKeys = [];
@@ -1262,6 +1271,12 @@
 
   /* ─── Tabs, search, dates ─────────────────────────────────────────── */
   el('search').addEventListener('input', function () { state.q = this.value.trim(); render(); });
+
+  Shell.initColResize(el('grid'), {
+    min: function (k) { return MIN_W[k] || 100; },
+    onResize: function (k, w) { if (k && field(k)) field(k).w = w; },
+    onDone: render
+  });
 
   var scrollBox = document.querySelector('.table-scroll');
   function syncScrollEdges() {
@@ -1610,9 +1625,15 @@
     pending.push(row);
     justAdded = row.id;
     addedOn = date;
+    /* Dropping a row inside a folded group hides the thing you just did,
+       so the group it lands in is opened. */
+    var g = groups();
+    if (g.length) delete collapsed['\u00a7' + (field(g[0]).get(row) || '—')];
     addModal.classList.remove('open');
     render();
-    showAdded();
+    /* After this click has finished travelling: the close-on-outside-click
+       handler is still on its way up and would shut the editor again. */
+    setTimeout(showAdded, 0);
   });
 
   /* Dropping a row into a long grouped table is no use if you cannot find

@@ -632,7 +632,15 @@
   /* Column widths the user has dragged, keyed by tab so the same column can
      be sized differently where it carries different content. */
   var colWidths = Object.create(null);
+  /* A floor per column, not one number for the table: 64px leaves Date and
+     Supervisor unreadable while it is still generous for Hours. */
   var MIN_COL_W = 64;
+  var MIN_W = {
+    chk: 44, group: 150, issued: 110, site: 140, super: 130, status: 110,
+    worker: 120, position: 120, worktype: 110, project: 130, task: 160,
+    allow: 140, times: 120, updated: 140, hrs: 80
+  };
+  function minFor(k) { return MIN_W[k] || MIN_COL_W; }
   var currentCols = [], currentAllCols = [];
   /* Child rows are built on demand: a timesheet can carry hundreds of entries,
      and rendering every one of them for a collapsed row costs the same as
@@ -1205,7 +1213,7 @@
 
   document.addEventListener('mousemove', function (e) {
     if (!drag) return;
-    var w = Math.max(MIN_COL_W, Math.round(drag.startW + (e.clientX - drag.startX)));
+    var w = Math.max(minFor(drag.key), Math.round(drag.startW + (e.clientX - drag.startX)));
     colWidths[state.group + ':' + drag.key] = w;
     drag.col.style.width = w + 'px';
     currentCols.forEach(function (c) { if (c.k === drag.key) c.w = w; });
@@ -1345,7 +1353,9 @@
       : pdColW.label;
   }
   Shell.initColResize(mainTable, {
-    min: 110,
+    min: function (k) {
+      return { site: 140, sup: 130, worker: 120, task: 160, label: 170 }[k] || 110;
+    },
     onResize: function (key, w) {
       if (!key) return;
       pdColW[key] = w;
