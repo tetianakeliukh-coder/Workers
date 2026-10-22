@@ -229,9 +229,6 @@
     border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
   }
   .cell-pop.open { display: block; }
-  /* Clear sits away from Done: one undoes, the other commits, and they
-     should not be neighbours. */
-  .cp-top { display: flex; justify-content: flex-end; margin-bottom: 6px; }
   .cp-note { margin: 10px 0 0; font-size: 12px; line-height: 16px; color: var(--grey-600); }
   .cp-row {
     display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;
@@ -248,7 +245,9 @@
     margin: 10px 0 8px; padding-top: 10px; border-top: 1px solid var(--grey-200);
     font-size: 12px; color: var(--grey-600);
   }
-  .cp-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+  /* Clear on the left, Done on the right: the one that undoes and the one
+     that commits sit at opposite ends of the same line. */
+  .cp-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
   .cell-input {
     width: 100%; height: 30px; padding: 0 8px;
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
@@ -425,9 +424,6 @@
 
 <!-- ── One cell's hours, and the times they came from ─────────────── -->
 <div class="cell-pop" id="cell-pop" role="dialog" aria-label="Hours for this day">
-  <div class="cp-top">
-    <button class="btn-text" type="button" id="cp-clear">Clear</button>
-  </div>
   <label class="cp-row"><span>Hours</span>
     <input id="cp-h" type="text" inputmode="decimal" autocomplete="off" /></label>
   <div class="cp-sep">or the times they were worked</div>
@@ -437,6 +433,7 @@
     <input id="cp-f" type="text" inputmode="numeric" placeholder="14:00" autocomplete="off" /></label>
   <p class="cp-note" id="cp-note"></p>
   <div class="cp-foot">
+    <button class="btn-text" type="button" id="cp-clear">Clear</button>
     <button class="btn-primary" type="button" id="cp-done">Done</button>
   </div>
 </div>
