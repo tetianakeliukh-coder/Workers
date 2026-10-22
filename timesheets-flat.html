@@ -227,31 +227,59 @@
   }
   .row-drop:hover { color: var(--error); background: var(--grey-100); }
 
-  /* ─── Add a task ──────────────────────────────────────────────────── */
-  .add-panel {
-    display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 320;
-    width: 340px; padding: 6px; border-radius: 10px;
-    background: var(--white); border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
+  /* ─── Add a task ──────────────────────────────────────────────────
+     The same dialog language as My Timesheets: fields, an accordion with
+     one section open at a time, and recent work as selectable cards. */
+  .modal.add-modal { max-width: 440px; width: 100%; }
+  .add-modal .modal-body {
+    padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px;
+    flex: 0 1 auto; max-height: 62vh; overflow: auto;
   }
-  .add-wrap { position: relative; }
-  .add-wrap.open .add-panel { display: block; }
-  .add-search { padding: 6px 6px 8px; }
-  .add-search input {
-    width: 100%; height: 34px; padding: 0 10px; border-radius: 8px;
-    border: 1px solid var(--grey-350); background: var(--white);
+  .fld { display: flex; flex-direction: column; gap: 6px; }
+  .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
+  .fld select {
+    width: 100%; height: 36px; padding: 0 34px 0 10px;
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23757575' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
   }
-  .add-search input:focus { outline: none; border-color: var(--primary); }
-  .add-list { max-height: 280px; overflow: auto; }
-  .add-row {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-    width: 100%; padding: 8px 10px; border: none; background: none; border-radius: 7px;
-    cursor: pointer; font-family: var(--fs-sans); text-align: left;
+  .fld select:focus { outline: none; border-color: var(--primary); }
+
+  /* .acc-body and the field groups set display, which beats the browser's
+     own [hidden] rule — so say it louder. */
+  [hidden] { display: none !important; }
+  .acc { display: flex; flex-direction: column; }
+  .acc-sec + .acc-sec { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--grey-300); }
+  .acc-head {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 0;
+    border: none; background: none; cursor: pointer; font-family: var(--fs-sans); text-align: left;
   }
-  .add-row:hover { background: var(--grey-100); }
-  .add-row .t { font-size: 14px; font-weight: 500; color: var(--text-main); }
-  .add-row .s { font-size: 12px; line-height: 17px; color: var(--grey-600); }
-  .add-empty { padding: 14px 10px; font-size: 13px; color: var(--grey-600); }
+  .acc-chev { flex-shrink: 0; color: var(--grey-600); transition: transform var(--t-fast); }
+  .acc-head[aria-expanded="false"] .acc-chev { transform: rotate(-90deg); }
+  .acc-body { margin-top: 12px; }
+  #new-task { display: flex; flex-direction: column; gap: 14px; }
+  #nt-levels { display: flex; flex-direction: column; gap: 14px; }
+  .step-title { font-family: var(--fs-sans); font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
+
+  .recent-list { display: flex; flex-direction: column; gap: 6px; }
+  .recent-row {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    width: 100%; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-align: left;
+    background: var(--white); border: 1px solid var(--grey-200); font-family: var(--fs-sans);
+    transition: border-color var(--t-fast), background var(--t-fast);
+  }
+  .recent-row:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
+  .recent-row.sel { border-color: var(--primary); background: var(--bg-blue-light); }
+  .rr-code { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .rr-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); }
+  .recent-empty { font-size: 13px; color: var(--grey-600); }
+
+  /* The row that was just added: findable at a glance, and it fades out
+     once it is no longer the newest thing on screen. */
+  tr.just-added > td { background: var(--bg-blue-light); }
+  tr.just-added > td.col-lead { background: var(--bg-blue-light); }
 
   body.is-narrow .table-card { overflow-x: auto; }
 </style>
@@ -284,18 +312,10 @@
               Period
             </button>
           </div>
-          <div class="add-wrap" id="add-wrap">
-            <button class="btn-primary" type="button" id="btn-add">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              Add a task
-            </button>
-            <div class="add-panel" id="add-panel">
-              <div class="add-search">
-                <input id="add-q" type="text" placeholder="Search tasks" autocomplete="off" />
-              </div>
-              <div class="add-list" id="add-list"></div>
-            </div>
-          </div>
+          <button class="btn-primary" type="button" id="btn-add">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Add a task
+          </button>
         </div>
       </div>
 
@@ -363,6 +383,56 @@
 
     </div>
   </main>
+</div>
+
+<!-- ── Add a task ───────────────────────────────────────────────────
+     One screen, mostly a list. Recent tasks are the way in, because most
+     of what a person adds is work they have done before; setting up one
+     they have never booked is folded away behind the second section. -->
+<div class="modal-backdrop" id="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-title">
+  <div class="modal modal-sm add-modal">
+    <div class="modal-header">
+      <div class="modal-heading"><span class="modal-title" id="add-title">Add a task</span></div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="fld" id="who-fld" hidden>
+        <label class="fld-label" for="add-worker">Worker</label>
+        <select id="add-worker"></select>
+      </div>
+
+      <div class="acc">
+        <div class="acc-sec">
+          <button class="acc-head" type="button" data-acc="recent" aria-expanded="true" aria-controls="recent-list">
+            <svg class="acc-chev" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="step-title" id="recent-label">Recent tasks</span>
+          </button>
+          <div class="acc-body recent-list" id="recent-list"></div>
+        </div>
+        <div class="acc-sec">
+          <button class="acc-head" type="button" data-acc="new" aria-expanded="false" aria-controls="new-task">
+            <svg class="acc-chev" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="step-title">Or set up another task</span>
+          </button>
+          <div class="acc-body" id="new-task" hidden>
+            <div class="fld">
+              <label class="fld-label" for="nt-site">Site</label>
+              <select id="nt-site"></select>
+            </div>
+            <div id="nt-levels"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-actions">
+        <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-primary" type="button" id="add-go" disabled>Add</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="assets/shell.js"></script>
@@ -523,6 +593,7 @@
   var collapsed = Object.create(null);
   var draft = null;        // 'entryId|date' -> hours, while editing
   var pending = [];        // rows added but not yet saved
+  var justAdded = null;    // the row added last, so it can be found
 
   /* Period turns the date into the columns, so it cannot also be a
      grouping — the days are already across the top. */
@@ -755,15 +826,21 @@
     function taskRow(group) {
       shown++;
       var e = group[0];
+      /* A task added here often already has a row — the booking is just
+         another day on it — so the mark belongs to the group, not to the
+         first entry in it. Without this, adding a task you have done
+         before leaves nothing on screen to show for it. */
+      var fresh = group.filter(function (x) { return x.isNew; })[0];
+      var isJust = group.some(function (x) { return x.id === justAdded; });
       var total = ds.reduce(function (n, d) {
         var h = 0;
         group.forEach(function (x) { if (x.date === iso(d)) h += Number(hoursOf(x, iso(d))) || 0; });
         return n + h;
       }, 0);
-      return '<tr' + (e.isNew ? ' class="new-row"' : '') + '>' +
+      return '<tr class="' + (fresh ? 'new-row' : '') + (isJust ? ' just-added' : '') + '">' +
         cols.map(function (c, i) {
           var html = i === cols.length - 1
-            ? Shell.highlight(e.task, state.q) + (e.isNew ? dropBtn(e) : '')
+            ? Shell.highlight(e.task, state.q) + (fresh ? dropBtn(fresh) : '')
             : '';
           return '<td class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
             '" style="left:' + offs[i] + 'px">' + html + '</td>';
@@ -862,7 +939,8 @@
 
     function entryRow(e) {
       shown++;
-      return '<tr' + (e.isNew ? ' class="new-row"' : '') + '>' +
+      return '<tr class="' + (e.isNew ? 'new-row' : '') +
+          (e.id === justAdded ? ' just-added' : '') + '">' +
         lead.map(function (c, i) {
           /* A row still being added shows its grouped fields as pickers
              rather than blanks: those are what decide where it lands, so
@@ -1051,7 +1129,6 @@
     render();
   });
   document.addEventListener('click', function () {
-    addWrap.classList.remove('open');
     [gbWrap, colsWrap].forEach(function (x) {
       x.classList.remove('open');
       x.querySelector('.gb-trigger').setAttribute('aria-expanded', 'false');
@@ -1112,7 +1189,7 @@
     render();
   }
   function exitEdit() {
-    state.editing = false; draft = null; pending = [];
+    state.editing = false; draft = null; pending = []; justAdded = null;
     render();
   }
   el('btn-edit').addEventListener('click', enterEdit);
@@ -1135,7 +1212,7 @@
          the whole point of the date being a column. */
       ENTRIES.push(Object.assign({}, e, { id: 'e' + (ENTRIES.length + 1000), date: date, hours: draft[k], allowances: [] }));
     });
-    state.editing = false; draft = null; pending = [];
+    state.editing = false; draft = null; pending = []; justAdded = null;
     render();
     Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved.');
   });
@@ -1181,61 +1258,145 @@
     ENTRIES.forEach(function (e) { if (!found && e.date === date && e.site === site) found = e.sup; });
     return found;
   }
-  function knownTasks() {
+  /* Recent is scoped to the person the row is for: a supervisor adding
+     on someone's behalf is shown that worker's own history, not their
+     own. Newest first, one entry per distinct task. */
+  function recentFor(worker) {
     var seen = Object.create(null), out = [];
-    ENTRIES.slice().reverse().forEach(function (e) {
-      var k = e.site + '\u00a7' + e.task;
-      if (seen[k] || !e.task) return;
-      seen[k] = true;
-      out.push({ site: e.site, task: e.task, project: e.project, when: e.date });
+    ENTRIES.filter(function (e) { return e.worker === worker && e.task; })
+      .sort(function (a, b) { return a.date < b.date ? 1 : -1; })
+      .forEach(function (e) {
+        var k = e.site + '\u00a7' + e.task;
+        if (seen[k]) return;
+        seen[k] = true;
+        out.push({ site: e.site, task: e.task, project: e.project, when: e.date });
+      });
+    return out.slice(0, 6);
+  }
+
+  var addModal = el('add-modal');
+  var addPick = null;          // the recent card chosen, if any
+
+  function addWorker() {
+    return state.tab === 'mine' ? ME : (el('add-worker').value || ME);
+  }
+  function setAcc(which) {
+    addModal.querySelectorAll('.acc-head').forEach(function (h) {
+      var on = h.getAttribute('data-acc') === which;
+      h.setAttribute('aria-expanded', on ? 'true' : 'false');
+      el(h.getAttribute('aria-controls')).hidden = !on;
     });
-    return out;
   }
-  function renderAddList() {
-    var q = el('add-q').value.trim().toLowerCase();
-    var list = knownTasks().filter(function (t) {
-      return !q || (t.task + ' ' + t.site + ' ' + t.project).toLowerCase().indexOf(q) !== -1;
-    }).slice(0, 12);
-    el('add-list').innerHTML = list.length ? list.map(function (t, i) {
-      return '<button class="add-row" type="button" data-add="' + i + '">' +
-        '<span class="t">' + Shell.highlight(t.task, q) + '</span>' +
-        '<span class="s">' + Shell.esc(t.site) + ' \u00b7 ' + Shell.esc(t.project) +
-          ' \u00b7 last booked ' + fmtDay(fromIso(t.when)) + '</span></button>';
-    }).join('') : '<div class="add-empty">Nothing matches. A task you have never booked is set up on the site first.</div>';
-    el('add-list').dataset.n = list.length;
-    addCache = list;
+  function renderLevels() {
+    var site = el('nt-site').value, fields = SITE_FIELDS[site] || [];
+    el('nt-levels').innerHTML = fields.map(function (f, i) {
+      return '<div class="fld"><label class="fld-label" for="nt-' + i + '">' + Shell.esc(f.name) +
+        (i === 0 ? '<span style="color:var(--error)">*</span>' : ' <span style="color:var(--grey-600);font-weight:400">(optional)</span>') +
+        '</label><select id="nt-' + i + '" data-lvl="' + i + '"><option value="">Select…</option>' +
+        f.values.map(function (v) { return '<option>' + Shell.esc(v) + '</option>'; }).join('') +
+        '</select></div>';
+    }).join('');
   }
-  var addCache = [], addWrap = el('add-wrap');
+  function newTaskPath() {
+    return [].slice.call(el('nt-levels').querySelectorAll('select'))
+      .map(function (x) { return x.value; }).filter(Boolean).join(' | ');
+  }
+  function syncAddGo() {
+    var openNew = el('new-task').hidden === false;
+    el('add-go').disabled = openNew ? !el('nt-0') || !el('nt-0').value : !addPick;
+  }
 
-  el('btn-add').addEventListener('click', function (e) {
-    e.stopPropagation();
-    var open = !addWrap.classList.contains('open');
-    addWrap.classList.toggle('open', open);
-    if (open) { el('add-q').value = ''; renderAddList(); el('add-q').focus(); }
+  function renderRecent() {
+    var list = recentFor(addWorker());
+    el('recent-label').textContent = 'Recent tasks' + (list.length ? ' (' + list.length + ')' : '');
+    el('recent-list').innerHTML = list.length ? list.map(function (t, i) {
+      return '<button class="recent-row" type="button" data-recent="' + i + '">' +
+        '<span class="rr-code">' + Shell.esc(t.task) + '</span>' +
+        '<span class="rr-sub">' + Shell.esc(t.site) + ' · ' + Shell.esc(t.project) +
+        ' · last booked ' + fmtDay(fromIso(t.when)) + '</span></button>';
+    }).join('') : '<div class="recent-empty">Nothing booked yet. Set one up below.</div>';
+    recentCache = list;
+    addPick = null;
+    syncAddGo();
+  }
+  var recentCache = [];
+
+  el('btn-add').addEventListener('click', function () {
+    el('who-fld').hidden = state.tab === 'mine';
+    if (state.tab !== 'mine') {
+      el('add-worker').innerHTML = WORKERS.map(function (w) {
+        return '<option' + (w === ME ? ' selected' : '') + '>' + Shell.esc(w) + '</option>';
+      }).join('');
+    }
+    el('nt-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    renderLevels();
+    renderRecent();
+    setAcc('recent');
+    addModal.classList.add('open');
   });
-  el('add-panel').addEventListener('click', function (e) { e.stopPropagation(); });
-  el('add-q').addEventListener('input', renderAddList);
 
-  el('add-list').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-add]');
+  el('add-worker').addEventListener('change', renderRecent);
+  el('nt-site').addEventListener('change', function () { renderLevels(); syncAddGo(); });
+  el('nt-levels').addEventListener('change', syncAddGo);
+
+  addModal.querySelector('.acc').addEventListener('click', function (e) {
+    var h = e.target.closest('.acc-head');
+    if (!h) return;
+    var me = h.getAttribute('data-acc');
+    setAcc(h.getAttribute('aria-expanded') === 'true' ? (me === 'recent' ? 'new' : 'recent') : me);
+    syncAddGo();
+  });
+
+  el('recent-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-recent]');
     if (!b) return;
-    var t = addCache[Number(b.getAttribute('data-add'))];
+    addPick = recentCache[Number(b.getAttribute('data-recent'))];
+    this.querySelectorAll('.recent-row').forEach(function (x) { x.classList.toggle('sel', x === b); });
+    syncAddGo();
+  });
+
+  addModal.addEventListener('click', function (e) {
+    if (e.target === addModal || e.target.closest('[data-close]')) addModal.classList.remove('open');
+  });
+
+  el('add-go').addEventListener('click', function () {
+    var openNew = el('new-task').hidden === false;
+    var site, task, project;
+    if (openNew) {
+      site = el('nt-site').value;
+      task = newTaskPath();
+      project = (PROJECTS[site] || [])[0];
+    } else {
+      if (!addPick) return;
+      site = addPick.site; task = addPick.task; project = addPick.project;
+    }
     if (!state.editing) enterEdit();
     var date = iso(TODAY);
     var row = {
-      id: 'n' + (pending.length + 1) + '-' + Date.now(),
-      date: date, site: t.site, sup: supervisorOn(date, t.site) || (SUPS[t.site] || [])[0],
-      worker: state.tab === 'mine' ? ME : ME,
-      project: t.project, task: t.task, status: 'Draft',
+      id: 'n' + Date.now(),
+      date: date, site: site, sup: supervisorOn(date, site) || (SUPS[site] || [])[0],
+      worker: addWorker(), project: project, task: task, status: 'Draft',
       allowances: [], hours: '', isNew: true
     };
     pending.push(row);
-    addWrap.classList.remove('open');
+    justAdded = row.id;
+    addModal.classList.remove('open');
     render();
-    var first = document.querySelector('tr.new-row .hr-input');
-    if (first) first.focus();
-    Shell.snackbar('Row added — type the hours, then Save.');
+    showAdded();
   });
+
+  /* Dropping a row into a long grouped table is no use if you cannot find
+     it, so it is marked and scrolled to. */
+  function showAdded() {
+    if (!justAdded) return;
+    var row = document.querySelector('tr.just-added');
+    if (!row) return;
+    row.scrollIntoView({ block: 'center' });
+    /* Land on the cell for the day it was added to, not the first of the
+       week — in Period that is the one the person is about to fill. */
+    var box = row.querySelector('.hr-input[data-cell$="|' + iso(TODAY) + '"]') || row.querySelector('.hr-input');
+    if (box) { box.focus(); box.select && box.select(); }
+  }
 
   /* ─── Entries or Period ─────────────────────────────────────────── */
   el('modeswitch').addEventListener('click', function (e) {
