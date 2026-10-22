@@ -15,18 +15,11 @@
      a column that is grouped on leaves the column list and becomes the
      heading it groups under. */
 
-  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--grey-300); margin-bottom: 16px; }
-  .tab {
-    height: 38px; padding: 0 14px; border: none; background: none; cursor: pointer;
-    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--grey-700);
-    border-bottom: 2px solid transparent; margin-bottom: -1px;
-  }
-  .tab:hover { color: var(--text-main); }
-  .tab.on { color: var(--primary); border-bottom-color: var(--primary); }
-  .tab .n { margin-left: 6px; font-weight: 400; color: var(--grey-600); }
-  .tab.on .n { color: var(--primary); }
-
   .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  /* The toolbar's own controls are secondary actions, so they read in the
+     call-to-action colour rather than as body text. */
+  .toolbar .btn-ghost, .toolbar .gb-trigger { color: var(--primary); }
+  .toolbar .gb-trigger .dd-caret, .toolbar .gb-clear { color: var(--primary); }
   .toolbar .search-wrap { width: 280px; }
   .toolbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
@@ -334,15 +327,8 @@
     <div class="content">
 
       <div class="page-header">
-        <h1 class="page-title">Timesheets</h1>
+        <h1 class="page-title" id="page-title">Timesheets</h1>
         <div class="header-actions">
-          <div class="dd-wrap" id="date-dd">
-            <button class="dd-trigger" type="button">
-              <span>Date: <span id="date-dd-value">Current week</span></span>
-              <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <div class="dd-panel" id="date-dd-panel"></div>
-          </div>
           <div class="seg" id="modeswitch">
             <button class="seg-btn active" type="button" data-mode="list">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="2" width="11" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 6h5M5.5 9h5M5.5 12h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -353,16 +339,18 @@
               Period
             </button>
           </div>
+          <div class="dd-wrap" id="date-dd">
+            <button class="dd-trigger" type="button">
+              <span>Date: <span id="date-dd-value">Current week</span></span>
+              <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="dd-panel" id="date-dd-panel"></div>
+          </div>
           <button class="btn-primary" type="button" id="btn-add">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
             Add a task
           </button>
         </div>
-      </div>
-
-      <div class="tabs" id="tabs">
-        <button class="tab on" type="button" data-tab="mine">My Timesheets<span class="n" id="n-mine"></span></button>
-        <button class="tab" type="button" data-tab="team">Supervisor Timesheets<span class="n" id="n-team"></span></button>
       </div>
 
       <div class="toolbar">
@@ -372,8 +360,8 @@
             <input class="search-input-el" id="search" type="text" placeholder="Search" autocomplete="off" />
           </label>
         </div>
-        <button class="btn-ghost" type="button" id="btn-collapse" hidden></button>
         <div class="toolbar-right">
+          <button class="btn-ghost" type="button" id="btn-collapse" hidden></button>
           <div class="gb-wrap" id="gb-wrap">
             <button class="gb-trigger" type="button" id="gb-trigger" aria-haspopup="true" aria-expanded="false">
               <span>Group by</span>
@@ -385,15 +373,6 @@
             </button>
             <div class="gb-panel" id="gb-panel"></div>
           </div>
-          <div class="edit-actions" id="edit-actions">
-            <span class="edit-note" id="edit-note"></span>
-            <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
-            <button class="btn-primary" type="button" id="btn-save">Save</button>
-          </div>
-          <button class="btn-ghost" type="button" id="btn-edit">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-            Edit
-          </button>
           <div class="gb-wrap" id="cols-wrap">
             <button class="gb-trigger" type="button" id="cols-trigger" aria-haspopup="true" aria-expanded="false">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -405,6 +384,15 @@
             </button>
             <div class="gb-panel" id="cols-panel"></div>
           </div>
+          <div class="edit-actions" id="edit-actions">
+            <span class="edit-note" id="edit-note"></span>
+            <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
+            <button class="btn-primary" type="button" id="btn-save">Save</button>
+          </div>
+          <button class="btn-ghost" type="button" id="btn-edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            Edit
+          </button>
         </div>
       </div>
 
@@ -654,14 +642,24 @@
     }).join('');
   }
 
+  /* Two screens, one file: the hash picks which, so the sidebar can carry
+     them as two entries the way the current structure does. */
+  var MINE = location.hash === '#mine';
+  document.body.setAttribute('data-module', MINE ? 'mytsflat' : 'tsflat');
+  document.title = (MINE ? 'My Timesheets' : 'Supervisor Timesheets') + ' — OPMS';
+  el('page-title').textContent = MINE ? 'My Timesheets' : 'Supervisor Timesheets';
+  window.addEventListener('hashchange', function () { location.reload(); });
+
   var MAX_GROUPS = 3;
   var state = {
-    tab: 'mine',
+    tab: MINE ? 'mine' : 'team',
     mode: 'list',
     q: '',
     range: 'week',
     editing: false,
-    groups: { mine: ['site', 'sup'], team: ['site', 'sup'] }
+    /* Nothing is grouped to begin with — the table is a flat list until
+       somebody asks for it to be otherwise. */
+    groups: { mine: [], team: [] }
   };
   var collapsed = Object.create(null);
   var draft = null;        // 'entryId|date' -> hours, while editing
@@ -1238,15 +1236,6 @@
   });
 
   /* ─── Tabs, search, dates ─────────────────────────────────────────── */
-  el('tabs').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-tab]');
-    if (!b) return;
-    state.tab = b.getAttribute('data-tab');
-    this.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === b); });
-    collapsed = Object.create(null);
-    render();
-  });
-
   el('search').addEventListener('input', function () { state.q = this.value.trim(); render(); });
 
   var scrollBox = document.querySelector('.table-scroll');

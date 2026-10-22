@@ -43,7 +43,8 @@
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
     { id: 'timesheets', label: 'Supervisor Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets.html', only: 'current' },
     { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html', only: 'current' },
-    { id: 'tsflat',     label: 'Timesheets',       icon: 'timesheets', r4: true, href: 'timesheets-flat.html', only: 'flat' },
+    { id: 'tsflat',   label: 'Supervisor Timesheets', icon: 'timesheets', r4: true, href: 'timesheets-flat.html', only: 'flat' },
+    { id: 'mytsflat', label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'timesheets-flat.html#mine', only: 'flat' },
     { id: 'reports',    label: 'Reports',          icon: 'reports',    r4: true }
   ];
 

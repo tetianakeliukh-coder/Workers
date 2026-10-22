@@ -573,6 +573,9 @@
   .btn-ghost svg, .btn-primary svg { flex-shrink: 0; }
 
   /* Summary line that opens each site + supervisor block in the flat layout. */
+  /* The row that was just added: findable at a glance. */
+  #grid tbody tr.just-added > td { background: var(--bg-blue-light); }
+
   .row-summary td { background: var(--grey-100); }
   .row-summary td.col-site, .row-summary td.col-sup { font-weight: 600; }
   .count-pill { font-size: 13px; color: var(--grey-600); }
@@ -696,81 +699,43 @@
   <div class="modal add-modal">
     <div class="modal-header">
       <div class="modal-heading">
-        <span class="modal-title" id="add-title">Add task</span>
+        <span class="modal-title" id="add-title">Add a task</span>
       </div>
       <button class="modal-close" type="button" data-close aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       </button>
     </div>
 
-    <!-- Its own band under the title: the three steps spread the full width. -->
-    <div class="stepper" id="stepper">
-      <button class="stp" type="button" data-goto="1"><span class="n">1</span>Details</button>
-      <span class="stp-sep"></span>
-      <button class="stp" type="button" data-goto="2"><span class="n">2</span>Task</button>
-      <span class="stp-sep"></span>
-      <button class="stp" type="button" data-goto="3"><span class="n">3</span>Hours</button>
-    </div>
-
     <div class="modal-body">
-      <!-- Step 1 -->
-      <div class="wiz-step" id="step-1">
-        <div class="fld">
-          <label class="fld-label" for="add-date">Date</label>
-          <select id="add-date"></select>
+      <div class="fld">
+        <label class="fld-label" for="add-date">Date</label>
+        <select id="add-date"></select>
+      </div>
+
+      <!-- Two ways to name the task, side by side in one heading rather
+           than one folded under the other, where the second was never
+           found. -->
+      <div class="sec">
+        <div class="sec-head">
+          <span class="step-title" id="sec-title">Recent tasks</span>
+          <button class="btn-text" type="button" id="sec-switch">Set up another task</button>
         </div>
-        <div class="fld">
-          <label class="fld-label" for="add-site">Site</label>
-          <select id="add-site"></select>
-        </div>
-        <div class="fld">
-          <label class="fld-label" for="add-sup">Supervisor</label>
-          <select id="add-sup"></select>
+        <div class="recent-list" id="recent-list"></div>
+        <div id="new-task" hidden>
+          <div class="fld">
+            <label class="fld-label" for="nt-site">Site</label>
+            <select id="nt-site"></select>
+          </div>
+          <div id="nt-levels"></div>
           <span class="fld-hint" id="date-hint"></span>
         </div>
-
-      </div>
-
-      <!-- Step 2 — the task -->
-      <div class="wiz-step" id="step-2" hidden>
-        <dl class="facts" id="facts-2"></dl>
-        <!-- Two ways to answer the same question, so only one is open. -->
-        <div class="acc">
-          <div class="acc-sec">
-            <button class="acc-head" type="button" data-acc="fields" aria-expanded="true" aria-controls="level-fields">
-              <svg class="acc-chev" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="step-title">Choose the task</span>
-            </button>
-            <div class="acc-body" id="level-fields"></div>
-          </div>
-          <div class="acc-sec" id="sec-recent">
-            <button class="acc-head" type="button" data-acc="recent" aria-expanded="false" aria-controls="quick-tasks">
-              <svg class="acc-chev" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="step-title" id="quick-label">Or pick a recent task</span>
-            </button>
-            <div class="acc-body recent-list" id="quick-tasks" hidden></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Step 3 — the hours -->
-      <div class="wiz-step" id="step-3" hidden>
-        <dl class="facts" id="facts-3"></dl>
-        <div class="step-head">
-          <span class="step-title">Enter the hours</span>
-          <span class="shift-total">Total <b id="shift-total">0</b> h</span>
-        </div>
-        <div class="shifts" id="shifts"></div>
-        <button class="btn-ghost add-shift" type="button" id="add-shift">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          Add another shift
-        </button>
       </div>
     </div>
 
     <div class="modal-footer">
       <div class="modal-footer-actions">
-        <button class="btn-ghost" type="button" data-close id="add-cancel">Cancel</button>
-        <button class="btn-primary" type="button" id="add-next">Next</button>
-        <button class="btn-primary" type="button" id="add-save" hidden>Save</button>
+        <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-primary" type="button" id="add-go" disabled>Add</button>
       </div>
     </div>
   </div>
@@ -944,6 +909,7 @@
   var collapsed = Object.create(null);
   var draft = null;          // 'key|date' -> hours, while editing
   var extraRows = [];        // keys added during this edit
+  var justAdded = null;      // the task added last, so it can be found
 
   /* One column per day in the active range. With no date filter the range
      spans whatever the worker has booked. */
@@ -1094,7 +1060,7 @@
         if (!open) return;
 
         sup.tasks.forEach(function (t) {
-          rows.push('<tr class="row-flat">' +
+          rows.push('<tr class="row-flat' + (t.key === justAdded ? ' just-added' : '') + '">' +
             '<td class="col-site"></td><td class="col-sup"></td>' +
             '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
@@ -1150,7 +1116,7 @@
         if (!supOpen) return;
 
         sup.tasks.forEach(function (t) {
-          rows.push('<tr class="row-task">' +
+          rows.push('<tr class="row-task' + (t.key === justAdded ? ' just-added' : '') + '">' +
             '<td class="col-label" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td></tr>');
@@ -1526,7 +1492,7 @@
     render();
   }
   function exitEdit() {
-    state.editing = false; draft = null; extraRows = [];
+    state.editing = false; draft = null; extraRows = []; justAdded = null;
     document.body.classList.remove('editing');
     render();
   }
@@ -1576,39 +1542,66 @@
     if (cardAdd) openAdd(cardAdd.getAttribute('data-card-add'));
   });
 
-  /* ─── Add task: step 1 where and what, step 2 the hours ─────────
-     Every field is on screen from the start; the recents underneath are
-     a shortcut that fills the same form, not the way in. */
+  /* ─── Add a task ──────────────────────────────────────────────────
+     One screen, mostly a list. Recent tasks are the way in, because most
+     of what anyone adds is work they have done before; setting up a task
+     never booked folds away behind the second heading. The hours are not
+     asked for here — the row lands on the week and is filled in place. */
   var addModal = document.getElementById('add-modal');
-  var shifts = [];
-  var addStep = 1;
-
   function el(id) { return document.getElementById(id); }
 
-  function renderLevelFields(preset) {
-    var site = el('add-site').value, fields = fieldsFor(site);
-    el('level-fields').innerHTML = fields.map(function (f, i) {
-      var val = preset && preset[i] ? preset[i] : '';
-      return '<div class="fld"><label class="fld-label" for="lvl-' + i + '">' + Shell.esc(f.name) +
+  var addPick = null, recentCache = [], addMode = 'recent', recentTitle = 'Recent tasks';
+
+  function renderLevels() {
+    var site = el('nt-site').value, fields = fieldsFor(site);
+    el('nt-levels').innerHTML = fields.map(function (f, i) {
+      return '<div class="fld"><label class="fld-label" for="nt-' + i + '">' + Shell.esc(f.name) +
         (i === 0 ? '<span style="color:var(--error)">*</span>' : ' <span style="color:var(--grey-600);font-weight:400">(optional)</span>') + '</label>' +
-        '<select id="lvl-' + i + '" data-lvl="' + i + '"><option value="">Select…</option>' +
-        f.values.map(function (v) { return '<option' + (v === val ? ' selected' : '') + '>' + Shell.esc(v) + '</option>'; }).join('') +
+        '<select id="nt-' + i + '" data-lvl="' + i + '"><option value="">Select…</option>' +
+        f.values.map(function (v) { return '<option>' + Shell.esc(v) + '</option>'; }).join('') +
         '</select></div>';
     }).join('');
   }
+  function newLevels() {
+    return [].slice.call(el('nt-levels').querySelectorAll('select')).map(function (x) { return x.value; });
+  }
+  function syncAddGo() {
+    el('add-go').disabled = !el('add-date').value ||
+      (addMode === 'new' ? !el('nt-0') || !el('nt-0').value : !addPick);
+  }
+  function setAddMode(m) {
+    addMode = m;
+    el('recent-list').hidden = m !== 'recent';
+    el('new-task').hidden = m !== 'new';
+    el('sec-title').textContent = m === 'recent' ? recentTitle : 'Set up another task';
+    /* Each side names where it goes, not where you came from. */
+    el('sec-switch').textContent = m === 'recent' ? 'Set up another task' : 'Select recent task';
+    syncAddGo();
+  }
 
-  function fillSupervisors(preset) {
-    var site = el('add-site').value;
-    var list = SUPS_BY_SITE[site] || [];
-    el('add-sup').innerHTML = '<option value="">Select…</option>' + list.map(function (x) {
-      return '<option' + (x === preset ? ' selected' : '') + '>' + Shell.esc(x) + '</option>';
-    }).join('');
-    if (!preset) el('add-sup').value = '';
+  function renderRecent() {
+    var recent = Object.keys(taskMeta).map(function (k) {
+      return { key: k, meta: taskMeta[k], when: lastUsed(k) };
+    }).filter(function (r) { return r.when; })
+      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 6);
+
+    recentTitle = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
+    if (addMode === 'recent') el('sec-title').textContent = recentTitle;
+
+    el('recent-list').innerHTML = recent.length ? recent.map(function (r, i) {
+      var sub = [taskRest(r.meta), r.meta.sup, r.meta.site, 'last booked ' + fmtDay(r.when)]
+                  .filter(Boolean).join(' · ');
+      return '<button class="recent-row" type="button" data-recent="' + i + '">' +
+        '<span class="rr-code">' + Shell.esc(taskTitle(r.meta)) + '</span>' +
+        '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
+    }).join('') : '<div class="recent-empty">Nothing booked yet. Set one up instead.</div>';
+    recentCache = recent;
+    addPick = null;
+    syncAddGo();
   }
 
   /* One timesheet is one day on one site, and it belongs to one
-     supervisor. Work the same day on another site and that is a second
-     timesheet, with its own supervisor. */
+     supervisor — so the supervisor is looked up, never asked for. */
   function supervisorOn(isoDate, site) {
     var found = null;
     entries.forEach(function (e) {
@@ -1617,183 +1610,79 @@
     });
     return found;
   }
+
   function syncDayHint() {
-    var site = el('add-site').value, date = el('add-date').value;
-    var sel = el('add-sup');
-    if (!site || !date) {
-      sel.disabled = !site;
-      el('date-hint').textContent = '';
-      return;
-    }
-    var locked = supervisorOn(date, site);
-    if (locked) {
-      sel.value = locked;
-      sel.disabled = true;
-      el('date-hint').textContent = 'This day already has a timesheet for ' + site + ' with ' + locked +
-        '. One site, one supervisor per day.';
-    } else {
-      sel.disabled = false;
-      el('date-hint').textContent = 'No timesheet for this site yet on this day — one will be created.';
-    }
+    var d = el('add-date').value;
+    var site = addMode === 'new' ? el('nt-site').value : (addPick ? addPick.meta.site : '');
+    if (!d || !site) { el('date-hint').textContent = ''; return; }
+    var locked = supervisorOn(d, site);
+    el('date-hint').textContent = locked
+      ? 'This day already has a timesheet for ' + site + ' with ' + locked + '.'
+      : 'No timesheet for this site yet on this day — one will be created.';
   }
-
-  /* Each step opens with what the step before it settled, in the same
-     block the edit sheet uses. */
-  function factRow(label, value, cls) {
-    return '<div class="fact' + (cls ? ' ' + cls : '') + '"><dt>' + label + '</dt><dd>' + value + '</dd></div>';
-  }
-  var DASH = '<span class="cell-empty">&mdash;</span>';
-  function renderFacts() {
-    var iso0 = el('add-date').value, when = DASH;
-    if (iso0) {
-      var d = fromIso(iso0);
-      when = DOW[d.getDay()] + ' ' + fmtDay(d) + ' ' + d.getFullYear();
-    }
-    var site = el('add-site').value, sup = el('add-sup').value;
-
-    el('facts-2').innerHTML =
-      factRow('Date', when) +
-      factRow('Site', site ? Shell.esc(site) : DASH) +
-      factRow('Supervisor', sup ? Shell.esc(sup) : DASH);
-
-    var levels = currentLevels(), meta = { site: site, sup: sup, levels: levels };
-    var name = levels[0] ? taskTitle(meta) : '—';
-    var rest = levels[0] ? taskRest(meta) : '';
-    el('facts-3').innerHTML =
-      '<div class="fact"><dt>Task</dt><dd><span class="fact-name">' + Shell.esc(name) + '</span>' +
-        (rest ? '<span class="fact-sub">' + Shell.esc(rest) + '</span>' : '') + '</dd></div>' +
-      factRow('Site', site ? Shell.esc(site) : DASH) +
-      factRow('Supervisor', sup ? Shell.esc(sup) : DASH) +
-      factRow('Date', when);
-  }
-
-  function renderQuick() {
-    var recent = Object.keys(taskMeta).map(function (k) {
-      return { key: k, meta: taskMeta[k], when: lastUsed(k) };
-    }).sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 3);
-
-    el('quick-tasks').innerHTML = recent.map(function (r) {
-      var sub = [taskRest(r.meta), r.meta.sup, r.when ? 'last used ' + fmtDay(r.when) : '']
-                  .filter(Boolean).join(' · ');
-      return '<button class="recent-row" type="button" data-quick="' + Shell.esc(r.key) + '">' +
-        '<span class="rr-code">' + Shell.esc(taskTitle(r.meta)) + '</span>' +
-        '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
-    }).join('');
-    el('quick-label').textContent = 'Or pick a recent task (' + recent.length + ')';
-    el('sec-recent').hidden = !recent.length;
-    setAcc('fields');
-  }
-
-  var dayLocked = false;        // opened from a day card: that day is fixed
-
-  function setStep(n) {
-    addStep = n;
-    [1, 2, 3].forEach(function (i) { el('step-' + i).hidden = n !== i; });
-    el('add-next').hidden = n === 3;
-    el('add-save').hidden = n !== 3;
-
-    document.querySelectorAll('#stepper .stp').forEach(function (b) {
-      var i = Number(b.getAttribute('data-goto'));
-      var reachable = i < n;
-      b.classList.toggle('now', i === n);
-      b.classList.toggle('done', reachable);
-      b.disabled = !reachable;
-    });
-    if (n === 2 || n === 3) renderFacts();
-    if (n === 3) renderShifts();
-  }
-
-  document.getElementById('stepper').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-goto]');
-    if (!b || b.disabled) return;
-    setStep(Number(b.getAttribute('data-goto')));
-  });
 
   function openAdd(dayIso) {
     var ds = days();
-    /* Nothing is pre-filled — a guessed day or site is a wrong timesheet
-       waiting to be saved without being read. */
     el('add-date').innerHTML = '<option value="">Select…</option>' + ds.map(function (d) {
       return '<option value="' + iso(d) + '">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</option>';
     }).join('');
-    el('add-date').value = dayIso || '';
+    /* From a day card the day is settled; otherwise today, when the week
+       on screen contains it. */
+    var fallback = ds.map(iso).indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : '';
+    el('add-date').value = dayIso || fallback;
 
-    el('add-site').innerHTML = '<option value="">Select…</option>' +
-      SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
-    el('add-site').value = '';
-    fillSupervisors(null);
-    renderLevelFields(null);
-    renderQuick();
-    renderFacts();
+    el('nt-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    renderLevels();
+    renderRecent();
+    setAddMode('recent');
     syncDayHint();
-
-    shifts = [{ start: '', finish: '', hours: '' }];
-    /* From a day card the day is settled and stays put, but the site and
-       supervisor are still open — a day holds one timesheet per site. */
-    dayLocked = !!dayIso;
-    el('add-date').disabled = dayLocked;
-    el('add-title').textContent = dayIso ? 'Add task' : 'Add timesheet';
-    setStep(1);
+    el('add-title').textContent = 'Add a task';
     addModal.classList.add('open');
   }
 
-  el('add-date').addEventListener('change', function () {
-    fillSupervisors(supervisorOn(this.value, el('add-site').value));
-    renderFacts();
+  el('add-date').addEventListener('change', function () { syncDayHint(); syncAddGo(); });
+  el('nt-site').addEventListener('change', function () { renderLevels(); syncDayHint(); syncAddGo(); });
+  el('nt-levels').addEventListener('change', syncAddGo);
+  el('sec-switch').addEventListener('click', function () {
+    setAddMode(addMode === 'recent' ? 'new' : 'recent');
     syncDayHint();
   });
-  el('add-site').addEventListener('change', function () {
-    fillSupervisors(supervisorOn(el('add-date').value, this.value));
-    renderLevelFields(null);
-    renderQuick();
-    renderFacts();
-    syncDayHint();
-  });
-
-  Shell.initColResize(document.getElementById('grid'), {
-    min: 110,
-    onResize: function (key, w) { if (key) { colW[key] = w; syncStickyX(); } }
-  });
-
-  el('level-fields').addEventListener('change', renderFacts);
-
-  /* One section of step 2 is open at a time: fill the fields, or pick
-     something already used. */
-  function setAcc(which) {
-    document.querySelectorAll('#step-2 .acc-head').forEach(function (h) {
-      var on = h.getAttribute('data-acc') === which;
-      h.setAttribute('aria-expanded', on ? 'true' : 'false');
-      document.getElementById(h.getAttribute('aria-controls')).hidden = !on;
-    });
-  }
-  /* Never both closed: closing one opens the other, since between them
-     they are the only ways to answer this step. */
-  document.querySelector('#step-2 .acc').addEventListener('click', function (e) {
-    var h = e.target.closest('.acc-head');
-    if (!h) return;
-    var me = h.getAttribute('data-acc');
-    setAcc(h.getAttribute('aria-expanded') === 'true'
-      ? (me === 'fields' ? 'recent' : 'fields')
-      : me);
-  });
-
-  el('quick-tasks').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-quick]');
+  el('recent-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-recent]');
     if (!b) return;
-    var m = taskMeta[b.getAttribute('data-quick')];
-    el('add-site').value = m.site;
-    var locked = supervisorOn(el('add-date').value, m.site);
-    fillSupervisors(locked || m.sup);
-    renderLevelFields(m.levels);
+    addPick = recentCache[Number(b.getAttribute('data-recent'))];
+    this.querySelectorAll('.recent-row').forEach(function (x) { x.classList.toggle('sel', x === b); });
     syncDayHint();
-    renderFacts();
-    /* The pick answers the question, so the list retires and the filled
-       fields are all that is left to look at. */
-    el('sec-recent').hidden = true;
-    setAcc('fields');
-    var blank = [].slice.call(document.querySelectorAll('#level-fields select'))
-                  .filter(function (sel) { return !sel.value; })[0];
-    if (blank) blank.focus();
+    syncAddGo();
+  });
+
+  el('add-go').addEventListener('click', function () {
+    var date = el('add-date').value, site, levels;
+    if (addMode === 'new') { site = el('nt-site').value; levels = newLevels(); }
+    else { site = addPick.meta.site; levels = addPick.meta.levels.slice(); }
+
+    var sup = supervisorOn(date, site) || (SUPS_BY_SITE[site] || [])[0];
+    var k = keyOf(site, sup, levels);
+    taskMeta[k] = { site: site, sup: sup, levels: levels };
+
+    /* The row goes on the week with no hours on it. Filling it in is the
+       next thing you do, in the grid, where the days are. */
+    if (!state.editing) enterEdit();
+    if (extraRows.indexOf(k) === -1) extraRows.push(k);
+    justAdded = k;
+    addModal.classList.remove('open');
+    render();
+
+    var row = document.querySelector('tr.just-added');
+    if (row) {
+      row.scrollIntoView({ block: 'center' });
+      var box = row.querySelector('.hr-input[data-date="' + date + '"]') || row.querySelector('.hr-input');
+      if (box) { box.focus(); box.select(); }
+    }
+  });
+
+  addModal.addEventListener('click', function (e) {
+    if (e.target === addModal || e.target.closest('[data-close]')) addModal.classList.remove('open');
   });
 
   /* ─── Shifts ──────────────────────────────────────────────────── */
@@ -1823,14 +1712,6 @@
   }
   function totalOf(list) { return list.reduce(function (n, sh) { return n + shiftHours(sh); }, 0); }
 
-  function renderShifts() {
-    el('shifts').innerHTML = shiftRows(shifts);
-    el('shift-total').textContent = fmtHours(totalOf(shifts));
-    syncAddSave();
-  }
-  /* Blank times record nothing, so there is nothing to save until the
-     shifts add up to something. */
-  function syncAddSave() { el('add-save').disabled = totalOf(shifts) <= 0; }
   function wireShifts(boxId, totalId, listFor, redraw, onEmpty) {
     el(boxId).addEventListener('input', function (e) {
       var row = e.target.closest('[data-shift]');
@@ -1843,7 +1724,6 @@
         if (h) { list[i].hours = fmtHours(h); row.querySelector('[data-f="hours"]').value = fmtHours(h); }
       }
       el(totalId).textContent = fmtHours(totalOf(list));
-      if (boxId === 'shifts') syncAddSave();
     });
     el(boxId).addEventListener('click', function (e) {
       var drop = e.target.closest('[data-drop]');
@@ -1856,12 +1736,6 @@
       redraw();
     });
   }
-  wireShifts('shifts', 'shift-total', function () { return shifts; }, renderShifts);
-  el('add-shift').addEventListener('click', function () {
-    shifts.push({ start: '', finish: '', hours: '' });
-    renderShifts();
-  });
-
   /* ─── Edit an entry ───────────────────────────────────────────────
      The same sheet as adding, opened on what is already there: the task
      for context, its shifts to change, and a way to take the day off. */
@@ -1980,45 +1854,6 @@
     if (e.target === editSheet || e.target.closest('[data-close]')) editSheet.classList.remove('open');
   });
 
-  /* ─── Steps ───────────────────────────────────────────────────── */
-  function currentLevels() {
-    return Array.prototype.map.call(el('level-fields').querySelectorAll('[data-lvl]'), function (sel) { return sel.value; });
-  }
-  el('add-next').addEventListener('click', function () {
-    if (addStep === 1) {
-      var missing = !el('add-date').value ? 'date' : (!el('add-site').value ? 'site' : (!el('add-sup').value ? 'supervisor' : ''));
-      if (missing) { Shell.snackbar('Choose the ' + missing + ' first.'); return; }
-      setStep(2);
-      return;
-    }
-    var levels = currentLevels();
-    if (!levels[0]) {
-      Shell.snackbar('Choose the ' + fieldsFor(el('add-site').value)[0].name.toLowerCase() + ' first.');
-      return;
-    }
-    setStep(3);
-  });
-
-  el('add-save').addEventListener('click', function () {
-    var total = shifts.reduce(function (n, sh) { return n + shiftHours(sh); }, 0);
-    if (!total) { Shell.snackbar('Add some hours first.'); return; }
-    var date = el('add-date').value, site = el('add-site').value, sup = el('add-sup').value;
-    var levels = currentLevels();
-    var k = keyOf(site, sup, levels);
-    taskMeta[k] = { site: site, sup: sup, levels: levels };
-    shifts.forEach(function (sh) {
-      var h = shiftHours(sh);
-      if (h > 0) entries.push({ date: date, key: k, hours: h, start: sh.start, finish: sh.finish });
-    });
-    addModal.classList.remove('open');
-    state.selDay = date;
-    render();
-    Shell.snackbar(fmtHours(total) + ' h added to ' + DOW[fromIso(date).getDay()] + ' ' + fmtDay(fromIso(date)) + '.');
-  });
-
-  addModal.addEventListener('click', function (e) {
-    if (e.target === addModal || e.target.closest('[data-close]')) addModal.classList.remove('open');
-  });
   document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null); });
 
   document.addEventListener('keydown', function (e) {
