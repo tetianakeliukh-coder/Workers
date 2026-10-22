@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Team Timesheets — OPMS</title>
+<title>Supervisor Timesheets — OPMS</title>
 <link rel="stylesheet" href="assets/tokens.css" />
 <link rel="stylesheet" href="assets/shell.css" />
 <style id="frozen-cols"></style>
@@ -68,8 +68,30 @@
   .col-panel-name { font-size: 14px; color: var(--text-main); }
 
   td.col-task { white-space: normal; line-height: 18px; }
-  /* pre-line so each allowance keeps its own line inside the cell. */
-  td.col-allow { white-space: pre-line; line-height: 18px; }
+  /* ─── Allowance ──────────────────────────────────────────────────
+     One allowance per line, each a name followed by a chip saying how
+     much. The chip is the same slot for both kinds — a figure for an
+     amount allowance, a tick for one that is simply claimed — so the two
+     are told apart by what is in it, not by a colour to memorise. */
+  td.col-allow { white-space: normal; line-height: 18px; padding-top: 7px; padding-bottom: 7px; }
+  .alw { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .alw + .alw { margin-top: 4px; }
+  .alw-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .alw-q {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    min-width: 20px; height: 18px; padding: 0 6px; border-radius: 5px;
+    background: var(--grey-200); color: var(--text-main);
+    font-size: 12px; font-weight: 500; line-height: 18px; font-variant-numeric: tabular-nums;
+  }
+  .alw-q.is-check { color: var(--grey-700); padding: 0 5px; }
+
+  /* Stands in for the hidden Allowance column on the line that has one. */
+  .alw-mark {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; margin-right: -2px; border-radius: 5px;
+    color: var(--grey-600); background: var(--grey-100); cursor: default;
+  }
+  .alw-mark:hover { color: var(--text-main); background: var(--grey-200); }
 
   /* Timesheet tab: sheet rows lead, their jobs sit under them on a tint. */
   tr.ts-parent { cursor: pointer; }
@@ -382,7 +404,7 @@
     <div class="content">
 
       <div class="page-header">
-        <h1 class="page-title">Team Timesheets</h1>
+        <h1 class="page-title">Supervisor Timesheets</h1>
         <div class="header-actions">
           <div class="dd-wrap" id="super-dd">
             <button class="dd-trigger" type="button">
@@ -1227,6 +1249,10 @@
       var fields = fieldsFor(t.site);
       workersFor(t).forEach(function (w) {
         w.assignments.forEach(function (a) {
+          /* Period is the hours breakdown. An allowance line carries no
+             hours, so it would only add a row of zeroes here — the
+             Timesheets tab is where allowances are read. */
+          if (a.kind === 'allow') return;
           /* Some entries carry no custom-field path; fall back to the
              project so the row still says what the work was. */
           var path = taskPath(a, fields) || a.project || 'No task';
@@ -1529,11 +1555,47 @@
   function taskPath(a, fields) {
     return fields.map(function (f, i) { return a.levels[i]; }).filter(Boolean).join(' | ');
   }
-  /* Name and units together, one allowance per line. Clients without any
-     allowances configured never see this column at all. */
+  /* Plain text, for search and for the tooltip that stands in for the
+     column when it is hidden. */
   function allowText(a) {
-    return [a.allow1 ? a.allow1 + ', ' + a.qty1 : '',
-            a.allow2 ? a.allow2 + ', ' + a.qty2 : ''].filter(Boolean).join('\n');
+    return (a.allowances || []).map(function (x) {
+      return x.type === 'amount' ? x.name + ' ' + x.qty : x.name;
+    }).join(' · ');
+  }
+  var TICK = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true">' +
+    '<path d="M2.5 6.2l2.4 2.4L9.5 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* The name says what was claimed; the chip after it says how much. An
+     amount allowance puts its figure there, a check allowance a tick —
+     same slot, so the eye reads the difference without a legend. */
+  function allowHtml(a) {
+    return (a.allowances || []).map(function (x) {
+      return '<span class="alw">' +
+        '<span class="alw-name">' + Shell.highlight(x.name, state.query) + '</span>' +
+        (x.type === 'check'
+          ? '<span class="alw-q is-check" title="Claimed">' + TICK + '</span>'
+          : '<span class="alw-q">' + x.qty + '</span>') +
+      '</span>';
+    }).join('');
+  }
+  function allowCell(a, cls) {
+    var html = allowHtml(a);
+    return '<td class="' + cls + '">' + (html || '<span class="cell-empty">&mdash;</span>') + '</td>';
+  }
+
+  /* With the Allowance column hidden, an allowance line and the work line
+     it is claimed against differ only by an empty Hours cell — which reads
+     as a duplicate row rather than as a second kind of line. The mark says
+     which one it is, and carries what the hidden column would have said. */
+  var ICO_ALW = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M8.6 1.9H13a1.1 1.1 0 011.1 1.1v4.4a1.1 1.1 0 01-.33.78l-5.7 5.7a1.1 1.1 0 01-1.56 0L2.02 9.5a1.1 1.1 0 010-1.56l5.8-5.7a1.1 1.1 0 01.78-.33z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>' +
+    '<circle cx="11" cy="5" r="1" fill="currentColor"/></svg>';
+
+  function hoursCell(a) {
+    var mark = (a.kind === 'allow' && hiddenCols.allow)
+      ? '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowText(a)) + '">' + ICO_ALW + '</span>'
+      : '';
+    return '<td class="col-hrs">' + mark + fmtHours(a.hours) + '</td>';
   }
   /* Finishing before you started means the shift ran past midnight. */
   function timesText(a) {
@@ -1590,7 +1652,7 @@
         if (j.a.project) projects[j.a.project] = true;
         var path = taskPath(j.a, j.fields);
         if (path) tasks[path] = true;
-        [j.a.allow1, j.a.allow2].forEach(function (x) { if (x) allowances[x] = true; });
+        j.a.allowances.forEach(function (x) { allowances[x.name] = true; });
       });
       /* The count says what it counts — a bare number sitting in the Site
          column would read as a value. */
@@ -1637,10 +1699,10 @@
           jobCell(j.workType, 'col-worktype') +
           jobCell(j.a.project, 'col-project') +
           jobCell(taskPath(j.a, j.fields), 'col-task') +
-          jobCell(allowText(j.a), 'col-allow') +
+          allowCell(j.a, 'col-allow') +
           jobCell(timesText(j.a), 'col-times') +
           '<td class="col-updated">' + updatedCell(j.t) + '</td>' +
-          '<td class="col-hrs">' + fmtHours(j.a.hours) + '</td>' +
+          hoursCell(j.a) +
           actionCell(openBtn(j.t)) +
         '</tr>';
         }).join('');
@@ -1681,7 +1743,7 @@
         if (j.a.project) projects[j.a.project] = true;
         var path = taskPath(j.a, fields);
         if (path) tasks[path] = true;
-        [j.a.allow1, j.a.allow2].forEach(function (x) { if (x) allowances[x] = true; });
+        j.a.allowances.forEach(function (x) { allowances[x.name] = true; });
       });
       var total = jobs.reduce(function (s, j) { return s + (Number(j.a.hours) || 0); }, 0);
       /* Each summary number counts distinct values among the jobs beneath, so
@@ -1722,10 +1784,10 @@
           jobCell(j.w.workType, 'col-worktype') +
           jobCell(j.a.project, 'col-project') +
           jobCell(taskPath(j.a, fields), 'col-task') +
-          jobCell(allowText(j.a), 'col-allow') +
+          allowCell(j.a, 'col-allow') +
           jobCell(timesText(j.a), 'col-times') +
           '<td class="col-updated"></td>' +
-          '<td class="col-hrs">' + fmtHours(j.a.hours) + '</td>' +
+          hoursCell(j.a) +
           '<td class="col-act"></td>' +
         '</tr>';
         }).join('');
@@ -1748,7 +1810,6 @@
           // The site's custom fields, joined — their names vary by site, so a
           // single flat table can only carry the path, not a column each.
           var path = taskPath(a, fields);
-          var allow = allowText(a);
           var times = timesText(a);
           var cell = jobCell;
           /* A row here is a job, but bulk actions act on whole timesheets —
@@ -1767,10 +1828,10 @@
             cell(a.project, 'col-project') +
             '<td class="col-task" title="' + Shell.esc(path) + '">' +
               (path ? Shell.highlight(path, q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
-            cell(allow, 'col-allow') +
+            allowCell(a, 'col-allow') +
             cell(times, 'col-times') +
             '<td class="col-updated">' + updatedCell(t) + '</td>' +
-            '<td class="col-hrs">' + fmtHours(a.hours) + '</td>' +
+            hoursCell(a) +
           '</tr>');
         });
       });
@@ -2255,7 +2316,22 @@
     'SA BHP OLYMPIC DAM': ['Olympic Dam Expansion', 'Shutdown Factory XYZ']
   };
 
-  var E_ALLOW = ['Rope Allowance', 'Offshore Allowance', 'Height Allowance', 'Travel Allowance', 'Meal Allowance'];
+  /* An allowance is one of two things, and they are not interchangeable.
+     An AMOUNT allowance carries a number claimed against it — hours at
+     height, kilometres travelled, days offshore; the unit is whatever the
+     client configured, so the table shows the figure and not a guess at
+     what it counts. A CHECK allowance is an entitlement taken or not —
+     a meal, a crib break; there is no quantity to show, and it never
+     touches the Hours column. */
+  var E_ALLOW = [
+    { name: 'Rope Allowance',     type: 'amount' },
+    { name: 'Height Allowance',   type: 'amount' },
+    { name: 'Travel Allowance',   type: 'amount' },
+    { name: 'Offshore Allowance', type: 'amount' },
+    { name: 'Breakfast',          type: 'check' },
+    { name: 'Crib Break',         type: 'check' },
+    { name: 'Site Meal',          type: 'check' }
+  ];
   var E_TIMES = [['06:00', '18:00'], ['07:30', '19:30'], ['18:00', '06:00'], ['05:45', '17:45'], ['06:30', '16:30']];
 
   /* Which fields a row carries. Covers the cases called out in review:
@@ -2303,22 +2379,46 @@
         var pat = pick(E_PATTERNS, k, 3);
         var depth = Math.min(pat.levels, fields.length);
         var t = pick(E_TIMES, k, 2);
-        var nAllow = (seed + k) % 3;
 
         assignments.push({
+          kind: 'work',
           project: pick(projects, k, 1),
           levels: fields.map(function (f, idx) {
             return idx < depth ? pick(f.values, k, 1 + idx * 2) : '';
           }),
-          // Each allowance carries the number of units claimed against it.
-          allow1: nAllow >= 1 ? pick(E_ALLOW, k, 2) : '',
-          qty1:   1 + ((seed + k) % 3),
-          allow2: nAllow >= 2 ? pick(E_ALLOW, k + 2, 2) : '',
-          qty2:   1 + ((seed + k) % 2),
+          allowances: [],
           start:  pat.times ? t[0] : '',
           finish: pat.times ? t[1] : '',
           hours:  pat.times ? diffHours(t[0], t[1]) : pat.hours
         });
+      }
+
+      /* An allowance is claimed on a line of its own, with no hours on it.
+         Some of those lines are coded against a task the worker already
+         booked time to — which is why two rows can carry the same worker
+         and the same task and differ only in the Allowance column. Others
+         are claimed against nothing in particular and carry no task. */
+      var nAlwLines = (seed + i) % 3;
+      for (var b = 0; b < nAlwLines; b++) {
+        var ak = i * 5 + b;
+        var alw = pick(E_ALLOW, ak, 3);
+        var host = (seed + i + b) % (assignments.length + 1);   // last index = unattached
+        var onTask = host < assignments.length ? assignments[host] : null;
+
+        var line = {
+          kind: 'allow',
+          project: onTask ? onTask.project : '',
+          levels: onTask ? onTask.levels.slice() : fields.map(function () { return ''; }),
+          allowances: [{
+            name: alw.name,
+            type: alw.type,
+            qty:  alw.type === 'amount' ? 1 + ((seed + ak) % 4) : null
+          }],
+          start: '', finish: '', hours: ''
+        };
+        /* Sit it next to the line it is claimed against, so the pair reads
+           as a pair rather than as two sightings of the same task. */
+        if (onTask) assignments.splice(host + 1, 0, line); else assignments.push(line);
       }
 
       out.push({

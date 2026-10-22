@@ -41,7 +41,7 @@
     { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
     { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
-    { id: 'timesheets', label: 'Team Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets.html' },
+    { id: 'timesheets', label: 'Supervisor Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets.html' },
     { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html' },
     { id: 'reports',    label: 'Reports',          icon: 'reports',    r4: true }
   ];
@@ -308,7 +308,12 @@
   /* ─── Instant tooltip ────────────────────────────────────────────────
      Shows data-tip the moment the pointer enters, rather than after the
      browser's own ~1s delay on title. */
-  var tipEl = null;
+  var tipEl = null, tipFor = null;
+
+  function hideTip() {
+    if (tipEl) tipEl.classList.remove('on');
+    tipFor = null;
+  }
 
   function placeTip(target) {
     var r = target.getBoundingClientRect();
@@ -333,15 +338,22 @@
       if (!t || !t.getAttribute('data-tip')) return;
       tipEl.textContent = t.getAttribute('data-tip');
       tipEl.classList.add('on');
+      tipFor = t;
       placeTip(t);
     });
+    /* A re-render can take the hovered element away without ever firing
+       mouseout, which would leave the tip stranded on screen. */
+    document.addEventListener('mouseover', function () {
+      if (tipFor && !tipFor.isConnected) hideTip();
+    }, true);
+    document.addEventListener('click', hideTip, true);
     host.addEventListener('mouseout', function (e) {
       var t = e.target.closest ? e.target.closest('[data-tip]') : null;
       if (!t) return;
       if (e.relatedTarget && t.contains(e.relatedTarget)) return;
-      tipEl.classList.remove('on');
+      hideTip();
     });
-    window.addEventListener('scroll', function () { if (tipEl) tipEl.classList.remove('on'); }, true);
+    window.addEventListener('scroll', hideTip, true);
   }
 
   /* ─── Resizable columns ──────────────────────────────────────────────

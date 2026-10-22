@@ -67,7 +67,7 @@
     position: sticky; left: 0; z-index: 2; background: inherit;
     overflow: hidden; text-overflow: ellipsis;
   }
-  /* Same hairline the frozen columns use on Team Timesheets. */
+  /* Same hairline the frozen columns use on Supervisor Timesheets. */
   .sx-left th.col-label, .sx-left td.col-label { overflow: visible; }
   .sx-left th.col-label::after, .sx-left td.col-label::after {
     content: ''; position: absolute; top: 0; bottom: 0; left: 100%; width: 1px;
@@ -86,7 +86,7 @@
   .day-head .dnum { font-size: 14px; font-weight: 500; color: var(--text-main); }
   .day-head.is-today .dow, .day-head.is-today .dnum { color: var(--primary); }
 
-  /* No fills on the parent rows — the Team Timesheets table settled on
+  /* No fills on the parent rows — the Supervisor Timesheets table settled on
      indent, weight and icon for hierarchy, and these two sit side by side. */
   #grid tbody tr { background: var(--white); }
   #grid tbody tr:hover { background: #fafbfe; }
@@ -400,7 +400,7 @@
   .period-dd .dd-trigger { min-width: 232px; }
   .dd-item .sub { margin-left: auto; font-size: 12px; color: var(--grey-600); }
   /* ─── Date range calendar ─────────────────────────────────────────
-     The same two-month picker Team Timesheets uses. Its markup came over
+     The same two-month picker Supervisor Timesheets uses. Its markup came over
      when the two date controls were unified; these rules did not, so the
      calendar was rendering as one unstyled column. Scoped to #date-cal so
      nothing collides with the week picker's own rules. */
@@ -856,7 +856,7 @@
 
   /* ─── Sites, their custom fields and their supervisors ─────────────
      The fields a task is built from differ per site — one to four levels,
-     named by the client's own configuration. Mirrors Team Timesheets. */
+     named by the client's own configuration. Mirrors Supervisor Timesheets. */
   var SITE_FIELDS = {
     'MMA VIGILANT – 360': [
       { name: 'Work Order', values: ['WORK-00123', 'WORK-00124', 'WORK-00187', 'WORK-00201'] },
@@ -1231,7 +1231,7 @@
   }
 
   /* ─── Date filter ─────────────────────────────────────────────────
-     The same control as Team Timesheets, in the same place — one date
+     The same control as Supervisor Timesheets, in the same place — one date
      picker across both screens. The grid draws a column per day in range. */
   var datePanel = document.getElementById('date-dd-panel');
   var dateValue = document.getElementById('date-dd-value');
