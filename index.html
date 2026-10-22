@@ -342,6 +342,21 @@
   }
   thead th:last-child { padding: 6px 16px; }
 
+  /* Drag the edge of a header to widen its column. Self-contained here, as
+     everything in this file is — the shared shell is not loaded. */
+  .col-rs {
+    position: absolute; top: 0; right: 0; bottom: 0; width: 9px;
+    cursor: col-resize; user-select: none; z-index: 3;
+  }
+  .col-rs::after {
+    content: ''; position: absolute; top: 6px; bottom: 6px; right: 4px; width: 1px;
+    background: var(--grey-400); opacity: 0; transition: opacity .12s ease;
+  }
+  thead th:hover > .col-rs::after, .col-rs:hover::after { opacity: 1; }
+  .col-rs:hover::after { background: var(--primary); width: 2px; }
+  body.col-resizing { cursor: col-resize; user-select: none; }
+  body.col-resizing .col-rs::after { opacity: 1; background: var(--primary); width: 2px; }
+
   tbody tr { height: 52px; }
   tbody tr:not(:last-child) td { border-bottom: 1px solid var(--row-divider); }
   tbody tr.hidden { display: none; }
@@ -1367,16 +1382,16 @@
               </colgroup>
               <thead>
                 <tr>
-                  <th class="col-name">Last Name</th>
-                  <th data-col="id">OPMS ID</th>
-                  <th data-col="status">Status</th>
-                  <th data-col="site">Site</th>
-                  <th data-col="positions">Positions</th>
-                  <th data-col="email" style="display:none">Email</th>
-                  <th data-col="work-email" style="display:none">Work Email</th>
-                  <th data-col="mobile" style="display:none">Mobile</th>
-                  <th data-col="phone" style="display:none">Phone</th>
-                  <th data-col="work-phone" style="display:none">Work Phone</th>
+                  <th class="col-name" data-w="name">Last Name<span class="col-rs"></span></th>
+                  <th data-col="id" data-w="id">OPMS ID<span class="col-rs"></span></th>
+                  <th data-col="status" data-w="status">Status<span class="col-rs"></span></th>
+                  <th data-col="site" data-w="site">Site<span class="col-rs"></span></th>
+                  <th data-col="positions" data-w="positions">Positions<span class="col-rs"></span></th>
+                  <th data-col="email" data-w="email" style="display:none">Email<span class="col-rs"></span></th>
+                  <th data-col="work-email" data-w="work-email" style="display:none">Work Email<span class="col-rs"></span></th>
+                  <th data-col="mobile" data-w="mobile" style="display:none">Mobile<span class="col-rs"></span></th>
+                  <th data-col="phone" data-w="phone" style="display:none">Phone<span class="col-rs"></span></th>
+                  <th data-col="work-phone" data-w="work-phone" style="display:none">Work Phone<span class="col-rs"></span></th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -3352,6 +3367,47 @@
       gsClose();
     }
   });
+
+  /* ── Column resizing ───────────────────────────────────────────────
+     A floor per column: 64px is fine for OPMS ID and unreadable for Site. */
+  (function () {
+    var MIN_W = {
+      name: 160, id: 100, status: 100, site: 150, positions: 150,
+      email: 140, 'work-email': 140, mobile: 110, phone: 110, 'work-phone': 110
+    };
+    var table = document.querySelector('.table-card table');
+    if (!table) return;
+    var group = table.querySelector('colgroup');
+
+    table.addEventListener('mousedown', function (e) {
+      var grip = e.target.closest ? e.target.closest('.col-rs') : null;
+      if (!grip) return;
+      var th = grip.closest('th');
+      var col = group && group.children[th.cellIndex];
+      if (!col) return;
+
+      e.preventDefault();
+      var startX = e.pageX, startW = th.getBoundingClientRect().width;
+      var min = MIN_W[th.getAttribute('data-w')] || 100;
+      document.body.classList.add('col-resizing');
+
+      function move(ev) {
+        col.style.width = Math.max(min, Math.round(startW + (ev.pageX - startX))) + 'px';
+      }
+      function up() {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        document.body.classList.remove('col-resizing');
+      }
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+
+    /* A drag that ends on the header must not also sort it. */
+    table.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('.col-rs')) e.stopPropagation();
+    }, true);
+  })();
 
 })();
 </script>
