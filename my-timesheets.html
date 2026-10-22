@@ -216,13 +216,23 @@
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
 
+  /* The two ways to name a task share one heading line: the section's
+     own title on the left, the way to the other one on the right. */
+  .sec { padding-top: 14px; border-top: 1px solid var(--grey-300); }
+  .sec-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin-bottom: 10px;
+  }
+  #new-task { display: flex; flex-direction: column; gap: 14px; }
+  #nt-levels { display: flex; flex-direction: column; gap: 14px; }
+
   /* Recents are rows, not chips — each one has to carry who you worked for
      and when, which is what makes them pickable without thinking. */
   .recent-list { display: flex; flex-direction: column; gap: 6px; }
   .recent-row {
     display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
     width: 100%; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-align: left;
-    background: var(--white); border: 1px solid var(--grey-350); font-family: var(--fs-sans);
+    background: var(--white); border: 1px solid var(--grey-200); font-family: var(--fs-sans);
     transition: border-color var(--t-fast), background var(--t-fast);
   }
   .recent-row:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
