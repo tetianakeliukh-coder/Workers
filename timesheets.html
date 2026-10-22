@@ -84,11 +84,18 @@
     font-size: 12px; font-weight: 500; line-height: 18px; font-variant-numeric: tabular-nums;
   }
 
+  /* The same flag as the hidden-column mark, sitting in the header so the
+     two are read as one thing. */
+  .th-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .th-row .th-label { min-width: 0; }
+  .th-ico { display: inline-flex; align-items: center; flex-shrink: 0; color: var(--grey-500); }
+
   /* Stands in for the hidden Allowance column on the line that has one. */
   .alw-mark {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 20px; height: 20px; margin-right: -2px; border-radius: 5px;
+    width: 20px; height: 20px; margin-right: 6px; border-radius: 5px;
     color: var(--grey-600); background: var(--grey-100); cursor: default;
+    vertical-align: -5px;
   }
   .alw-mark:hover { color: var(--text-main); background: var(--grey-200); }
 
@@ -1158,8 +1165,14 @@
       }
       // The pinned actions column has no width worth dragging.
       var grip = c.k === 'act' ? '' : '<span class="col-grip" data-grip="' + c.k + '"></span>';
+      /* The Allowance header carries the flag the hidden-column mark uses,
+         so the mark is recognised rather than decoded. */
+      var head = c.k === 'allow'
+        ? '<span class="th-row"><span class="th-label">' + c.label + '</span>' +
+            '<span class="th-ico">' + ICO_ALW + '</span></span>'
+        : '<span class="th-label">' + c.label + '</span>';
       return '<th class="col-' + c.k + (c.num ? ' num' : '') + '" title="' + Shell.esc(c.label) + '">' +
-        '<span class="th-label">' + c.label + '</span>' + grip + '</th>';
+        head + grip + '</th>';
     }).join('') + '</tr>';
 
     mainTable.style.minWidth = cols.reduce(function (s, c) { return s + c.w; }, 0) + 'px';
@@ -1587,10 +1600,14 @@
     '<path d="M7 22V2l10 5-10 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function hoursCell(a) {
-    var mark = (a.kind === 'allow' && hiddenCols.allow)
+    if (a.kind !== 'allow') return '<td class="col-hrs">' + fmtHours(a.hours) + '</td>';
+    /* An allowance line has no hours, and a blank cell reads as a value
+       that failed to arrive. The dash is the token the rest of the table
+       already uses for "this record genuinely carries nothing here". */
+    var mark = hiddenCols.allow
       ? '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowText(a)) + '">' + ICO_ALW + '</span>'
       : '';
-    return '<td class="col-hrs">' + mark + fmtHours(a.hours) + '</td>';
+    return '<td class="col-hrs">' + mark + '<span class="cell-empty">&mdash;</span></td>';
   }
   /* Finishing before you started means the shift ran past midnight. */
   function timesText(a) {
@@ -2331,14 +2348,17 @@
 
   /* Which fields a row carries. Covers the cases called out in review:
      levels but no times, times but no levels, and everything in between. */
+  /* Every line is coded to at least the first level — a line with no task
+     at all is not a thing the client's exports contain. How deep it goes
+     after that varies, and so does whether times were recorded. */
   var E_PATTERNS = [
-    { levels: 1, allow: 0, times: false, hours: 12 },
-    { levels: 3, allow: 0, times: false, hours: 10 },
-    { levels: 0, allow: 1, times: true },
-    { levels: 2, allow: 2, times: true },
-    { levels: 4, allow: 1, times: true },
-    { levels: 1, allow: 0, times: true },
-    { levels: 2, allow: 0, times: false, hours: 8 }
+    { levels: 1, times: false, hours: 12 },
+    { levels: 3, times: false, hours: 10 },
+    { levels: 1, times: true },
+    { levels: 2, times: true },
+    { levels: 4, times: true },
+    { levels: 3, times: true },
+    { levels: 2, times: false, hours: 8 }
   ];
 
   function diffHours(from, to) {
@@ -2397,13 +2417,14 @@
       for (var b = 0; b < nAlwLines; b++) {
         var ak = i * 5 + b;
         var alw = pick(E_ALLOW, ak, 3);
-        var host = (seed + i + b) % (assignments.length + 1);   // last index = unattached
-        var onTask = host < assignments.length ? assignments[host] : null;
+        /* An allowance is always claimed against work the person did, so it
+           takes the task and project of one of their own lines. */
+        var onTask = assignments[(seed + i + b) % assignments.length];
 
         var line = {
           kind: 'allow',
-          project: onTask ? onTask.project : '',
-          levels: onTask ? onTask.levels.slice() : fields.map(function () { return ''; }),
+          project: onTask.project,
+          levels: onTask.levels.slice(),
           allowances: [{
             name: alw.name,
             type: alw.type,
@@ -2413,7 +2434,7 @@
         };
         /* Sit it next to the line it is claimed against, so the pair reads
            as a pair rather than as two sightings of the same task. */
-        if (onTask) assignments.splice(host + 1, 0, line); else assignments.push(line);
+        assignments.splice(assignments.indexOf(onTask) + 1, 0, line);
       }
 
       out.push({
