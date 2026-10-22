@@ -196,8 +196,11 @@
   }
   .btn-outline:hover { background: var(--bg-blue-light); }
 
+  /* Every number in a cell sits on the same line, whether it is being
+     edited or only read. */
+  #grid td, #grid th { vertical-align: middle; }
   .hr-cell {
-    display: flex; align-items: center; justify-content: flex-end;
+    display: flex; align-items: center; justify-content: flex-end; gap: 6px;
     width: 100%; height: 30px; padding: 0 8px; cursor: pointer;
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
     border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
@@ -206,6 +209,17 @@
   .hr-cell:hover { border-color: var(--border-hover); }
   .hr-cell:focus { outline: none; border-color: var(--primary); }
   .hr-cell.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+  /* Already submitted or finalised: shown, not offered. */
+  .hr-cell.locked, .hr-cell.locked:hover {
+    background: var(--grey-100); border-color: var(--grey-300);
+    color: var(--grey-600); cursor: default;
+  }
+  .hr-st {
+    display: inline-flex; align-items: center; flex-shrink: 0;
+    color: var(--grey-500); margin-right: auto;
+  }
+  td.col-day .hr-st { margin-right: 4px; }
+  .st-cell { display: inline-flex; align-items: center; gap: 6px; }
 
   .cell-pop {
     display: none; position: fixed; z-index: 500; width: 220px; padding: 12px;
@@ -243,6 +257,7 @@
   }
   .cell-input:focus { outline: none; border-color: var(--primary); }
   td.col-day, th.col-day { text-align: right; font-variant-numeric: tabular-nums; }
+  td.col-day > .cell-empty, td.col-day { line-height: 1; }
   th.col-day .dh { display: flex; flex-direction: column; align-items: flex-end; line-height: 15px; }
   th.col-day .dh .dw { font-size: 12px; font-weight: 400; color: var(--grey-600); }
   th.col-day.tdy, td.col-day.tdy { background: var(--bg-blue-light); }
@@ -534,6 +549,17 @@
   var ME = 'Rhye, Olivia';
   var WORKERS = [ME, 'Smith, John', 'Miller, Ava', 'Brown, Olivia', 'Davis, Noah', 'Clark, Emma', 'Baker, Liam'];
   var STATUSES = ['Draft', 'Submitted', 'Revised', 'Finalised'];
+  /* Once a supervisor has submitted a day, or it has been finalised, the
+     hours on it are no longer anyone's to change. Draft and Revised are
+     still in play. */
+  var STATUS_META = {
+    Draft:     { locked: false, icon: '' },
+    Revised:   { locked: false, icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>' },
+    Submitted: { locked: true,  icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.3"/><path d="M8 11V5M5.5 7.5L8 5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
+    Finalised: { locked: true,  icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="6.5" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7V5.2a2.5 2.5 0 015 0V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' }
+  };
+  function statusOf(e) { return STATUS_META[e.status] || STATUS_META.Draft; }
+  function isLocked(e) { return statusOf(e).locked; }
   var ALLOWANCES = [
     { name: 'Rope Allowance',   type: 'amount' },
     { name: 'Height Allowance', type: 'amount' },
@@ -793,9 +819,19 @@
   function hrInput(e, isoDate) {
     var c = cellOf(e, isoDate), k = cellKey(e, isoDate);
     var changed = draft && k in draft;
-    return '<button class="hr-cell' + (changed ? ' changed' : '') + '" type="button" data-cell="' + k + '">' +
+    var st = statusOf(e), lock = st.locked;
+    return '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
+      '" type="button" data-cell="' + k + '"' + (lock ? ' disabled data-tip="' + e.status + ' — hours can no longer be changed"' : '') + '>' +
+      (st.icon ? '<span class="hr-st">' + st.icon + '</span>' : '') +
       (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
       '</button>';
+  }
+  /* Out of edit mode the status still has to be visible, because Period
+     has no Status column to carry it. */
+  function dayValue(e, isoDate) {
+    var c = cellOf(e, isoDate), st = statusOf(e);
+    return (st.icon ? '<span class="hr-st" data-tip="' + e.status + '">' + st.icon + '</span>' : '') +
+      (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h));
   }
   /* A field the context could not supply arrives as a cell on the row,
      prefilled with the best guess, rather than as another question in a
@@ -816,6 +852,11 @@
     if (f.k === 'hours') {
       if (state.editing && e.kind !== 'allow') return hrInput(e);
       return e.hours === '' ? '<span class="cell-empty">&mdash;</span>' : fmtHours(e.hours);
+    }
+    if (f.k === 'status') {
+      var st = statusOf(e);
+      return '<span class="st-cell">' + (st.icon ? '<span class="hr-st">' + st.icon + '</span>' : '') +
+        Shell.highlight(e.status, state.q) + '</span>';
     }
     if (e.isNew && (f.k === 'date' || f.k === 'sup')) return pickCell(e, f);
     var v = f.get(e);
@@ -880,9 +921,8 @@
           (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
           '</button></td>';
       }
-      var v = hit ? hoursOf(hit, key) : '';
       return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' +
-        (v === '' || v === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(v)) + '</td>';
+        (hit ? dayValue(hit, key) : '<span class="cell-empty">&mdash;</span>') + '</td>';
     }
 
     function taskRow(group) {
@@ -1389,7 +1429,7 @@
 
   el('grid-body').addEventListener('click', function (e) {
     var cell = e.target.closest('.hr-cell');
-    if (!cell) return;
+    if (!cell || cell.disabled) return;
     e.stopPropagation();
     openCell(cell);
   });
