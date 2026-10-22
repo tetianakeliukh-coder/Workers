@@ -196,13 +196,41 @@
   }
   .btn-outline:hover { background: var(--bg-blue-light); }
 
-  .hr-input {
-    width: 100%; max-width: 72px; height: 30px; padding: 0 8px; text-align: right;
+  .hr-cell {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 0;
+    width: 100%; min-height: 30px; padding: 2px 8px; cursor: pointer;
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
     border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+    font-variant-numeric: tabular-nums;
   }
-  .hr-input:focus { outline: none; border-color: var(--primary); }
-  .hr-input.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+  .hr-cell:hover { border-color: var(--border-hover); }
+  .hr-cell:focus { outline: none; border-color: var(--primary); }
+  .hr-cell.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+  .hr-times { font-size: 11px; line-height: 13px; color: var(--grey-600); }
+
+  .cell-pop {
+    display: none; position: fixed; z-index: 500; width: 220px; padding: 12px;
+    border-radius: 10px; background: var(--white);
+    border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
+  }
+  .cell-pop.open { display: block; }
+  .cp-when { font-size: 13px; font-weight: 500; color: var(--text-main); margin-bottom: 10px; }
+  .cp-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;
+    font-size: 13px; color: var(--grey-700);
+  }
+  .cp-row input {
+    width: 92px; height: 32px; padding: 0 8px; text-align: right;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+    font-variant-numeric: tabular-nums;
+  }
+  .cp-row input:focus { outline: none; border-color: var(--primary); }
+  .cp-sep {
+    margin: 10px 0 8px; padding-top: 10px; border-top: 1px solid var(--grey-200);
+    font-size: 12px; color: var(--grey-600);
+  }
+  .cp-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
   .cell-input {
     width: 100%; height: 30px; padding: 0 8px;
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
@@ -381,6 +409,22 @@
   </main>
 </div>
 
+<!-- ── One cell's hours, and the times they came from ─────────────── -->
+<div class="cell-pop" id="cell-pop" role="dialog" aria-label="Hours for this day">
+  <div class="cp-when" id="cp-when"></div>
+  <label class="cp-row"><span>Hours</span>
+    <input id="cp-h" type="text" inputmode="decimal" autocomplete="off" /></label>
+  <div class="cp-sep">or the times they were worked</div>
+  <label class="cp-row"><span>Start</span>
+    <input id="cp-s" type="text" placeholder="06:00" autocomplete="off" /></label>
+  <label class="cp-row"><span>Finish</span>
+    <input id="cp-f" type="text" placeholder="14:00" autocomplete="off" /></label>
+  <div class="cp-foot">
+    <button class="btn-text" type="button" id="cp-clear">Clear</button>
+    <button class="btn-primary" type="button" id="cp-done">Done</button>
+  </div>
+</div>
+
 <!-- ── Add a task ───────────────────────────────────────────────────
      One screen, mostly a list. Recent tasks are the way in, because most
      of what a person adds is work they have done before; setting up one
@@ -524,6 +568,7 @@
             task: levels.join(' | '),
             status: pick(STATUSES, Math.floor((n + d) / 2)),
             allowances: [],
+            start: '', finish: '',
             hours: hrs
           });
           n++;
@@ -538,7 +583,7 @@
               date: host.date, site: host.site, sup: host.sup, worker: host.worker,
               project: host.project, task: host.task, status: host.status,
               allowances: [{ name: alw.name, type: alw.type, qty: alw.type === 'amount' ? 1 + (n % 3) : null }],
-              hours: ''
+              start: '', finish: '', hours: ''
             });
           }
         }
@@ -559,6 +604,8 @@
     { k: 'project', label: 'Project',    w: 190, group: true,  get: function (e) { return e.project; } },
     { k: 'status',  label: 'Status',     w: 120, group: true,  get: function (e) { return e.status; } },
     { k: 'task',    label: 'Task',       w: 300, group: true,  get: function (e) { return e.task; } },
+    { k: 'times',   label: 'Start - Finish', w: 140, group: false,
+      get: function (e) { return e.start && e.finish ? e.start + ' - ' + e.finish : ''; } },
     { k: 'allow',   label: 'Allowance',  w: 200, group: false, get: function (e) { return allowText(e); } },
     { k: 'hours',   label: 'Hours',      w: 90,  group: false, num: true, get: function (e) { return e.hours === '' ? '' : fmtHours(e.hours); } }
   ];
@@ -718,22 +765,34 @@
     });
   }
   function sumOf(list) {
-    return list.reduce(function (n, e) { return n + (Number(e.hours) || 0); }, 0);
+    return list.reduce(function (n, e) { return n + (Number(hoursOf(e)) || 0); }, 0);
   }
 
   /* ─── Render ──────────────────────────────────────────────────────── */
   var CARET = '<span class="g-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 
-  function hoursOf(e, isoDate) {
-    var k = e.id + '|' + (isoDate || e.date);
+  /* A cell holds hours, and may hold the times they came from — some
+     clients record one, some the other. The draft keeps all three
+     together so the cell editor can read and write them as one thing. */
+  function cellKey(e, isoDate) { return e.id + '|' + (isoDate || e.date); }
+  function cellOf(e, isoDate) {
+    var k = cellKey(e, isoDate);
     if (draft && k in draft) return draft[k];
-    if (isoDate && e.date !== isoDate) return '';
-    return e.hours;
+    if (isoDate && e.date !== isoDate) return { h: '', s: '', f: '' };
+    return { h: e.hours, s: e.start || '', f: e.finish || '' };
   }
+  function hoursOf(e, isoDate) { return cellOf(e, isoDate).h; }
+
+  /* The cell is a button, not a bare input: typing a number is still the
+     fast path, but times have to be reachable from somewhere, and a cell
+     nobody can open is a feature nobody finds. */
   function hrInput(e, isoDate) {
-    var v = hoursOf(e, isoDate);
-    return '<input class="hr-input" type="text" inputmode="decimal" value="' +
-      (v === '' ? '' : fmtHours(v)) + '" data-cell="' + e.id + '|' + (isoDate || e.date) + '" aria-label="Hours" />';
+    var c = cellOf(e, isoDate), k = cellKey(e, isoDate);
+    var changed = draft && k in draft;
+    return '<button class="hr-cell' + (changed ? ' changed' : '') + '" type="button" data-cell="' + k + '">' +
+      (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
+      (c.s && c.f ? '<span class="hr-times">' + Shell.esc(c.s) + '–' + Shell.esc(c.f) + '</span>' : '') +
+      '</button>';
   }
   /* A field the context could not supply arrives as a cell on the row,
      prefilled with the best guess, rather than as another question in a
@@ -808,12 +867,16 @@
         return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' + hrInput(hit, key) + '</td>';
       }
       if (state.editing && !hit) {
-        /* An empty day on a row that exists: type into it and the entry is
-           created against that date. The cell is the date picker. */
+        /* An empty day on a row that exists: open it and the entry is
+           created against that date. The column is the date. */
         var seed = group[0];
+        var k = seed.id + '|' + key, changed = draft && k in draft;
+        var c = changed ? draft[k] : { h: '', s: '', f: '' };
         return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' +
-          '<input class="hr-input" type="text" inputmode="decimal" value="" ' +
-          'data-newcell="' + seed.id + '|' + key + '" aria-label="Hours" /></td>';
+          '<button class="hr-cell' + (changed ? ' changed' : '') + '" type="button" data-cell="' + k + '">' +
+          (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
+          (c.s && c.f ? '<span class="hr-times">' + Shell.esc(c.s) + '–' + Shell.esc(c.f) + '</span>' : '') +
+          '</button></td>';
       }
       var v = hit ? hoursOf(hit, key) : '';
       return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' +
@@ -1195,7 +1258,9 @@
     var n = (draft ? Object.keys(draft).length : 0) + pending.length;
     /* A pending row with no hours on it never became an entry. */
     pending.forEach(function (row) {
-      var any = Object.keys(draft || {}).some(function (k) { return k.indexOf(row.id + '|') === 0 && draft[k] > 0; });
+      var any = Object.keys(draft || {}).some(function (k) {
+        return k.indexOf(row.id + '|') === 0 && draft[k].h > 0;
+      });
       if (!any) return;
       delete row.isNew;
       ENTRIES.push(row);
@@ -1204,35 +1269,111 @@
       var id = k.slice(0, k.indexOf('|')), date = k.slice(k.indexOf('|') + 1);
       var e = ENTRIES.concat(pending).filter(function (x) { return x.id === id; })[0];
       if (!e) return;
-      if (e.date === date) { e.hours = draft[k]; return; }
-      /* Typed into another day: that is a new entry on that date, which is
+      var c = draft[k];
+      if (e.date === date) { e.hours = c.h; e.start = c.s; e.finish = c.f; return; }
+      /* Filled in another day: that is a new entry on that date, which is
          the whole point of the date being a column. */
-      ENTRIES.push(Object.assign({}, e, { id: 'e' + (ENTRIES.length + 1000), date: date, hours: draft[k], allowances: [] }));
+      ENTRIES.push(Object.assign({}, e, {
+        id: 'e' + (ENTRIES.length + 1000), date: date,
+        hours: c.h, start: c.s, finish: c.f, allowances: []
+      }));
     });
     state.editing = false; draft = null; pending = []; justAdded = null;
     render();
     Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved.');
   });
 
+  /* ─── One cell ──────────────────────────────────────────────────────
+     Hours, or the times they were worked. Both are recorded because
+     different clients record different ones, and times had nowhere to go
+     while a cell was a bare number field. */
+  var pop = el('cell-pop'), popKey = null;
+
+  function parseTime(v) {
+    var m = /^(\d{1,2})[:.]?(\d{2})?$/.exec((v || '').trim());
+    if (!m) return null;
+    return Number(m[1]) * 60 + Number(m[2] || 0);
+  }
+  function hoursBetween(a, b) {
+    var x = parseTime(a), y = parseTime(b);
+    if (x == null || y == null) return null;
+    var mins = y - x;
+    if (mins <= 0) mins += 24 * 60;          // finished after midnight
+    return Math.round(mins / 60 * 100) / 100;
+  }
+
+  function openCell(btn) {
+    popKey = btn.getAttribute('data-cell');
+    var id = popKey.slice(0, popKey.indexOf('|')), date = popKey.slice(popKey.indexOf('|') + 1);
+    var e = ENTRIES.concat(pending).filter(function (x) { return x.id === id; })[0];
+    var c = draft && popKey in draft ? draft[popKey]
+          : (e && e.date === date ? { h: e.hours, s: e.start || '', f: e.finish || '' } : { h: '', s: '', f: '' });
+
+    el('cp-when').textContent = fmtDay(fromIso(date)) + (e ? ' · ' + e.worker : '');
+    el('cp-h').value = c.h === '' ? '' : fmtHours(c.h);
+    el('cp-s').value = c.s || '';
+    el('cp-f').value = c.f || '';
+
+    var r = btn.getBoundingClientRect();
+    pop.classList.add('open');
+    var top = r.bottom + 6, left = r.right - pop.offsetWidth;
+    if (top + pop.offsetHeight > window.innerHeight - 8) top = r.top - pop.offsetHeight - 6;
+    pop.style.top = Math.max(8, top) + 'px';
+    pop.style.left = Math.max(8, left) + 'px';
+    el('cp-h').focus();
+    el('cp-h').select();
+  }
+
+  function commitCell() {
+    if (!popKey) return;
+    var h = el('cp-h').value.trim().replace(',', '.');
+    var sT = el('cp-s').value.trim(), fT = el('cp-f').value.trim();
+    var fromTimes = hoursBetween(sT, fT);
+    var v = fromTimes != null ? fromTimes : (h === '' ? 0 : Number(h));
+    if (isNaN(v) || v < 0) v = 0;
+    draft[popKey] = { h: v, s: fromTimes != null ? sT : '', f: fromTimes != null ? fT : '' };
+    closeCell();
+    render();
+  }
+  function closeCell() { pop.classList.remove('open'); popKey = null; }
+
+  /* Times win when both are given, because they are the more specific
+     answer — and the figure they imply is shown as it is typed. */
+  ['cp-s', 'cp-f'].forEach(function (id) {
+    el(id).addEventListener('input', function () {
+      var v = hoursBetween(el('cp-s').value, el('cp-f').value);
+      if (v != null) el('cp-h').value = fmtHours(v);
+    });
+  });
+  el('cp-done').addEventListener('click', commitCell);
+  el('cp-clear').addEventListener('click', function () {
+    if (popKey) draft[popKey] = { h: 0, s: '', f: '' };
+    closeCell();
+    render();
+  });
+  pop.addEventListener('click', function (e) { e.stopPropagation(); });
+  pop.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); commitCell(); }
+    if (e.key === 'Escape') closeCell();
+  });
+  document.addEventListener('click', function () { if (popKey) closeCell(); });
+  window.addEventListener('scroll', function () { if (popKey) closeCell(); }, true);
+
+  el('grid-body').addEventListener('click', function (e) {
+    var cell = e.target.closest('.hr-cell');
+    if (!cell) return;
+    e.stopPropagation();
+    openCell(cell);
+  });
+
   el('grid-body').addEventListener('input', function (e) {
-    var box = e.target.closest('.hr-input');
-    if (box) {
-      var raw = box.value.trim().replace(',', '.');
-      var v = raw === '' ? 0 : Number(raw);
-      if (isNaN(v) || v < 0) return;
-      draft[box.getAttribute('data-cell') || box.getAttribute('data-newcell')] = v;
-      box.classList.add('changed');
-      syncEditNote();
-      return;
-    }
     var sel = e.target.closest('.cell-input');
-    if (sel) {
-      var row = pending.filter(function (x) { return x.id === sel.getAttribute('data-row'); })[0];
-      if (!row) return;
-      row[sel.getAttribute('data-field')] = sel.value;
-      if (sel.getAttribute('data-field') === 'date') row.sup = supervisorOn(row.date, row.site) || row.sup;
-      render();
-    }
+    if (!sel) return;
+    var row = pending.filter(function (x) { return x.id === sel.getAttribute('data-row'); })[0];
+    if (!row) return;
+    row[sel.getAttribute('data-field')] = sel.value;
+    if (sel.getAttribute('data-field') === 'date') row.sup = supervisorOn(row.date, row.site) || row.sup;
+    render();
   });
 
   el('grid-body').addEventListener('click', function (e) {
@@ -1400,8 +1541,9 @@
     row.scrollIntoView({ block: 'center' });
     /* Land on the cell for the day it was added to, not the first of the
        week — in Period that is the one the person is about to fill. */
-    var box = row.querySelector('.hr-input[data-cell$="|' + addedOn + '"]') || row.querySelector('.hr-input');
-    if (box) { box.focus(); box.select && box.select(); }
+    /* Open the day it was added to, so the next thing you do is fill it. */
+    var box = row.querySelector('.hr-cell[data-cell$="|' + addedOn + '"]') || row.querySelector('.hr-cell');
+    if (box) openCell(box);
   }
 
   /* ─── Entries or Period ─────────────────────────────────────────── */
