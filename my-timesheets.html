@@ -1690,6 +1690,14 @@
     renderGrid(); renderWeek(); syncEditBar();
   }
 
+  /* Hours and the times are two ways of saying the same thing, so typing
+     one lets go of the other — otherwise a number typed over a cell that
+     already has times is silently overruled by them on Done. */
+  el('cp-h').addEventListener('input', function () {
+    el('cp-s').value = '';
+    el('cp-f').value = '';
+  });
+
   ['cp-s', 'cp-f'].forEach(function (id) {
     el(id).addEventListener('input', function () {
       var v = hoursBetween(el('cp-s').value, el('cp-f').value);
@@ -1713,6 +1721,10 @@
     if (e.key === 'Escape') closeCell();
   });
   document.addEventListener('click', function (e) {
+    /* This runs in the capture phase, ahead of the editor's own buttons, so
+       a click on Done would otherwise clear popKey before commitCell reads
+       it — and the hours would never land. */
+    if (pop.contains(e.target)) return;
     var cell = e.target.closest('.hr-cell');
     if (cell) { e.stopPropagation(); openCell(cell); return; }
     if (popKey) closeCell();
