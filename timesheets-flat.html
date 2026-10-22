@@ -1424,7 +1424,8 @@
     el('recent-list').hidden = m !== 'recent';
     el('new-task').hidden = m !== 'new';
     el('sec-title').textContent = m === 'recent' ? recentTitle : 'Set up another task';
-    el('sec-switch').textContent = m === 'recent' ? 'Set up another task' : 'Back to recent tasks';
+    /* Each side names where it goes, not where you came from. */
+    el('sec-switch').textContent = m === 'recent' ? 'Set up another task' : 'Select recent task';
     syncAddGo();
   }
   var recentTitle = 'Recent tasks';
