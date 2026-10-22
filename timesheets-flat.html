@@ -159,8 +159,11 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .g-btn .g-name { display: inline; }
-  /* A rollup, not a value of that column — so it says what it counts. */
-  td.g-tally, .g-tally-in { color: var(--grey-600); font-weight: 400; }
+  /* A rollup, not a value of that column — so it says what it counts and
+     is set in grey, exactly as the counts on the Supervisor screen are.
+     The #grid prefix matters: without it the cell colour above wins on
+     specificity and the counts come out at full strength. */
+  #grid td.g-tally, .g-tally-in { color: var(--grey-600); font-weight: 400; }
 
   .grid-foot {
     display: flex; align-items: center; gap: 12px; padding: 12px 16px;
