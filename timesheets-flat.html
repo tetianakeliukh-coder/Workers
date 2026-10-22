@@ -586,18 +586,23 @@
       return '<td></td>';
     }
 
+    /* Only the top level folds. One chevron on the screen, in one column,
+       and everything under a closed one goes with it — the deeper rows are
+       the detail you opened it to read, not more drawers to open. */
     function walk(nodes, depth, path) {
       nodes.forEach(function (node) {
         var key = path + '\u00a7' + node.name;
-        var open = collapsed[key] !== true;
-        openKeys.push(key);
+        var top = depth === 1;
+        var open = !top || collapsed[key] !== true;
+        if (top) openKeys.push(key);
 
-        out.push('<tr class="g-row d' + depth + (open ? '' : ' collapsed') + '" data-key="' + Shell.esc(key) + '">' +
+        out.push('<tr class="g-row d' + depth + (open ? '' : ' collapsed') + '"' +
+            (top ? ' data-key="' + Shell.esc(key) + '"' : '') + '>' +
           lead.map(function (c, i) {
             if (i < depth - 1) return leadCell(i, '');            // said already, above
             if (i === depth - 1) {
-              return leadCell(i, '<button class="g-btn" type="button">' + CARET +
-                '<span class="g-name">' + Shell.highlight(String(node.name), state.q) + '</span></button>');
+              var name = '<span class="g-name">' + Shell.highlight(String(node.name), state.q) + '</span>';
+              return leadCell(i, top ? '<button class="g-btn" type="button">' + CARET + name + '</button>' : name);
             }
             /* A field grouped below this one: how many are coming. */
             return leadCell(i, '<span class="g-tally-in">' + tally(node.rows, c) + '</span>');
