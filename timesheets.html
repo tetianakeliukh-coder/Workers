@@ -91,13 +91,13 @@
   .th-ico { display: inline-flex; align-items: center; flex-shrink: 0; color: var(--grey-500); }
 
   /* Stands in for the hidden Allowance column on the line that has one. */
+  /* No box around it: the icon sits flush on the column's right edge, so
+     it lines up with the hours above and below it. */
   .alw-mark {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 20px; height: 20px; margin-right: 6px; border-radius: 5px;
-    color: var(--grey-600); background: var(--grey-100); cursor: default;
-    vertical-align: -5px;
+    display: inline-flex; align-items: center; justify-content: flex-end;
+    color: var(--grey-500); cursor: default; vertical-align: -2px;
   }
-  .alw-mark:hover { color: var(--text-main); background: var(--grey-200); }
+  .alw-mark:hover { color: var(--text-main); }
 
   /* Timesheet tab: sheet rows lead, their jobs sit under them on a tint. */
   tr.ts-parent { cursor: pointer; }
@@ -1574,6 +1574,13 @@
       return x.type === 'amount' ? x.name + ' ' + x.qty : x.name;
     }).join(' · ');
   }
+  /* The tooltip stands in for the chip, so the quantity is bracketed —
+     otherwise "Height Allowance 1" reads as part of the name. */
+  function allowTip(a) {
+    return (a.allowances || []).map(function (x) {
+      return x.type === 'amount' ? x.name + ' (' + x.qty + ')' : x.name;
+    }).join(' · ');
+  }
   /* The chip says how much. A check allowance has no how-much — the line
      exists because it was claimed, and there is no version of it that says
      no — so it carries no chip, and the empty slot is what tells the two
@@ -1601,13 +1608,15 @@
 
   function hoursCell(a) {
     if (a.kind !== 'allow') return '<td class="col-hrs">' + fmtHours(a.hours) + '</td>';
-    /* An allowance line has no hours, and a blank cell reads as a value
-       that failed to arrive. The dash is the token the rest of the table
-       already uses for "this record genuinely carries nothing here". */
-    var mark = hiddenCols.allow
-      ? '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowText(a)) + '">' + ICO_ALW + '</span>'
-      : '';
-    return '<td class="col-hrs">' + mark + '<span class="cell-empty">&mdash;</span></td>';
+    /* An allowance line has no hours. With the column hidden the flag
+       fills the cell and carries what the column would have said, so the
+       dash would only be a second way of saying the same nothing; with
+       the column on screen there is no flag, and the dash keeps the cell
+       from reading as a figure that failed to arrive. Either way one
+       mark, sitting on the same right edge as the numbers. */
+    return '<td class="col-hrs">' + (hiddenCols.allow
+      ? '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowTip(a)) + '">' + ICO_ALW + '</span>'
+      : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
   /* Finishing before you started means the shift ran past midnight. */
   function timesText(a) {
