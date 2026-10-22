@@ -98,7 +98,20 @@
   #grid tbody tr:hover { background: #fafbfe; }
 
   th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  /* Hours stays on screen whatever the columns do — it is the number the
+     table exists to add up, same as the totals column on the Supervisor
+     screen. */
+  th.col-hrs, td.col-hrs {
+    position: sticky; right: 0; z-index: 2; background: inherit; padding-right: 16px;
+  }
+  #grid thead th.col-hrs { z-index: 4; }
   td.col-hrs { font-weight: 600; }
+  /* A hairline on its left while there is anything scrolled under it. */
+  .sx-right .col-hrs::before {
+    content: ''; position: absolute; top: 0; bottom: 0; right: 100%; width: 1px;
+    background: var(--grey-400); pointer-events: none;
+  }
+  .sx-right .col-hrs { overflow: visible; }
 
   /* A heading row is a value the rows under it share, not a record. */
   tr.g1 > td { background: var(--grey-100); }
@@ -492,7 +505,8 @@
 
     el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
       var isLead = i < lead.length;
-      return '<th class="' + (isLead ? 'col-lead' + (i === lead.length - 1 ? ' last' : '') : '') + (c.num ? ' num' : '') + '"' +
+      return '<th class="' + (isLead ? 'col-lead' + (i === lead.length - 1 ? ' last' : '') : '') +
+        (c.num ? ' num' : '') + (c.k === 'hours' ? ' col-hrs' : '') + '"' +
         (isLead ? ' style="left:' + offsets[i] + 'px"' : '') + '>' +
         Shell.esc(c.label) + '</th>';
     }).join('') + '</tr>';
@@ -561,6 +575,7 @@
     el('btn-collapse').dataset.keys = openKeys.join('\u0000');
     syncCollapseBtn(openKeys);
     renderGroupBy();
+    syncScrollEdges();
   }
 
   var ICO_COLLAPSE = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
@@ -644,9 +659,13 @@
   el('search').addEventListener('input', function () { state.q = this.value.trim(); render(); });
 
   var scrollBox = document.querySelector('.table-scroll');
-  scrollBox.addEventListener('scroll', function () {
-    this.classList.toggle('sx', this.scrollLeft > 0);
-  });
+  function syncScrollEdges() {
+    var max = scrollBox.scrollWidth - scrollBox.clientWidth;
+    scrollBox.classList.toggle('sx', scrollBox.scrollLeft > 0);
+    scrollBox.classList.toggle('sx-right', max > 1 && scrollBox.scrollLeft < max - 1);
+  }
+  scrollBox.addEventListener('scroll', syncScrollEdges);
+  window.addEventListener('resize', syncScrollEdges);
 
   var RANGES = [
     { k: 'week',     label: 'Current week' },
