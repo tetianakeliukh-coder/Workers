@@ -250,15 +250,11 @@
   /* .acc-body and the field groups set display, which beats the browser's
      own [hidden] rule — so say it louder. */
   [hidden] { display: none !important; }
-  .acc { display: flex; flex-direction: column; }
-  .acc-sec + .acc-sec { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--grey-300); }
-  .acc-head {
-    display: flex; align-items: center; gap: 8px; width: 100%; padding: 0;
-    border: none; background: none; cursor: pointer; font-family: var(--fs-sans); text-align: left;
+  .sec { padding-top: 14px; border-top: 1px solid var(--grey-300); }
+  .sec-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    margin-bottom: 10px;
   }
-  .acc-chev { flex-shrink: 0; color: var(--grey-600); transition: transform var(--t-fast); }
-  .acc-head[aria-expanded="false"] .acc-chev { transform: rotate(-90deg); }
-  .acc-body { margin-top: 12px; }
   #new-task { display: flex; flex-direction: column; gap: 14px; }
   #nt-levels { display: flex; flex-direction: column; gap: 14px; }
   .step-title { font-family: var(--fs-sans); font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
@@ -403,26 +399,26 @@
         <select id="add-worker"></select>
       </div>
 
-      <div class="acc">
-        <div class="acc-sec">
-          <button class="acc-head" type="button" data-acc="recent" aria-expanded="true" aria-controls="recent-list">
-            <svg class="acc-chev" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="step-title" id="recent-label">Recent tasks</span>
-          </button>
-          <div class="acc-body recent-list" id="recent-list"></div>
+      <div class="fld">
+        <label class="fld-label" for="add-date">Date</label>
+        <select id="add-date"></select>
+      </div>
+
+      <!-- Two ways to name the task, side by side in one heading rather
+           than one folded under the other, where the second was never
+           found. -->
+      <div class="sec">
+        <div class="sec-head">
+          <span class="step-title" id="sec-title">Recent tasks</span>
+          <button class="btn-text" type="button" id="sec-switch">Set up another task</button>
         </div>
-        <div class="acc-sec">
-          <button class="acc-head" type="button" data-acc="new" aria-expanded="false" aria-controls="new-task">
-            <svg class="acc-chev" width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="step-title">Or set up another task</span>
-          </button>
-          <div class="acc-body" id="new-task" hidden>
-            <div class="fld">
-              <label class="fld-label" for="nt-site">Site</label>
-              <select id="nt-site"></select>
-            </div>
-            <div id="nt-levels"></div>
+        <div class="recent-list" id="recent-list"></div>
+        <div id="new-task" hidden>
+          <div class="fld">
+            <label class="fld-label" for="nt-site">Site</label>
+            <select id="nt-site"></select>
           </div>
+          <div id="nt-levels"></div>
         </div>
       </div>
     </div>
@@ -594,6 +590,7 @@
   var draft = null;        // 'entryId|date' -> hours, while editing
   var pending = [];        // rows added but not yet saved
   var justAdded = null;    // the row added last, so it can be found
+  var addedOn = null;      // and the day it was added to
 
   /* Period turns the date into the columns, so it cannot also be a
      grouping — the days are already across the top. */
@@ -1280,13 +1277,16 @@
   function addWorker() {
     return state.tab === 'mine' ? ME : (el('add-worker').value || ME);
   }
-  function setAcc(which) {
-    addModal.querySelectorAll('.acc-head').forEach(function (h) {
-      var on = h.getAttribute('data-acc') === which;
-      h.setAttribute('aria-expanded', on ? 'true' : 'false');
-      el(h.getAttribute('aria-controls')).hidden = !on;
-    });
+  var addMode = 'recent';
+  function setAddMode(m) {
+    addMode = m;
+    el('recent-list').hidden = m !== 'recent';
+    el('new-task').hidden = m !== 'new';
+    el('sec-title').textContent = m === 'recent' ? recentTitle : 'Set up another task';
+    el('sec-switch').textContent = m === 'recent' ? 'Set up another task' : 'Back to recent tasks';
+    syncAddGo();
   }
+  var recentTitle = 'Recent tasks';
   function renderLevels() {
     var site = el('nt-site').value, fields = SITE_FIELDS[site] || [];
     el('nt-levels').innerHTML = fields.map(function (f, i) {
@@ -1302,13 +1302,15 @@
       .map(function (x) { return x.value; }).filter(Boolean).join(' | ');
   }
   function syncAddGo() {
-    var openNew = el('new-task').hidden === false;
-    el('add-go').disabled = openNew ? !el('nt-0') || !el('nt-0').value : !addPick;
+    el('add-go').disabled = addMode === 'new'
+      ? !el('nt-0') || !el('nt-0').value
+      : !addPick;
   }
 
   function renderRecent() {
     var list = recentFor(addWorker());
-    el('recent-label').textContent = 'Recent tasks' + (list.length ? ' (' + list.length + ')' : '');
+    recentTitle = 'Recent tasks' + (list.length ? ' (' + list.length + ')' : '');
+    if (addMode === 'recent') el('sec-title').textContent = recentTitle;
     el('recent-list').innerHTML = list.length ? list.map(function (t, i) {
       return '<button class="recent-row" type="button" data-recent="' + i + '">' +
         '<span class="rr-code">' + Shell.esc(t.task) + '</span>' +
@@ -1329,9 +1331,17 @@
       }).join('');
     }
     el('nt-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    /* The date is a field, not a guess the person has to work out from
+       the table afterwards. */
+    var ds = days(), today = iso(TODAY);
+    var has = ds.some(function (d) { return iso(d) === today; });
+    el('add-date').innerHTML = ds.map(function (d) {
+      return '<option value="' + iso(d) + '"' +
+        ((has ? iso(d) === today : d === ds[0]) ? ' selected' : '') + '>' + fmtDay(d) + '</option>';
+    }).join('');
     renderLevels();
     renderRecent();
-    setAcc('recent');
+    setAddMode('recent');
     addModal.classList.add('open');
   });
 
@@ -1339,12 +1349,8 @@
   el('nt-site').addEventListener('change', function () { renderLevels(); syncAddGo(); });
   el('nt-levels').addEventListener('change', syncAddGo);
 
-  addModal.querySelector('.acc').addEventListener('click', function (e) {
-    var h = e.target.closest('.acc-head');
-    if (!h) return;
-    var me = h.getAttribute('data-acc');
-    setAcc(h.getAttribute('aria-expanded') === 'true' ? (me === 'recent' ? 'new' : 'recent') : me);
-    syncAddGo();
+  el('sec-switch').addEventListener('click', function () {
+    setAddMode(addMode === 'recent' ? 'new' : 'recent');
   });
 
   el('recent-list').addEventListener('click', function (e) {
@@ -1360,9 +1366,8 @@
   });
 
   el('add-go').addEventListener('click', function () {
-    var openNew = el('new-task').hidden === false;
     var site, task, project;
-    if (openNew) {
+    if (addMode === 'new') {
       site = el('nt-site').value;
       task = newTaskPath();
       project = (PROJECTS[site] || [])[0];
@@ -1371,7 +1376,7 @@
       site = addPick.site; task = addPick.task; project = addPick.project;
     }
     if (!state.editing) enterEdit();
-    var date = iso(TODAY);
+    var date = el('add-date').value || iso(TODAY);
     var row = {
       id: 'n' + Date.now(),
       date: date, site: site, sup: supervisorOn(date, site) || (SUPS[site] || [])[0],
@@ -1380,6 +1385,7 @@
     };
     pending.push(row);
     justAdded = row.id;
+    addedOn = date;
     addModal.classList.remove('open');
     render();
     showAdded();
@@ -1394,7 +1400,7 @@
     row.scrollIntoView({ block: 'center' });
     /* Land on the cell for the day it was added to, not the first of the
        week — in Period that is the one the person is about to fill. */
-    var box = row.querySelector('.hr-input[data-cell$="|' + iso(TODAY) + '"]') || row.querySelector('.hr-input');
+    var box = row.querySelector('.hr-input[data-cell$="|' + addedOn + '"]') || row.querySelector('.hr-input');
     if (box) { box.focus(); box.select && box.select(); }
   }
 
