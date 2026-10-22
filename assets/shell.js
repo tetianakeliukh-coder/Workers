@@ -414,22 +414,6 @@
            'and carries no hours, so including it adds a row of zeroes across the whole week for ' +
            'every allowance claimed.',
       now: 'They are left out. Allowances are read on the Timesheets tab, where the Allowance column lives.'
-    },
-    {
-      screen: 'My Timesheets',
-      q: 'Should SA BHP OLYMPIC DAM have a field that names the work?',
-      why: 'Its four fields are all codes — Work Order, Cost Code, Type, Shift Code. On a phone a ' +
-           'timesheet card leads with whichever field names the job, and that site has none, so a ' +
-           'worker there sees two entries that differ only by a code.',
-      now: 'The card leads with the Work Order and lists the remaining codes underneath.'
-    },
-    {
-      screen: 'Supervisor Timesheets',
-      q: 'Does anyone need to compare sites week by week with the detail hidden?',
-      why: 'The flat Period layout folds at site + supervisor, and the nested one folds by site and ' +
-           'by supervisor. A totals-only roll-up would be a third thing, worth building only if ' +
-           'somebody actually works that way.',
-      now: 'Both layouts fold, but every fold still shows the rows beneath when it is open.'
     }
   ];
 
