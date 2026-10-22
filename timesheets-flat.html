@@ -18,8 +18,10 @@
   .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
   /* The toolbar's own controls are secondary actions, so they read in the
      call-to-action colour rather than as body text. */
-  .toolbar .btn-ghost, .toolbar .gb-trigger { color: var(--primary); }
-  .toolbar .gb-trigger .dd-caret, .toolbar .gb-clear { color: var(--primary); }
+  .toolbar .btn-ghost, .toolbar #cols-trigger { color: var(--primary); }
+  /* Group by shows a value rather than doing something, so it reads like
+     the date picker: black text, a grey caret. */
+  .toolbar #gb-trigger { color: var(--text-main); }
   .toolbar .search-wrap { width: 280px; }
   .toolbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
@@ -36,7 +38,10 @@
   }
   .gb-trigger:hover { border-color: var(--border-hover); }
   .gb-wrap.open .gb-trigger { border-color: var(--primary); }
-  .gb-wrap.has-clear .gb-trigger { border-radius: 8px 0 0 8px; border-right: none; padding-right: 10px; }
+  /* The count and the clear keep their room whether or not there is
+     anything in them, so the control never shifts under the cursor. */
+  #gb-trigger { border-radius: 8px 0 0 8px; border-right: none; padding-right: 10px; }
+  .is-off { visibility: hidden; pointer-events: none; }
   .gb-count {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
@@ -70,13 +75,15 @@
   .gb-row:hover { background: var(--grey-100); }
   .gb-row:disabled { color: var(--grey-400); cursor: default; }
   .gb-row:disabled:hover { background: none; }
+  /* An empty slot, not a dead one: an outline until it holds a number. */
   .gb-order {
     width: 20px; height: 20px; flex-shrink: 0; border-radius: 5px;
     display: inline-flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 600;
-    background: var(--grey-200); color: var(--grey-600);
+    background: none; border: 1px solid var(--grey-350); color: var(--grey-600);
   }
-  .gb-row.on .gb-order { background: var(--primary); color: var(--white); }
+  .gb-row.on .gb-order { background: var(--primary); border-color: var(--primary); color: var(--white); }
+  .gb-row:disabled .gb-order { border-color: var(--grey-300); }
   .gb-foot { padding: 6px 10px 4px; border-top: 1px solid var(--grey-200); margin-top: 4px; }
   .gb-why { padding: 2px 10px 8px; font-size: 12px; line-height: 16px; color: var(--grey-600); }
 
@@ -212,7 +219,9 @@
     color: var(--grey-500); margin-right: auto;
   }
   td.col-day .hr-st { margin-right: 4px; }
-  .st-cell { display: inline-flex; align-items: center; gap: 6px; }
+  /* The chip carries its own dot already, so the icon replaces it. */
+  .status-sec .st-ico { display: inline-flex; align-items: center; margin-right: -2px; }
+  .status-sec:has(.st-ico)::before { display: none; }
 
   .cell-pop {
     display: none; position: fixed; z-index: 500; width: 220px; padding: 12px;
@@ -365,10 +374,10 @@
           <div class="gb-wrap" id="gb-wrap">
             <button class="gb-trigger" type="button" id="gb-trigger" aria-haspopup="true" aria-expanded="false">
               <span>Group by</span>
-              <span class="gb-count" id="gb-count" hidden></span>
+              <span class="gb-count is-off" id="gb-count">0</span>
               <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
-            <button class="gb-clear" type="button" id="gb-clear" aria-label="Clear grouping" hidden>
+            <button class="gb-clear is-off" type="button" id="gb-clear" aria-label="Clear grouping">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </button>
             <div class="gb-panel" id="gb-panel"></div>
@@ -546,6 +555,15 @@
     Submitted: { locked: true,  icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.3"/><path d="M8 11V5M5.5 7.5L8 5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
     Finalised: { locked: true,  icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="6.5" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7V5.2a2.5 2.5 0 015 0V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' }
   };
+  /* The same colours the Supervisor screen uses, so a status reads the
+     same whichever structure it is on. */
+  var STATUS_COLOR = { Draft: 'grey', Submitted: 'blue', Revised: 'lime', Finalised: 'green' };
+  function statusChip(st) {
+    var m = STATUS_META[st] || STATUS_META.Draft;
+    return '<span class="status-sec status-sec-' + (STATUS_COLOR[st] || 'grey') + '">' +
+      (m.icon ? '<span class="st-ico">' + m.icon + '</span>' : '') +
+      Shell.highlight(st, state.q) + '</span>';
+  }
   function statusOf(e) { return STATUS_META[e.status] || STATUS_META.Draft; }
   function isLocked(e) { return statusOf(e).locked; }
   var ALLOWANCES = [
@@ -851,11 +869,7 @@
       if (state.editing && e.kind !== 'allow') return hrInput(e);
       return e.hours === '' ? '<span class="cell-empty">&mdash;</span>' : fmtHours(e.hours);
     }
-    if (f.k === 'status') {
-      var st = statusOf(e);
-      return '<span class="st-cell">' + (st.icon ? '<span class="hr-st">' + st.icon + '</span>' : '') +
-        Shell.highlight(e.status, state.q) + '</span>';
-    }
+    if (f.k === 'status') return statusChip(e.status);
     if (e.isNew && (f.k === 'date' || f.k === 'sup')) return pickCell(e, f);
     var v = f.get(e);
     return v ? Shell.highlight(v, state.q) : '<span class="cell-empty">&mdash;</span>';
@@ -1173,10 +1187,9 @@
     /* The count, never the names: the control keeps one width whatever is
        chosen, and the table below is already showing the names in its own
        headings. */
-    el('gb-count').hidden = !g.length;
-    el('gb-count').textContent = g.length;
-    el('gb-clear').hidden = !g.length;
-    el('gb-wrap').classList.toggle('has-clear', !!g.length);
+    el('gb-count').textContent = g.length || '0';
+    el('gb-count').classList.toggle('is-off', !g.length);
+    el('gb-clear').classList.toggle('is-off', !g.length);
 
     el('gb-panel').innerHTML =
       '<div class="gb-head">Group by, in order</div>' +
