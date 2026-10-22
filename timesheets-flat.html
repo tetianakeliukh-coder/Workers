@@ -32,7 +32,10 @@
 
   /* ─── Group by ────────────────────────────────────────────────────
      The order is the nesting, so the chips are a sequence, not a set. */
-  .gb-wrap { position: relative; }
+  /* The trigger says how many fields are grouped on, never which — the
+     control then keeps one width whatever is chosen, and the table below
+     is already showing the names in its own headings. */
+  .gb-wrap { position: relative; display: inline-flex; align-items: center; }
   .gb-trigger {
     display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
     border-radius: 8px; background: var(--white); border: 1px solid var(--grey-350);
@@ -40,14 +43,21 @@
   }
   .gb-trigger:hover { border-color: var(--border-hover); }
   .gb-wrap.open .gb-trigger { border-color: var(--primary); }
-  .gb-chips { display: inline-flex; align-items: center; gap: 4px; }
-  .gb-chip {
-    display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px;
-    border-radius: 5px; background: var(--bg-blue-light); color: var(--primary);
-    font-size: 12px; font-weight: 500;
+  .gb-wrap.has-clear .gb-trigger { border-radius: 8px 0 0 8px; border-right: none; padding-right: 10px; }
+  .gb-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--primary); color: var(--white);
+    font-size: 11px; font-weight: 600; line-height: 18px;
   }
-  .gb-sep { color: var(--grey-500); font-size: 12px; }
-  .gb-none { color: var(--grey-600); }
+  .gb-clear {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 32px; padding: 0; cursor: pointer; color: var(--grey-600);
+    border: 1px solid var(--grey-350); border-radius: 0 8px 8px 0; border-left: 1px solid var(--grey-300);
+    background: var(--white);
+  }
+  .gb-clear:hover { color: var(--text-main); background: var(--grey-100); }
+  .gb-wrap.open .gb-clear { border-color: var(--primary); border-left-color: var(--grey-300); }
 
   .gb-panel {
     display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 300;
@@ -75,6 +85,18 @@
   }
   .gb-row.on .gb-order { background: var(--primary); color: var(--white); }
   .gb-foot { padding: 6px 10px 4px; border-top: 1px solid var(--grey-200); margin-top: 4px; }
+  .gb-why { padding: 2px 10px 8px; font-size: 12px; line-height: 16px; color: var(--grey-600); }
+
+  /* Columns: a tick each, and a locked one where the table cannot do
+     without it — grouped on, or the figure the table adds up. */
+  .cb-box {
+    width: 16px; height: 16px; flex-shrink: 0; border-radius: 4px;
+    border: 1px solid var(--grey-400); background: var(--white);
+    display: inline-flex; align-items: center; justify-content: center; color: var(--white);
+  }
+  .gb-row.on .cb-box { background: var(--primary); border-color: var(--primary); }
+  .gb-row:disabled .cb-box { background: var(--grey-350); border-color: var(--grey-350); }
+  .gb-row .lock { margin-left: auto; font-size: 12px; color: var(--grey-500); }
 
   /* ─── Table ───────────────────────────────────────────────────────── */
   .table-scroll { overflow: auto; max-height: calc(100vh - 290px); }
@@ -193,16 +215,30 @@
             <input class="search-input-el" id="search" type="text" placeholder="Search" autocomplete="off" />
           </label>
         </div>
+        <button class="btn-ghost" type="button" id="btn-collapse" hidden></button>
         <div class="toolbar-right">
           <div class="gb-wrap" id="gb-wrap">
             <button class="gb-trigger" type="button" id="gb-trigger" aria-haspopup="true" aria-expanded="false">
               <span>Group by</span>
-              <span class="gb-chips" id="gb-chips"></span>
+              <span class="gb-count" id="gb-count" hidden></span>
               <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="gb-clear" type="button" id="gb-clear" aria-label="Clear grouping" hidden>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             </button>
             <div class="gb-panel" id="gb-panel"></div>
           </div>
-          <button class="btn-ghost" type="button" id="btn-collapse"></button>
+          <div class="gb-wrap" id="cols-wrap">
+            <button class="gb-trigger" type="button" id="cols-trigger" aria-haspopup="true" aria-expanded="false">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+                <rect x="6" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+                <rect x="11" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+              </svg>
+              <span>Columns</span>
+            </button>
+            <div class="gb-panel" id="cols-panel"></div>
+          </div>
         </div>
       </div>
 
@@ -392,10 +428,18 @@
      the Supervisor screen has always done it. The columns in group order
      come first; everything else follows. */
   function leadCols() { return groups().map(field); }
+  var hidden = Object.create(null);
+  /* Grouped on, or the figure the table adds up — either way the table
+     cannot be asked to drop it. */
+  function locked(k) { return k === 'hours' || groups().indexOf(k) !== -1; }
+  function hideable() {
+    return FIELDS.filter(function (f) { return !(state.tab === 'mine' && f.k === 'worker'); });
+  }
   function restCols() {
     var g = groups();
     return FIELDS.filter(function (f) {
       if (g.indexOf(f.k) !== -1) return false;
+      if (hidden[f.k] && !locked(f.k)) return false;
       return !(state.tab === 'mine' && f.k === 'worker');
     });
   }
@@ -575,7 +619,7 @@
     el('grid-count').textContent = 'Displaying ' + shown + ' entr' + (shown === 1 ? 'y' : 'ies') +
       ' \u00b7 ' + fmtHours(sumOf(list)) + ' h';
 
-    el('btn-collapse').style.display = openKeys.length ? '' : 'none';
+    el('btn-collapse').hidden = !openKeys.length;
     el('btn-collapse').dataset.keys = openKeys.join('\u0000');
     syncCollapseBtn(openKeys);
     renderGroupBy();
@@ -607,14 +651,35 @@
   });
 
   /* ─── Group by ────────────────────────────────────────────────────── */
+  var TICK = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 6.2l2.4 2.4L9.5 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* Every field can be hidden except the one the table adds up and the
+     ones it is grouped on — dropping those would leave headings with no
+     column to sit in. */
+  function renderCols() {
+    el('cols-panel').innerHTML =
+      '<div class="gb-head">Show columns</div>' +
+      hideable().map(function (f) {
+        var lock = locked(f.k);
+        var on = lock || !hidden[f.k];
+        return '<button class="gb-row' + (on ? ' on' : '') + '" type="button" data-col="' + f.k + '"' +
+          (lock ? ' disabled' : '') + '>' +
+          '<span class="cb-box">' + (on ? TICK : '') + '</span>' +
+          '<span>' + Shell.esc(f.label) + '</span>' +
+          (lock ? '<span class="lock">' + (f.k === 'hours' ? 'always' : 'grouped') + '</span>' : '') +
+          '</button>';
+      }).join('');
+  }
+
   function renderGroupBy() {
     var g = groups();
-    el('gb-chips').innerHTML = g.length
-      ? g.map(function (k, i) {
-          return (i ? '<span class="gb-sep">›</span>' : '') +
-            '<span class="gb-chip">' + Shell.esc(field(k).label) + '</span>';
-        }).join('')
-      : '<span class="gb-none">None</span>';
+    /* The count, never the names: the control keeps one width whatever is
+       chosen, and the table below is already showing the names in its own
+       headings. */
+    el('gb-count').hidden = !g.length;
+    el('gb-count').textContent = g.length;
+    el('gb-clear').hidden = !g.length;
+    el('gb-wrap').classList.toggle('has-clear', !!g.length);
 
     el('gb-panel').innerHTML =
       '<div class="gb-head">Group by, in order</div>' +
@@ -626,18 +691,39 @@
           '<span class="gb-order">' + (at !== -1 ? (at + 1) : '') + '</span>' +
           '<span>' + Shell.esc(f.label) + '</span></button>';
       }).join('') +
-      '<div class="gb-foot"><button class="btn-text" type="button" data-gb-clear>Clear grouping</button></div>';
+      '<div class="gb-why">The table groups on the combination, so the order is the order the ' +
+        'columns read in.</div>';
+    renderCols();
   }
 
-  var gbWrap = el('gb-wrap');
-  el('gb-trigger').addEventListener('click', function (e) {
+  var gbWrap = el('gb-wrap'), colsWrap = el('cols-wrap');
+  function openOnly(w) {
+    [gbWrap, colsWrap].forEach(function (x) {
+      var on = x === w && !x.classList.contains('open');
+      x.classList.toggle('open', on);
+      x.querySelector('.gb-trigger').setAttribute('aria-expanded', on ? 'true' : 'false');
+    });
+  }
+  el('gb-trigger').addEventListener('click', function (e) { e.stopPropagation(); openOnly(gbWrap); });
+  el('cols-trigger').addEventListener('click', function (e) { e.stopPropagation(); openOnly(colsWrap); });
+
+  el('gb-clear').addEventListener('click', function (e) {
     e.stopPropagation();
-    var open = gbWrap.classList.toggle('open');
-    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+    state.groups[state.tab] = [];
+    render();
   });
+
+  el('cols-panel').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var b = e.target.closest('[data-col]');
+    if (!b || b.disabled) return;
+    var k = b.getAttribute('data-col');
+    if (hidden[k]) delete hidden[k]; else hidden[k] = true;
+    render();
+  });
+
   el('gb-panel').addEventListener('click', function (e) {
     e.stopPropagation();
-    if (e.target.closest('[data-gb-clear]')) { state.groups[state.tab] = []; render(); return; }
     var b = e.target.closest('[data-gb]');
     if (!b || b.disabled) return;
     var k = b.getAttribute('data-gb'), g = state.groups[state.tab], at = g.indexOf(k);
@@ -646,8 +732,10 @@
     render();
   });
   document.addEventListener('click', function () {
-    gbWrap.classList.remove('open');
-    el('gb-trigger').setAttribute('aria-expanded', 'false');
+    [gbWrap, colsWrap].forEach(function (x) {
+      x.classList.remove('open');
+      x.querySelector('.gb-trigger').setAttribute('aria-expanded', 'false');
+    });
   });
 
   /* ─── Tabs, search, dates ─────────────────────────────────────────── */
