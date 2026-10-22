@@ -218,6 +218,17 @@
     display: inline-flex; align-items: center; flex-shrink: 0;
     color: var(--grey-500); margin-right: auto;
   }
+
+  /* Removing a row is its own column at the right, not a cross tucked
+     behind the task's name where it reads as part of the text. It only
+     appears while editing, and only rows added in this sitting carry it
+     — anything already saved is not the table's to throw away. */
+  th.col-act, td.col-act {
+    position: sticky; right: 0; z-index: 2; background: inherit;
+    text-align: right; padding: 0 12px 0 4px;
+  }
+  #grid thead th.col-act { z-index: 4; }
+  body.editing th.col-hrs, body.editing td.col-hrs { right: 44px; }
   td.col-day .hr-st { margin-right: 4px; }
   /* The chip carries its own dot already, so the icon replaces it. */
   .status-sec .st-ico { display: inline-flex; align-items: center; margin-right: -2px; }
@@ -268,7 +279,7 @@
   tr.new-row:hover > td { background: #eaf1ff; }
   .row-drop {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 24px; height: 24px; border: none; background: none; cursor: pointer;
+    width: 28px; height: 28px; border: none; background: none; cursor: pointer;
     color: var(--grey-600); border-radius: 6px;
   }
   .row-drop:hover { color: var(--error); background: var(--grey-100); }
@@ -885,7 +896,8 @@
     cols.forEach(function (c) { offs.push(off); off += c.w; });
 
     el('grid-cols').innerHTML = cols.map(function (c) { return '<col style="width:' + c.w + 'px" />'; }).join('') +
-      ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />';
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />' +
+      (state.editing ? '<col style="width:44px" />' : '');
 
     el('grid-head').innerHTML = '<tr>' +
       cols.map(function (c, i) {
@@ -897,9 +909,9 @@
         return '<th class="col-day' + (t ? ' tdy' : '') + '"><span class="dh"><span class="dw">' +
           DOW[d.getDay()] + '</span><span>' + d.getDate() + ' ' + MONTHS[d.getMonth()] + '</span></span></th>';
       }).join('') +
-      '<th class="num col-hrs">Total</th></tr>';
+      '<th class="num col-hrs">Total</th>' + (state.editing ? '<th class="col-act"></th>' : '') + '</tr>';
 
-    el('grid').style.minWidth = (off + ds.length * 92 + 92) + 'px';
+    el('grid').style.minWidth = (off + ds.length * 92 + 92 + (state.editing ? 44 : 0)) + 'px';
 
     var out = [], shown = 0, openKeys = [];
 
@@ -951,7 +963,7 @@
       return '<tr class="' + (fresh ? 'new-row' : '') + (isJust ? ' just-added' : '') + '">' +
         cols.map(function (c, i) {
           var html = i === cols.length - 1
-            ? Shell.highlight(e.task, state.q) + (fresh ? dropBtn(fresh) : '')
+            ? Shell.highlight(e.task, state.q)
             : '';
           return '<td class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
             '" style="left:' + offs[i] + 'px">' + html + '</td>';
@@ -983,7 +995,7 @@
           return '<td class="col-day g-tally' + (iso(d) === iso(TODAY) ? ' tdy' : '') + '">' +
             (h ? fmtHours(h) : '') + '</td>';
         }).join('') +
-        '<td class="num col-hrs">' + fmtHours(total) + '</td></tr>';
+        '<td class="num col-hrs">' + fmtHours(total) + '</td>' + actCell(null) + '</tr>';
     }
 
     function walk(nodes, depth, path) {
@@ -1004,13 +1016,17 @@
     else walk(nest(list, g), 1, '');
 
     el('grid-body').innerHTML = out.length ? out.join('')
-      : '<tr><td colspan="' + (cols.length + ds.length + 1) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
+      : '<tr><td colspan="' + (cols.length + ds.length + 2) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
     return { shown: shown, openKeys: openKeys };
   }
 
-  function dropBtn(e) {
-    return '<button class="row-drop" type="button" data-drop="' + e.id + '" aria-label="Remove this row">' +
-      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
+  /* Only a row added in this sitting can be thrown away here. */
+  function actCell(e) {
+    if (!state.editing) return '';
+    return '<td class="col-act">' + (e && e.isNew
+      ? '<button class="row-drop" type="button" data-drop="' + e.id + '" aria-label="Remove this row" data-tip="Remove this row">' +
+        '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 4.5h11M6 4.5V3h4v1.5M4 4.5l.6 8.2a1 1 0 001 .8h4.8a1 1 0 001-.8l.6-8.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.6 7v4M9.4 7v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>'
+      : '') + '</td>';
   }
 
   function render() {
@@ -1031,7 +1047,7 @@
 
     el('grid-cols').innerHTML = cols.map(function (c) {
       return '<col style="width:' + c.w + 'px" />';
-    }).join('');
+    }).join('') + (state.editing ? '<col style="width:44px" />' : '');
 
     el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
       var isLead = i < lead.length;
@@ -1039,7 +1055,7 @@
         (c.num ? ' num' : '') + (c.k === 'hours' ? ' col-hrs' : '') + '"' +
         (isLead ? ' style="left:' + offsets[i] + 'px"' : '') + '>' +
         Shell.esc(c.label) + '</th>';
-    }).join('') + '</tr>';
+    }).join('') + (state.editing ? '<th class="col-act"></th>' : '') + '</tr>';
 
     var out = [], shown = 0, openKeys = [];
 
@@ -1062,10 +1078,8 @@
         }).join('') +
         rest.map(function (c) {
           var cls = (c.num ? 'num' : '') + (c.k === 'hours' ? ' col-hrs' : '');
-          var html = cellHtml(e, c);
-          if (e.isNew && c.k === 'task') html += dropBtn(e);
-          return '<td class="' + cls + '">' + html + '</td>';
-        }).join('') +
+          return '<td class="' + cls + '">' + cellHtml(e, c) + '</td>';
+        }).join('') + actCell(e) +
       '</tr>';
     }
 
@@ -1112,9 +1126,10 @@
 
     el('grid-body').innerHTML = out.length
       ? out.join('')
-      : '<tr><td colspan="' + cols.length + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
+      : '<tr><td colspan="' + (cols.length + 1) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
 
-    el('grid').style.minWidth = cols.reduce(function (n, c) { return n + c.w; }, 0) + 'px';
+    el('grid').style.minWidth =
+      (cols.reduce(function (n, c) { return n + c.w; }, 0) + (state.editing ? 44 : 0)) + 'px';
     finish(shown, list, openKeys);
   }
 
