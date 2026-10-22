@@ -84,11 +84,16 @@
   }
   #grid th, #grid td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #grid td { padding: 0 24px 0 16px; font-size: 14px; color: var(--text-main); }
-  th.col-label, td.col-label {
-    position: sticky; left: 0; z-index: 2; background: inherit;
-    overflow: hidden; text-overflow: ellipsis;
+  /* The grouped columns are the ones the headings live in, so they stay
+     put while the rest scrolls. */
+  th.col-lead, td.col-lead { position: sticky; z-index: 2; background: inherit; }
+  #grid thead th.col-lead { z-index: 4; }
+  /* A hairline where the frozen band ends, so the scroll is legible. */
+  .sx .col-lead.last::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: 100%; width: 1px;
+    background: var(--grey-400); pointer-events: none;
   }
-  #grid thead th.col-label { z-index: 4; }
+  .sx .col-lead.last { overflow: visible; }
   #grid tbody tr { background: var(--white); height: 48px; }
   #grid tbody tr:hover { background: #fafbfe; }
 
@@ -111,10 +116,10 @@
     transition: transform var(--t-fast);
   }
   tr.collapsed .g-caret { transform: rotate(-90deg); }
-  .g-field { font-size: 12px; color: var(--grey-600); flex-shrink: 0; }
   .g-name { font-size: 14px; font-weight: 600; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; }
   tr.g2 .g-name, tr.g3 .g-name { font-weight: 500; }
-  .g-count { font-size: 13px; font-weight: 400; color: var(--grey-600); flex-shrink: 0; margin-left: auto; padding-right: 16px; }
+  /* A rollup, not a value of that column — so it says what it counts. */
+  td.g-tally { color: var(--grey-600); }
 
   .grid-foot {
     display: flex; align-items: center; gap: 12px; padding: 12px 16px;
@@ -327,9 +332,9 @@
      on it and it leaves the table, because the heading above the rows is
      already saying it. */
   var FIELDS = [
-    { k: 'date',    label: 'Date',       w: 130, group: true,  get: function (e) { return fmtDay(fromIso(e.date)); } },
+    { k: 'date',    label: 'Date',       w: 165, group: true,  get: function (e) { return fmtDay(fromIso(e.date)); } },
     { k: 'site',    label: 'Site',       w: 190, group: true,  get: function (e) { return e.site; } },
-    { k: 'sup',     label: 'Supervisor', w: 160, group: true,  get: function (e) { return e.sup; } },
+    { k: 'sup',     label: 'Supervisor', w: 175, group: true,  get: function (e) { return e.sup; } },
     { k: 'worker',  label: 'Worker',     w: 150, group: true,  get: function (e) { return e.worker; } },
     { k: 'project', label: 'Project',    w: 190, group: true,  get: function (e) { return e.project; } },
     { k: 'status',  label: 'Status',     w: 120, group: true,  get: function (e) { return e.status; } },
@@ -369,12 +374,49 @@
       return f.group && !(state.tab === 'mine' && f.k === 'worker');
     });
   }
-  function columns() {
+  /* Grouping does not take a field out of the table — it moves it to the
+     front and turns it into the column the headings live in, which is how
+     the Supervisor screen has always done it. The columns in group order
+     come first; everything else follows. */
+  function leadCols() { return groups().map(field); }
+  function restCols() {
     var g = groups();
     return FIELDS.filter(function (f) {
       if (g.indexOf(f.k) !== -1) return false;
       return !(state.tab === 'mine' && f.k === 'worker');
     });
+  }
+  function columns() { return leadCols().concat(restCols()); }
+
+  /* What a parent row says in a column it is not the heading for: how many
+     different values sit underneath it. The number alone would read as a
+     value of that column, so it carries its noun. */
+  var COUNTABLE = {
+    date:    ['day', 'days'],
+    site:    ['site', 'sites'],
+    sup:     ['supervisor', 'supervisors'],
+    worker:  ['worker', 'workers'],
+    project: ['project', 'projects'],
+    status:  ['status', 'statuses'],
+    task:    ['task', 'tasks']
+  };
+  function tally(list, f) {
+    var seen = Object.create(null), n = 0;
+    list.forEach(function (e) {
+      var v = f.get(e);
+      if (!v || seen[v]) return;
+      seen[v] = true; n++;
+    });
+    if (!n) return '';
+    var noun = COUNTABLE[f.k];
+    return n + ' ' + noun[n === 1 ? 0 : 1];
+  }
+  function allowTally(list) {
+    var seen = Object.create(null), n = 0;
+    list.forEach(function (e) {
+      (e.allowances || []).forEach(function (a) { if (!seen[a.name]) { seen[a.name] = true; n++; } });
+    });
+    return n ? n + ' allowance' + (n === 1 ? '' : 's') : '';
   }
 
   /* ─── Scope ───────────────────────────────────────────────────────── */
@@ -437,49 +479,60 @@
   }
 
   function render() {
-    var cols = columns(), g = groups(), list = rows();
+    var lead = leadCols(), rest = restCols(), cols = lead.concat(rest);
+    var g = groups(), list = rows();
 
-    el('n-mine').textContent = '';
-    el('n-team').textContent = '';
+    /* The heading columns stay put while the rest scrolls, so a row read
+       on the right still says whose it is. */
+    var off = 0, offsets = lead.map(function (c) { var at = off; off += c.w; return at; });
 
-    el('grid-cols').innerHTML = cols.map(function (c, i) {
-      /* The first column carries the group headings as well as its own
-         values, so it needs room for the deepest one. */
-      return '<col style="width:' + (i === 0 ? Math.max(c.w, 300 + (g.length - 1) * 20) : c.w) + 'px" />';
+    el('grid-cols').innerHTML = cols.map(function (c) {
+      return '<col style="width:' + c.w + 'px" />';
     }).join('');
 
     el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
-      return '<th class="' + (i === 0 ? 'col-label' : '') + (c.num ? ' num' : '') + '">' +
+      var isLead = i < lead.length;
+      return '<th class="' + (isLead ? 'col-lead' + (i === lead.length - 1 ? ' last' : '') : '') + (c.num ? ' num' : '') + '"' +
+        (isLead ? ' style="left:' + offsets[i] + 'px"' : '') + '>' +
         Shell.esc(c.label) + '</th>';
     }).join('') + '</tr>';
 
     var out = [], shown = 0, openKeys = [];
 
+    function leadCell(i, html) {
+      return '<td class="col-lead' + (i === lead.length - 1 ? ' last' : '') +
+        '" style="left:' + offsets[i] + 'px">' + (html || '') + '</td>';
+    }
+
     function entryRow(e) {
       shown++;
-      return '<tr>' + cols.map(function (c, i) {
-        var cls = (i === 0 ? 'col-label' : '') + (c.num ? ' num' : '') + (c.k === 'hours' ? ' col-hrs' : '');
-        return '<td class="' + cls + '">' + cellHtml(e, c) + '</td>';
-      }).join('') + '</tr>';
+      return '<tr>' +
+        lead.map(function (c, i) { return leadCell(i, ''); }).join('') +
+        rest.map(function (c) {
+          var cls = (c.num ? 'num' : '') + (c.k === 'hours' ? ' col-hrs' : '');
+          return '<td class="' + cls + '">' + cellHtml(e, c) + '</td>';
+        }).join('') +
+      '</tr>';
     }
 
     function walk(node, depth, path) {
       node.kids.forEach(function (kid) {
-        var key = path + '§' + kid.name;
+        var key = path + '\u00a7' + kid.name;
         var open = collapsed[key] !== true;
         openKeys.push(key);
+        var total = sumOf(kid.rows);
 
-        var n = kid.rows.length, total = sumOf(kid.rows);
         out.push('<tr class="g' + depth + (open ? '' : ' collapsed') + '" data-key="' + Shell.esc(key) + '">' +
-          '<td class="col-label" style="padding-left:' + (16 + (depth - 1) * 20) + 'px">' +
-            '<button class="g-btn" type="button">' + CARET +
-              '<span class="g-field">' + Shell.esc(kid.field.label) + '</span>' +
-              '<span class="g-name">' + Shell.highlight(String(kid.name), state.q) + '</span>' +
-              '<span class="g-count">' + n + ' ' + (n === 1 ? 'entry' : 'entries') + '</span>' +
-            '</button></td>' +
-          cols.slice(1).map(function (c) {
+          lead.map(function (c, i) {
+            if (i !== depth - 1) return leadCell(i, '');
+            return leadCell(i, '<button class="g-btn" type="button">' + CARET +
+              '<span class="g-name">' + Shell.highlight(String(kid.name), state.q) + '</span></button>');
+          }).join('') +
+          rest.map(function (c) {
             if (c.k === 'hours') return '<td class="num col-hrs">' + fmtHours(total) + '</td>';
-            return '<td class="' + (c.num ? 'num' : '') + '"></td>';
+            if (c.k === 'allow') return '<td class="g-tally">' + allowTally(kid.rows) + '</td>';
+            if (COUNTABLE[c.k]) return '<td class="g-tally">' + tally(kid.rows, c) + '</td>';
+            return '<td></td>';
           }).join('') +
         '</tr>');
 
@@ -489,19 +542,20 @@
       });
     }
 
-    var tree = nest(list, g);
     if (!g.length) list.forEach(function (e) { out.push(entryRow(e)); });
-    else walk(tree, 1, '');
+    else walk(nest(list, g), 1, '');
 
     el('grid-body').innerHTML = out.length
       ? out.join('')
-      : '<tr><td class="col-label" colspan="' + cols.length + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
+      : '<tr><td colspan="' + cols.length + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
+
+    el('grid').style.minWidth = cols.reduce(function (n, c) { return n + c.w; }, 0) + 'px';
 
     el('grid-note').textContent = state.tab === 'mine'
       ? 'Your own entries. Hours are saved against the day you book them to.'
       : 'Every entry the filters let through, whoever booked it.';
     el('grid-count').textContent = 'Displaying ' + shown + ' entr' + (shown === 1 ? 'y' : 'ies') +
-      ' · ' + fmtHours(sumOf(list)) + ' h';
+      ' \u00b7 ' + fmtHours(sumOf(list)) + ' h';
 
     el('btn-collapse').style.display = openKeys.length ? '' : 'none';
     el('btn-collapse').dataset.keys = openKeys.join('\u0000');
@@ -588,6 +642,11 @@
   });
 
   el('search').addEventListener('input', function () { state.q = this.value.trim(); render(); });
+
+  var scrollBox = document.querySelector('.table-scroll');
+  scrollBox.addEventListener('scroll', function () {
+    this.classList.toggle('sx', this.scrollLeft > 0);
+  });
 
   var RANGES = [
     { k: 'week',     label: 'Current week' },
