@@ -135,9 +135,15 @@
   }
   .sx-right .col-hrs { overflow: visible; }
 
-  /* A heading row is the combination its rows share, not a record. */
-  tr.g-row > td { background: var(--grey-100); }
-  tr.g-row:hover > td { background: var(--grey-200); }
+  /* A heading row is a value its rows share, not a record. Each level
+     down sits a shade lighter, so three of them still read as three. */
+  tr.g-row.d1 > td { background: var(--grey-100); }
+  tr.g-row.d2 > td { background: #f6f7f9; }
+  tr.g-row.d3 > td { background: #fafbfc; }
+  tr.g-row.d1:hover > td { background: var(--grey-200); }
+  tr.g-row.d2:hover > td, tr.g-row.d3:hover > td { background: #eef0f4; }
+  tr.g-row.d1 .g-name { font-weight: 600; }
+  tr.g-row.d2 .g-name, tr.g-row.d3 .g-name { font-weight: 500; }
   .g-btn {
     display: inline-flex; align-items: center; gap: 8px; width: 100%; padding: 0;
     border: none; background: none; cursor: pointer; font-family: var(--fs-sans); text-align: left;
@@ -154,7 +160,7 @@
   }
   .g-btn .g-name { display: inline; }
   /* A rollup, not a value of that column — so it says what it counts. */
-  td.g-tally { color: var(--grey-600); }
+  td.g-tally, .g-tally-in { color: var(--grey-600); font-weight: 400; }
 
   .grid-foot {
     display: flex; align-items: center; gap: 12px; padding: 12px 16px;
@@ -499,30 +505,24 @@
   }
 
   /* ─── Grouping ──────────────────────────────────────────────────────
-     Grouping on several fields groups on the combination, not one level
-     per field: one heading row per distinct combination, carrying every
-     grouped value in its own column, behind a single chevron. A site that
-     runs two supervisors therefore appears on both of their rows — the
-     repetition is the point, because each row is one group and reads on
-     its own. This is how Group by Timesheet has always worked next door,
-     where a timesheet is a date, a site and a supervisor together. */
-  function groupRows(list, keys) {
-    var fields = keys.map(field), order = [], by = Object.create(null);
+     A level per grouped field, in the order they were picked. A heading
+     row carries its own field's value in its own column; the columns for
+     the fields above it stay blank, because those rows are already on
+     screen above, and the columns for the fields below it carry how many
+     different values are coming — so a site row says "2 supervisors"
+     before the two supervisor rows arrive. */
+  function nest(list, keys) {
+    if (!keys.length) return null;
+    var f = field(keys[0]), order = [], by = Object.create(null);
     list.forEach(function (e) {
-      var vals = fields.map(function (f) { return f.get(e) || '—'; });
-      var key = vals.join('\u00a7');
-      if (!by[key]) { by[key] = { key: key, values: vals, rows: [] }; order.push(by[key]); }
-      by[key].rows.push(e);
+      var v = f.get(e) || '—';
+      if (!by[v]) { by[v] = []; order.push(v); }
+      by[v].push(e);
     });
-    /* Sorted by the grouped values in order, so the runs that share a
-       leading value sit together and the repeat reads as a repeat. */
-    order.sort(function (a, b) {
-      for (var i = 0; i < a.values.length; i++) {
-        if (a.values[i] !== b.values[i]) return a.values[i] < b.values[i] ? -1 : 1;
-      }
-      return 0;
+    order.sort();
+    return order.map(function (v) {
+      return { name: v, rows: by[v], kids: nest(by[v], keys.slice(1)) };
     });
-    return order;
   }
   function sumOf(list) {
     return list.reduce(function (n, e) { return n + (Number(e.hours) || 0); }, 0);
@@ -562,8 +562,8 @@
 
     var out = [], shown = 0, openKeys = [];
 
-    function leadCell(i, html, cls) {
-      return '<td class="col-lead' + (i === lead.length - 1 ? ' last' : '') + (cls ? ' ' + cls : '') +
+    function leadCell(i, html) {
+      return '<td class="col-lead' + (i === lead.length - 1 ? ' last' : '') +
         '" style="left:' + offsets[i] + 'px">' + (html || '') + '</td>';
     }
 
@@ -578,34 +578,41 @@
       '</tr>';
     }
 
-    if (!g.length) {
-      list.forEach(function (e) { out.push(entryRow(e)); });
-    } else {
-      groupRows(list, g).forEach(function (grp) {
-        var open = collapsed[grp.key] !== true;
-        openKeys.push(grp.key);
-        var total = sumOf(grp.rows);
+    /* What a heading row says in a column it is not the heading for. */
+    function rollup(c, rows) {
+      if (c.k === 'hours') return '<td class="num col-hrs">' + fmtHours(sumOf(rows)) + '</td>';
+      if (c.k === 'allow') return '<td class="g-tally">' + allowTally(rows) + '</td>';
+      if (COUNTABLE[c.k]) return '<td class="g-tally">' + tally(rows, c) + '</td>';
+      return '<td></td>';
+    }
 
-        out.push('<tr class="g-row' + (open ? '' : ' collapsed') + '" data-key="' + Shell.esc(grp.key) + '">' +
+    function walk(nodes, depth, path) {
+      nodes.forEach(function (node) {
+        var key = path + '\u00a7' + node.name;
+        var open = collapsed[key] !== true;
+        openKeys.push(key);
+
+        out.push('<tr class="g-row d' + depth + (open ? '' : ' collapsed') + '" data-key="' + Shell.esc(key) + '">' +
           lead.map(function (c, i) {
-            var name = '<span class="g-name">' + Shell.highlight(String(grp.values[i]), state.q) + '</span>';
-            /* One chevron for the row, in the first column — the row is
-               one group, however many fields it took to define it. */
-            return leadCell(i, i === 0
-              ? '<button class="g-btn" type="button">' + CARET + name + '</button>'
-              : name);
+            if (i < depth - 1) return leadCell(i, '');            // said already, above
+            if (i === depth - 1) {
+              return leadCell(i, '<button class="g-btn" type="button">' + CARET +
+                '<span class="g-name">' + Shell.highlight(String(node.name), state.q) + '</span></button>');
+            }
+            /* A field grouped below this one: how many are coming. */
+            return leadCell(i, '<span class="g-tally-in">' + tally(node.rows, c) + '</span>');
           }).join('') +
-          rest.map(function (c) {
-            if (c.k === 'hours') return '<td class="num col-hrs">' + fmtHours(total) + '</td>';
-            if (c.k === 'allow') return '<td class="g-tally">' + allowTally(grp.rows) + '</td>';
-            if (COUNTABLE[c.k]) return '<td class="g-tally">' + tally(grp.rows, c) + '</td>';
-            return '<td></td>';
-          }).join('') +
+          rest.map(function (c) { return rollup(c, node.rows); }).join('') +
         '</tr>');
 
-        if (open) grp.rows.forEach(function (e) { out.push(entryRow(e)); });
+        if (!open) return;
+        if (node.kids) walk(node.kids, depth + 1, key);
+        else node.rows.forEach(function (e) { out.push(entryRow(e)); });
       });
     }
+
+    if (!g.length) list.forEach(function (e) { out.push(entryRow(e)); });
+    else walk(nest(list, g), 1, '');
 
     el('grid-body').innerHTML = out.length
       ? out.join('')
