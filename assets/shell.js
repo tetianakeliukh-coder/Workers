@@ -401,11 +401,101 @@
     }, true);
   }
 
+  /* ─── Open questions ─────────────────────────────────────────────────
+     The prototype carries its own list of what is still undecided, so a
+     reviewer can read the questions on the screen they are about, rather
+     than waiting for them to come up on a call. Read-only on purpose —
+     answers come back as comments or in the call, not typed in here. */
+  var QUESTIONS = [
+    {
+      screen: 'Supervisor Timesheets',
+      q: 'Should allowance lines show in the Period view?',
+      why: 'Period is a day-by-day grid of hours. An allowance is claimed on a line of its own ' +
+           'and carries no hours, so including it adds a row of zeroes across the whole week for ' +
+           'every allowance claimed.',
+      now: 'They are left out. Allowances are read on the Timesheets tab, where the Allowance column lives.'
+    },
+    {
+      screen: 'My Timesheets',
+      q: 'Should SA BHP OLYMPIC DAM have a field that names the work?',
+      why: 'Its four fields are all codes — Work Order, Cost Code, Type, Shift Code. On a phone a ' +
+           'timesheet card leads with whichever field names the job, and that site has none, so a ' +
+           'worker there sees two entries that differ only by a code.',
+      now: 'The card leads with the Work Order and lists the remaining codes underneath.'
+    },
+    {
+      screen: 'Supervisor Timesheets',
+      q: 'Does anyone need to compare sites week by week with the detail hidden?',
+      why: 'The flat Period layout folds at site + supervisor, and the nested one folds by site and ' +
+           'by supervisor. A totals-only roll-up would be a third thing, worth building only if ' +
+           'somebody actually works that way.',
+      now: 'Both layouts fold, but every fold still shows the rows beneath when it is open.'
+    }
+  ];
+
+  var ICO_Q = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+    '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>' +
+    '<path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<circle cx="12" cy="17" r="1" fill="currentColor"/></svg>';
+
+  function renderQuestions() {
+    if (!QUESTIONS.length || document.getElementById('q-fab')) return;
+
+    var fab = document.createElement('button');
+    fab.id = 'q-fab';
+    fab.className = 'q-fab';
+    fab.type = 'button';
+    fab.setAttribute('aria-label', 'Open questions');
+    fab.innerHTML = ICO_Q + '<span class="q-count">' + QUESTIONS.length + '</span>';
+
+    var back = document.createElement('div');
+    back.className = 'modal-backdrop';
+    back.id = 'q-modal';
+    back.setAttribute('role', 'dialog');
+    back.setAttribute('aria-modal', 'true');
+    back.innerHTML =
+      '<div class="modal modal-md q-modal">' +
+        '<div class="modal-header">' +
+          '<div class="modal-heading">' +
+            '<span class="modal-title">Open questions</span>' +
+            '<span class="modal-meta"><span class="meta-item">' + QUESTIONS.length +
+              ' still to decide — the prototype takes a position on each one meanwhile</span></span>' +
+          '</div>' +
+          '<button class="modal-close" type="button" data-close aria-label="Close">' +
+            '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body q-body">' +
+          QUESTIONS.map(function (x, i) {
+            return '<div class="q-item">' +
+              '<div class="q-top"><span class="q-n">' + (i + 1) + '</span>' +
+                '<span class="q-q">' + esc(x.q) + '</span></div>' +
+              '<span class="q-where">' + esc(x.screen) + '</span>' +
+              '<p class="q-why">' + esc(x.why) + '</p>' +
+              '<p class="q-now"><b>Today:</b> ' + esc(x.now) + '</p>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(fab);
+    document.body.appendChild(back);
+
+    fab.addEventListener('click', function () { back.classList.add('open'); });
+    back.addEventListener('click', function (e) {
+      if (e.target === back || e.target.closest('[data-close]')) back.classList.remove('open');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') back.classList.remove('open');
+    });
+  }
+
   /* ─── Boot ──────────────────────────────────────────────────────────── */
   function init() {
     renderSidebar(document.body.getAttribute('data-module'));
     initDropdowns(document);
     initTips(document);
+    renderQuestions();
   }
 
   if (document.readyState === 'loading') {

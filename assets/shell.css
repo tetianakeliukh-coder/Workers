@@ -477,3 +477,48 @@ th:hover > .col-rs::after, .col-rs:hover::after { opacity: 1; }
 .col-rs:hover::after { background: var(--primary); width: 2px; }
 body.col-resizing { cursor: col-resize; user-select: none; }
 body.col-resizing .col-rs::after { opacity: 1; background: var(--primary); width: 2px; }
+
+/* ─── Open questions ───────────────────────────────────────────────────
+   A prototype device, not part of the product: a quiet marker that this
+   screen still has something undecided on it. It sits above the other
+   floating controls in the same corner. */
+.q-fab {
+  position: fixed; right: 20px; bottom: 70px; z-index: 401;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+  background: var(--white); border: 1px solid var(--grey-350);
+  color: var(--grey-700); box-shadow: var(--shadow-dropdown);
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.q-fab:hover { color: var(--primary); border-color: var(--primary); }
+.q-count {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--error); color: var(--white);
+  font-family: var(--fs-sans); font-size: 11px; font-weight: 600; line-height: 17px;
+}
+
+.q-modal .modal-body { flex: 0 1 auto; max-height: 68vh; padding: 4px 24px 20px; }
+.q-item { padding: 16px 0; }
+.q-item + .q-item { border-top: 1px solid var(--grey-200); }
+.q-top { display: flex; align-items: baseline; gap: 10px; }
+.q-n {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-blue-light); color: var(--primary);
+  font-size: 11px; font-weight: 600; line-height: 20px;
+}
+.q-q { font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
+.q-where {
+  display: inline-block; margin: 6px 0 0 30px; padding: 0 7px; height: 20px;
+  border-radius: 5px; background: var(--grey-100); color: var(--grey-700);
+  font-size: 12px; font-weight: 500; line-height: 20px;
+}
+.q-why, .q-now {
+  margin: 8px 0 0 30px; font-size: 13px; line-height: 19px; color: var(--grey-700);
+}
+.q-now { color: var(--grey-600); }
+.q-now b { color: var(--text-main); font-weight: 500; }
+
+body.shell-mobile .q-fab { bottom: 20px; right: 20px; }
