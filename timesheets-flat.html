@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Timesheets — OPMS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/shell.css" />
+<style>
+  /* ─── Timesheets, flat ───────────────────────────────────────────────
+     One screen, one table, one row per entry. The worker's view and the
+     supervisor's view are the same table with a different scope, which is
+     why they are tabs here rather than two screens. Nothing is nested in
+     the data — grouping is chosen per view, up to three levels deep, and
+     a column that is grouped on leaves the column list and becomes the
+     heading it groups under. */
+
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--grey-300); margin-bottom: 16px; }
+  .tab {
+    height: 38px; padding: 0 14px; border: none; background: none; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--grey-700);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text-main); }
+  .tab.on { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab .n { margin-left: 6px; font-weight: 400; color: var(--grey-600); }
+  .tab.on .n { color: var(--primary); }
+
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .toolbar .search-wrap { width: 280px; }
+  .toolbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+  /* ─── Group by ────────────────────────────────────────────────────
+     The order is the nesting, so the chips are a sequence, not a set. */
+  .gb-wrap { position: relative; }
+  .gb-trigger {
+    display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+    border-radius: 8px; background: var(--white); border: 1px solid var(--grey-350);
+    cursor: pointer; font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+  }
+  .gb-trigger:hover { border-color: var(--border-hover); }
+  .gb-wrap.open .gb-trigger { border-color: var(--primary); }
+  .gb-chips { display: inline-flex; align-items: center; gap: 4px; }
+  .gb-chip {
+    display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px;
+    border-radius: 5px; background: var(--bg-blue-light); color: var(--primary);
+    font-size: 12px; font-weight: 500;
+  }
+  .gb-sep { color: var(--grey-500); font-size: 12px; }
+  .gb-none { color: var(--grey-600); }
+
+  .gb-panel {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 300;
+    min-width: 230px; padding: 6px; border-radius: 10px;
+    background: var(--white); border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
+  }
+  .gb-wrap.open .gb-panel { display: block; }
+  .gb-head {
+    padding: 8px 10px 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.7px;
+    text-transform: uppercase; color: var(--grey-600);
+  }
+  .gb-row {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px;
+    border: none; background: none; border-radius: 7px; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main); text-align: left;
+  }
+  .gb-row:hover { background: var(--grey-100); }
+  .gb-row:disabled { color: var(--grey-400); cursor: default; }
+  .gb-row:disabled:hover { background: none; }
+  .gb-order {
+    width: 20px; height: 20px; flex-shrink: 0; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    background: var(--grey-200); color: var(--grey-600);
+  }
+  .gb-row.on .gb-order { background: var(--primary); color: var(--white); }
+  .gb-foot { padding: 6px 10px 4px; border-top: 1px solid var(--grey-200); margin-top: 4px; }
+
+  /* ─── Table ───────────────────────────────────────────────────────── */
+  .table-scroll { overflow: auto; max-height: calc(100vh - 290px); }
+  #grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  #grid thead th {
+    position: sticky; top: 0; z-index: 3; background: var(--white); vertical-align: bottom;
+  }
+  #grid th, #grid td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #grid td { padding: 0 24px 0 16px; font-size: 14px; color: var(--text-main); }
+  th.col-label, td.col-label {
+    position: sticky; left: 0; z-index: 2; background: inherit;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  #grid thead th.col-label { z-index: 4; }
+  #grid tbody tr { background: var(--white); height: 48px; }
+  #grid tbody tr:hover { background: #fafbfe; }
+
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.col-hrs { font-weight: 600; }
+
+  /* A heading row is a value the rows under it share, not a record. */
+  tr.g1 > td { background: var(--grey-100); }
+  tr.g2 > td { background: #f7f8fa; }
+  tr.g3 > td { background: #fbfbfc; }
+  tr.g1:hover > td { background: var(--grey-200); }
+  tr.g2:hover > td, tr.g3:hover > td { background: #f1f3f6; }
+  .g-btn {
+    display: inline-flex; align-items: center; gap: 8px; width: 100%; padding: 0;
+    border: none; background: none; cursor: pointer; font-family: var(--fs-sans); text-align: left;
+  }
+  .g-caret {
+    width: 16px; height: 16px; flex-shrink: 0; color: var(--grey-600);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: transform var(--t-fast);
+  }
+  tr.collapsed .g-caret { transform: rotate(-90deg); }
+  .g-field { font-size: 12px; color: var(--grey-600); flex-shrink: 0; }
+  .g-name { font-size: 14px; font-weight: 600; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; }
+  tr.g2 .g-name, tr.g3 .g-name { font-weight: 500; }
+  .g-count { font-size: 13px; font-weight: 400; color: var(--grey-600); flex-shrink: 0; margin-left: auto; padding-right: 16px; }
+
+  .grid-foot {
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+    border-top: 1px solid var(--grey-300); font-size: 13px; color: var(--grey-600);
+  }
+  .grid-foot .count { margin-left: auto; }
+
+  /* Allowance, as on the Supervisor screen: a name, and a chip when there
+     is a quantity to put in it. */
+  .alw { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .alw-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .alw-q {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    min-width: 20px; height: 18px; padding: 0 6px; border-radius: 5px;
+    background: var(--grey-200); color: var(--text-main);
+    font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums;
+  }
+
+  .empty { padding: 48px 16px; text-align: center; color: var(--grey-600); font-size: 14px; }
+
+  body.is-narrow .table-card { overflow-x: auto; }
+</style>
+</head>
+<body data-module="tsflat">
+
+<div class="page">
+  <aside id="shell-sidebar"></aside>
+
+  <main class="main">
+    <div class="content">
+
+      <div class="page-header">
+        <h1 class="page-title">Timesheets</h1>
+        <div class="header-actions">
+          <div class="dd-wrap" id="date-dd">
+            <button class="dd-trigger" type="button">
+              <span>Date: <span id="date-dd-value">Current week</span></span>
+              <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="dd-panel" id="date-dd-panel"></div>
+          </div>
+          <button class="btn-primary" type="button" id="btn-add">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Add entry
+          </button>
+        </div>
+      </div>
+
+      <div class="tabs" id="tabs">
+        <button class="tab on" type="button" data-tab="mine">My Timesheets<span class="n" id="n-mine"></span></button>
+        <button class="tab" type="button" data-tab="team">Supervisor Timesheets<span class="n" id="n-team"></span></button>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-wrap">
+          <label class="search-bar">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <input class="search-input-el" id="search" type="text" placeholder="Search" autocomplete="off" />
+          </label>
+        </div>
+        <div class="toolbar-right">
+          <div class="gb-wrap" id="gb-wrap">
+            <button class="gb-trigger" type="button" id="gb-trigger" aria-haspopup="true" aria-expanded="false">
+              <span>Group by</span>
+              <span class="gb-chips" id="gb-chips"></span>
+              <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="gb-panel" id="gb-panel"></div>
+          </div>
+          <button class="btn-ghost" type="button" id="btn-collapse"></button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-scroll">
+          <table id="grid">
+            <colgroup id="grid-cols"></colgroup>
+            <thead id="grid-head"></thead>
+            <tbody id="grid-body"></tbody>
+          </table>
+        </div>
+        <div class="grid-foot">
+          <span id="grid-note"></span>
+          <span class="count" id="grid-count"></span>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  'use strict';
+  var el = function (id) { return document.getElementById(id); };
+
+  /* ─── Dates ───────────────────────────────────────────────────────── */
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  function startOfDay(d) { var x = new Date(d.getTime()); x.setHours(0, 0, 0, 0); return x; }
+  function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+  function iso(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function fromIso(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function fmtDay(d) { return DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+  function fmtHours(n) { return n % 1 === 0 ? String(n) : n.toFixed(1); }
+
+  var TODAY = startOfDay(new Date());
+  function mondayOf(d) { var x = startOfDay(d); return addDays(x, -((x.getDay() + 6) % 7)); }
+  var THIS_MON = mondayOf(TODAY);
+
+  /* ─── The data, as one flat table ─────────────────────────────────────
+     This is the shape the client is moving to: no timesheet record that
+     owns its entries, just entries that each carry their own date, site
+     and supervisor. Every grouping on this screen is a view over it. */
+  var SITE_FIELDS = {
+    'MMA VIGILANT – 360': [
+      { name: 'Work Order', values: ['WORK-00123', 'WORK-00124', 'WORK-00187', 'WORK-00201'] },
+      { name: 'Task',       values: ['Repair the machine', 'Replace hydraulic hose', 'Weld handrail section', 'Deck plating repair'] },
+      { name: 'Type',       values: ['Labour', 'Waiting for materials', 'Equipment breakdown'] }
+    ],
+    'MMA VIGILANT ROV': [
+      { name: 'Job Number', values: ['JOB-00451', 'JOB-00478', 'JOB-00492'] },
+      { name: 'Activity',   values: ['ROV dive', 'Deck handling', 'Tooling change'] },
+      { name: 'Type',       values: ['Labour', 'Weather standby'] }
+    ],
+    'SA BHP OLYMPIC DAM': [
+      { name: 'Work Order', values: ['WORK-00123', 'WORK-00201'] },
+      { name: 'Cost Code',  values: ['CC-1140', 'CC-1155', 'CC-1163'] },
+      { name: 'Type',       values: ['Labour', 'Waiting for materials'] }
+    ]
+  };
+  var SITES = Object.keys(SITE_FIELDS);
+  var SUPS = {
+    'MMA VIGILANT – 360': ['Grace Okafor', 'Tom Halloran'],
+    'MMA VIGILANT ROV':   ['Priya Nair'],
+    'SA BHP OLYMPIC DAM': ['Grace Okafor', 'Marcus Webb']
+  };
+  var PROJECTS = {
+    'MMA VIGILANT – 360': ['Vigilant 360 Refit', 'Shutdown Factory XYZ'],
+    'MMA VIGILANT ROV':   ['ROV Mobilisation', 'Subsea Survey'],
+    'SA BHP OLYMPIC DAM': ['Olympic Dam Expansion', 'Shutdown Factory XYZ']
+  };
+  var ME = 'Rhye, Olivia';
+  var WORKERS = [ME, 'Smith, John', 'Miller, Ava', 'Brown, Olivia', 'Davis, Noah', 'Clark, Emma', 'Baker, Liam'];
+  var STATUSES = ['Draft', 'Submitted', 'Revised', 'Finalised'];
+  var ALLOWANCES = [
+    { name: 'Rope Allowance',   type: 'amount' },
+    { name: 'Height Allowance', type: 'amount' },
+    { name: 'Travel Allowance', type: 'amount' },
+    { name: 'Breakfast',        type: 'check' },
+    { name: 'Crib Break',       type: 'check' }
+  ];
+
+  var ENTRIES = (function () {
+    var out = [], n = 0;
+    function pick(pool, i) { return pool[i % pool.length]; }
+
+    for (var d = -9; d <= 4; d++) {
+      var day = addDays(THIS_MON, d);
+      if (day.getDay() === 0 || day.getDay() === 6) continue;
+      for (var w = 0; w < WORKERS.length; w++) {
+        var who = WORKERS[w];
+        /* Everybody books most days; the worker whose screen this also is
+           books every one of them, so her tab is never empty. */
+        if (who !== ME && (n + w + d) % 3 === 0) { n++; continue; }
+
+        var lines = 1 + ((n + w) % 2);
+        for (var a = 0; a < lines; a++) {
+          var site = pick(SITES, n + a);
+          var fields = SITE_FIELDS[site];
+          var levels = fields.map(function (f, i) { return pick(f.values, n + a + i * 2); });
+          var hrs = [4, 6, 8, 10, 12][(n + a) % 5];
+
+          out.push({
+            id: 'e' + out.length,
+            date: iso(day),
+            site: site,
+            sup: pick(SUPS[site], n + a),
+            worker: who,
+            project: pick(PROJECTS[site], n + a),
+            task: levels.join(' | '),
+            status: pick(STATUSES, Math.floor((n + d) / 2)),
+            allowances: [],
+            hours: hrs
+          });
+          n++;
+
+          /* An allowance is claimed against work already done, on a line
+             of its own with no hours — the same rule as the other screen. */
+          if ((n + a) % 4 === 0) {
+            var alw = pick(ALLOWANCES, n + a);
+            var host = out[out.length - 1];
+            out.push({
+              id: 'e' + out.length,
+              date: host.date, site: host.site, sup: host.sup, worker: host.worker,
+              project: host.project, task: host.task, status: host.status,
+              allowances: [{ name: alw.name, type: alw.type, qty: alw.type === 'amount' ? 1 + (n % 3) : null }],
+              hours: ''
+            });
+          }
+        }
+      }
+    }
+    return out;
+  })();
+
+  /* ─── Columns ─────────────────────────────────────────────────────
+     Every field is both a column and something you can group on. Group
+     on it and it leaves the table, because the heading above the rows is
+     already saying it. */
+  var FIELDS = [
+    { k: 'date',    label: 'Date',       w: 130, group: true,  get: function (e) { return fmtDay(fromIso(e.date)); } },
+    { k: 'site',    label: 'Site',       w: 190, group: true,  get: function (e) { return e.site; } },
+    { k: 'sup',     label: 'Supervisor', w: 160, group: true,  get: function (e) { return e.sup; } },
+    { k: 'worker',  label: 'Worker',     w: 150, group: true,  get: function (e) { return e.worker; } },
+    { k: 'project', label: 'Project',    w: 190, group: true,  get: function (e) { return e.project; } },
+    { k: 'status',  label: 'Status',     w: 120, group: true,  get: function (e) { return e.status; } },
+    { k: 'task',    label: 'Task',       w: 300, group: true,  get: function (e) { return e.task; } },
+    { k: 'allow',   label: 'Allowance',  w: 200, group: false, get: function (e) { return allowText(e); } },
+    { k: 'hours',   label: 'Hours',      w: 90,  group: false, num: true, get: function (e) { return e.hours === '' ? '' : fmtHours(e.hours); } }
+  ];
+  function field(k) { return FIELDS.filter(function (f) { return f.k === k; })[0]; }
+
+  function allowText(e) {
+    return (e.allowances || []).map(function (x) {
+      return x.type === 'amount' ? x.name + ' ' + x.qty : x.name;
+    }).join(' · ');
+  }
+  function allowHtml(e) {
+    if (!e.allowances.length) return '<span class="cell-empty">&mdash;</span>';
+    return e.allowances.map(function (x) {
+      return '<span class="alw"><span class="alw-name">' + Shell.highlight(x.name, state.q) + '</span>' +
+        (x.type === 'amount' ? '<span class="alw-q">' + x.qty + '</span>' : '') + '</span>';
+    }).join('');
+  }
+
+  var MAX_GROUPS = 3;
+  var state = {
+    tab: 'mine',
+    q: '',
+    range: 'week',
+    groups: { mine: ['site', 'sup'], team: ['site', 'sup'] }
+  };
+  var collapsed = Object.create(null);
+
+  function groups() { return state.groups[state.tab]; }
+  /* The worker's own tab has one worker in it, so grouping on worker
+     would make a heading per row and say nothing. */
+  function groupable() {
+    return FIELDS.filter(function (f) {
+      return f.group && !(state.tab === 'mine' && f.k === 'worker');
+    });
+  }
+  function columns() {
+    var g = groups();
+    return FIELDS.filter(function (f) {
+      if (g.indexOf(f.k) !== -1) return false;
+      return !(state.tab === 'mine' && f.k === 'worker');
+    });
+  }
+
+  /* ─── Scope ───────────────────────────────────────────────────────── */
+  function weekBounds(n) {
+    var m = addDays(mondayOf(TODAY), -7 * n);
+    return { from: iso(m), to: iso(addDays(m, 6)) };
+  }
+  function bounds() {
+    if (state.range === 'week') return weekBounds(0);
+    if (state.range === 'lastweek') return weekBounds(1);
+    return null;
+  }
+  function rows() {
+    var b = bounds(), q = state.q.toLowerCase();
+    return ENTRIES.filter(function (e) {
+      if (state.tab === 'mine' && e.worker !== ME) return false;
+      if (b && (e.date < b.from || e.date > b.to)) return false;
+      if (!q) return true;
+      return columns().concat(groups().map(field)).some(function (f) {
+        return String(f.get(e)).toLowerCase().indexOf(q) !== -1;
+      });
+    });
+  }
+
+  /* ─── Grouping ────────────────────────────────────────────────────
+     Nests the flat list by the chosen fields, in the chosen order. */
+  function nest(list, keys) {
+    if (!keys.length) return { leaves: list };
+    var f = field(keys[0]), order = [], by = Object.create(null);
+    list.forEach(function (e) {
+      var v = f.get(e) || '—';
+      if (!by[v]) { by[v] = []; order.push(v); }
+      by[v].push(e);
+    });
+    return {
+      field: f,
+      kids: order.map(function (v) {
+        var node = nest(by[v], keys.slice(1));
+        node.name = v;
+        node.field = f;
+        node.rows = by[v];
+        return node;
+      })
+    };
+  }
+  function sumOf(list) {
+    return list.reduce(function (n, e) { return n + (Number(e.hours) || 0); }, 0);
+  }
+
+  /* ─── Render ──────────────────────────────────────────────────────── */
+  var CARET = '<span class="g-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+
+  function cellHtml(e, f) {
+    if (f.k === 'allow') return allowHtml(e);
+    if (f.k === 'hours') {
+      return e.hours === '' ? '<span class="cell-empty">&mdash;</span>' : fmtHours(e.hours);
+    }
+    var v = f.get(e);
+    return v ? Shell.highlight(v, state.q) : '<span class="cell-empty">&mdash;</span>';
+  }
+
+  function render() {
+    var cols = columns(), g = groups(), list = rows();
+
+    el('n-mine').textContent = '';
+    el('n-team').textContent = '';
+
+    el('grid-cols').innerHTML = cols.map(function (c, i) {
+      /* The first column carries the group headings as well as its own
+         values, so it needs room for the deepest one. */
+      return '<col style="width:' + (i === 0 ? Math.max(c.w, 300 + (g.length - 1) * 20) : c.w) + 'px" />';
+    }).join('');
+
+    el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
+      return '<th class="' + (i === 0 ? 'col-label' : '') + (c.num ? ' num' : '') + '">' +
+        Shell.esc(c.label) + '</th>';
+    }).join('') + '</tr>';
+
+    var out = [], shown = 0, openKeys = [];
+
+    function entryRow(e) {
+      shown++;
+      return '<tr>' + cols.map(function (c, i) {
+        var cls = (i === 0 ? 'col-label' : '') + (c.num ? ' num' : '') + (c.k === 'hours' ? ' col-hrs' : '');
+        return '<td class="' + cls + '">' + cellHtml(e, c) + '</td>';
+      }).join('') + '</tr>';
+    }
+
+    function walk(node, depth, path) {
+      node.kids.forEach(function (kid) {
+        var key = path + '§' + kid.name;
+        var open = collapsed[key] !== true;
+        openKeys.push(key);
+
+        var n = kid.rows.length, total = sumOf(kid.rows);
+        out.push('<tr class="g' + depth + (open ? '' : ' collapsed') + '" data-key="' + Shell.esc(key) + '">' +
+          '<td class="col-label" style="padding-left:' + (16 + (depth - 1) * 20) + 'px">' +
+            '<button class="g-btn" type="button">' + CARET +
+              '<span class="g-field">' + Shell.esc(kid.field.label) + '</span>' +
+              '<span class="g-name">' + Shell.highlight(String(kid.name), state.q) + '</span>' +
+              '<span class="g-count">' + n + ' ' + (n === 1 ? 'entry' : 'entries') + '</span>' +
+            '</button></td>' +
+          cols.slice(1).map(function (c) {
+            if (c.k === 'hours') return '<td class="num col-hrs">' + fmtHours(total) + '</td>';
+            return '<td class="' + (c.num ? 'num' : '') + '"></td>';
+          }).join('') +
+        '</tr>');
+
+        if (!open) return;
+        if (kid.kids) walk(kid, depth + 1, key);
+        else kid.leaves.forEach(function (e) { out.push(entryRow(e)); });
+      });
+    }
+
+    var tree = nest(list, g);
+    if (!g.length) list.forEach(function (e) { out.push(entryRow(e)); });
+    else walk(tree, 1, '');
+
+    el('grid-body').innerHTML = out.length
+      ? out.join('')
+      : '<tr><td class="col-label" colspan="' + cols.length + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
+
+    el('grid-note').textContent = state.tab === 'mine'
+      ? 'Your own entries. Hours are saved against the day you book them to.'
+      : 'Every entry the filters let through, whoever booked it.';
+    el('grid-count').textContent = 'Displaying ' + shown + ' entr' + (shown === 1 ? 'y' : 'ies') +
+      ' · ' + fmtHours(sumOf(list)) + ' h';
+
+    el('btn-collapse').style.display = openKeys.length ? '' : 'none';
+    el('btn-collapse').dataset.keys = openKeys.join('\u0000');
+    syncCollapseBtn(openKeys);
+    renderGroupBy();
+  }
+
+  var ICO_COLLAPSE = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M4.7 2.7L8 6l3.3-3.3M4.7 13.3L8 10l3.3 3.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var ICO_EXPAND = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M4.7 6L8 2.7 11.3 6M4.7 10L8 13.3 11.3 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function syncCollapseBtn(keys) {
+    var anyOpen = keys.some(function (k) { return collapsed[k] !== true; });
+    el('btn-collapse').innerHTML = anyOpen ? ICO_COLLAPSE + 'Collapse all' : ICO_EXPAND + 'Expand all';
+  }
+  el('btn-collapse').addEventListener('click', function () {
+    var keys = (this.dataset.keys || '').split('\u0000').filter(Boolean);
+    var anyOpen = keys.some(function (k) { return collapsed[k] !== true; });
+    keys.forEach(function (k) { collapsed[k] = anyOpen; });
+    render();
+  });
+
+  el('grid-body').addEventListener('click', function (e) {
+    var row = e.target.closest('[data-key]');
+    if (!row) return;
+    var k = row.getAttribute('data-key');
+    collapsed[k] = collapsed[k] !== true;
+    render();
+  });
+
+  /* ─── Group by ────────────────────────────────────────────────────── */
+  function renderGroupBy() {
+    var g = groups();
+    el('gb-chips').innerHTML = g.length
+      ? g.map(function (k, i) {
+          return (i ? '<span class="gb-sep">›</span>' : '') +
+            '<span class="gb-chip">' + Shell.esc(field(k).label) + '</span>';
+        }).join('')
+      : '<span class="gb-none">None</span>';
+
+    el('gb-panel').innerHTML =
+      '<div class="gb-head">Group by, in order</div>' +
+      groupable().map(function (f) {
+        var at = g.indexOf(f.k);
+        var full = at === -1 && g.length >= MAX_GROUPS;
+        return '<button class="gb-row' + (at !== -1 ? ' on' : '') + '" type="button" data-gb="' + f.k + '"' +
+          (full ? ' disabled' : '') + '>' +
+          '<span class="gb-order">' + (at !== -1 ? (at + 1) : '') + '</span>' +
+          '<span>' + Shell.esc(f.label) + '</span></button>';
+      }).join('') +
+      '<div class="gb-foot"><button class="btn-text" type="button" data-gb-clear>Clear grouping</button></div>';
+  }
+
+  var gbWrap = el('gb-wrap');
+  el('gb-trigger').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = gbWrap.classList.toggle('open');
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  el('gb-panel').addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (e.target.closest('[data-gb-clear]')) { state.groups[state.tab] = []; render(); return; }
+    var b = e.target.closest('[data-gb]');
+    if (!b || b.disabled) return;
+    var k = b.getAttribute('data-gb'), g = state.groups[state.tab], at = g.indexOf(k);
+    if (at !== -1) g.splice(at, 1);
+    else if (g.length < MAX_GROUPS) g.push(k);
+    render();
+  });
+  document.addEventListener('click', function () {
+    gbWrap.classList.remove('open');
+    el('gb-trigger').setAttribute('aria-expanded', 'false');
+  });
+
+  /* ─── Tabs, search, dates ─────────────────────────────────────────── */
+  el('tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]');
+    if (!b) return;
+    state.tab = b.getAttribute('data-tab');
+    this.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === b); });
+    collapsed = Object.create(null);
+    render();
+  });
+
+  el('search').addEventListener('input', function () { state.q = this.value.trim(); render(); });
+
+  var RANGES = [
+    { k: 'week',     label: 'Current week' },
+    { k: 'lastweek', label: 'Last week' },
+    { k: 'all',      label: 'All time' }
+  ];
+  var CHECK = '<svg class="dd-check" width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3.5 3.5L13 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  el('date-dd-panel').innerHTML = RANGES.map(function (r) {
+    return '<button class="dd-item' + (r.k === state.range ? ' active' : '') + '" type="button" data-range="' + r.k + '">' +
+      CHECK + r.label + '</button>';
+  }).join('');
+  el('date-dd-panel').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-range]');
+    if (!b) return;
+    state.range = b.getAttribute('data-range');
+    this.querySelectorAll('.dd-item').forEach(function (i) {
+      i.classList.toggle('active', i.getAttribute('data-range') === state.range);
+    });
+    el('date-dd-value').textContent = RANGES.filter(function (r) { return r.k === state.range; })[0].label;
+    Shell.closeAllDropdowns();
+    render();
+  });
+
+  el('btn-add').addEventListener('click', function () {
+    Shell.snackbar('Add entry — the creation flow is the next thing to design.');
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

@@ -41,8 +41,9 @@
     { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
     { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
-    { id: 'timesheets', label: 'Supervisor Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets.html' },
-    { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html' },
+    { id: 'timesheets', label: 'Supervisor Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets.html', only: 'current' },
+    { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html', only: 'current' },
+    { id: 'tsflat',     label: 'Timesheets',       icon: 'timesheets', r4: true, href: 'timesheets-flat.html', only: 'flat' },
     { id: 'reports',    label: 'Reports',          icon: 'reports',    r4: true }
   ];
 
@@ -52,6 +53,25 @@
   ];
 
   var ACCOUNT = { initials: 'OR', name: 'Olivia Rhye', email: 'olivia@opms.com' };
+
+  /* ─── Structures ─────────────────────────────────────────────────────
+     Two ways the same timesheet screens could be organised, kept side by
+     side so they can be compared rather than argued about. "current" is
+     what exists: a screen each for the supervisor and the worker.
+     "flat" is the one the client is heading towards: a single Timesheets
+     screen, a tab each, one flat table underneath, and grouping chosen
+     per view. The switch is a prototype device, not a product control. */
+  var STRUCTURES = [
+    { k: 'current', label: 'Current', home: 'timesheets.html' },
+    { k: 'flat',    label: 'Flat',    home: 'timesheets-flat.html' }
+  ];
+  function structure() {
+    try { return localStorage.getItem('opms-structure') === 'flat' ? 'flat' : 'current'; }
+    catch (e) { return 'current'; }
+  }
+  function setStructure(k) {
+    try { localStorage.setItem('opms-structure', k); } catch (e) {}
+  }
 
   var LOGO =
     '<svg width="87" height="19" viewBox="0 0 87 19" fill="none" aria-label="OPMS">' +
@@ -206,7 +226,9 @@
           '<span class="logo-mark">' + LOGO + '</span>' +
           '<button class="sidebar-toggle" type="button">' + TOGGLE_ICON + '</button>' +
         '</div>' +
-        '<nav><ul class="nav-list">' + NAV.map(function (i) { return navItem(i, current); }).join('') + '</ul></nav>' +
+        '<nav><ul class="nav-list">' + NAV.filter(function (i) {
+          return !i.only || i.only === structure();
+        }).map(function (i) { return navItem(i, current); }).join('') + '</ul></nav>' +
       '</div>' +
       '<div class="sidebar-footer">' +
         '<ul class="footer-nav">' + FOOTER_NAV.map(function (i) { return navItem(i, current); }).join('') + '</ul>' +
@@ -474,12 +496,47 @@
     });
   }
 
+  /* The structure switch itself: moves between the two and lands on the
+     matching screen, since the screens differ between them. */
+  function renderStructureSwitch() {
+    if (document.getElementById('structure-switch')) return;
+    var box = document.createElement('div');
+    box.className = 'vp-switch structure-switch';
+    box.id = 'structure-switch';
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', 'Prototype structure');
+    box.innerHTML = '<span class="sw-label">Structure</span>' +
+      STRUCTURES.map(function (x) {
+        return '<button type="button" data-structure="' + x.k + '"' +
+          (x.k === structure() ? ' class="on"' : '') + '>' + x.label + '</button>';
+      }).join('');
+    document.body.appendChild(box);
+
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-structure]');
+      if (!b) return;
+      var k = b.getAttribute('data-structure');
+      if (k === structure()) return;
+      setStructure(k);
+      var to = STRUCTURES.filter(function (x) { return x.k === k; })[0].home;
+      window.location.href = to;
+    });
+  }
+
   /* ─── Boot ──────────────────────────────────────────────────────────── */
   function init() {
-    renderSidebar(document.body.getAttribute('data-module'));
+    /* A page belongs to one structure, so opening it directly is enough
+       to switch into that structure — otherwise a pasted link shows the
+       flat screen with the old sidebar beside it. */
+    var mod = document.body.getAttribute('data-module');
+    var owner = NAV.filter(function (i) { return i.id === mod && i.only; })[0];
+    if (owner) setStructure(owner.only);
+
+    renderSidebar(mod);
     initDropdowns(document);
     initTips(document);
     renderQuestions();
+    renderStructureSwitch();
   }
 
   if (document.readyState === 'loading') {
@@ -499,6 +556,7 @@
     initDropdowns: initDropdowns,
     initTips: initTips,
     initColResize: initColResize,
+    structure: structure,
     colGrip: colGrip,
     setViewport: setViewport,
     closeAllDropdowns: closeAllDropdowns

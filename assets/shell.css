@@ -522,3 +522,23 @@ body.col-resizing .col-rs::after { opacity: 1; background: var(--primary); width
 .q-now b { color: var(--text-main); font-weight: 500; }
 
 body.shell-mobile .q-fab { bottom: 20px; right: 20px; }
+
+/* ─── Structure switch ─────────────────────────────────────────────────
+   A prototype device: the same screens, organised two ways, so the two
+   can be compared rather than argued about. */
+.structure-switch {
+  position: fixed; left: 20px; bottom: 20px; z-index: 401;
+  display: inline-flex; align-items: center; padding: 4px; gap: 2px; border-radius: 10px;
+  background: var(--white); border: 1px solid var(--grey-350); box-shadow: var(--shadow-dropdown);
+}
+.structure-switch .sw-label {
+  padding: 0 8px 0 6px; font-size: 12px; font-weight: 500; color: var(--grey-600);
+}
+.structure-switch button {
+  height: 28px; padding: 0 12px; border: none; border-radius: 7px; cursor: pointer;
+  background: none; color: var(--grey-700);
+  font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+}
+.structure-switch button:hover { background: var(--grey-100); }
+.structure-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
+body.shell-mobile .structure-switch { display: none; }
