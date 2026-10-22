@@ -181,6 +181,78 @@
 
   .empty { padding: 48px 16px; text-align: center; color: var(--grey-600); font-size: 14px; }
 
+  /* ─── Edit mode ───────────────────────────────────────────────────
+     Editing takes over the toolbar's right-hand side rather than opening
+     a bar of its own, so the search and the grouping stay put. */
+  .edit-actions { display: none; align-items: center; gap: 8px; }
+  body.editing .edit-actions { display: flex; }
+  body.editing #btn-edit, body.editing #gb-wrap, body.editing #cols-wrap { display: none; }
+  .edit-note { font-size: 13px; color: var(--grey-600); white-space: nowrap; }
+  .btn-outline {
+    height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--white); border: 1px solid var(--primary); color: var(--primary);
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
+  }
+  .btn-outline:hover { background: var(--bg-blue-light); }
+
+  .hr-input {
+    width: 100%; max-width: 72px; height: 30px; padding: 0 8px; text-align: right;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+  }
+  .hr-input:focus { outline: none; border-color: var(--primary); }
+  .hr-input.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+  .cell-input {
+    width: 100%; height: 30px; padding: 0 8px;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23757575' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 8px center; padding-right: 26px;
+  }
+  .cell-input:focus { outline: none; border-color: var(--primary); }
+  td.col-day, th.col-day { text-align: right; font-variant-numeric: tabular-nums; }
+  th.col-day .dh { display: flex; flex-direction: column; align-items: flex-end; line-height: 15px; }
+  th.col-day .dh .dw { font-size: 12px; font-weight: 400; color: var(--grey-600); }
+  th.col-day.tdy, td.col-day.tdy { background: var(--bg-blue-light); }
+
+  /* A row being added, until it is saved. */
+  tr.new-row > td { background: #f3f7ff; }
+  tr.new-row:hover > td { background: #eaf1ff; }
+  .row-drop {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border: none; background: none; cursor: pointer;
+    color: var(--grey-600); border-radius: 6px;
+  }
+  .row-drop:hover { color: var(--error); background: var(--grey-100); }
+
+  /* ─── Add a task ──────────────────────────────────────────────────── */
+  .add-panel {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 320;
+    width: 340px; padding: 6px; border-radius: 10px;
+    background: var(--white); border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
+  }
+  .add-wrap { position: relative; }
+  .add-wrap.open .add-panel { display: block; }
+  .add-search { padding: 6px 6px 8px; }
+  .add-search input {
+    width: 100%; height: 34px; padding: 0 10px; border-radius: 8px;
+    border: 1px solid var(--grey-350); background: var(--white);
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+  }
+  .add-search input:focus { outline: none; border-color: var(--primary); }
+  .add-list { max-height: 280px; overflow: auto; }
+  .add-row {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+    width: 100%; padding: 8px 10px; border: none; background: none; border-radius: 7px;
+    cursor: pointer; font-family: var(--fs-sans); text-align: left;
+  }
+  .add-row:hover { background: var(--grey-100); }
+  .add-row .t { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .add-row .s { font-size: 12px; line-height: 17px; color: var(--grey-600); }
+  .add-empty { padding: 14px 10px; font-size: 13px; color: var(--grey-600); }
+
   body.is-narrow .table-card { overflow-x: auto; }
 </style>
 </head>
@@ -202,10 +274,28 @@
             </button>
             <div class="dd-panel" id="date-dd-panel"></div>
           </div>
-          <button class="btn-primary" type="button" id="btn-add">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add entry
-          </button>
+          <div class="seg" id="modeswitch">
+            <button class="seg-btn active" type="button" data-mode="list">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2.5" y="2" width="11" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 6h5M5.5 9h5M5.5 12h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Entries
+            </button>
+            <button class="seg-btn" type="button" data-mode="period">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3.5" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5h12M5.5 2v3M10.5 2v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              Period
+            </button>
+          </div>
+          <div class="add-wrap" id="add-wrap">
+            <button class="btn-primary" type="button" id="btn-add">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Add a task
+            </button>
+            <div class="add-panel" id="add-panel">
+              <div class="add-search">
+                <input id="add-q" type="text" placeholder="Search tasks" autocomplete="off" />
+              </div>
+              <div class="add-list" id="add-list"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -234,6 +324,15 @@
             </button>
             <div class="gb-panel" id="gb-panel"></div>
           </div>
+          <div class="edit-actions" id="edit-actions">
+            <span class="edit-note" id="edit-note"></span>
+            <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
+            <button class="btn-primary" type="button" id="btn-save">Save</button>
+          </div>
+          <button class="btn-ghost" type="button" id="btn-edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            Edit
+          </button>
           <div class="gb-wrap" id="cols-wrap">
             <button class="gb-trigger" type="button" id="cols-trigger" aria-haspopup="true" aria-expanded="false">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -415,17 +514,43 @@
   var MAX_GROUPS = 3;
   var state = {
     tab: 'mine',
+    mode: 'list',
     q: '',
     range: 'week',
+    editing: false,
     groups: { mine: ['site', 'sup'], team: ['site', 'sup'] }
   };
   var collapsed = Object.create(null);
+  var draft = null;        // 'entryId|date' -> hours, while editing
+  var pending = [];        // rows added but not yet saved
 
-  function groups() { return state.groups[state.tab]; }
+  /* Period turns the date into the columns, so it cannot also be a
+     grouping — the days are already across the top. */
+  function activeGroups() {
+    var g = state.groups[state.tab];
+    return state.mode === 'period' ? g.filter(function (k) { return k !== 'date'; }) : g;
+  }
+
+  /* The days the Period view spreads across. */
+  function days() {
+    var b = bounds();
+    var from, to;
+    if (b) { from = fromIso(b.from); to = fromIso(b.to); }
+    else {
+      var all = ENTRIES.map(function (e) { return e.date; }).sort();
+      from = fromIso(all[0]); to = fromIso(all[all.length - 1]);
+    }
+    var out = [], cur = new Date(from.getTime());
+    while (cur <= to && out.length < 60) { out.push(new Date(cur.getTime())); cur.setDate(cur.getDate() + 1); }
+    return out;
+  }
+
+  function groups() { return activeGroups(); }
   /* The worker's own tab has one worker in it, so grouping on worker
      would make a heading per row and say nothing. */
   function groupable() {
     return FIELDS.filter(function (f) {
+      if (state.mode === 'period' && f.k === 'date') return false;
       return f.group && !(state.tab === 'mine' && f.k === 'worker');
     });
   }
@@ -494,7 +619,7 @@
   }
   function rows() {
     var b = bounds(), q = state.q.toLowerCase();
-    return ENTRIES.filter(function (e) {
+    return ENTRIES.concat(pending).filter(function (e) {
       if (state.tab === 'mine' && e.worker !== ME) return false;
       if (b && (e.date < b.from || e.date > b.to)) return false;
       if (!q) return true;
@@ -531,18 +656,186 @@
   /* ─── Render ──────────────────────────────────────────────────────── */
   var CARET = '<span class="g-caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
 
+  function hoursOf(e, isoDate) {
+    var k = e.id + '|' + (isoDate || e.date);
+    if (draft && k in draft) return draft[k];
+    if (isoDate && e.date !== isoDate) return '';
+    return e.hours;
+  }
+  function hrInput(e, isoDate) {
+    var v = hoursOf(e, isoDate);
+    return '<input class="hr-input" type="text" inputmode="decimal" value="' +
+      (v === '' ? '' : fmtHours(v)) + '" data-cell="' + e.id + '|' + (isoDate || e.date) + '" aria-label="Hours" />';
+  }
+  /* A field the context could not supply arrives as a cell on the row,
+     prefilled with the best guess, rather than as another question in a
+     dialog before the row exists. */
+  function pickCell(e, f) {
+    var opts = f.k === 'date'
+      ? days().map(function (d) { return { v: iso(d), t: fmtDay(d) }; })
+      : (f.k === 'sup' ? (SUPS[e.site] || []) : []).map(function (x) { return { v: x, t: x }; });
+    return '<select class="cell-input" data-field="' + f.k + '" data-row="' + e.id + '">' +
+      opts.map(function (o) {
+        return '<option value="' + Shell.esc(o.v) + '"' + (o.v === e[f.k] ? ' selected' : '') + '>' +
+          Shell.esc(o.t) + '</option>';
+      }).join('') + '</select>';
+  }
+
   function cellHtml(e, f) {
     if (f.k === 'allow') return allowHtml(e);
     if (f.k === 'hours') {
+      if (state.editing && e.kind !== 'allow') return hrInput(e);
       return e.hours === '' ? '<span class="cell-empty">&mdash;</span>' : fmtHours(e.hours);
     }
+    if (e.isNew && (f.k === 'date' || f.k === 'sup')) return pickCell(e, f);
     var v = f.get(e);
     return v ? Shell.highlight(v, state.q) : '<span class="cell-empty">&mdash;</span>';
+  }
+
+  /* ─── Period ────────────────────────────────────────────────────────
+     The same rows, pivoted: the date stops being a column of values and
+     becomes the columns themselves. A leaf is a task, and its hours land
+     in whichever day they were booked to — which is what lets a new row
+     ask for nothing but the task. */
+  function taskKey(e) { return [e.site, e.sup, e.worker, e.task].join('\u00a7'); }
+
+  function renderPeriod(list, lead, ds) {
+    var cols = lead.concat([field('task')]);
+    var offs = [], off = 0;
+    cols.forEach(function (c) { offs.push(off); off += c.w; });
+
+    el('grid-cols').innerHTML = cols.map(function (c) { return '<col style="width:' + c.w + 'px" />'; }).join('') +
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />';
+
+    el('grid-head').innerHTML = '<tr>' +
+      cols.map(function (c, i) {
+        return '<th class="col-lead' + (i === cols.length - 1 ? ' last' : '') + '" style="left:' + offs[i] + 'px">' +
+          Shell.esc(c.label) + '</th>';
+      }).join('') +
+      ds.map(function (d) {
+        var t = iso(d) === iso(TODAY);
+        return '<th class="col-day' + (t ? ' tdy' : '') + '"><span class="dh"><span class="dw">' +
+          DOW[d.getDay()] + '</span><span>' + d.getDate() + ' ' + MONTHS[d.getMonth()] + '</span></span></th>';
+      }).join('') +
+      '<th class="num col-hrs">Total</th></tr>';
+
+    el('grid').style.minWidth = (off + ds.length * 92 + 92) + 'px';
+
+    var out = [], shown = 0, openKeys = [];
+
+    function leafRows(rowsIn) {
+      var order = [], by = Object.create(null);
+      rowsIn.forEach(function (e) {
+        var k = taskKey(e);
+        if (!by[k]) { by[k] = []; order.push(k); }
+        by[k].push(e);
+      });
+      return order.map(function (k) { return by[k]; });
+    }
+
+    function dayCell(group, d) {
+      var key = iso(d), hit = null;
+      group.forEach(function (e) { if (e.date === key) hit = e; });
+      if (state.editing && hit && hit.kind !== 'allow') {
+        return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' + hrInput(hit, key) + '</td>';
+      }
+      if (state.editing && !hit) {
+        /* An empty day on a row that exists: type into it and the entry is
+           created against that date. The cell is the date picker. */
+        var seed = group[0];
+        return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' +
+          '<input class="hr-input" type="text" inputmode="decimal" value="" ' +
+          'data-newcell="' + seed.id + '|' + key + '" aria-label="Hours" /></td>';
+      }
+      var v = hit ? hoursOf(hit, key) : '';
+      return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' +
+        (v === '' || v === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(v)) + '</td>';
+    }
+
+    function taskRow(group) {
+      shown++;
+      var e = group[0];
+      var total = ds.reduce(function (n, d) {
+        var h = 0;
+        group.forEach(function (x) { if (x.date === iso(d)) h += Number(hoursOf(x, iso(d))) || 0; });
+        return n + h;
+      }, 0);
+      return '<tr' + (e.isNew ? ' class="new-row"' : '') + '>' +
+        cols.map(function (c, i) {
+          var html = i === cols.length - 1
+            ? Shell.highlight(e.task, state.q) + (e.isNew ? dropBtn(e) : '')
+            : '';
+          return '<td class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
+            '" style="left:' + offs[i] + 'px">' + html + '</td>';
+        }).join('') +
+        ds.map(function (d) { return dayCell(group, d); }).join('') +
+        '<td class="num col-hrs">' + fmtHours(total) + '</td></tr>';
+    }
+
+    function headRow(node, depth, key, open) {
+      var total = sumOf(node.rows);
+      return '<tr class="g-row d' + depth + (open ? '' : ' collapsed') + '"' +
+          (depth === 1 ? ' data-key="' + Shell.esc(key) + '"' : '') + '>' +
+        cols.map(function (c, i) {
+          var html = '';
+          if (i === depth - 1) {
+            var name = '<span class="g-name">' + Shell.highlight(String(node.name), state.q) + '</span>';
+            html = depth === 1 ? '<button class="g-btn" type="button">' + CARET + name + '</button>' : name;
+          } else if (i > depth - 1 && i < lead.length) {
+            html = '<span class="g-tally-in">' + tally(node.rows, cols[i]) + '</span>';
+          } else if (i === cols.length - 1) {
+            html = '<span class="g-tally-in">' + tally(node.rows, field('task')) + '</span>';
+          }
+          return '<td class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
+            '" style="left:' + offs[i] + 'px">' + html + '</td>';
+        }).join('') +
+        ds.map(function (d) {
+          var h = 0;
+          node.rows.forEach(function (x) { if (x.date === iso(d)) h += Number(hoursOf(x, iso(d))) || 0; });
+          return '<td class="col-day g-tally' + (iso(d) === iso(TODAY) ? ' tdy' : '') + '">' +
+            (h ? fmtHours(h) : '') + '</td>';
+        }).join('') +
+        '<td class="num col-hrs">' + fmtHours(total) + '</td></tr>';
+    }
+
+    function walk(nodes, depth, path) {
+      nodes.forEach(function (node) {
+        var key = path + '\u00a7' + node.name;
+        var top = depth === 1;
+        var open = !top || collapsed[key] !== true;
+        if (top) openKeys.push(key);
+        out.push(headRow(node, depth, key, open));
+        if (!open) return;
+        if (node.kids) walk(node.kids, depth + 1, key);
+        else leafRows(node.rows).forEach(function (grp) { out.push(taskRow(grp)); });
+      });
+    }
+
+    var g = groups();
+    if (!g.length) leafRows(list).forEach(function (grp) { out.push(taskRow(grp)); });
+    else walk(nest(list, g), 1, '');
+
+    el('grid-body').innerHTML = out.length ? out.join('')
+      : '<tr><td colspan="' + (cols.length + ds.length + 1) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
+    return { shown: shown, openKeys: openKeys };
+  }
+
+  function dropBtn(e) {
+    return '<button class="row-drop" type="button" data-drop="' + e.id + '" aria-label="Remove this row">' +
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
   }
 
   function render() {
     var lead = leadCols(), rest = restCols(), cols = lead.concat(rest);
     var g = groups(), list = rows();
+
+    document.body.classList.toggle('editing', state.editing);
+
+    if (state.mode === 'period') {
+      var r = renderPeriod(list, lead, days());
+      finish(r.shown, list, r.openKeys);
+      return;
+    }
 
     /* The heading columns stay put while the rest scrolls, so a row read
        on the right still says whose it is. */
@@ -569,11 +862,20 @@
 
     function entryRow(e) {
       shown++;
-      return '<tr>' +
-        lead.map(function (c, i) { return leadCell(i, ''); }).join('') +
+      return '<tr' + (e.isNew ? ' class="new-row"' : '') + '>' +
+        lead.map(function (c, i) {
+          /* A row still being added shows its grouped fields as pickers
+             rather than blanks: those are what decide where it lands, so
+             a wrong guess has to be correctable from the row itself. */
+          if (e.isNew && (c.k === 'date' || c.k === 'sup')) return leadCell(i, pickCell(e, c));
+          if (e.isNew && c.k === 'site') return leadCell(i, '<span class="g-tally-in">' + Shell.esc(e.site) + '</span>');
+          return leadCell(i, '');
+        }).join('') +
         rest.map(function (c) {
           var cls = (c.num ? 'num' : '') + (c.k === 'hours' ? ' col-hrs' : '');
-          return '<td class="' + cls + '">' + cellHtml(e, c) + '</td>';
+          var html = cellHtml(e, c);
+          if (e.isNew && c.k === 'task') html += dropBtn(e);
+          return '<td class="' + cls + '">' + html + '</td>';
         }).join('') +
       '</tr>';
     }
@@ -624,17 +926,22 @@
       : '<tr><td colspan="' + cols.length + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
 
     el('grid').style.minWidth = cols.reduce(function (n, c) { return n + c.w; }, 0) + 'px';
+    finish(shown, list, openKeys);
+  }
 
+  function finish(shown, list, openKeys) {
     el('grid-note').textContent = state.tab === 'mine'
       ? 'Your own entries. Hours are saved against the day you book them to.'
       : 'Every entry the filters let through, whoever booked it.';
-    el('grid-count').textContent = 'Displaying ' + shown + ' entr' + (shown === 1 ? 'y' : 'ies') +
+    el('grid-count').textContent = 'Displaying ' + shown + ' ' +
+      (state.mode === 'period' ? 'task' + (shown === 1 ? '' : 's') : 'entr' + (shown === 1 ? 'y' : 'ies')) +
       ' \u00b7 ' + fmtHours(sumOf(list)) + ' h';
 
     el('btn-collapse').hidden = !openKeys.length;
     el('btn-collapse').dataset.keys = openKeys.join('\u0000');
     syncCollapseBtn(openKeys);
     renderGroupBy();
+    syncEditNote();
     syncScrollEdges();
   }
 
@@ -744,6 +1051,7 @@
     render();
   });
   document.addEventListener('click', function () {
+    addWrap.classList.remove('open');
     [gbWrap, colsWrap].forEach(function (x) {
       x.classList.remove('open');
       x.querySelector('.gb-trigger').setAttribute('aria-expanded', 'false');
@@ -793,8 +1101,150 @@
     render();
   });
 
-  el('btn-add').addEventListener('click', function () {
-    Shell.snackbar('Add entry — the creation flow is the next thing to design.');
+  /* ─── Edit mode ─────────────────────────────────────────────────── */
+  function syncEditNote() {
+    var n = (draft ? Object.keys(draft).length : 0) + pending.length;
+    el('edit-note').textContent = n ? n + ' unsaved change' + (n === 1 ? '' : 's') : 'No changes yet';
+    el('btn-save').disabled = !n;
+  }
+  function enterEdit() {
+    state.editing = true; draft = Object.create(null); pending = [];
+    render();
+  }
+  function exitEdit() {
+    state.editing = false; draft = null; pending = [];
+    render();
+  }
+  el('btn-edit').addEventListener('click', enterEdit);
+  el('btn-cancel').addEventListener('click', exitEdit);
+  el('btn-save').addEventListener('click', function () {
+    var n = (draft ? Object.keys(draft).length : 0) + pending.length;
+    /* A pending row with no hours on it never became an entry. */
+    pending.forEach(function (row) {
+      var any = Object.keys(draft || {}).some(function (k) { return k.indexOf(row.id + '|') === 0 && draft[k] > 0; });
+      if (!any) return;
+      delete row.isNew;
+      ENTRIES.push(row);
+    });
+    Object.keys(draft || {}).forEach(function (k) {
+      var id = k.slice(0, k.indexOf('|')), date = k.slice(k.indexOf('|') + 1);
+      var e = ENTRIES.concat(pending).filter(function (x) { return x.id === id; })[0];
+      if (!e) return;
+      if (e.date === date) { e.hours = draft[k]; return; }
+      /* Typed into another day: that is a new entry on that date, which is
+         the whole point of the date being a column. */
+      ENTRIES.push(Object.assign({}, e, { id: 'e' + (ENTRIES.length + 1000), date: date, hours: draft[k], allowances: [] }));
+    });
+    state.editing = false; draft = null; pending = [];
+    render();
+    Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved.');
+  });
+
+  el('grid-body').addEventListener('input', function (e) {
+    var box = e.target.closest('.hr-input');
+    if (box) {
+      var raw = box.value.trim().replace(',', '.');
+      var v = raw === '' ? 0 : Number(raw);
+      if (isNaN(v) || v < 0) return;
+      draft[box.getAttribute('data-cell') || box.getAttribute('data-newcell')] = v;
+      box.classList.add('changed');
+      syncEditNote();
+      return;
+    }
+    var sel = e.target.closest('.cell-input');
+    if (sel) {
+      var row = pending.filter(function (x) { return x.id === sel.getAttribute('data-row'); })[0];
+      if (!row) return;
+      row[sel.getAttribute('data-field')] = sel.value;
+      if (sel.getAttribute('data-field') === 'date') row.sup = supervisorOn(row.date, row.site) || row.sup;
+      render();
+    }
+  });
+
+  el('grid-body').addEventListener('click', function (e) {
+    var drop = e.target.closest('[data-drop]');
+    if (!drop) return;
+    e.stopPropagation();
+    var id = drop.getAttribute('data-drop');
+    pending = pending.filter(function (x) { return x.id !== id; });
+    Object.keys(draft || {}).forEach(function (k) { if (k.indexOf(id + '|') === 0) delete draft[k]; });
+    render();
+  });
+
+  /* ─── Add a task ────────────────────────────────────────────────────
+     The only question is which task. The site comes with it, because the
+     custom fields are configured per site; the supervisor is looked up
+     from site and date; the date is whichever day you then type into, or
+     a cell on the row when the view has no day columns. */
+  function supervisorOn(date, site) {
+    var found = null;
+    ENTRIES.forEach(function (e) { if (!found && e.date === date && e.site === site) found = e.sup; });
+    return found;
+  }
+  function knownTasks() {
+    var seen = Object.create(null), out = [];
+    ENTRIES.slice().reverse().forEach(function (e) {
+      var k = e.site + '\u00a7' + e.task;
+      if (seen[k] || !e.task) return;
+      seen[k] = true;
+      out.push({ site: e.site, task: e.task, project: e.project, when: e.date });
+    });
+    return out;
+  }
+  function renderAddList() {
+    var q = el('add-q').value.trim().toLowerCase();
+    var list = knownTasks().filter(function (t) {
+      return !q || (t.task + ' ' + t.site + ' ' + t.project).toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 12);
+    el('add-list').innerHTML = list.length ? list.map(function (t, i) {
+      return '<button class="add-row" type="button" data-add="' + i + '">' +
+        '<span class="t">' + Shell.highlight(t.task, q) + '</span>' +
+        '<span class="s">' + Shell.esc(t.site) + ' \u00b7 ' + Shell.esc(t.project) +
+          ' \u00b7 last booked ' + fmtDay(fromIso(t.when)) + '</span></button>';
+    }).join('') : '<div class="add-empty">Nothing matches. A task you have never booked is set up on the site first.</div>';
+    el('add-list').dataset.n = list.length;
+    addCache = list;
+  }
+  var addCache = [], addWrap = el('add-wrap');
+
+  el('btn-add').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var open = !addWrap.classList.contains('open');
+    addWrap.classList.toggle('open', open);
+    if (open) { el('add-q').value = ''; renderAddList(); el('add-q').focus(); }
+  });
+  el('add-panel').addEventListener('click', function (e) { e.stopPropagation(); });
+  el('add-q').addEventListener('input', renderAddList);
+
+  el('add-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-add]');
+    if (!b) return;
+    var t = addCache[Number(b.getAttribute('data-add'))];
+    if (!state.editing) enterEdit();
+    var date = iso(TODAY);
+    var row = {
+      id: 'n' + (pending.length + 1) + '-' + Date.now(),
+      date: date, site: t.site, sup: supervisorOn(date, t.site) || (SUPS[t.site] || [])[0],
+      worker: state.tab === 'mine' ? ME : ME,
+      project: t.project, task: t.task, status: 'Draft',
+      allowances: [], hours: '', isNew: true
+    };
+    pending.push(row);
+    addWrap.classList.remove('open');
+    render();
+    var first = document.querySelector('tr.new-row .hr-input');
+    if (first) first.focus();
+    Shell.snackbar('Row added — type the hours, then Save.');
+  });
+
+  /* ─── Entries or Period ─────────────────────────────────────────── */
+  el('modeswitch').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-mode]');
+    if (!b) return;
+    state.mode = b.getAttribute('data-mode');
+    this.querySelectorAll('.seg-btn').forEach(function (x) { x.classList.toggle('active', x === b); });
+    collapsed = Object.create(null);
+    render();
   });
 
   render();
