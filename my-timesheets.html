@@ -270,6 +270,7 @@
   }
   #new-task { display: flex; flex-direction: column; gap: 14px; }
   #nt-levels { display: flex; flex-direction: column; gap: 14px; }
+  #add-where { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
 
   /* Recents are rows, not chips — each one has to carry who you worked for
      and when, which is what makes them pickable without thinking. */
@@ -645,17 +646,25 @@
 
   /* Adding into a group the table already shows: the site and supervisor
      are the row you clicked, so the dialog only has the task left to ask.
-     It stays out of the way until the row is pointed at. */
+     It sits at the right-hand end of the group's own columns and is
+     always there — a control that appears on hover is a control nobody
+     knows about. The label is the tooltip. */
   .grp-add {
-    margin-left: 8px; flex-shrink: 0;
-    display: inline-flex; align-items: center; gap: 4px;
-    height: 24px; padding: 0 8px; border-radius: 6px;
-    border: 1px solid transparent; background: none; cursor: pointer;
-    font-family: var(--fs-sans); font-size: 13px; color: var(--primary);
-    opacity: 0; transition: opacity var(--t-fast), background var(--t-fast);
+    flex-shrink: 0; margin-left: auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 6px;
+    border: 1px solid var(--grey-350); background: var(--white); cursor: pointer;
+    color: var(--primary); transition: border-color var(--t-fast), background var(--t-fast);
   }
-  #grid tbody tr:hover .grp-add, .grp-add:focus-visible { opacity: 1; }
-  .grp-add:hover { background: var(--bg-blue-light); border-color: var(--primary); }
+  .grp-add:hover { border-color: var(--primary); background: var(--bg-blue-light); }
+  /* The row it sits on has to span the cell for margin-left:auto to have
+     anything to push against. */
+  #grid tbody tr.row-summary td.col-task > .tree,
+  #grid tbody tr.row-site td.col-label > .tree,
+  #grid tbody tr.row-sup td.col-label > .tree { display: flex; width: 100%; }
+  #grid tbody tr.row-summary td.col-task,
+  #grid tbody tr.row-site td.col-label,
+  #grid tbody tr.row-sup td.col-label { padding-right: 12px; }
   #grid tbody tr.row-summary:hover td { background: var(--grey-200); }
 
   /* Today reads as a tint, not as something clickable. */
@@ -793,17 +802,27 @@
            answered, so they are stated rather than asked. -->
       <div class="add-ctx" id="add-ctx" hidden></div>
 
-      <div class="sec">
+      <!-- Where the row goes is asked first and asked blank: the tasks a
+           site offers depend on it, so nothing below can be filled in
+           until it is answered. -->
+      <div id="add-where">
+        <div class="fld">
+          <label class="fld-label" for="nt-site">Site<span style="color:var(--error)">*</span></label>
+          <select id="nt-site"></select>
+        </div>
+        <div class="fld">
+          <label class="fld-label" for="nt-sup">Supervisor<span style="color:var(--error)">*</span></label>
+          <select id="nt-sup"></select>
+        </div>
+      </div>
+
+      <div class="sec" id="add-sec">
         <div class="sec-head">
           <span class="step-title" id="sec-title">Recent tasks</span>
           <button class="btn-text" type="button" id="sec-switch">Set up another task</button>
         </div>
         <div class="recent-list" id="recent-list"></div>
         <div id="new-task" hidden>
-          <div class="fld">
-            <label class="fld-label" for="nt-site">Site</label>
-            <select id="nt-site"></select>
-          </div>
           <div id="nt-levels"></div>
           <span class="fld-hint" id="date-hint"></span>
         </div>
@@ -1144,10 +1163,11 @@
      opens with the group already answered. */
   function grpAdd(site, sup) {
     if (!state.editing) return '';
-    return '<button class="grp-add" type="button" data-add-site="' + Shell.esc(site) + '"' +
+    return '<button class="grp-add" type="button" aria-label="Add task" data-tip="Add task"' +
+      ' data-add-site="' + Shell.esc(site) + '"' +
       (sup ? ' data-add-sup="' + Shell.esc(sup) + '"' : '') + '>' +
-      '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
-      'Add task</button>';
+      '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>' +
+      '</button>';
   }
   var ICO_SITE = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V3.5l5-1.5V14M3 14h10V6.5H8M3 14H1.5M13 14h1.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
@@ -1799,8 +1819,27 @@
 
   var addPick = null, recentCache = [], addMode = 'recent', recentTitle = 'Recent tasks';
 
+  /* The site in play: the group's when the dialog was opened from one,
+     otherwise whatever the select is currently on — '' until chosen. */
+  function addSite() { return addCtx ? addCtx.site : el('nt-site').value; }
+  function addSup() { return addCtx ? (addCtx.sup || '') : el('nt-sup').value; }
+
+  function renderSups() {
+    var site = el('nt-site').value;
+    var list = SUPS_BY_SITE[site] || [];
+    el('nt-sup').innerHTML = '<option value="">Select…</option>' +
+      list.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    el('nt-sup').disabled = !site;
+  }
+
+  /* Nothing below the two selects means anything without a site, so the
+     whole section waits rather than offering tasks from everywhere. */
+  function syncWhere() {
+    el('add-sec').hidden = !addSite();
+  }
+
   function renderLevels() {
-    var site = el('nt-site').value, fields = fieldsFor(site);
+    var site = addSite(), fields = fieldsFor(site);
     el('nt-levels').innerHTML = fields.map(function (f, i) {
       return '<div class="fld"><label class="fld-label" for="nt-' + i + '">' + Shell.esc(f.name) +
         (i === 0 ? '<span style="color:var(--error)">*</span>' : ' <span style="color:var(--grey-600);font-weight:400">(optional)</span>') + '</label>' +
@@ -1813,7 +1852,8 @@
     return [].slice.call(el('nt-levels').querySelectorAll('select')).map(function (x) { return x.value; });
   }
   function syncAddGo() {
-    el('add-go').disabled = addMode === 'new' ? (!el('nt-0') || !el('nt-0').value) : !addPick;
+    var named = addMode === 'new' ? !!(el('nt-0') && el('nt-0').value) : !!addPick;
+    el('add-go').disabled = !named || !addSite() || !addSup();
   }
   function setAddMode(m) {
     addMode = m;
@@ -1829,18 +1869,19 @@
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) { return r.when; })
-      /* Started from a group, a task from a different site is not a
-         candidate — it would land somewhere other than the row clicked. */
-      .filter(function (r) { return !addCtx || r.meta.site === addCtx.site; })
+      /* A task from another site is not a candidate — it would land
+         somewhere other than where this dialog says the row goes. */
+      .filter(function (r) { return !addSite() || r.meta.site === addSite(); })
       .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 6);
 
     recentTitle = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
     if (addMode === 'recent') el('sec-title').textContent = recentTitle;
 
     el('recent-list').innerHTML = recent.length ? recent.map(function (r, i) {
-      /* Inside a group, the site and supervisor are the strip above — and
-         repeating a supervisor the row overrides would just mislead. */
-      var sub = (addCtx
+      /* Once the site is settled, the dialog states where the row goes —
+         and the supervisor stored on the task is not where it goes, so
+         repeating either would only mislead. */
+      var sub = (addSite()
                   ? [taskRest(r.meta), 'last booked ' + fmtDay(r.when)]
                   : [taskRest(r.meta), r.meta.sup, r.meta.site, 'last booked ' + fmtDay(r.when)])
                   .filter(Boolean).join(' · ');
@@ -1864,13 +1905,12 @@
     return found || (SUPS_BY_SITE[site] || [])[0];
   }
 
+  /* Where the row lands is now stated outright — the strip when the
+     dialog came from a group, the two selects when it did not — so the
+     hint has only the days left to say. */
   function syncDayHint() {
-    var site = addMode === 'new' ? el('nt-site').value : (addPick ? addPick.meta.site : '');
-    /* The strip above already names the group, so the hint would only
-       repeat it. */
-    el('date-hint').textContent = (site && !addCtx)
-      ? 'Goes to ' + site + ' with ' + supervisorFor(site) + '. Fill in the days once the row is there.'
-      : '';
+    el('date-hint').textContent = addSite()
+      ? 'Fill in the days once the row is there.' : '';
   }
 
   var addOnDay = null;      // set when the dialog was opened from a day
@@ -1885,9 +1925,15 @@
        unknown either — the row will go to the same one the site's other
        tasks go to, so it is stated rather than left to be discovered. */
     if (addCtx && !addCtx.sup) addCtx.sup = supervisorFor(addCtx.site) || '';
-    el('nt-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
-    if (addCtx) el('nt-site').value = addCtx.site;
-    el('nt-site').disabled = !!addCtx;
+    el('nt-site').innerHTML = '<option value="">Select…</option>' +
+      SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    el('nt-site').value = addCtx ? addCtx.site : '';
+    renderSups();
+    if (addCtx) el('nt-sup').value = addCtx.sup || '';
+
+    /* Opened from a group, those two are already answered and the strip
+       states them; opened from the toolbar, they are the first question. */
+    el('add-where').hidden = !!addCtx;
 
     var strip = el('add-ctx');
     strip.hidden = !addCtx;
@@ -1901,11 +1947,17 @@
     renderRecent();
     setAddMode('recent');
     syncDayHint();
+    syncWhere();
     el('add-title').textContent = 'Add a task';
     addModal.classList.add('open');
   }
 
-  el('nt-site').addEventListener('change', function () { renderLevels(); syncDayHint(); syncAddGo(); });
+  el('nt-site').addEventListener('change', function () {
+    renderSups();
+    addPick = null;
+    renderLevels(); renderRecent(); setAddMode(addMode); syncWhere(); syncDayHint(); syncAddGo();
+  });
+  el('nt-sup').addEventListener('change', syncAddGo);
   el('nt-levels').addEventListener('change', syncAddGo);
   el('sec-switch').addEventListener('click', function () {
     setAddMode(addMode === 'recent' ? 'new' : 'recent');
@@ -1922,12 +1974,12 @@
 
   el('add-go').addEventListener('click', function () {
     var site, levels;
-    if (addMode === 'new') { site = el('nt-site').value; levels = newLevels(); }
+    if (addMode === 'new') { site = addSite(); levels = newLevels(); }
     else { site = addPick.meta.site; levels = addPick.meta.levels.slice(); }
 
     var ds = days().map(iso);
     var date = addOnDay || (ds.indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : ds[0]);
-    var sup = (addCtx && addCtx.sup) || supervisorFor(site);
+    var sup = addSup() || supervisorFor(site);
     var k = keyOf(site, sup, levels);
     taskMeta[k] = { site: site, sup: sup, levels: levels };
 
