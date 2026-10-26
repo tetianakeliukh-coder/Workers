@@ -278,10 +278,13 @@
     flex: 0 1 auto; max-height: 68vh; overflow: auto;
   }
   .add-modal .modal-body > .add-split { flex: 1; min-height: 0; }
-  /* Sized to its taller half rather than to the worst case, so the
-     opening state is not mostly empty; each half then scrolls inside it.
+  /* One height for every state, measured from the tallest: a site with
+     four levels needs 550px of form, and the body's own 24px of padding
+     sits outside that. Sizing to content instead would resize the dialog
+     under the pointer each time a site is named — a short state leaves
+     space, and that is the cheaper fault.
      A sheet on a phone keeps growing with its content instead. */
-  .add-modal .modal-body { height: auto; min-height: 300px; max-height: 68vh; flex: 0 1 auto; overflow: hidden; }
+  .add-modal .modal-body { height: 574px; max-height: 68vh; flex: 0 0 auto; overflow: hidden; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
   body.is-narrow .add-form, body.is-narrow .add-recent { overflow: visible; }
