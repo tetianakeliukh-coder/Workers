@@ -373,7 +373,16 @@
      one per step: a step is a change of screen, where a change of size
      is expected — unlike a field appearing under the pointer. */
   body.addvar-steps .add-modal .modal-body { height: 470px; }
-  body.addvar-steps.addstep-1 .add-modal .modal-body { height: 206px; }
+  /* Step one asks two questions, and a 720px dialog holding two 299px
+     fields is mostly empty room with the content pushed into one
+     corner. It narrows to them, the fields take the width they are
+     given, and the footer stops listing two fields that are the only
+     things on screen and already marked. */
+  body.addvar-steps.addstep-1 .modal.add-modal { max-width: 420px; }
+  body.addvar-steps.addstep-1 .add-modal .modal-body { height: 200px; }
+  body.addvar-steps.addstep-1 #add-where .fld,
+  body.addvar-steps.addstep-1 #add-where-set .fld-static { max-width: none; }
+  body.addvar-steps.addstep-1 .add-need { display: none; }
   /* The stepper already names this step, so the panel's own heading
      would be the same words twice. */
   body.addvar-steps .add-one > .add-card > .sec-head { display: none; }
