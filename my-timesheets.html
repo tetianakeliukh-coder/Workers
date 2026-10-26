@@ -2041,6 +2041,19 @@
     el('cp-h').select();
   }
   function closeCell() { pop.classList.remove('open'); popKey = null; }
+
+  /* Two cells are the same when they say the same thing — so an editor
+     that was opened and left alone writes nothing, and the Save button
+     is not lit by looking. */
+  function sameCell(a, b) {
+    if (a.h !== b.h || (a.s || '') !== (b.s || '') || (a.f || '') !== (b.f || '')) return false;
+    var x = a.a || [], y = b.a || [];
+    if (x.length !== y.length) return false;
+    return x.every(function (v, i) {
+      return v.name === y[i].name && v.type === y[i].type && (v.qty || 0) === (y[i].qty || 0);
+    });
+  }
+
   function commitCell() {
     if (!popKey || !draft) return;
     var period = entryModeOf(popKey) === 'period';
@@ -2055,7 +2068,8 @@
       v = h === '' ? 0 : Number(h);
     }
     if (isNaN(v) || v < 0) v = 0;
-    draft[popKey + '|' + popDate] = { h: v, s: sT, f: fT, a: cellAllowances() };
+    var next = { h: v, s: sT, f: fT, a: cellAllowances() };
+    if (!sameCell(next, cellOf(popKey, popDate))) draft[popKey + '|' + popDate] = next;
     closeCell();
     renderGrid(); renderWeek(); syncEditBar();
   }
@@ -2080,18 +2094,41 @@
   pop.addEventListener('click', function (e) { e.stopPropagation(); });
   pop.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); commitCell(); }
-    if (e.key === 'Escape') closeCell();
+    /* Escape is the way out that keeps nothing — and it must not travel
+       on, or the page's own Escape would end the whole edit. */
+    if (e.key === 'Escape') { e.stopPropagation(); closeCell(); }
   });
+
+  /* Leaving the editor keeps what is in it. Typing a number and clicking
+     the next cell is the whole job on a site that books plain hours, and
+     making that cost a trip to Done loses the number far more often than
+     it prevents a mistake. Escape is still there to keep nothing. */
   document.addEventListener('click', function (e) {
     /* This runs in the capture phase, ahead of the editor's own buttons, so
        a click on Done would otherwise clear popKey before commitCell reads
        it — and the hours would never land. */
     if (pop.contains(e.target)) return;
     var cell = e.target.closest('.hr-cell');
-    if (cell) { e.stopPropagation(); openCell(cell); return; }
-    if (popKey) closeCell();
+    if (cell) {
+      e.stopPropagation();
+      var k = cell.getAttribute('data-key'), d = cell.getAttribute('data-date');
+      /* Committing re-renders the grid, so the cell just clicked is a
+         detached node by the time it would be opened — it is found
+         again by what it was. */
+      if (popKey) commitCell();
+      openCell(cellAt(k, d) || cell);
+      return;
+    }
+    if (popKey) commitCell();
   }, true);
-  window.addEventListener('scroll', function () { if (popKey) closeCell(); }, true);
+  function cellAt(key, isoDate) {
+    var found = null;
+    [].forEach.call(document.querySelectorAll('.hr-cell'), function (x) {
+      if (!found && x.getAttribute('data-key') === key && x.getAttribute('data-date') === isoDate) found = x;
+    });
+    return found;
+  }
+  window.addEventListener('scroll', function () { if (popKey) commitCell(); }, true);
 
   document.addEventListener('click', function (e) {
     var head = e.target.closest('[data-dayhead]');
