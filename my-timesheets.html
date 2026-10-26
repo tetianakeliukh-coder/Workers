@@ -293,7 +293,7 @@
   body.is-narrow .add-split { grid-template-columns: 1fr; }
   body.is-narrow #mode-new { padding-right: 0; }
   body.is-narrow #mode-recent {
-    padding-left: 0; border-left: none; padding-top: 20px; border-top: 1px solid var(--grey-200);
+    padding-left: 0; border-left: none; padding-top: 20px; border-top: 1px solid var(--grey-350);
   }
   body.is-narrow .add-col { overflow: visible; }
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
@@ -313,8 +313,10 @@
   .add-one { display: flex; flex-direction: column; gap: 14px; }
   /* Each panel is one idea, bounded, so the two are told apart without
      being read. */
+  /* The same grey the inputs are drawn in: two shades of border inside
+     one dialog reads as a mistake, and the inputs set the standard. */
   .add-card {
-    border: 1px solid var(--grey-200); border-radius: 10px; padding: 16px;
+    border: 1px solid var(--grey-350); border-radius: 10px; padding: 16px;
     background: var(--white);
   }
   /* Fields run down the page, never across it — and at a field's width,
@@ -348,7 +350,8 @@
      which is what must not jump, and the stepped one has no panel of
      fields to make room for. */
   body.addvar-steps .add-modal .modal-body { height: 470px; }
-  .vp-switch.addvar-switch { right: 612px; }
+  /* Clear of the open-questions button, which sits at right 20. */
+  .vp-switch.addvar-switch { right: 76px; bottom: 60px; }
   body.is-narrow .addvar-switch { display: none; }
   /* .add-one zeroes every heading's margin for the columns, which set
      their own gap; this one has no flex parent to space it. */
@@ -356,7 +359,7 @@
   /* Two peers, with the rule between them running the column's height. */
   .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; min-height: 0; }
   .add-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-  #mode-recent { border-left: 1px solid var(--grey-200); }
+  #mode-recent { border-left: 1px solid var(--grey-350); }
   /* The side that is not the answer says so quietly. */
   .add-col.off .step-title { color: var(--grey-600); font-weight: 400; }
   .sec-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: -4px; }
@@ -380,7 +383,7 @@
   .recent-row {
     display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
     width: 100%; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-align: left;
-    background: var(--white); border: 1px solid var(--grey-200); font-family: var(--fs-sans);
+    background: var(--white); border: 1px solid var(--grey-350); font-family: var(--fs-sans);
     transition: border-color var(--t-fast), background var(--t-fast);
   }
   .recent-row:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
@@ -498,8 +501,11 @@
   }
   .fld select:focus { outline: none; border-color: var(--primary); }
   /* A field the flow has already settled — shown, but not up for grabs. */
+  /* A field the flow has settled should recede, which grey-100 behind
+     grey-700 does not — that reads as heavier than the live fields
+     beside it rather than quieter. */
   .fld select:disabled {
-    background-color: var(--grey-100); color: var(--grey-700); cursor: default;
+    background-color: #fafafa; color: var(--grey-600); cursor: default;
   }
   .fld-hint { font-size: 12px; color: var(--grey-600); }
 
@@ -553,7 +559,9 @@
   .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
   /* Sits to the left of the preview switcher — needs to outrank .vp-switch. */
   .vp-switch.rows-switch { right: 216px; }
-  .vp-switch.alw-switch { right: 414px; }
+  /* Four of these in one line runs off a narrow window, and the last one
+     is the one nobody finds. They sit two to a row instead. */
+  .vp-switch.alw-switch { right: 328px; bottom: 60px; }
   body.is-narrow .alw-switch { display: none; }
 
   /* ─── Week dropdown ────────────────────────────────────────────── */

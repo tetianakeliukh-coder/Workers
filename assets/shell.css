@@ -526,6 +526,12 @@ body.shell-mobile .q-fab { bottom: 20px; right: 20px; }
 /* ─── Structure switch ─────────────────────────────────────────────────
    A prototype device: the same screens, organised two ways, so the two
    can be compared rather than argued about. */
+/* It is built with the .vp-switch class for its looks, which pins a
+   right edge too — and a fixed box given both edges stretches across the
+   window, laying an invisible bar over every other switcher down there.
+   Two classes, because a page that defines .vp-switch of its own defines
+   it after this file. */
+.vp-switch.structure-switch, .structure-switch { right: auto; }
 .structure-switch {
   position: fixed; left: 20px; bottom: 20px; z-index: 401;
   display: inline-flex; align-items: center; padding: 4px; gap: 2px; border-radius: 10px;
