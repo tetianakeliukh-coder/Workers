@@ -269,7 +269,7 @@
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
-  .modal.add-modal { max-width: 480px; width: 100%; }
+  .modal.add-modal { max-width: 720px; width: 100%; }
   /* The shell's modal body is flex:1 with a zero basis, which collapses when
      the dialog has no fixed height — size it to its content instead. */
   .add-modal .modal-body {
@@ -277,14 +277,23 @@
     flex: 0 1 auto; max-height: 68vh; overflow: auto;
   }
   .add-modal .modal-body > .add-one { flex: 1; min-height: 0; }
+  .add-one > .add-split { flex: 1; min-height: 0; }
+  .add-col { overflow-y: auto; }
   /* One height for every state, measured from the tallest. Sizing to
      content instead would resize the dialog under the pointer each time
      a site is named or a mode is switched — a short state leaves space,
      and that is the cheaper fault. A sheet on a phone keeps growing with
      its content instead. */
-  .add-modal .modal-body { height: 520px; max-height: 68vh; flex: 0 0 auto; overflow-y: auto; }
+  .add-modal .modal-body { height: 470px; max-height: 68vh; flex: 0 0 auto; overflow: hidden; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
+  body.is-narrow #add-where, body.is-narrow #add-where-set,
+  body.is-narrow .add-split { grid-template-columns: 1fr; }
+  body.is-narrow #mode-new { padding-right: 0; }
+  body.is-narrow #mode-recent {
+    padding-left: 0; border-left: none; padding-top: 20px; border-top: 1px solid var(--grey-200);
+  }
+  body.is-narrow .add-col { overflow: visible; }
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
 
@@ -301,7 +310,16 @@
      rather than below, where it would fall off the bottom. */
   .add-one { display: flex; flex-direction: column; gap: 14px; }
   .add-sep { border-top: 1px solid var(--grey-200); }
-  #mode-recent, #mode-new { display: flex; flex-direction: column; gap: 10px; }
+  /* Site and supervisor read as one line of context rather than as the
+     first two of six questions. */
+  #add-where, #add-where-set { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  /* Two peers, with the rule between them running the column's height. */
+  .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; min-height: 0; }
+  .add-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  #mode-new { padding-right: 24px; }
+  #mode-recent { padding-left: 24px; border-left: 1px solid var(--grey-200); }
+  /* The side that is not the answer says so quietly. */
+  .add-col.off .step-title { color: var(--grey-600); font-weight: 400; }
   .sec-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: -4px; }
   /* One mark for required, and nothing at all for the rest: a form that
      says both "*" and "(optional)" is saying it twice in two languages. */
@@ -319,7 +337,7 @@
   /* A ceiling on the list, so the fields under it are not pushed off
      the bottom by a worker with a lot of history. Cutting the third card
      rather than ending cleanly is what says there is more below. */
-  .recent-list { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; }
+  .recent-list { display: flex; flex-direction: column; gap: 6px; }
   .recent-row {
     display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
     width: 100%; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-align: left;
@@ -892,10 +910,9 @@
       <!-- Two halves of one question. The left names the task a field at
            a time; the right shows what has been booked that still
            matches, so an answer can be taken rather than typed. -->
-      <!-- One question at a time, down one column. The two fields at the
-           top are what they look like — filters — and the list under them
-           is their result; a card is picked, not copied into a form
-           standing beside it. -->
+      <!-- Site and supervisor are shared context, so they sit across the
+           top; the two ways of naming the task sit under them as peers,
+           side by side, because that is what two columns say. -->
       <div class="add-one">
         <div id="add-where">
           <div class="fld">
@@ -914,26 +931,25 @@
 
         <div class="add-sep"></div>
 
-        <!-- Both ways of naming the task are on screen at once and
-             neither is hidden behind a switch. They cannot both be the
-             answer, so taking one releases the other: picking a card
-             empties the fields, touching a field drops the card. -->
-        <div id="mode-recent">
-          <div class="sec-head">
-            <span class="step-title" id="sec-title">Recent tasks</span>
+        <!-- Either column answers, never both: picking a card empties the
+             fields, naming a field drops the card. The heading of the one
+             not answering goes quiet, so the state is readable. -->
+        <div class="add-split">
+          <div class="add-col" id="mode-new">
+            <div class="sec-head">
+              <span class="step-title">Set up a new task</span>
+            </div>
+            <div id="nt-levels"></div>
+            <span class="fld-hint" id="date-hint"></span>
           </div>
-          <div class="sec-sub" id="sec-sub" hidden>Matching what you have filled in</div>
-          <div class="recent-list" id="recent-list"></div>
-        </div>
 
-        <div class="add-sep"></div>
-
-        <div id="mode-new">
-          <div class="sec-head">
-            <span class="step-title">Or set up a new task</span>
+          <div class="add-col" id="mode-recent">
+            <div class="sec-head">
+              <span class="step-title" id="sec-title">Or select a recent one</span>
+            </div>
+            <div class="sec-sub" id="sec-sub" hidden>Matching the site and supervisor above</div>
+            <div class="recent-list" id="recent-list"></div>
           </div>
-          <div id="nt-levels"></div>
-          <span class="fld-hint" id="date-hint"></span>
         </div>
       </div>
     </div>
@@ -2210,6 +2226,14 @@
     else setLevels([]);
     sync();
   }
+  /* Which column is answering, said in the headings rather than by
+     disabling the other — the other is still perfectly usable, and using
+     it is how you change your mind. */
+  function syncColumns() {
+    var first = el('nt-0'), named = !!(first && first.value);
+    el('mode-new').classList.toggle('off', !!addPick);
+    el('mode-recent').classList.toggle('off', named);
+  }
 
   function renderLevels() {
     var site = addSite(), fields = fieldsFor(site), had = levelValues();
@@ -2300,7 +2324,8 @@
        drawn, or it would be drawn still marked. */
     if (addPick && !recent.some(function (r) { return r.key === addPick.key; })) addPick = null;
 
-    el('sec-title').textContent = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
+    el('sec-title').textContent = 'Or select a recent one' +
+      (recent.length ? ' (' + recent.length + ')' : '');
     /* The list narrowing as the form is filled is the point of putting
        the two side by side, and a falling count alone reads as tasks
        going missing. */
@@ -2394,6 +2419,7 @@
     renderRecent();
     syncDayHint();
     syncAddGo();
+    syncColumns();
   }
 
   el('nt-site').addEventListener('change', function () {
