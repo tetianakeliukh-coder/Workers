@@ -278,16 +278,16 @@
   }
   .add-modal .modal-body > .add-one { flex: 1; min-height: 0; }
   .add-one > .add-split { flex: 1; min-height: 0; }
-  .add-split.add-card { padding: 16px 0; }
-  .add-split.add-card > #mode-new { padding-left: 16px; }
-  .add-split.add-card > #mode-recent { padding-right: 16px; }
+  .add-split.add-card { padding: 16px; }
+  .add-split.add-card > #mode-new { padding-right: 20px; }
+  .add-split.add-card > #mode-recent { padding-left: 20px; }
   .add-col { overflow-y: auto; }
   /* One height for every state, measured from the tallest. Sizing to
      content instead would resize the dialog under the pointer each time
      a site is named or a mode is switched — a short state leaves space,
      and that is the cheaper fault. A sheet on a phone keeps growing with
      its content instead. */
-  .add-modal .modal-body { height: 590px; max-height: 72vh; flex: 0 0 auto; overflow: hidden; }
+  .add-modal .modal-body { height: 606px; max-height: 74vh; flex: 0 0 auto; overflow: hidden; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
   body.is-narrow .add-split { grid-template-columns: 1fr; }
@@ -317,13 +317,17 @@
     border: 1px solid var(--grey-200); border-radius: 10px; padding: 16px;
     background: var(--white);
   }
-  /* Fields run down the page, never across it. */
+  /* Fields run down the page, never across it — and at a field's width,
+     not the panel's: a select stretched over 680px reads as a banner. */
   #add-where, #add-where-set { display: flex; flex-direction: column; gap: 14px; }
+  #add-where .fld, #add-where-set .fld-static { max-width: 299px; }
+  /* .add-one zeroes every heading's margin for the columns, which set
+     their own gap; this one has no flex parent to space it. */
+  .add-one .add-card > .sec-head { margin-bottom: 10px; }
   /* Two peers, with the rule between them running the column's height. */
   .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; min-height: 0; }
   .add-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-  #mode-new { padding-right: 24px; }
-  #mode-recent { padding-left: 24px; border-left: 1px solid var(--grey-200); }
+  #mode-recent { border-left: 1px solid var(--grey-200); }
   /* The side that is not the answer says so quietly. */
   .add-col.off .step-title { color: var(--grey-600); font-weight: 400; }
   .sec-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: -4px; }
@@ -923,6 +927,9 @@
         <!-- Two panels, so where the row goes and what it is are told
              apart at a glance rather than by reading. -->
         <div class="add-card">
+          <div class="sec-head">
+            <span class="step-title">Site and supervisor</span>
+          </div>
           <div id="add-where">
             <div class="fld">
               <label class="fld-label" for="nt-site">Site<span class="req">*</span></label>
