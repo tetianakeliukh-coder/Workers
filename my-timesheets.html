@@ -201,7 +201,6 @@
     border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
   }
   .alw-qty:focus { outline: none; border-color: var(--primary); }
-  .alw-qty:disabled { background: var(--grey-100); color: var(--grey-400); }
   .alw-empty { font-size: 12px; color: var(--grey-600); padding: 2px 0; }
   /* Hours a period site works out for itself: shown, not asked for. */
   #cp-hrow.derived input { background: var(--grey-100); color: var(--grey-700); cursor: default; }
@@ -1985,8 +1984,11 @@
     el('cp-alw').innerHTML =
       '<div class="alw-pick">' +
         '<select id="cp-alw-name">' + opts + '</select>' +
+        /* Only the ones measured by quantity have one. For the rest there
+           is nothing to say beyond having named them, so the box is not
+           there rather than sitting greyed out asking to be filled. */
         '<input class="alw-qty" id="cp-alw-qty" type="text" inputmode="numeric" placeholder="Qty"' +
-          ' value="' + (pickedAmount ? has.qty : '') + '"' + (pickedAmount ? '' : ' disabled') + ' />' +
+          ' value="' + (pickedAmount ? has.qty : '') + '"' + (pickedAmount ? '' : ' hidden') + ' />' +
       '</div>';
   }
   /* What the popup's allowance picker currently says — a list of none or
@@ -2008,7 +2010,7 @@
     var sel = el('cp-alw-name'), q = el('cp-alw-qty'), m = taskMeta[popKey], a = null;
     allowancesFor(m && m.site).forEach(function (x) { if (x.name === sel.value) a = x; });
     var amount = !!a && a.type === 'amount';
-    q.disabled = !amount;
+    q.hidden = !amount;
     q.value = amount ? (q.value || '1') : '';
   });
 
