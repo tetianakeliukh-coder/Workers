@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Leave Requests — OPMS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/shell.css" />
+<style>
+  /* ─── Leave Requests ────────────────────────────────────────────────
+     Built to the shape of the Expense Claims manager screen: a tab per
+     state, one row per request, and a details dialog with the queue down
+     its left edge so a manager can work through the pile without going
+     back to the table. What differs is what a request is made of —
+     a stretch of days rather than an amount, and a balance it comes out
+     of. */
+
+  /* Several blocks here set display, which beats the browser's own
+     [hidden] rule — so say it louder. */
+  [hidden] { display: none !important; }
+
+  .lr-caption { font-size: 14px; font-weight: 500; color: var(--text-main); margin-top: 4px; }
+
+  /* ─── Tabs ──────────────────────────────────────────────────────── */
+  .lr-tabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--grey-300); }
+  .lr-tab {
+    position: relative; height: 36px; padding: 0 14px; border: none; background: none;
+    cursor: pointer; font-family: var(--fs-sans); font-size: 14px; font-weight: 500;
+    color: var(--grey-600); white-space: nowrap;
+  }
+  .lr-tab:hover { color: var(--text-main); }
+  .lr-tab.on { color: var(--primary); }
+  .lr-tab.on::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: var(--primary); border-radius: 2px 2px 0 0;
+  }
+  .lr-tab .n { color: inherit; }
+
+  /* ─── Table ─────────────────────────────────────────────────────── */
+  .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .who .av {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--white);
+  }
+  .who .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.col-view, th.col-view { text-align: right; }
+  .view-link {
+    background: none; border: none; cursor: pointer; padding: 0;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--primary);
+  }
+  .view-link:hover { text-decoration: underline; }
+  #lr-table td { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .lr-empty { padding: 40px 16px; text-align: center; color: var(--grey-600); font-size: 14px; }
+
+  /* ─── Details dialog ────────────────────────────────────────────────
+     Queue on the left, the request in the middle, whatever was attached
+     to it on the right — the manager's three questions in reading
+     order: what else is waiting, what is this, and is it evidenced. */
+  .rd-modal { max-width: 1180px; height: 86vh; }
+  .rd-body { display: grid; grid-template-columns: 240px 1fr; min-height: 0; }
+  .rd-queue {
+    border-right: 1px solid var(--grey-300); display: flex; flex-direction: column; min-height: 0;
+  }
+  .rd-queue-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 14px 16px; font-size: 14px; font-weight: 500; color: var(--text-main);
+  }
+  .rd-queue-list { overflow-y: auto; padding: 0 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .rd-q-item {
+    text-align: left; border: none; background: none; cursor: pointer;
+    padding: 10px 12px; border-radius: 8px; font-family: var(--fs-sans);
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  }
+  .rd-q-item:hover { background: var(--grey-100); }
+  .rd-q-item.on { background: var(--grey-200); }
+  .rd-q-item .t { font-size: 14px; font-weight: 500; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rd-q-item .s { font-size: 12px; color: var(--grey-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .rd-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .rd-main-head {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 24px; border-bottom: 1px solid var(--grey-300);
+  }
+  .rd-main-title { font-size: 15px; font-weight: 600; color: var(--text-main); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rd-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; flex-shrink: 0; }
+  .btn-reject {
+    height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
+    background: var(--white); border: 1px solid var(--grey-350);
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--grey-800);
+  }
+  .btn-reject:hover { border-color: var(--error); color: var(--error); }
+
+  .rd-split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 24px; min-height: 0; overflow: auto; }
+  .rd-card { border: 1px solid var(--grey-350); border-radius: 10px; padding: 16px; }
+  .rd-card-title { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 12px; }
+  .rd-rows { display: grid; grid-template-columns: 116px 1fr; gap: 10px 16px; align-items: baseline; }
+  .rd-rows dt { font-size: 13px; color: var(--grey-600); }
+  .rd-rows dd { font-size: 14px; color: var(--text-main); margin: 0; }
+  .rd-note { font-size: 13px; line-height: 18px; color: var(--grey-700); }
+
+  /* The attachment pane, with the viewer's own controls — the same set
+     the expense screen carries, since it is the same kind of thing. */
+  .rd-doc { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+  .rd-doc-bar { display: flex; align-items: center; gap: 6px; }
+  .doc-btn {
+    width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+    background: var(--white); border: 1px solid var(--grey-350); color: var(--grey-700);
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .doc-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .doc-btn:disabled { color: var(--grey-400); cursor: default; border-color: var(--grey-350); }
+  .doc-page { font-size: 12px; color: var(--grey-600); margin: 0 4px; }
+  .rd-doc-bar .right { margin-left: auto; display: flex; gap: 6px; }
+  .rd-doc-stage {
+    flex: 1; min-height: 220px; border-radius: 10px; background: var(--grey-100);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .doc-sheet {
+    background: var(--white); border-radius: 4px; padding: 20px 22px; width: 240px;
+    box-shadow: 0 2px 10px rgba(8,17,21,0.12); transform-origin: center;
+  }
+  .doc-sheet h4 { font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
+  .doc-sheet p { font-size: 10px; line-height: 15px; color: var(--grey-700); }
+  .doc-none { font-size: 13px; color: var(--grey-600); }
+
+  /* ─── A phone gets one column ───────────────────────────────────── */
+  body.is-narrow .rd-modal { height: auto; max-height: 88vh; }
+  body.is-narrow .rd-body { grid-template-columns: 1fr; }
+  body.is-narrow .rd-queue { display: none; }
+  body.is-narrow .rd-split { grid-template-columns: 1fr; }
+  body.is-narrow .lr-tabs { overflow-x: auto; }
+</style>
+</head>
+<body data-module="leave">
+
+<div class="page">
+  <aside id="shell-sidebar"></aside>
+
+  <main class="main">
+    <div class="content">
+
+      <div class="page-header">
+        <h1 class="page-title">Leave Requests</h1>
+      </div>
+
+      <div class="search-wrap">
+        <label class="search-bar">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <input class="search-input-el" id="search" type="text" placeholder="Search" autocomplete="off" />
+          <button class="search-clear" id="search-clear" type="button" aria-label="Clear search">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+        </label>
+      </div>
+
+      <div class="lr-tabs" id="lr-tabs"></div>
+      <div class="lr-caption" id="lr-caption"></div>
+
+      <div class="table-card">
+        <div class="table-scroll">
+          <table id="lr-table">
+            <colgroup>
+              <col style="width:200px" /><col style="width:190px" /><col style="width:160px" />
+              <col style="width:80px" /><col style="width:180px" /><col style="width:130px" />
+              <col /><col style="width:90px" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Title</th><th>Worker</th><th>Leave Type</th>
+                <th class="num">Days</th><th>Dates</th><th>Created Date</th>
+                <th>Reason</th><th class="col-view"></th>
+              </tr>
+            </thead>
+            <tbody id="lr-body"></tbody>
+          </table>
+        </div>
+        <div class="lr-empty" id="lr-empty" hidden></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ── Request details ──────────────────────────────────────────── -->
+<div class="modal-backdrop" id="rd-modal" role="dialog" aria-modal="true" aria-labelledby="rd-title">
+  <div class="modal rd-modal">
+    <div class="modal-header">
+      <div class="modal-heading">
+        <span class="modal-title" id="rd-title">Request Details</span>
+      </div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="modal-body rd-body">
+      <div class="rd-queue">
+        <div class="rd-queue-head">
+          <span id="rd-queue-title">All Pending Requests</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+        <div class="rd-queue-list" id="rd-queue-list"></div>
+      </div>
+
+      <div class="rd-main">
+        <div class="rd-main-head">
+          <span class="rd-main-title" id="rd-main-title"></span>
+          <div class="rd-actions" id="rd-actions">
+            <button class="btn-primary" type="button" id="rd-approve">Approve</button>
+            <button class="btn-reject" type="button" id="rd-reject">Reject</button>
+          </div>
+        </div>
+
+        <div class="rd-split">
+          <div class="rd-card">
+            <div class="rd-card-title">Details</div>
+            <dl class="rd-rows" id="rd-rows"></dl>
+          </div>
+
+          <div class="rd-doc">
+            <div class="rd-doc-bar">
+              <button class="doc-btn" type="button" id="doc-out" aria-label="Zoom out">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h4M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <button class="doc-btn" type="button" id="doc-in" aria-label="Zoom in">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h4M7 5v4M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <button class="doc-btn" type="button" id="doc-prev" aria-label="Previous page">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <span class="doc-page" id="doc-page">1/1</span>
+              <button class="doc-btn" type="button" id="doc-next" aria-label="Next page">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <span class="right">
+                <button class="doc-btn" type="button" aria-label="Download" data-tip="Download">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2.5v7m0 0L5.5 7M8 9.5L10.5 7M3 12.5h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <button class="doc-btn" type="button" aria-label="Open" data-tip="Open in a new tab">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+                </button>
+              </span>
+            </div>
+            <div class="rd-doc-stage" id="doc-stage"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  function el(id) { return document.getElementById(id); }
+
+  /* ─── Mock data ───────────────────────────────────────────────────
+     Hardcoded, as in every other OPMS prototype — there is no backend. */
+  var TYPES = ['Annual Leave', 'Sick Leave', 'Unpaid Leave', 'Parental Leave', 'Compassionate Leave'];
+
+  var WORKERS = [
+    { name: 'John Sith',    colour: '#3b7dd8' },
+    { name: 'Emma Stone',   colour: '#c4845c' },
+    { name: 'Sophia Adams', colour: '#7b6c9e' },
+    { name: 'Olivia Brown', colour: '#4a9b6f' },
+    { name: 'Olivia Rhye',  colour: '#b85555' },
+    { name: 'Liam Baker',   colour: '#3a7ab5' },
+    { name: 'Noah Davis',   colour: '#5b8c8c' },
+    { name: 'Ava Miller',   colour: '#8b7355' }
+  ];
+  function worker(n) { return WORKERS.filter(function (w) { return w.name === n; })[0] || WORKERS[0]; }
+  function initials(n) { return n.split(' ').map(function (p) { return p[0]; }).join('').slice(0, 2); }
+
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmt(iso) {
+    var d = new Date(iso + 'T00:00:00');
+    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  /* A stretch of days reads as one thing when it is one month, and as
+     two when it crosses one. */
+  function fmtRange(a, b) {
+    if (a === b) return fmt(a);
+    var x = new Date(a + 'T00:00:00'), y = new Date(b + 'T00:00:00');
+    if (x.getMonth() === y.getMonth() && x.getFullYear() === y.getFullYear()) {
+      return x.getDate() + ' – ' + fmt(b);
+    }
+    return fmt(a) + ' – ' + fmt(b);
+  }
+  /* Working days only: a weekend inside a stretch of leave is not leave. */
+  function workingDays(a, b) {
+    var d = new Date(a + 'T00:00:00'), end = new Date(b + 'T00:00:00'), n = 0;
+    while (d <= end) {
+      var w = d.getDay();
+      if (w !== 0 && w !== 6) n++;
+      d.setDate(d.getDate() + 1);
+    }
+    return n;
+  }
+
+  var REQUESTS = [
+    { id: 1,  title: 'Family holiday',     who: 'John Sith',    type: 'Annual Leave',  from: '2026-12-21', to: '2026-12-31', made: '2026-10-14', why: 'Booked flights to Perth over Christmas.', doc: null, state: 'pending' },
+    { id: 2,  title: 'Title',              who: 'Emma Stone',   type: 'Sick Leave',    from: '2026-10-27', to: '2026-10-29', made: '2026-10-26', why: 'Flu — certificate attached.', doc: 'Medical Certificate', state: 'pending' },
+    { id: 3,  title: 'Title',              who: 'Sophia Adams', type: 'Annual Leave',  from: '2026-11-09', to: '2026-11-13', made: '2026-10-20', why: '', doc: null, state: 'pending' },
+    { id: 4,  title: 'Title',              who: 'Olivia Brown', type: 'Parental Leave',from: '2027-01-11', to: '2027-04-02', made: '2026-10-02', why: 'First child, due early January.', doc: 'Birth Certificate', state: 'pending' },
+    { id: 5,  title: 'Title',              who: 'Olivia Rhye',  type: 'Unpaid Leave',  from: '2026-11-02', to: '2026-11-06', made: '2026-10-22', why: 'Moving house.', doc: null, state: 'pending' },
+    { id: 6,  title: 'Title',              who: 'Liam Baker',   type: 'Annual Leave',  from: '2026-11-23', to: '2026-11-27', made: '2026-10-25', why: '', doc: null, state: 'pending' },
+    { id: 7,  title: 'Funeral — interstate', who: 'Noah Davis', type: 'Compassionate Leave', from: '2026-10-29', to: '2026-10-30', made: '2026-10-26', why: 'Grandfather passed away on Saturday.', doc: null, state: 'pending' },
+    { id: 8,  title: 'Title',              who: 'Ava Miller',   type: 'Sick Leave',    from: '2026-10-26', to: '2026-10-26', made: '2026-10-26', why: 'Migraine.', doc: null, state: 'pending' },
+    { id: 9,  title: 'Title',              who: 'John Sith',    type: 'Annual Leave',  from: '2026-11-16', to: '2026-11-20', made: '2026-10-19', why: '', doc: null, state: 'pending' },
+    { id: 10, title: 'Title',              who: 'Emma Stone',   type: 'Annual Leave',  from: '2027-02-01', to: '2027-02-12', made: '2026-10-23', why: 'Wedding and honeymoon.', doc: null, state: 'pending' },
+
+    { id: 11, title: 'Title',              who: 'Olivia Brown', type: 'Annual Leave',  from: '2026-10-05', to: '2026-10-09', made: '2026-09-11', why: '', doc: null, state: 'approved' },
+    { id: 12, title: 'Title',              who: 'Liam Baker',   type: 'Sick Leave',    from: '2026-09-28', to: '2026-09-29', made: '2026-09-28', why: 'Dental surgery.', doc: 'Medical Certificate', state: 'approved' },
+    { id: 13, title: 'Title',              who: 'Ava Miller',   type: 'Annual Leave',  from: '2026-10-12', to: '2026-10-16', made: '2026-09-02', why: '', doc: null, state: 'approved' },
+    { id: 14, title: 'Title',              who: 'Noah Davis',   type: 'Unpaid Leave',  from: '2026-09-21', to: '2026-09-25', made: '2026-09-01', why: 'Studying for exams.', doc: null, state: 'approved' },
+
+    { id: 15, title: 'Title',              who: 'Sophia Adams', type: 'Annual Leave',  from: '2026-10-05', to: '2026-10-23', made: '2026-09-15', why: 'Three weeks over the shutdown.', doc: null, state: 'rejected' },
+    { id: 16, title: 'Title',              who: 'John Sith',    type: 'Unpaid Leave',  from: '2026-09-14', to: '2026-09-18', made: '2026-09-10', why: '', doc: null, state: 'rejected' },
+
+    { id: 17, title: 'Title',              who: 'Emma Stone',   type: 'Annual Leave',  from: '2026-10-19', to: '2026-10-23', made: '2026-09-20', why: 'No longer needed.', doc: null, state: 'cancelled' }
+  ];
+
+  /* Leave comes out of a balance, which is the one thing a manager needs
+     that the request itself does not carry. */
+  var BALANCE = {
+    'John Sith':    { 'Annual Leave': 14.5, 'Sick Leave': 6, 'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
+    'Emma Stone':   { 'Annual Leave': 9,    'Sick Leave': 8, 'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
+    'Sophia Adams': { 'Annual Leave': 2,    'Sick Leave': 10, 'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
+    'Olivia Brown': { 'Annual Leave': 21,   'Sick Leave': 10, 'Unpaid Leave': null, 'Parental Leave': 90, 'Compassionate Leave': 3 },
+    'Olivia Rhye':  { 'Annual Leave': 11,   'Sick Leave': 4,  'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
+    'Liam Baker':   { 'Annual Leave': 18,   'Sick Leave': 7,  'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
+    'Noah Davis':   { 'Annual Leave': 5,    'Sick Leave': 9,  'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
+    'Ava Miller':   { 'Annual Leave': 16,   'Sick Leave': 2,  'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 }
+  };
+  function balance(who, type) {
+    var b = BALANCE[who];
+    return b && b[type] != null ? b[type] : null;
+  }
+
+  /* ─── State ───────────────────────────────────────────────────── */
+  var TABS = [
+    { k: 'pending',   label: 'Pending',   caption: 'All Pending Requests:' },
+    { k: 'approved',  label: 'Approved',  caption: 'All Approved Requests:' },
+    { k: 'rejected',  label: 'Rejected',  caption: 'All Rejected Requests:' },
+    { k: 'cancelled', label: 'Cancelled', caption: 'All Cancelled Requests:' }
+  ];
+  var state = { tab: 'pending', q: '' };
+  var openId = null;
+
+  function countOf(k) { return REQUESTS.filter(function (r) { return r.state === k; }).length; }
+  function matches(r, q) {
+    if (!q) return true;
+    return [r.title, r.who, r.type, r.why, fmtRange(r.from, r.to)]
+      .join(' ').toLowerCase().indexOf(q) !== -1;
+  }
+  function rowsFor(tab, q) {
+    return REQUESTS.filter(function (r) { return r.state === tab && matches(r, q); });
+  }
+
+  /* ─── Table ───────────────────────────────────────────────────── */
+  function renderTabs() {
+    el('lr-tabs').innerHTML = TABS.map(function (t) {
+      var n = countOf(t.k);
+      return '<button class="lr-tab' + (t.k === state.tab ? ' on' : '') + '" type="button" data-tab="' + t.k + '">' +
+        Shell.esc(t.label) + (n ? ' <span class="n">(' + n + ')</span>' : '') + '</button>';
+    }).join('');
+    var tab = TABS.filter(function (t) { return t.k === state.tab; })[0];
+    el('lr-caption').textContent = tab.caption;
+  }
+
+  function render() {
+    renderTabs();
+    var q = state.q.toLowerCase();
+    var rows = rowsFor(state.tab, q);
+
+    el('lr-body').innerHTML = rows.map(function (r) {
+      var w = worker(r.who);
+      return '<tr data-id="' + r.id + '">' +
+        '<td data-tip="' + Shell.esc(r.title) + '">' + Shell.highlight(r.title, state.q) + '</td>' +
+        '<td><span class="who"><span class="av" style="background:' + w.colour + '">' + initials(r.who) + '</span>' +
+          '<span class="nm">' + Shell.highlight(r.who, state.q) + '</span></span></td>' +
+        '<td>' + Shell.highlight(r.type, state.q) + '</td>' +
+        '<td class="num">' + workingDays(r.from, r.to) + '</td>' +
+        '<td>' + Shell.esc(fmtRange(r.from, r.to)) + '</td>' +
+        '<td>' + Shell.esc(fmt(r.made)) + '</td>' +
+        '<td data-tip="' + Shell.esc(r.why || '') + '">' +
+          (r.why ? Shell.highlight(r.why, state.q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
+        '<td class="col-view"><button class="view-link" type="button" data-view="' + r.id + '">View</button></td>' +
+      '</tr>';
+    }).join('');
+
+    var none = !rows.length;
+    el('lr-empty').hidden = !none;
+    el('lr-empty').textContent = state.q
+      ? 'Nothing matches “' + state.q + '” in this tab.'
+      : 'No requests here.';
+    el('lr-table').hidden = none;
+  }
+
+  el('lr-tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]');
+    if (!b) return;
+    state.tab = b.getAttribute('data-tab');
+    render();
+  });
+
+  var searchEl = el('search'), clearBtn = el('search-clear');
+  searchEl.addEventListener('input', function () {
+    state.q = this.value.trim();
+    clearBtn.classList.toggle('visible', this.value.length > 0);
+    render();
+  });
+  clearBtn.addEventListener('click', function () {
+    searchEl.value = ''; state.q = '';
+    clearBtn.classList.remove('visible');
+    render(); searchEl.focus();
+  });
+
+  /* ─── Details ─────────────────────────────────────────────────── */
+  var modal = el('rd-modal');
+  var zoom = 1, page = 1;
+
+  function byId(id) { return REQUESTS.filter(function (r) { return r.id === id; })[0]; }
+
+  function renderQueue() {
+    var r = byId(openId);
+    var tab = TABS.filter(function (t) { return t.k === r.state; })[0];
+    el('rd-queue-title').textContent = 'All ' + tab.label + ' Requests';
+    var list = rowsFor(r.state, state.q.toLowerCase());
+    el('rd-queue-list').innerHTML = list.map(function (x) {
+      return '<button class="rd-q-item' + (x.id === openId ? ' on' : '') + '" type="button" data-q="' + x.id + '">' +
+        '<span class="t">' + Shell.esc(x.title) + '</span>' +
+        '<span class="s">' + Shell.esc(x.who + ' · ' + fmtRange(x.from, x.to)) + '</span></button>';
+    }).join('');
+  }
+
+  function renderDetails() {
+    var r = byId(openId), d = workingDays(r.from, r.to), bal = balance(r.who, r.type);
+    el('rd-main-title').textContent = r.title;
+    el('rd-rows').innerHTML =
+      row('Worker', Shell.esc(r.who)) +
+      row('Leave Type', Shell.esc(r.type)) +
+      row('Dates', Shell.esc(fmtRange(r.from, r.to))) +
+      row('Working days', d + (d === 1 ? ' day' : ' days')) +
+      row('Balance', bal == null
+        ? '<span class="cell-empty">Not deducted</span>'
+        : fmtNum(bal) + ' left, ' + fmtNum(bal - d) + ' after this') +
+      row('Requested', Shell.esc(fmt(r.made))) +
+      row('Reason', r.why
+        ? '<span class="rd-note">' + Shell.esc(r.why) + '</span>'
+        : '<span class="cell-empty">&mdash;</span>');
+
+    /* A request is either approved and rejected from here, or it is
+       already settled and there is nothing to do but read it. */
+    el('rd-actions').hidden = r.state !== 'pending';
+    renderDoc(r);
+  }
+  function row(k, v) { return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
+  function fmtNum(n) { return (Math.round(n * 10) / 10) + ''; }
+
+  function renderDoc(r) {
+    page = 1; zoom = 1;
+    var pages = r.doc ? 2 : 0;
+    el('doc-page').textContent = pages ? page + '/' + pages : '—';
+    el('doc-prev').disabled = true;
+    el('doc-next').disabled = pages < 2;
+    el('doc-in').disabled = !pages;
+    el('doc-out').disabled = !pages;
+    el('doc-stage').innerHTML = r.doc
+      ? '<div class="doc-sheet" id="doc-sheet"><h4>' + Shell.esc(r.doc) + '</h4>' +
+        '<p>Patient: ' + Shell.esc(r.who) + '<br />Issued: ' + Shell.esc(fmt(r.made)) + '<br />' +
+        'Unfit for work from ' + Shell.esc(fmt(r.from)) + ' to ' + Shell.esc(fmt(r.to)) + '.</p></div>'
+      : '<span class="doc-none">Nothing was attached to this request.</span>';
+    el('doc-stage').dataset.pages = pages;
+  }
+  function syncDoc() {
+    var sheet = el('doc-sheet');
+    if (sheet) sheet.style.transform = 'scale(' + zoom + ')';
+    var pages = Number(el('doc-stage').dataset.pages || 0);
+    el('doc-page').textContent = pages ? page + '/' + pages : '—';
+    el('doc-prev').disabled = page <= 1;
+    el('doc-next').disabled = page >= pages;
+  }
+  el('doc-in').addEventListener('click', function () { zoom = Math.min(1.8, zoom + 0.2); syncDoc(); });
+  el('doc-out').addEventListener('click', function () { zoom = Math.max(0.6, zoom - 0.2); syncDoc(); });
+  el('doc-prev').addEventListener('click', function () { page = Math.max(1, page - 1); syncDoc(); });
+  el('doc-next').addEventListener('click', function () {
+    page = Math.min(Number(el('doc-stage').dataset.pages || 1), page + 1); syncDoc();
+  });
+
+  function openRequest(id) {
+    openId = id;
+    renderQueue();
+    renderDetails();
+    modal.classList.add('open');
+  }
+  function closeModal() { modal.classList.remove('open'); openId = null; }
+
+  el('lr-body').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-view]');
+    var tr = e.target.closest('tr[data-id]');
+    if (b) { openRequest(Number(b.getAttribute('data-view'))); return; }
+    if (tr) openRequest(Number(tr.getAttribute('data-id')));
+  });
+  el('rd-queue-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-q]');
+    if (b) openRequest(Number(b.getAttribute('data-q')));
+  });
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal || e.target.closest('[data-close]')) closeModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+  });
+
+  /* Settling a request moves it to another tab, so the queue it was in
+     is one shorter — the next one in that queue opens, since working
+     through the pile is the whole job. */
+  function settle(to, verb) {
+    var r = byId(openId);
+    var queue = rowsFor(r.state, state.q.toLowerCase());
+    var at = queue.map(function (x) { return x.id; }).indexOf(r.id);
+    r.state = to;
+    var next = queue[at + 1] || queue[at - 1] || null;
+    render();
+    Shell.snackbar(verb + ' ' + r.who + '’s ' + r.type.toLowerCase() + '.');
+    if (next && next.state === state.tab) openRequest(next.id);
+    else closeModal();
+  }
+  el('rd-approve').addEventListener('click', function () { settle('approved', 'Approved'); });
+  el('rd-reject').addEventListener('click', function () { settle('rejected', 'Rejected'); });
+
+  render();
+})();
+</script>
+</body>
+</html>

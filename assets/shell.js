@@ -21,6 +21,7 @@
     timesheets: '<circle cx="8" cy="8.5" r="5.5" ' + S + '/><path d="M8 5.5v3.3l2.2 2" ' + S + ' stroke-linecap="round" stroke-linejoin="round"/>',
     mytime:     '<circle cx="6.5" cy="5" r="2.5" ' + S + '/><path d="M2 13.2c0-2.2 2-4 4.5-4" ' + S + ' stroke-linecap="round"/>' +
                 '<circle cx="11" cy="10.5" r="3.8" ' + S + '/><path d="M11 8.8v1.9l1.3.9" ' + S + ' stroke-linecap="round" stroke-linejoin="round"/>',
+    leave:      '<rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5.5 1.8v2.4M10.5 1.8v2.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M6 10.3l1.4 1.4L10.4 8.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>',
     reports:    '<rect x="1.5" y="8.5" width="3" height="5.5" rx="0.6" stroke="currentColor" stroke-width="1.2"/><rect x="6" y="6" width="3" height="8" rx="0.6" stroke="currentColor" stroke-width="1.2"/><rect x="10.5" y="2.5" width="3" height="11.5" rx="0.6" stroke="currentColor" stroke-width="1.2"/>',
     orgdocs:    '<path d="M2 5.5c0-.8.7-1.5 1.5-1.5H7l1.5 2H13c.8 0 1.5.7 1.5 1.5V13c0 .8-.7 1.5-1.5 1.5H3.5C2.7 14.5 2 13.8 2 13V5.5z" ' + S + '/>',
     notifs:     '<path d="M8 2a4.5 4.5 0 0 1 4.5 4.5V9l1.5 2H2l1.5-2V6.5A4.5 4.5 0 0 1 8 2z" ' + S + ' stroke-linejoin="round"/><path d="M6.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" ' + S + ' stroke-linecap="round"/>'
@@ -45,6 +46,7 @@
     { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html', only: 'current' },
     { id: 'tsflat',   label: 'Supervisor Timesheets', icon: 'timesheets', r4: true, href: 'timesheets-flat.html', only: 'flat' },
     { id: 'mytsflat', label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'timesheets-flat.html#mine', only: 'flat' },
+    { id: 'leave',      label: 'Leave Requests',   icon: 'leave',      r4: true, href: 'leave-requests.html' },
     { id: 'reports',    label: 'Reports',          icon: 'reports',    r4: true }
   ];
 

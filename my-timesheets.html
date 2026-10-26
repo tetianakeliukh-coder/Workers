@@ -158,6 +158,11 @@
   .hr-cell { gap: 6px; }
   .hr-st { display: inline-flex; align-items: center; flex-shrink: 0; color: var(--grey-500); margin-right: auto; }
   td.col-day .hr-st { margin-right: 4px; vertical-align: -2px; }
+  /* Outside the editable cell there is no flex row to push against. */
+  td.col-day .alw-mark { margin-right: 4px; }
+  /* Status and allowance both sit left; only the first of them claims
+     the gap, or the figure is shunted a second time. */
+  .hr-cell .hr-st + .alw-mark { margin-right: 0; margin-left: -2px; }
 
   .cell-pop {
     display: none; position: fixed; z-index: 500; width: 248px; padding: 12px;
@@ -785,10 +790,12 @@
      prototype decides between them. */
   /* The same flag Supervisor Timesheets marks an allowance line with —
      one mark for one idea across the product. */
+  /* Left of the figure, like the status icon: a mark that follows the
+     number pushes it off the right edge, and then one column of numbers
+     no longer lines up with the next. */
   .alw-mark {
-    display: inline-flex; align-items: center; justify-content: flex-end;
-    flex-shrink: 0; margin-left: 4px;
-    color: var(--grey-500); cursor: default; vertical-align: -2px;
+    display: inline-flex; align-items: center; flex-shrink: 0;
+    margin-right: auto; color: var(--grey-500); cursor: default; vertical-align: -2px;
   }
   .alw-mark:hover { color: var(--text-main); }
   /* The flag keeps its own hover inside an editable cell too, so the
@@ -1430,8 +1437,8 @@
     var st = key ? statusFor(key, isoDate) : null;
     return '<td class="col-day' + todayCls(isoDate) + '">' +
       (st && st.icon ? '<span class="hr-st" data-tip="' + statusName(key, isoDate) + '">' + st.icon + '</span>' : '') +
-      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') +
-      alwDot(key, isoDate) + '</td>';
+      alwDot(key, isoDate) +
+      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
 
   function dayCellPlain(value, isoDate) {
@@ -1464,8 +1471,8 @@
         'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
         (lock ? ' disabled data-tip="' + statusName(key, isoDate) + ' — hours can no longer be changed"' : '') + '>' +
         (st.icon ? '<span class="hr-st">' + st.icon + '</span>' : '') +
-        (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') +
-        alwDot(key, isoDate) + '</button></td>';
+        alwDot(key, isoDate) +
+        (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
     }
     return dayCell(value, isoDate, key);
   }
