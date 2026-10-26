@@ -160,7 +160,7 @@
   td.col-day .hr-st { margin-right: 4px; vertical-align: -2px; }
 
   .cell-pop {
-    display: none; position: fixed; z-index: 500; width: 220px; padding: 12px;
+    display: none; position: fixed; z-index: 500; width: 248px; padding: 12px;
     border-radius: 10px; background: var(--white);
     border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
   }
@@ -183,6 +183,34 @@
   /* Clear on the left, Done on the right: the one that undoes and the one
      that commits sit at opposite ends of the same line. */
   .cp-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+
+  /* One line per allowance the site offers: claimed or not, and for the
+     ones measured by quantity, how many. */
+  .cp-alw { display: flex; flex-direction: column; gap: 2px; max-height: 168px; overflow: auto; }
+  .alw-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 4px 4px 0; border-radius: 6px; cursor: pointer;
+    font-size: 13px; color: var(--text-main);
+  }
+  .alw-row:hover { background: var(--bg-blue-light); }
+  .alw-row .alw-box {
+    width: 16px; height: 16px; flex-shrink: 0; border-radius: 4px;
+    border: 1.5px solid var(--grey-400); background: var(--white);
+    display: flex; align-items: center; justify-content: center; color: var(--white);
+  }
+  .alw-row input[type="checkbox"] { position: absolute; opacity: 0; pointer-events: none; }
+  .alw-row input:checked ~ .alw-box { background: var(--primary); border-color: var(--primary); }
+  .alw-row .alw-box svg { opacity: 0; }
+  .alw-row input:checked ~ .alw-box svg { opacity: 1; }
+  .alw-row .alw-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .alw-row .alw-qty {
+    width: 46px; height: 26px; flex-shrink: 0; padding: 0 6px; text-align: right;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+  }
+  .alw-row .alw-qty:focus { outline: none; border-color: var(--primary); }
+  .alw-row .alw-qty:disabled { background: var(--grey-100); color: var(--grey-400); }
+  .alw-empty { font-size: 12px; color: var(--grey-600); padding: 2px 0; }
 
   .grid-foot {
     display: flex; align-items: center; gap: 12px; padding: 12px 16px;
@@ -471,6 +499,8 @@
   .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
   /* Sits to the left of the preview switcher — needs to outrank .vp-switch. */
   .vp-switch.rows-switch { right: 216px; }
+  .vp-switch.alw-switch { right: 414px; }
+  body.is-narrow .alw-switch { display: none; }
 
   /* ─── Week dropdown ────────────────────────────────────────────── */
   .period-dd .dd-trigger { min-width: 232px; }
@@ -656,6 +686,30 @@
   .row-summary td.col-site, .row-summary td.col-sup { font-weight: 600; }
   .count-pill { font-size: 13px; color: var(--grey-600); }
 
+  /* ─── Allowances ───────────────────────────────────────────────────
+     Two displays of the same per-cell claim, switchable while the
+     prototype decides between them. */
+  .alw-dot {
+    width: 5px; height: 5px; flex-shrink: 0; margin-left: 5px; border-radius: 50%;
+    display: inline-block; vertical-align: 2px; background: var(--primary);
+  }
+  .hr-cell .alw-dot { margin-left: 4px; }
+  #grid tbody tr.row-alw td { border-bottom: 1px solid var(--row-divider); }
+  .row-alw .alw-lbl {
+    font-size: 12px; color: var(--grey-600);
+    padding-left: 62px; display: inline-block;
+  }
+  .row-flat.row-alw .alw-lbl { padding-left: 0; }
+  .row-alw td.col-day { font-size: 12px; }
+  .alw-chip { color: var(--grey-700); font-size: 12px; }
+  .alw-cell {
+    width: 100%; height: 26px; padding: 0 6px; border-radius: 6px;
+    border: 1px dashed var(--grey-350); background: var(--white); cursor: pointer;
+    font-family: var(--fs-sans); font-size: 12px; color: var(--grey-700);
+    display: flex; align-items: center; justify-content: flex-end;
+  }
+  .alw-cell:hover { border-color: var(--primary); border-style: solid; background: var(--bg-blue-light); }
+
   /* Adding into a group the table already shows: the site and supervisor
      are the row you clicked, so the dialog only has the task left to ask.
      It sits at the right-hand end of the group's own columns and is
@@ -775,6 +829,19 @@
 
     </div>
   </main>
+</div>
+
+<!-- ── Prototype switchers: two ways to show allowances, side by side
+     until one of them wins ──────────────────────────────────────── -->
+<div class="vp-switch alw-switch" id="alw-switch" role="group" aria-label="Allowances">
+  <button type="button" data-alwview="dot" class="on">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="3" fill="currentColor"/></svg>
+    Dot
+  </button>
+  <button type="button" data-alwview="row">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 5h11M2.5 9.5h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 12.5h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="1 2"/></svg>
+    Own row
+  </button>
 </div>
 
 <!-- ── Prototype viewport switcher ──────────────────────────────── -->
@@ -899,6 +966,10 @@
     <input id="cp-s" type="text" inputmode="numeric" placeholder="06:00" autocomplete="off" /></label>
   <label class="cp-row"><span>Finish</span>
     <input id="cp-f" type="text" inputmode="numeric" placeholder="14:00" autocomplete="off" /></label>
+  <!-- The claims for this task on this day. Which ones exist is the
+       site's business, so the list is rebuilt per cell. -->
+  <div class="cp-sep">allowances claimed for this day</div>
+  <div class="cp-alw" id="cp-alw"></div>
   <div class="cp-foot">
     <button class="btn-text" type="button" id="cp-clear">Clear</button>
     <button class="btn-primary" type="button" id="cp-done">Done</button>
@@ -1000,6 +1071,31 @@
     var i = titleAt(meta);
     return meta.levels.filter(function (v, n) { return v && n !== i; }).join(' · ');
   }
+  /* Each site runs its own allowances: an amount is claimed by quantity,
+     a check is simply claimed. A claim belongs to one task on one day —
+     the same thing a cell is — so it is stored and edited per cell. */
+  var ALLOWANCES_BY_SITE = {
+    'MMA VIGILANT – 360': [
+      { name: 'Height Allowance', type: 'amount' },
+      { name: 'Rope Allowance',   type: 'amount' },
+      { name: 'Crib Break',       type: 'check' },
+      { name: 'Breakfast',        type: 'check' }
+    ],
+    'MMA VIGILANT ROV': [
+      { name: 'Dive Allowance',    type: 'amount' },
+      { name: 'Offshore Living',   type: 'check' },
+      { name: 'Crib Break',        type: 'check' }
+    ],
+    'SA BHP OLYMPIC DAM': [
+      { name: 'Travel Allowance', type: 'amount' },
+      { name: 'Site Allowance',   type: 'amount' },
+      { name: 'Night Shift',      type: 'check' },
+      { name: 'Crib Break',       type: 'check' },
+      { name: 'Breakfast',        type: 'check' }
+    ]
+  };
+  function allowancesFor(site) { return ALLOWANCES_BY_SITE[site] || []; }
+
   var SUPS_BY_SITE = {
     'MMA VIGILANT – 360': ['Grace Okafor', 'Tom Halloran'],
     'MMA VIGILANT ROV':   ['Priya Nair'],
@@ -1014,10 +1110,11 @@
   var entries = [];
   var taskMeta = Object.create(null);         // key -> { site, sup, levels }
 
-  function add(day, site, sup, levels, hours, start, finish) {
+  function add(day, site, sup, levels, hours, start, finish, allow) {
     var k = keyOf(site, sup, levels);
     taskMeta[k] = { site: site, sup: sup, levels: levels.slice() };
-    entries.push({ date: iso(day), key: k, hours: hours, start: start || '', finish: finish || '' });
+    entries.push({ date: iso(day), key: k, hours: hours, start: start || '', finish: finish || '',
+      allowances: allow || [] });
   }
 
   var A  = ['WORK-00123', 'Repair the machine', 'Labour', ''];
@@ -1039,17 +1136,27 @@
 
   /* This week, spread over three sites and five supervisors, so the
      grouping has something to group. */
-  add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
+  /* Some days carry allowances and some do not, which is the point: they
+     vary cell by cell, not by task. */
+  var CRIB = [{ name: 'Crib Break', type: 'check' }];
+  add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00',
+    [{ name: 'Height Allowance', type: 'amount', qty: 2 }, { name: 'Crib Break', type: 'check' }]);
   add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', B, 4, '14:00', '18:00');
-  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
+  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00', CRIB);
   add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Tom Halloran', H, 3.5, '15:00', '18:30');
-  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H, 6, '07:00', '13:00');
+  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H, 6, '07:00', '13:00',
+    [{ name: 'Rope Allowance', type: 'amount', qty: 1 }]);
   add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', A2, 2, '13:30', '15:30');
-  add(addDays(THIS_MON, 1), 'MMA VIGILANT ROV', 'Priya Nair', D, 9, '06:00', '15:00');
-  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D, 7.5, '06:00', '13:30');
+  add(addDays(THIS_MON, 1), 'MMA VIGILANT ROV', 'Priya Nair', D, 9, '06:00', '15:00',
+    [{ name: 'Dive Allowance', type: 'amount', qty: 3 }, { name: 'Offshore Living', type: 'check' }]);
+  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D, 7.5, '06:00', '13:30',
+    [{ name: 'Dive Allowance', type: 'amount', qty: 2 }]);
   add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', E, 2, '13:30', '15:30');
-  add(addDays(THIS_MON, 4), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F, 10, '05:00', '15:00');
-  add(addDays(THIS_MON, 4), 'SA BHP OLYMPIC DAM', 'Grace Okafor', G, 4, '15:00', '19:00');
+  add(addDays(THIS_MON, 4), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F, 10, '05:00', '15:00',
+    [{ name: 'Travel Allowance', type: 'amount', qty: 1 }, { name: 'Site Allowance', type: 'amount', qty: 1 },
+     { name: 'Crib Break', type: 'check' }]);
+  add(addDays(THIS_MON, 4), 'SA BHP OLYMPIC DAM', 'Grace Okafor', G, 4, '15:00', '19:00',
+    [{ name: 'Night Shift', type: 'check' }]);
 
   /* Older work, so the quick picks can say when each was last used. */
   add(addDays(THIS_MON, -24), 'MMA VIGILANT – 360', 'Tom Halloran', H, 10);
@@ -1081,13 +1188,22 @@
   function cellOf(key, isoDate) {
     var dk = key + '|' + isoDate;
     if (draft && dk in draft) return draft[dk];
-    var h = 0, st = '', fi = '';
+    var h = 0, st = '', fi = '', al = [];
     entries.forEach(function (e) {
       if (e.key !== key || e.date !== isoDate) return;
       h += e.hours;
       if (e.start) { st = e.start; fi = e.finish; }
+      al = al.concat(e.allowances || []);
     });
-    return { h: h, s: st, f: fi };
+    return { h: h, s: st, f: fi, a: al };
+  }
+  function allowOf(key, isoDate) { return cellOf(key, isoDate).a || []; }
+  /* "Height Allowance 2 · Crib Break" — what a claim reads as in a line
+     of text, used by the tooltips and the allowance row. */
+  function allowText(list) {
+    return (list || []).map(function (x) {
+      return x.type === 'amount' ? x.name + ' ' + x.qty : x.name;
+    }).join(' · ');
   }
   function hoursFor(key, isoDate) { return cellOf(key, isoDate).h; }
   function lastUsed(key) {
@@ -1173,12 +1289,23 @@
     var st = key ? statusFor(key, isoDate) : null;
     return '<td class="col-day' + todayCls(isoDate) + '">' +
       (st && st.icon ? '<span class="hr-st" data-tip="' + statusName(key, isoDate) + '">' + st.icon + '</span>' : '') +
-      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') +
+      alwDot(key, isoDate) + '</td>';
   }
 
   function dayCellPlain(value, isoDate) {
     return '<td class="col-day' + todayCls(isoDate) + '">' +
       (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+  }
+
+  /* In 'dot' mode a cell that carries claims says so beside its hours;
+     in 'row' mode the line underneath says it instead, so the dot would
+     only be saying it twice. */
+  function alwDot(key, isoDate) {
+    if (alwView !== 'dot' || !key) return '';
+    var a = allowOf(key, isoDate);
+    if (!a.length) return '';
+    return '<span class="alw-dot" data-tip="' + Shell.esc(allowText(a)) + '"></span>';
   }
 
   function cellHtml(value, key, isoDate) {
@@ -1190,9 +1317,48 @@
         'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
         (lock ? ' disabled data-tip="' + statusName(key, isoDate) + ' — hours can no longer be changed"' : '') + '>' +
         (st.icon ? '<span class="hr-st">' + st.icon + '</span>' : '') +
-        (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
+        (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') +
+        alwDot(key, isoDate) + '</button></td>';
     }
     return dayCell(value, isoDate, key);
+  }
+
+  /* The second display: a thin line under the task carrying that week's
+     claims, one cell per day, opening the same editor. */
+  function alwRow(t, ds) {
+    if (alwView !== 'row') return '';
+    return '<tr class="row-alw">' +
+      '<td class="col-label"><span class="alw-lbl">Allowances</span></td>' +
+      ds.map(function (d) { return alwRowCell(t.key, iso(d)); }).join('') +
+      '<td class="col-total"></td><td class="col-act"></td></tr>';
+  }
+  function alwRowFlat(t, ds) {
+    if (alwView !== 'row') return '';
+    return '<tr class="row-alw row-flat">' +
+      '<td class="col-site"></td><td class="col-sup"></td>' +
+      '<td class="col-task"><span class="alw-lbl">Allowances</span></td>' +
+      ds.map(function (d) { return alwRowCell(t.key, iso(d)); }).join('') +
+      '<td class="col-total"></td><td class="col-act"></td></tr>';
+  }
+  function alwRowCell(key, isoDate) {
+    var a = allowOf(key, isoDate), lock = statusFor(key, isoDate).locked;
+    var inner = a.length
+      ? '<span class="alw-chip">' + a.map(function (x) {
+          return Shell.esc(abbr(x.name)) + (x.type === 'amount' ? ' ' + x.qty : '');
+        }).join(', ') + '</span>'
+      : '<span class="cell-empty">&mdash;</span>';
+    if (!state.editing || lock) {
+      return '<td class="col-day' + todayCls(isoDate) + '"' +
+        (a.length ? ' data-tip="' + Shell.esc(allowText(a)) + '"' : '') + '>' + inner + '</td>';
+    }
+    return '<td class="col-day' + todayCls(isoDate) + '">' +
+      '<button class="hr-cell alw-cell" type="button" data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
+      (a.length ? ' data-tip="' + Shell.esc(allowText(a)) + '"' : '') + '>' + inner + '</button></td>';
+  }
+  /* "Height Allowance" in a 92px column is "Height" — the tooltip and the
+     editor both carry the whole name. */
+  function abbr(name) {
+    return name.replace(/\s*Allowance$/, '');
   }
   function caret() {
     return '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
@@ -1212,6 +1378,7 @@
   var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
   var rowsMode = 'flat';
+  var alwView = 'dot';      // prototype: 'dot' or 'row'
 
   /* The label columns are draggable: narrow them and the day columns get
      the space back. */
@@ -1285,6 +1452,8 @@
             '<td class="col-act"></td>' +
           '</tr>');
           count++;
+          var ar = alwRowFlat(t, ds);
+          if (ar) { rows.push(ar); count++; }
         });
       });
     });
@@ -1343,6 +1512,8 @@
             '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             '<td class="col-act"></td></tr>');
           shown++;
+          var ar = alwRow(t, ds);
+          if (ar) { rows.push(ar); shown++; }
         });
       });
     });
@@ -1622,6 +1793,15 @@
     });
     renderWeek();
   }
+  var alwSwitch = document.getElementById('alw-switch');
+  alwSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-alwview]');
+    if (!b) return;
+    alwView = b.getAttribute('data-alwview');
+    alwSwitch.querySelectorAll('[data-alwview]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    renderGrid();
+  });
+
   var rowsSwitch = document.getElementById('rows-switch');
   rowsSwitch.addEventListener('click', function (e) {
     var b = e.target.closest('[data-rows]');
@@ -1728,7 +1908,8 @@
       for (var i = entries.length - 1; i >= 0; i--) {
         if (entries[i].key === key && entries[i].date === date) entries.splice(i, 1);
       }
-      if (c.h > 0) entries.push({ date: date, key: key, hours: c.h, start: c.s, finish: c.f });
+      if (c.h > 0) entries.push({ date: date, key: key, hours: c.h, start: c.s, finish: c.f,
+        allowances: c.a || [] });
     });
     exitEdit();
     Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved to your timesheets.');
@@ -1768,6 +1949,53 @@
     return Math.round(mins / 60 * 100) / 100;
   }
 
+  var ICO_TICK = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* The site's allowances, each marked with what this cell claims. */
+  function renderCellAllowances(key, claimed) {
+    var m = taskMeta[key], list = allowancesFor(m && m.site);
+    if (!list.length) {
+      el('cp-alw').innerHTML = '<div class="alw-empty">This site has no allowances.</div>';
+      return;
+    }
+    el('cp-alw').innerHTML = list.map(function (a, i) {
+      var has = null;
+      (claimed || []).forEach(function (c) { if (c.name === a.name) has = c; });
+      return '<label class="alw-row">' +
+        '<input type="checkbox" data-alw="' + i + '"' + (has ? ' checked' : '') + ' />' +
+        '<span class="alw-box">' + ICO_TICK + '</span>' +
+        '<span class="alw-name">' + Shell.esc(a.name) + '</span>' +
+        (a.type === 'amount'
+          ? '<input class="alw-qty" type="text" inputmode="numeric" data-qty="' + i + '"' +
+            ' value="' + (has ? has.qty : '') + '"' + (has ? '' : ' disabled') + ' />'
+          : '') +
+      '</label>';
+    }).join('');
+  }
+  /* What the popup's allowance rows currently say. */
+  function cellAllowances() {
+    var m = taskMeta[popKey], list = allowancesFor(m && m.site), out = [];
+    list.forEach(function (a, i) {
+      var box = el('cp-alw').querySelector('[data-alw="' + i + '"]');
+      if (!box || !box.checked) return;
+      if (a.type !== 'amount') { out.push({ name: a.name, type: 'check' }); return; }
+      var q = Number((el('cp-alw').querySelector('[data-qty="' + i + '"]') || {}).value);
+      out.push({ name: a.name, type: 'amount', qty: !q || q < 1 ? 1 : q });
+    });
+    return out;
+  }
+  /* Ticking an amount opens its quantity and starts it at one, which is
+     what claiming it means; unticking closes it again. */
+  el('cp-alw').addEventListener('change', function (e) {
+    var box = e.target.closest('[data-alw]');
+    if (!box) return;
+    var q = el('cp-alw').querySelector('[data-qty="' + box.getAttribute('data-alw') + '"]');
+    if (!q) return;
+    q.disabled = !box.checked;
+    if (box.checked && !q.value) q.value = '1';
+    if (!box.checked) q.value = '';
+  });
+
   function openCell(btn) {
     popKey = btn.getAttribute('data-key');
     popDate = btn.getAttribute('data-date');
@@ -1775,6 +2003,7 @@
     el('cp-h').value = c.h > 0 ? fmtHours(c.h) : '';
     el('cp-s').value = c.s || '';
     el('cp-f').value = c.f || '';
+    renderCellAllowances(popKey, c.a);
 
     var r = btn.getBoundingClientRect();
     pop.classList.add('open');
@@ -1793,7 +2022,8 @@
     var fromTimes = hoursBetween(sT, fT);
     var v = fromTimes != null ? fromTimes : (h === '' ? 0 : Number(h));
     if (isNaN(v) || v < 0) v = 0;
-    draft[popKey + '|' + popDate] = { h: v, s: fromTimes != null ? sT : '', f: fromTimes != null ? fT : '' };
+    draft[popKey + '|' + popDate] = { h: v, s: fromTimes != null ? sT : '', f: fromTimes != null ? fT : '',
+      a: cellAllowances() };
     closeCell();
     renderGrid(); renderWeek(); syncEditBar();
   }
@@ -1819,7 +2049,7 @@
   });
   el('cp-done').addEventListener('click', commitCell);
   el('cp-clear').addEventListener('click', function () {
-    if (popKey && draft) draft[popKey + '|' + popDate] = { h: 0, s: '', f: '' };
+    if (popKey && draft) draft[popKey + '|' + popDate] = { h: 0, s: '', f: '', a: [] };
     closeCell();
     renderGrid(); renderWeek(); syncEditBar();
   });
