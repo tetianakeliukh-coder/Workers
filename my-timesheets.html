@@ -321,6 +321,35 @@
      not the panel's: a select stretched over 680px reads as a banner. */
   #add-where, #add-where-set { display: flex; flex-direction: column; gap: 14px; }
   #add-where .fld, #add-where-set .fld-static { max-width: 299px; }
+  /* The carried answer: one line, not a panel. */
+  .add-sum {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 10px; background: var(--bg-blue-light);
+    font-size: 14px; color: var(--text-main);
+  }
+  .add-sum .v { font-weight: 500; }
+  .add-sum .btn-text { margin-left: auto; }
+
+  /* ── Variant: one screen ──────────────────────────────────────────
+     Site and supervisor sit across the top, now that the panel they are
+     in tells them apart from the task below. */
+  body.addvar-one #add-where, body.addvar-one #add-where-set {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  body.addvar-one #add-where .fld, body.addvar-one #add-where-set .fld-static { max-width: none; }
+
+  /* ── Variant: two steps ───────────────────────────────────────────
+     Step one asks where, and nothing else is on screen; step two
+     carries the answer as a line and asks for the task. */
+  body.addvar-steps.addstep-1 .add-split,
+  body.addvar-steps.addstep-1 .add-sum { display: none; }
+  body.addvar-steps.addstep-2 .add-one > .add-card:first-child { display: none; }
+  /* Each variant holds one height of its own: constant within a flow,
+     which is what must not jump, and the stepped one has no panel of
+     fields to make room for. */
+  body.addvar-steps .add-modal .modal-body { height: 470px; }
+  .vp-switch.addvar-switch { right: 612px; }
+  body.is-narrow .addvar-switch { display: none; }
   /* .add-one zeroes every heading's margin for the columns, which set
      their own gap; this one has no flex parent to space it. */
   .add-one .add-card > .sec-head { margin-bottom: 10px; }
@@ -863,8 +892,19 @@
   </main>
 </div>
 
-<!-- ── Prototype switchers: two ways to show allowances, side by side
-     until one of them wins ──────────────────────────────────────── -->
+<!-- ── Prototype switchers ───────────────────────────────────────── -->
+<div class="vp-switch addvar-switch" id="addvar-switch" role="group" aria-label="Add dialog">
+  <button type="button" data-addvar="one" class="on">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="2.5" width="12" height="11" rx="1.4" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5h12M8 6.5v7" stroke="currentColor" stroke-width="1.3"/></svg>
+    One screen
+  </button>
+  <button type="button" data-addvar="steps">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 11.5h4v3H2zM6 7.5h4v7H6zM10 3.5h4v11h-4z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    Two steps
+  </button>
+</div>
+
+
 <div class="vp-switch alw-switch" id="alw-switch" role="group" aria-label="Allowances">
   <button type="button" data-alwview="mark" class="on">
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M7 22V2l10 5-10 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -946,6 +986,14 @@
           <div id="add-where-set" hidden></div>
         </div>
 
+        <!-- In the stepped variant the answer from step one is carried
+             as a line rather than as two more controls, so it costs the
+             height of one line instead of a panel. -->
+        <div class="add-sum" id="add-sum" hidden>
+          <span class="v" id="add-sum-text"></span>
+          <button class="btn-text" type="button" id="add-sum-change">Change</button>
+        </div>
+
         <!-- Either column answers, never both: picking a card empties the
              fields, naming a field drops the card. The heading of the one
              not answering goes quiet, so the state is readable. -->
@@ -974,6 +1022,7 @@
              dialog's failure mode, so it says. -->
         <span class="add-need" id="add-need"></span>
         <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-primary" type="button" id="add-next" hidden disabled>Next</button>
         <button class="btn-primary" type="button" id="add-go" disabled>Add</button>
       </div>
     </div>
@@ -2217,6 +2266,8 @@
 
   var recentCache = [];
   var addPick = null;       // the recent task picked, if one was
+  var addVar = 'one';       // prototype: 'one' screen or 'steps'
+  var addStep = 1;          // in the stepped variant, which one
 
   /* The site in play: the group's when the dialog was opened from one,
      otherwise whatever the select is currently on — '' until chosen. */
@@ -2243,6 +2294,28 @@
   /* Which column is answering, said in the headings rather than by
      disabling the other — the other is still perfectly usable, and using
      it is how you change your mind. */
+  /* The two variants are the same dialog in two shapes, so the state
+     they share is kept in one place and only the showing differs. */
+  function syncVariant() {
+    var stepped = addVar === 'steps' && !addCtx;
+    document.body.classList.toggle('addvar-steps', addVar === 'steps');
+    document.body.classList.toggle('addvar-one', addVar !== 'steps');
+    document.body.classList.toggle('addstep-1', stepped && addStep === 1);
+    document.body.classList.toggle('addstep-2', !stepped || addStep === 2);
+
+    /* Opened from a group there is no step one to take, so the carried
+       line stands in for the panel either way. */
+    var carry = (addVar === 'steps' && (addStep === 2 || addCtx));
+    el('add-sum').hidden = !carry;
+    if (carry) {
+      el('add-sum-text').textContent = addSite() + (addSup() ? ' · ' + addSup() : '');
+      el('add-sum-change').hidden = !!addCtx;
+    }
+    var onStepOne = stepped && addStep === 1;
+    el('add-next').hidden = !onStepOne;
+    el('add-go').hidden = onStepOne;
+  }
+
   function syncColumns() {
     var first = el('nt-0'), named = !!(first && first.value);
     el('mode-new').classList.toggle('off', !!addPick);
@@ -2285,8 +2358,13 @@
       if (!addPick && !(first && first.value)) missing.push('task');
     }
     el('add-go').disabled = missing.length > 0;
-    el('add-need').textContent = missing.length
-      ? 'Still to choose: ' + missing.join(', ') : '';
+    el('add-next').disabled = !addSite() || !addSup();
+    /* On step one only the step-one answers are outstanding. */
+    var shown = (addVar === 'steps' && !addCtx && addStep === 1)
+      ? missing.filter(function (m) { return m !== 'task'; })
+      : missing;
+    el('add-need').textContent = shown.length
+      ? 'Still to choose: ' + shown.join(', ') : '';
   }
 
   /* Everything booked before that still matches what has been filled in,
@@ -2416,6 +2494,7 @@
     setLevels([]);
     renderLevels();
     addPick = null;
+    addStep = 1;
     /* Every add starts on the list: most of them are a repeat of
        something already there. */
     setAddMode('recent');
@@ -2428,6 +2507,7 @@
   function sync() {
     renderRecent();
     syncDayHint();
+    syncVariant();
     syncAddGo();
     syncColumns();
   }
@@ -2444,6 +2524,20 @@
   el('nt-levels').addEventListener('change', function () { setAddMode('new'); });
 
   /* Picking a card is the answer, so the fields under it let go. */
+  el('add-next').addEventListener('click', function () { addStep = 2; sync(); });
+  el('add-sum-change').addEventListener('click', function () { addStep = 1; sync(); });
+
+  var addvarSwitch = document.getElementById('addvar-switch');
+  addvarSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-addvar]');
+    if (!b) return;
+    addVar = b.getAttribute('data-addvar');
+    addvarSwitch.querySelectorAll('[data-addvar]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    addStep = 1;
+    if (addModal.classList.contains('open')) sync();
+    else syncVariant();
+  });
+
   el('recent-list').addEventListener('click', function (e) {
     var b = e.target.closest('[data-recent]');
     if (!b) return;
@@ -2682,6 +2776,7 @@
 
   render();
   applyViewport();
+  syncVariant();
 })();
 </script>
 </body>
