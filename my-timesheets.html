@@ -302,7 +302,6 @@
   .add-one { display: flex; flex-direction: column; gap: 14px; }
   .add-sep { border-top: 1px solid var(--grey-200); }
   #mode-recent, #mode-new { display: flex; flex-direction: column; gap: 10px; }
-  .add-new-btn { width: 100%; justify-content: center; color: var(--primary); }
   .sec-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: -4px; }
   /* One mark for required, and nothing at all for the rest: a form that
      says both "*" and "(optional)" is saying it twice in two languages. */
@@ -317,7 +316,10 @@
 
   /* Recents are rows, not chips — each one has to carry who you worked for
      and when, which is what makes them pickable without thinking. */
-  .recent-list { display: flex; flex-direction: column; gap: 6px; }
+  /* A ceiling on the list, so the fields under it are not pushed off
+     the bottom by a worker with a lot of history. Cutting the third card
+     rather than ending cleanly is what says there is more below. */
+  .recent-list { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; }
   .recent-row {
     display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
     width: 100%; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-align: left;
@@ -912,23 +914,23 @@
 
         <div class="add-sep"></div>
 
+        <!-- Both ways of naming the task are on screen at once and
+             neither is hidden behind a switch. They cannot both be the
+             answer, so taking one releases the other: picking a card
+             empties the fields, touching a field drops the card. -->
         <div id="mode-recent">
           <div class="sec-head">
             <span class="step-title" id="sec-title">Recent tasks</span>
           </div>
           <div class="sec-sub" id="sec-sub" hidden>Matching what you have filled in</div>
           <div class="recent-list" id="recent-list"></div>
-          <!-- A button, not the text link that went unnoticed last time. -->
-          <button class="btn-ghost add-new-btn" type="button" id="sec-switch">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Set up a new task
-          </button>
         </div>
 
-        <div id="mode-new" hidden>
+        <div class="add-sep"></div>
+
+        <div id="mode-new">
           <div class="sec-head">
-            <span class="step-title">New task</span>
-            <button class="btn-text" type="button" id="sec-back">Select a recent task</button>
+            <span class="step-title">Or set up a new task</span>
           </div>
           <div id="nt-levels"></div>
           <span class="fld-hint" id="date-hint"></span>
@@ -2184,8 +2186,7 @@
   function el(id) { return document.getElementById(id); }
 
   var recentCache = [];
-  var addMode = 'recent';   // 'recent' picks one, 'new' names one
-  var addPick = null;       // the card picked, in 'recent' mode
+  var addPick = null;       // the recent task picked, if one was
 
   /* The site in play: the group's when the dialog was opened from one,
      otherwise whatever the select is currently on — '' until chosen. */
@@ -2202,13 +2203,11 @@
 
   /* A site's fields are its own, so they cannot be drawn before one is
      chosen — between 0 and 4 of them, per site. */
-  /* Which half of the dialog is answering. Only one is on screen, so a
-     card can be picked without a form behind it rewriting itself. */
+  /* Which of the two is currently the answer. Nothing is hidden: the
+     mode is simply whichever one was touched last. */
   function setAddMode(m) {
-    addMode = m;
-    el('mode-recent').hidden = m !== 'recent';
-    el('mode-new').hidden = m !== 'new';
     if (m === 'new') addPick = null;
+    else setLevels([]);
     sync();
   }
 
@@ -2241,13 +2240,11 @@
     var missing = [];
     if (!addSite()) missing.push('site');
     if (!addSup()) missing.push('supervisor');
+    /* Either half answers it, so neither is named: "work order" would be
+       wrong advice to anyone about to pick a card instead. */
     if (addSite()) {
-      if (addMode === 'new') {
-        var first = el('nt-0'), f = fieldsFor(addSite())[0];
-        if (!first || !first.value) missing.push(f ? f.name.toLowerCase() : 'task');
-      } else if (!addPick) {
-        missing.push('task');
-      }
+      var first = el('nt-0');
+      if (!addPick && !(first && first.value)) missing.push('task');
     }
     el('add-go').disabled = missing.length > 0;
     el('add-need').textContent = missing.length
@@ -2298,6 +2295,10 @@
       .filter(function (r) { return !sup || r.meta.sup === sup; })
       .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 5);
     nameCards(recent);
+    /* A card picked under a different site or supervisor is no longer on
+       the list and no longer an answer — dropped before the list is
+       drawn, or it would be drawn still marked. */
+    if (addPick && !recent.some(function (r) { return r.key === addPick.key; })) addPick = null;
 
     el('sec-title').textContent = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
     /* The list narrowing as the form is filled is the point of putting
@@ -2324,9 +2325,6 @@
           ? 'Nothing booked here before. Set a new task up instead.'
           : 'Nothing booked yet.') + '</div>';
     recentCache = recent;
-    /* A card picked under a different site or supervisor is no longer on
-       the list and no longer an answer. */
-    if (addPick && !recent.some(function (r) { return r.key === addPick.key; })) addPick = null;
   }
 
   /* A site has one supervisor at a time, so the supervisor is looked up
@@ -2406,26 +2404,22 @@
     sync();
   });
   el('nt-sup').addEventListener('change', function () { addPick = null; sync(); });
-  el('nt-levels').addEventListener('change', sync);
+  /* And naming a level is the answer instead, so the card lets go. */
+  el('nt-levels').addEventListener('change', function () { setAddMode('new'); });
 
-  el('sec-switch').addEventListener('click', function () { setAddMode('new'); });
-  el('sec-back').addEventListener('click', function () { setAddMode('recent'); });
-
-  /* Picking a card is the answer, not a shortcut into a form standing
-     next to it — nothing else on screen moves. */
+  /* Picking a card is the answer, so the fields under it let go. */
   el('recent-list').addEventListener('click', function (e) {
     var b = e.target.closest('[data-recent]');
     if (!b) return;
     addPick = recentCache[Number(b.getAttribute('data-recent'))] || null;
-    el('recent-list').querySelectorAll('.recent-row').forEach(function (x) {
-      x.classList.toggle('sel', x === b);
-    });
-    syncAddGo();
+    setAddMode('recent');
   });
 
   el('add-go').addEventListener('click', function () {
     var site = addSite();
-    var levels = addMode === 'new' ? newLevels() : addPick.meta.levels.slice();
+    /* Only one of the two can be set at a time — taking one empties the
+       other — so whichever is there is the answer. */
+    var levels = addPick ? addPick.meta.levels.slice() : newLevels();
 
     var ds = days().map(iso);
     var date = addOnDay || (ds.indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : ds[0]);
