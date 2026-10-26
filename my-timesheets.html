@@ -269,25 +269,22 @@
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
-  /* Two columns, so it is wider than the shell's one-question dialogs. */
-  .modal.add-modal { max-width: 760px; width: 100%; }
+  .modal.add-modal { max-width: 480px; width: 100%; }
   /* The shell's modal body is flex:1 with a zero basis, which collapses when
      the dialog has no fixed height — size it to its content instead. */
   .add-modal .modal-body {
     padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 14px;
     flex: 0 1 auto; max-height: 68vh; overflow: auto;
   }
-  .add-modal .modal-body > .add-split { flex: 1; min-height: 0; }
-  /* One height for every state, measured from the tallest: a site with
-     four levels needs 550px of form, and the body's own 24px of padding
-     sits outside that. Sizing to content instead would resize the dialog
-     under the pointer each time a site is named — a short state leaves
-     space, and that is the cheaper fault.
-     A sheet on a phone keeps growing with its content instead. */
-  .add-modal .modal-body { height: 574px; max-height: 68vh; flex: 0 0 auto; overflow: hidden; }
+  .add-modal .modal-body > .add-one { flex: 1; min-height: 0; }
+  /* One height for every state, measured from the tallest. Sizing to
+     content instead would resize the dialog under the pointer each time
+     a site is named or a mode is switched — a short state leaves space,
+     and that is the cheaper fault. A sheet on a phone keeps growing with
+     its content instead. */
+  .add-modal .modal-body { height: 520px; max-height: 68vh; flex: 0 0 auto; overflow-y: auto; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
-  body.is-narrow .add-form, body.is-narrow .add-recent { overflow: visible; }
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
 
@@ -302,18 +299,10 @@
   #add-where, #add-where-set { display: flex; flex-direction: column; gap: 14px; }
   /* The form can run to six fields, so the recent list sits beside it
      rather than below, where it would fall off the bottom. */
-  /* Stretch, not start: the rule between the two halves is the dialog's
-     full height, so it reads as one divided surface rather than as a
-     border hanging off the taller column. Each half scrolls on its own —
-     a six-field site must not carry the recent list off the screen with
-     it, since the list is what the fields are being checked against. */
-  .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; min-height: 0; }
-  .add-form, .add-recent { overflow-y: auto; min-height: 0; }
-  .add-form { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding-right: 24px; }
-  .add-recent {
-    min-width: 0; display: flex; flex-direction: column; gap: 10px;
-    padding-left: 24px; border-left: 1px solid var(--grey-200);
-  }
+  .add-one { display: flex; flex-direction: column; gap: 14px; }
+  .add-sep { border-top: 1px solid var(--grey-200); }
+  #mode-recent, #mode-new { display: flex; flex-direction: column; gap: 10px; }
+  .add-new-btn { width: 100%; justify-content: center; color: var(--primary); }
   .sec-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: -4px; }
   /* One mark for required, and nothing at all for the rest: a form that
      says both "*" and "(optional)" is saying it twice in two languages. */
@@ -324,12 +313,7 @@
   /* The shell pushes the footer's buttons right; the reason has to sit
      at the other end of that same line, so the row spans it. */
   .add-modal .modal-footer-actions { width: 100%; margin-left: 0; }
-  /* Both halves open on a heading at the same height, so the first field
-     and the first card start on one line. */
-  .add-split .sec-head { margin: 0; min-height: 20px; }
-  body.is-narrow .add-split { grid-template-columns: 1fr; gap: 20px; min-height: 0; }
-  body.is-narrow .add-form { padding-right: 0; }
-  body.is-narrow .add-recent { padding-left: 0; border-left: none; padding-top: 20px; border-top: 1px solid var(--grey-200); }
+  .add-one .sec-head { margin: 0; }
 
   /* Recents are rows, not chips — each one has to carry who you worked for
      and when, which is what makes them pickable without thinking. */
@@ -906,38 +890,48 @@
       <!-- Two halves of one question. The left names the task a field at
            a time; the right shows what has been booked that still
            matches, so an answer can be taken rather than typed. -->
-      <div class="add-split">
-        <div class="add-form">
-          <div class="sec-head">
-            <span class="step-title">Where it goes</span>
+      <!-- One question at a time, down one column. The two fields at the
+           top are what they look like — filters — and the list under them
+           is their result; a card is picked, not copied into a form
+           standing beside it. -->
+      <div class="add-one">
+        <div id="add-where">
+          <div class="fld">
+            <label class="fld-label" for="nt-site">Site<span class="req">*</span></label>
+            <select id="nt-site"></select>
           </div>
-          <div id="add-where">
-            <div class="fld">
-              <label class="fld-label" for="nt-site">Site<span class="req">*</span></label>
-              <select id="nt-site"></select>
-            </div>
-            <div class="fld">
-              <label class="fld-label" for="nt-sup">Supervisor<span class="req">*</span></label>
-              <select id="nt-sup"></select>
-            </div>
+          <div class="fld">
+            <label class="fld-label" for="nt-sup">Supervisor<span class="req">*</span></label>
+            <select id="nt-sup"></select>
           </div>
-          <!-- Opened from a group row the two above are settled, and a
-               disabled dropdown still invites the click it will refuse —
-               so they are printed rather than offered. -->
-          <div id="add-where-set" hidden></div>
-          <div class="sec-head" id="task-head" hidden>
-            <span class="step-title">Task</span>
-          </div>
-          <div id="nt-levels"></div>
-          <span class="fld-hint" id="date-hint"></span>
         </div>
+        <!-- Opened from a group row the two above are settled, and a
+             disabled dropdown still invites the click it will refuse —
+             so they are printed rather than offered. -->
+        <div id="add-where-set" hidden></div>
 
-        <div class="add-recent">
+        <div class="add-sep"></div>
+
+        <div id="mode-recent">
           <div class="sec-head">
             <span class="step-title" id="sec-title">Recent tasks</span>
           </div>
           <div class="sec-sub" id="sec-sub" hidden>Matching what you have filled in</div>
           <div class="recent-list" id="recent-list"></div>
+          <!-- A button, not the text link that went unnoticed last time. -->
+          <button class="btn-ghost add-new-btn" type="button" id="sec-switch">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Set up a new task
+          </button>
+        </div>
+
+        <div id="mode-new" hidden>
+          <div class="sec-head">
+            <span class="step-title">New task</span>
+            <button class="btn-text" type="button" id="sec-back">Select a recent task</button>
+          </div>
+          <div id="nt-levels"></div>
+          <span class="fld-hint" id="date-hint"></span>
         </div>
       </div>
     </div>
@@ -2190,6 +2184,8 @@
   function el(id) { return document.getElementById(id); }
 
   var recentCache = [];
+  var addMode = 'recent';   // 'recent' picks one, 'new' names one
+  var addPick = null;       // the card picked, in 'recent' mode
 
   /* The site in play: the group's when the dialog was opened from one,
      otherwise whatever the select is currently on — '' until chosen. */
@@ -2206,9 +2202,18 @@
 
   /* A site's fields are its own, so they cannot be drawn before one is
      chosen — between 0 and 4 of them, per site. */
+  /* Which half of the dialog is answering. Only one is on screen, so a
+     card can be picked without a form behind it rewriting itself. */
+  function setAddMode(m) {
+    addMode = m;
+    el('mode-recent').hidden = m !== 'recent';
+    el('mode-new').hidden = m !== 'new';
+    if (m === 'new') addPick = null;
+    sync();
+  }
+
   function renderLevels() {
     var site = addSite(), fields = fieldsFor(site), had = levelValues();
-    el('task-head').hidden = !fields.length;
     el('nt-levels').innerHTML = fields.map(function (f, i) {
       return '<div class="fld"><label class="fld-label" for="nt-' + i + '">' + Shell.esc(f.name) +
         (i === 0 ? '<span class="req">*</span>' : '') + '</label>' +
@@ -2231,14 +2236,18 @@
   function newLevels() { return levelValues(); }
 
   /* Named, not merely refused: a button that will not say what it is
-     waiting for leaves the reader to audit six fields by eye. */
+     waiting for leaves the reader to audit the form by eye. */
   function syncAddGo() {
-    var first = el('nt-0'), missing = [];
+    var missing = [];
     if (!addSite()) missing.push('site');
     if (!addSup()) missing.push('supervisor');
-    if (addSite() && (!first || !first.value)) {
-      var f = fieldsFor(addSite())[0];
-      missing.push(f ? f.name.toLowerCase() : 'task');
+    if (addSite()) {
+      if (addMode === 'new') {
+        var first = el('nt-0'), f = fieldsFor(addSite())[0];
+        if (!first || !first.value) missing.push(f ? f.name.toLowerCase() : 'task');
+      } else if (!addPick) {
+        missing.push('task');
+      }
     }
     el('add-go').disabled = missing.length > 0;
     el('add-need').textContent = missing.length
@@ -2280,16 +2289,13 @@
   }
 
   function renderRecent() {
-    var site = addSite(), sup = addSup(), lv = levelValues();
-    var filtered = !!(site || sup || lv.some(Boolean));
+    var site = addSite(), sup = addSup();
+    var filtered = !!(site || sup);
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) { return r.when; })
       .filter(function (r) { return !site || r.meta.site === site; })
       .filter(function (r) { return !sup || r.meta.sup === sup; })
-      .filter(function (r) {
-        return lv.every(function (v, i) { return !v || r.meta.levels[i] === v; });
-      })
       .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 5);
     nameCards(recent);
 
@@ -2308,19 +2314,19 @@
                   ? [rest, 'last booked ' + fmtDay(r.when)]
                   : [rest, r.meta.sup, r.meta.site, 'last booked ' + fmtDay(r.when)])
                   .filter(Boolean).join(' · ');
-      /* Marked from the form rather than from a click: the fields are the
-         selection, so a card stays marked only while they still say it. */
-      var on = r.meta.site === site && r.meta.sup === sup &&
-               lv.length && lv.every(function (v, n) { return (r.meta.levels[n] || '') === v; });
+      var on = !!addPick && addPick.key === r.key;
       return '<button class="recent-row' + (on ? ' sel' : '') + '" type="button" data-recent="' + i + '">' +
         '<span class="rr-code">' + Shell.esc(r.cardTitle) + '</span>' +
         '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
     }).join('')
       /* Empty for two different reasons, and they need different words. */
-      : '<div class="recent-empty">' + (site || sup || lv.some(Boolean)
-          ? 'Nothing booked before matches this. Carry on filling the fields in.'
+      : '<div class="recent-empty">' + (filtered
+          ? 'Nothing booked here before. Set a new task up instead.'
           : 'Nothing booked yet.') + '</div>';
     recentCache = recent;
+    /* A card picked under a different site or supervisor is no longer on
+       the list and no longer an answer. */
+    if (addPick && !recent.some(function (r) { return r.key === addPick.key; })) addPick = null;
   }
 
   /* A site has one supervisor at a time, so the supervisor is looked up
@@ -2376,7 +2382,10 @@
 
     setLevels([]);
     renderLevels();
-    sync();
+    addPick = null;
+    /* Every add starts on the list: most of them are a repeat of
+       something already there. */
+    setAddMode('recent');
     el('add-title').textContent = 'Add a task';
     addModal.classList.add('open');
   }
@@ -2391,31 +2400,32 @@
 
   el('nt-site').addEventListener('change', function () {
     renderSups();
+    setLevels([]);
     renderLevels();   // a different site, a different set of fields
+    addPick = null;
     sync();
   });
-  el('nt-sup').addEventListener('change', sync);
+  el('nt-sup').addEventListener('change', function () { addPick = null; sync(); });
   el('nt-levels').addEventListener('change', sync);
 
-  /* A card is a shortcut through the fields, not a mode: it fills them in
-     and leaves them editable. */
+  el('sec-switch').addEventListener('click', function () { setAddMode('new'); });
+  el('sec-back').addEventListener('click', function () { setAddMode('recent'); });
+
+  /* Picking a card is the answer, not a shortcut into a form standing
+     next to it — nothing else on screen moves. */
   el('recent-list').addEventListener('click', function (e) {
     var b = e.target.closest('[data-recent]');
     if (!b) return;
-    var pick = recentCache[Number(b.getAttribute('data-recent'))];
-    if (!pick) return;
-    if (!addCtx) {
-      el('nt-site').value = pick.meta.site;
-      renderSups();
-      el('nt-sup').value = pick.meta.sup;
-    }
-    renderLevels();
-    setLevels(pick.meta.levels);
-    sync();
+    addPick = recentCache[Number(b.getAttribute('data-recent'))] || null;
+    el('recent-list').querySelectorAll('.recent-row').forEach(function (x) {
+      x.classList.toggle('sel', x === b);
+    });
+    syncAddGo();
   });
 
   el('add-go').addEventListener('click', function () {
-    var site = addSite(), levels = newLevels();
+    var site = addSite();
+    var levels = addMode === 'new' ? newLevels() : addPick.meta.levels.slice();
 
     var ds = days().map(iso);
     var date = addOnDay || (ds.indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : ds[0]);
