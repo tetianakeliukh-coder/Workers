@@ -245,7 +245,8 @@
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
-  .modal.add-modal { max-width: 460px; width: 100%; }
+  /* Two columns, so it is wider than the shell's one-question dialogs. */
+  .modal.add-modal { max-width: 760px; width: 100%; }
   /* The shell's modal body is flex:1 with a zero basis, which collapses when
      the dialog has no fixed height — size it to its content instead. */
   .add-modal .modal-body {
@@ -255,7 +256,9 @@
   /* One height for all three steps: the dialog must not jump as you move
      through them, so a short step leaves space and a long one scrolls.
      A sheet on a phone keeps growing with its content. */
-  .add-modal .modal-body { height: 448px; max-height: 60vh; flex: 0 0 auto; }
+  /* Tall enough for a site with four levels, so the dialog does not
+     resize itself as the fields come and go. */
+  .add-modal .modal-body { height: 492px; max-height: 72vh; flex: 0 0 auto; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
@@ -268,9 +271,19 @@
     display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
     margin-bottom: 10px;
   }
-  #new-task { display: flex; flex-direction: column; gap: 14px; }
   #nt-levels { display: flex; flex-direction: column; gap: 14px; }
-  #add-where { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+  #add-where { display: flex; flex-direction: column; gap: 14px; }
+  /* The form can run to six fields, so the recent list sits beside it
+     rather than below, where it would fall off the bottom. */
+  .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  .add-form { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .add-recent {
+    min-width: 0; display: flex; flex-direction: column; gap: 10px;
+    padding-left: 24px; border-left: 1px solid var(--grey-200);
+  }
+  .add-recent .sec-head { margin: 0; }
+  body.is-narrow .add-split { grid-template-columns: 1fr; gap: 20px; }
+  body.is-narrow .add-recent { padding-left: 0; border-left: none; padding-top: 20px; border-top: 1px solid var(--grey-200); }
 
   /* Recents are rows, not chips — each one has to carry who you worked for
      and when, which is what makes them pickable without thinking. */
@@ -657,14 +670,20 @@
     color: var(--primary); transition: border-color var(--t-fast), background var(--t-fast);
   }
   .grp-add:hover { border-color: var(--primary); background: var(--bg-blue-light); }
-  /* The row it sits on has to span the cell for margin-left:auto to have
-     anything to push against. */
-  #grid tbody tr.row-summary td.col-task > .tree,
-  #grid tbody tr.row-site td.col-label > .tree,
-  #grid tbody tr.row-sup td.col-label > .tree { display: flex; width: 100%; }
-  #grid tbody tr.row-summary td.col-task,
-  #grid tbody tr.row-site td.col-label,
-  #grid tbody tr.row-sup td.col-label { padding-right: 12px; }
+  /* Row actions live at the right-hand end of the table, the way they do
+     on every other OPMS grid — not among the day columns, which is where
+     the eye is reading numbers. It stays put while the days scroll. */
+  th.col-act, td.col-act {
+    position: sticky; right: 0; z-index: 2;
+    width: 52px; padding: 6px 16px 6px 8px; text-align: right;
+    background: var(--white);
+  }
+  #grid thead th.col-act { z-index: 6; }
+  /* Sticky cells paint their own background, so the ones the rest of the
+     row has are repeated here rather than inherited. */
+  #grid tbody tr.row-summary td.col-act { background: var(--grey-100); }
+  #grid tbody tr.row-summary:hover td.col-act { background: var(--grey-200); }
+  #grid tbody tr.just-added td.col-act { background: var(--bg-blue-light); }
   #grid tbody tr.row-summary:hover td { background: var(--grey-200); }
 
   /* Today reads as a tint, not as something clickable. */
@@ -802,29 +821,30 @@
            answered, so they are stated rather than asked. -->
       <div class="add-ctx" id="add-ctx" hidden></div>
 
-      <!-- Where the row goes is asked first and asked blank: the tasks a
-           site offers depend on it, so nothing below can be filled in
-           until it is answered. -->
-      <div id="add-where">
-        <div class="fld">
-          <label class="fld-label" for="nt-site">Site<span style="color:var(--error)">*</span></label>
-          <select id="nt-site"></select>
-        </div>
-        <div class="fld">
-          <label class="fld-label" for="nt-sup">Supervisor<span style="color:var(--error)">*</span></label>
-          <select id="nt-sup"></select>
-        </div>
-      </div>
-
-      <div class="sec" id="add-sec">
-        <div class="sec-head">
-          <span class="step-title" id="sec-title">Recent tasks</span>
-          <button class="btn-text" type="button" id="sec-switch">Set up another task</button>
-        </div>
-        <div class="recent-list" id="recent-list"></div>
-        <div id="new-task" hidden>
+      <!-- Two halves of one question. The left names the task a field at
+           a time; the right shows what has been booked that still
+           matches, so an answer can be taken rather than typed. -->
+      <div class="add-split">
+        <div class="add-form">
+          <div id="add-where">
+            <div class="fld">
+              <label class="fld-label" for="nt-site">Site<span style="color:var(--error)">*</span></label>
+              <select id="nt-site"></select>
+            </div>
+            <div class="fld">
+              <label class="fld-label" for="nt-sup">Supervisor<span style="color:var(--error)">*</span></label>
+              <select id="nt-sup"></select>
+            </div>
+          </div>
           <div id="nt-levels"></div>
           <span class="fld-hint" id="date-hint"></span>
+        </div>
+
+        <div class="add-recent">
+          <div class="sec-head">
+            <span class="step-title" id="sec-title">Recent tasks</span>
+          </div>
+          <div class="recent-list" id="recent-list"></div>
         </div>
       </div>
     </div>
@@ -1000,9 +1020,15 @@
     entries.push({ date: iso(day), key: k, hours: hours, start: start || '', finish: finish || '' });
   }
 
-  var A = ['WORK-00123', 'Repair the machine', 'Labour', ''];
-  var B = ['WORK-00201', 'Deck plating repair', 'Labour', ''];
-  var C = ['JOB-00492', 'Tooling change', 'Labour'];
+  var A  = ['WORK-00123', 'Repair the machine', 'Labour', ''];
+  var B  = ['WORK-00201', 'Deck plating repair', 'Labour', ''];
+  var A2 = ['WORK-00124', 'Replace hydraulic hose', 'Labour', 'Preparation'];
+  var H  = ['WORK-00187', 'Weld handrail section', 'Labour', ''];
+  var C  = ['JOB-00492', 'Tooling change', 'Labour'];
+  var D  = ['JOB-00478', 'ROV dive', 'Labour'];
+  var E  = ['JOB-00451', 'Deck handling', 'Weather standby'];
+  var F  = ['WORK-00123', 'CC-1140', 'Labour', 'Day'];
+  var G  = ['WORK-00201', 'CC-1155', 'Labour', 'Night'];
   var lastMon = addDays(THIS_MON, -7);
   for (var i = 0; i < 5; i++) {
     add(addDays(lastMon, i), 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
@@ -1010,10 +1036,23 @@
   }
   add(addDays(lastMon, 3), 'MMA VIGILANT ROV', 'Priya Nair', C, 3, '07:00', '10:00');
   add(addDays(lastMon, 4), 'MMA VIGILANT ROV', 'Priya Nair', C, 2.5, '07:00', '09:30');
+
+  /* This week, spread over three sites and five supervisors, so the
+     grouping has something to group. */
   add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
   add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', B, 4, '14:00', '18:00');
+  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
+  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Tom Halloran', H, 3.5, '15:00', '18:30');
+  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H, 6, '07:00', '13:00');
+  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', A2, 2, '13:30', '15:30');
+  add(addDays(THIS_MON, 1), 'MMA VIGILANT ROV', 'Priya Nair', D, 9, '06:00', '15:00');
+  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D, 7.5, '06:00', '13:30');
+  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', E, 2, '13:30', '15:30');
+  add(addDays(THIS_MON, 4), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F, 10, '05:00', '15:00');
+  add(addDays(THIS_MON, 4), 'SA BHP OLYMPIC DAM', 'Grace Okafor', G, 4, '15:00', '19:00');
+
   /* Older work, so the quick picks can say when each was last used. */
-  add(addDays(THIS_MON, -24), 'MMA VIGILANT – 360', 'Tom Halloran', ['WORK-00187', 'Weld handrail section', 'Labour', ''], 10);
+  add(addDays(THIS_MON, -24), 'MMA VIGILANT – 360', 'Tom Halloran', H, 10);
   add(addDays(THIS_MON, -38), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1155', 'Labour', 'Day'], 7.5);
 
   /* ─── State ───────────────────────────────────────────────────── */
@@ -1207,13 +1246,14 @@
     var ds = days();
     gridCols.innerHTML = '<col style="width:' + wPx('site') + '" /><col style="width:' + wPx('sup') + '" />' +
       '<col style="width:' + wPx('task') + '" />' +
-      ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') +
+      '<col style="width:96px" /><col style="width:52px" />';
 
     gridHead.innerHTML = '<tr>' +
       '<th class="col-site" data-w="site">Site' + Shell.colGrip() + '</th>' +
       '<th class="col-sup" data-w="sup">Supervisor' + Shell.colGrip() + '</th>' +
       '<th class="col-task" data-w="task">Task' + Shell.colGrip() + '</th>' +
-      dayHeadCells(ds) + '<th class="col-total">Total</th></tr>';
+      dayHeadCells(ds) + '<th class="col-total">Total</th><th class="col-act"></th></tr>';
     syncStickyX();
 
     /* Every site + supervisor opens with its own summary line — how many tasks
@@ -1228,10 +1268,10 @@
           '<td class="col-site" data-tip="Site &mdash; ' + Shell.esc(site.name) + '">' +
             '<span class="tree">' + caret() + '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
           '<td class="col-sup">' + Shell.esc(sup.name) + '</td>' +
-          '<td class="col-task"><span class="tree"><span class="count-pill">' + n + ' task' +
-            (n === 1 ? '' : 's') + '</span>' + grpAdd(site.name, sup.name) + '</span></td>' +
+          '<td class="col-task"><span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
           ds.map(function (d) { return dayCellPlain(sumRow(sup.tasks, iso(d)), iso(d)); }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
+          '<td class="col-act">' + grpAdd(site.name, sup.name) + '</td>' +
         '</tr>');
         first = false; count++;
         if (!open) return;
@@ -1242,6 +1282,7 @@
             '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
+            '<td class="col-act"></td>' +
           '</tr>');
           count++;
         });
@@ -1249,7 +1290,7 @@
     });
 
     if (!rows.length) {
-      rows.push('<tr><td colspan="' + (ds.length + 4) + '" style="color:var(--grey-600)">No hours recorded this week.</td></tr>');
+      rows.push('<tr><td colspan="' + (ds.length + 5) + '" style="color:var(--grey-600)">No hours recorded this week.</td></tr>');
     }
     gridBody.innerHTML = rows.join('');
 
@@ -1261,14 +1302,15 @@
     if (rowsMode === 'flat') return renderFlat();
     var ds = days();
     gridCols.innerHTML = '<col style="width:' + wPx('label') + '" />' +
-      ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:96px" />';
+      ds.map(function () { return '<col style="width:92px" />'; }).join('') +
+      '<col style="width:96px" /><col style="width:52px" />';
 
     gridHead.innerHTML = '<tr><th class="col-label" data-w="label">Breakdown' + Shell.colGrip() + '</th>' +
       ds.map(function (d) {
         var today = iso(d) === iso(TODAY);
         return '<th class="col-day' + (today ? ' tdy' : '') + '"><span class="day-head' + (today ? ' is-today' : '') + '">' +
           '<span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + fmtDay(d) + '</span></span></th>';
-      }).join('') + '<th class="col-total">Total</th></tr>';
+      }).join('') + '<th class="col-total">Total</th><th class="col-act"></th></tr>';
 
     var tree = weekTree(), rows = [], shown = 0;
     tree.forEach(function (site) {
@@ -1276,9 +1318,10 @@
       var siteOpen = collapsed[siteKey] !== true;
       rows.push('<tr class="row-site' + (siteOpen ? '' : ' collapsed') + '" data-key="' + Shell.esc(siteKey) + '">' +
         '<td class="col-label" data-tip="Site &mdash; ' + Shell.esc(site.name) + '"><span class="tree">' + caret() + ICO_SITE +
-          '<span class="name">' + Shell.esc(site.name) + '</span>' + grpAdd(site.name, '') + '</span></td>' +
+          '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
         ds.map(function (d) { return cellHtml(sumRow(all, iso(d))); }).join('') +
-        '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(all, iso(d)); }, 0)) + '</td></tr>');
+        '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(all, iso(d)); }, 0)) + '</td>' +
+        '<td class="col-act">' + grpAdd(site.name, '') + '</td></tr>');
       shown++;
       if (!siteOpen) return;
 
@@ -1286,9 +1329,10 @@
         var supKey = siteKey + '|' + sup.name, supOpen = collapsed[supKey] !== true;
         rows.push('<tr class="row-sup' + (supOpen ? '' : ' collapsed') + '" data-key="' + Shell.esc(supKey) + '">' +
           '<td class="col-label" data-tip="Supervisor &mdash; ' + Shell.esc(sup.name) + '"><span class="tree" style="padding-left:20px">' + caret() + ICO_SUP +
-            '<span class="name">' + Shell.esc(sup.name) + '</span>' + grpAdd(site.name, sup.name) + '</span></td>' +
+            '<span class="name">' + Shell.esc(sup.name) + '</span></span></td>' +
           ds.map(function (d) { return cellHtml(sumRow(sup.tasks, iso(d))); }).join('') +
-          '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(sup.tasks, iso(d)); }, 0)) + '</td></tr>');
+          '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
+          '<td class="col-act">' + grpAdd(site.name, sup.name) + '</td></tr>');
         shown++;
         if (!supOpen) return;
 
@@ -1296,14 +1340,15 @@
           rows.push('<tr class="row-task' + (t.key === justAdded ? ' just-added' : '') + '">' +
             '<td class="col-label" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
-            '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td></tr>');
+            '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
+            '<td class="col-act"></td></tr>');
           shown++;
         });
       });
     });
 
     if (!rows.length) {
-      rows.push('<tr><td class="col-label" colspan="' + (ds.length + 2) + '" style="color:var(--grey-600)">' +
+      rows.push('<tr><td class="col-label" colspan="' + (ds.length + 3) + '" style="color:var(--grey-600)">' +
         'No hours recorded this week.</td></tr>');
     }
     gridBody.innerHTML = rows.join('');
@@ -1817,7 +1862,7 @@
   var addModal = document.getElementById('add-modal');
   function el(id) { return document.getElementById(id); }
 
-  var addPick = null, recentCache = [], addMode = 'recent', recentTitle = 'Recent tasks';
+  var recentCache = [];
 
   /* The site in play: the group's when the dialog was opened from one,
      otherwise whatever the select is currently on — '' until chosen. */
@@ -1832,14 +1877,10 @@
     el('nt-sup').disabled = !site;
   }
 
-  /* Nothing below the two selects means anything without a site, so the
-     whole section waits rather than offering tasks from everywhere. */
-  function syncWhere() {
-    el('add-sec').hidden = !addSite();
-  }
-
+  /* A site's fields are its own, so they cannot be drawn before one is
+     chosen — between 0 and 4 of them, per site. */
   function renderLevels() {
-    var site = addSite(), fields = fieldsFor(site);
+    var site = addSite(), fields = fieldsFor(site), had = levelValues();
     el('nt-levels').innerHTML = fields.map(function (f, i) {
       return '<div class="fld"><label class="fld-label" for="nt-' + i + '">' + Shell.esc(f.name) +
         (i === 0 ? '<span style="color:var(--error)">*</span>' : ' <span style="color:var(--grey-600);font-weight:400">(optional)</span>') + '</label>' +
@@ -1847,51 +1888,64 @@
         f.values.map(function (v) { return '<option>' + Shell.esc(v) + '</option>'; }).join('') +
         '</select></div>';
     }).join('');
+    setLevels(had);
   }
-  function newLevels() {
+  function levelValues() {
     return [].slice.call(el('nt-levels').querySelectorAll('select')).map(function (x) { return x.value; });
   }
-  function syncAddGo() {
-    var named = addMode === 'new' ? !!(el('nt-0') && el('nt-0').value) : !!addPick;
-    el('add-go').disabled = !named || !addSite() || !addSup();
+  function setLevels(vals) {
+    [].slice.call(el('nt-levels').querySelectorAll('select')).forEach(function (x, i) {
+      x.value = (vals && vals[i]) || '';
+      /* A value the new site does not offer silently falls back to ''. */
+      if (x.selectedIndex === -1) x.value = '';
+    });
   }
-  function setAddMode(m) {
-    addMode = m;
-    el('recent-list').hidden = m !== 'recent';
-    el('new-task').hidden = m !== 'new';
-    el('sec-title').textContent = m === 'recent' ? recentTitle : 'Set up another task';
-    /* Each side names where it goes, not where you came from. */
-    el('sec-switch').textContent = m === 'recent' ? 'Set up another task' : 'Select recent task';
-    syncAddGo();
+  function newLevels() { return levelValues(); }
+
+  function syncAddGo() {
+    var first = el('nt-0');
+    el('add-go').disabled = !addSite() || !addSup() || !first || !first.value;
   }
 
+  /* Everything booked before that still matches what has been filled in,
+     most recent first. Each answer makes the list a shorter, more exact
+     version of itself; with nothing filled in it is simply the last five
+     tasks worked on. */
   function renderRecent() {
+    var site = addSite(), sup = addSup(), lv = levelValues();
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) { return r.when; })
-      /* A task from another site is not a candidate — it would land
-         somewhere other than where this dialog says the row goes. */
-      .filter(function (r) { return !addSite() || r.meta.site === addSite(); })
-      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 6);
+      .filter(function (r) { return !site || r.meta.site === site; })
+      .filter(function (r) { return !sup || r.meta.sup === sup; })
+      .filter(function (r) {
+        return lv.every(function (v, i) { return !v || r.meta.levels[i] === v; });
+      })
+      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 5);
 
-    recentTitle = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
-    if (addMode === 'recent') el('sec-title').textContent = recentTitle;
+    el('sec-title').textContent = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
 
     el('recent-list').innerHTML = recent.length ? recent.map(function (r, i) {
-      /* Once the site is settled, the dialog states where the row goes —
-         and the supervisor stored on the task is not where it goes, so
-         repeating either would only mislead. */
-      var sub = (addSite()
+      /* Whatever the dialog already states is left off the card: with a
+         site chosen that is the site, and the supervisor a task was last
+         booked under is not where this row is going anyway. */
+      var sub = (site
                   ? [taskRest(r.meta), 'last booked ' + fmtDay(r.when)]
                   : [taskRest(r.meta), r.meta.sup, r.meta.site, 'last booked ' + fmtDay(r.when)])
                   .filter(Boolean).join(' · ');
-      return '<button class="recent-row" type="button" data-recent="' + i + '">' +
+      /* Marked from the form rather than from a click: the fields are the
+         selection, so a card stays marked only while they still say it. */
+      var on = r.meta.site === site && r.meta.sup === sup &&
+               lv.length && lv.every(function (v, n) { return (r.meta.levels[n] || '') === v; });
+      return '<button class="recent-row' + (on ? ' sel' : '') + '" type="button" data-recent="' + i + '">' +
         '<span class="rr-code">' + Shell.esc(taskTitle(r.meta)) + '</span>' +
         '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
-    }).join('') : '<div class="recent-empty">Nothing booked yet. Set one up instead.</div>';
+    }).join('')
+      /* Empty for two different reasons, and they need different words. */
+      : '<div class="recent-empty">' + (site || sup || lv.some(Boolean)
+          ? 'Nothing booked before matches this. Carry on filling the fields in.'
+          : 'Nothing booked yet.') + '</div>';
     recentCache = recent;
-    addPick = null;
-    syncAddGo();
   }
 
   /* A site has one supervisor at a time, so the supervisor is looked up
@@ -1943,39 +1997,48 @@
           Shell.esc(addCtx.sup) : '');
     }
 
+    setLevels([]);
     renderLevels();
-    renderRecent();
-    setAddMode('recent');
-    syncDayHint();
-    syncWhere();
+    sync();
     el('add-title').textContent = 'Add a task';
     addModal.classList.add('open');
   }
 
+  /* One pass after any answer changes: the list on the right is a view of
+     the form on the left, so it is never updated on its own. */
+  function sync() {
+    renderRecent();
+    syncDayHint();
+    syncAddGo();
+  }
+
   el('nt-site').addEventListener('change', function () {
     renderSups();
-    addPick = null;
-    renderLevels(); renderRecent(); setAddMode(addMode); syncWhere(); syncDayHint(); syncAddGo();
+    renderLevels();   // a different site, a different set of fields
+    sync();
   });
-  el('nt-sup').addEventListener('change', syncAddGo);
-  el('nt-levels').addEventListener('change', syncAddGo);
-  el('sec-switch').addEventListener('click', function () {
-    setAddMode(addMode === 'recent' ? 'new' : 'recent');
-    syncDayHint();
-  });
+  el('nt-sup').addEventListener('change', sync);
+  el('nt-levels').addEventListener('change', sync);
+
+  /* A card is a shortcut through the fields, not a mode: it fills them in
+     and leaves them editable. */
   el('recent-list').addEventListener('click', function (e) {
     var b = e.target.closest('[data-recent]');
     if (!b) return;
-    addPick = recentCache[Number(b.getAttribute('data-recent'))];
-    this.querySelectorAll('.recent-row').forEach(function (x) { x.classList.toggle('sel', x === b); });
-    syncDayHint();
-    syncAddGo();
+    var pick = recentCache[Number(b.getAttribute('data-recent'))];
+    if (!pick) return;
+    if (!addCtx) {
+      el('nt-site').value = pick.meta.site;
+      renderSups();
+      el('nt-sup').value = pick.meta.sup;
+    }
+    renderLevels();
+    setLevels(pick.meta.levels);
+    sync();
   });
 
   el('add-go').addEventListener('click', function () {
-    var site, levels;
-    if (addMode === 'new') { site = addSite(); levels = newLevels(); }
-    else { site = addPick.meta.site; levels = addPick.meta.levels.slice(); }
+    var site = addSite(), levels = newLevels();
 
     var ds = days().map(iso);
     var date = addOnDay || (ds.indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : ds[0]);
