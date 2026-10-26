@@ -58,8 +58,25 @@
      Queue on the left, the request in the middle, whatever was attached
      to it on the right — the manager's three questions in reading
      order: what else is waiting, what is this, and is it evidenced. */
-  .rd-modal { max-width: 1180px; height: 86vh; }
-  .rd-body { display: grid; grid-template-columns: 1fr; min-height: 0; }
+  /* The roster needs the room: 64px a day over four weeks does not fit
+     in a dialog sized for a form. */
+  .rd-modal { max-width: 96vw; width: 96vw; height: 90vh; }
+  .rd-body { display: grid; grid-template-columns: 260px 1fr; min-height: 0; }
+  .rd-queue { border-right: 1px solid var(--grey-300); display: flex; flex-direction: column; min-height: 0; }
+  .rd-queue-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 14px 16px; font-size: 14px; font-weight: 500; color: var(--text-main);
+  }
+  .rd-queue-list { overflow-y: auto; padding: 0 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .rd-q-item {
+    text-align: left; border: none; background: none; cursor: pointer;
+    padding: 10px 12px; border-radius: 8px; font-family: var(--fs-sans);
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  }
+  .rd-q-item:hover { background: var(--grey-100); }
+  .rd-q-item.on { background: var(--grey-200); }
+  .rd-q-item .t { font-size: 14px; font-weight: 500; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rd-q-item .s { font-size: 12px; color: var(--grey-600); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rd-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .rd-main-head {
     display: flex; align-items: center; gap: 16px;
@@ -89,55 +106,91 @@
   .rd-doc { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 
   /* ─── The worker's roster ───────────────────────────────────────────
-     Their own month, one row per thing they are rostered on — because a
-     worker is often on more than one — with the requested days laid over
-     the top so a clash is seen rather than worked out. */
+     The rostering screen's own board, to its own measurements: a 285px
+     sticky label column, 64px a day, a 56×24 block in each cell, rows of
+     32/32/36 for project, position and worker, and the same hover rings.
+     Copied rather than approximated, because a board a manager already
+     reads daily should not be a second dialect of itself. */
   .rd-roster {
-    display: flex; flex-direction: column; gap: 12px; min-width: 0;
-    border: 1px solid var(--grey-350); border-radius: 10px; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0;
   }
   .rd-roster-head { display: flex; align-items: center; gap: 12px; }
   .ros-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-  .ros-month { font-size: 13px; color: var(--grey-700); min-width: 86px; text-align: center; }
+  .ros-month { font-size: 13px; color: var(--grey-700); min-width: 118px; text-align: center; }
 
   .ros-clash { font-size: 13px; line-height: 18px; }
   .ros-clash.hit { color: var(--error); font-weight: 500; }
   .ros-clash.free { color: #289e1a; font-weight: 500; }
 
-  .ros-scroll { overflow-x: auto; min-width: 0; }
-  .ros-grid { display: grid; gap: 1px 2px; min-width: max-content; }
-  .ros-lbl {
-    font-size: 12px; line-height: 16px; color: var(--grey-700);
-    padding-right: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    max-width: 180px; position: sticky; left: 0; background: var(--white); z-index: 1;
+  .ros-scroll {
+    overflow: auto; min-width: 0; min-height: 0; flex: 1;
+    border: 1px solid var(--grey-300); border-radius: 2px;
   }
-  .ros-lbl.proj { font-weight: 600; color: var(--text-main); }
-  .ros-dow { font-size: 10px; line-height: 12px; color: var(--grey-500); text-align: center; }
-  .ros-dnum { font-size: 11px; line-height: 14px; color: var(--grey-700); text-align: center; padding-bottom: 4px; }
-  .ros-dnum.wknd, .ros-dow.wknd { color: var(--grey-400); }
-  .ros-cell {
-    height: 18px; border-radius: 3px; background: var(--grey-100);
-    border: 1px solid transparent; cursor: default;
+  .ros-stack { position: relative; width: max-content; }
+  table.ros-board { border-collapse: separate; border-spacing: 0; width: max-content; }
+  .ros-board th, .ros-board td {
+    padding: 0; margin: 0; box-sizing: border-box;
+    border-right: 1px solid var(--grey-300); border-bottom: 1px solid var(--grey-300);
+    background: var(--white); font-size: 12px; color: #212121;
+    text-align: center; vertical-align: middle;
+    --sh-row: 0 0 0 0 transparent; --sh-cell: 0 0 0 0 transparent;
+    box-shadow: var(--sh-row), var(--sh-cell);
   }
-  .ros-cell.on-day    { background: #d7e5fb; }
-  .ros-cell.on-night  { background: #f0dcf2; }
-  .ros-cell.on-travel { background: #d4ece2; }
-  .ros-cell.wknd { background: transparent; }
-  .ros-cell:hover { border-color: var(--primary); }
-  /* The requested stretch, laid over every row at once — as an overlay
-     rather than a grid item, because a grid item spanning every row
-     occupies those cells and shoves the rest of the grid sideways. */
-  .ros-stack { position: relative; min-width: max-content; }
+  .ros-board th:last-child, .ros-board td:last-child { border-right: none; }
+  .ros-board tbody tr:last-child > td { border-bottom: none; }
+  .ros-board thead th { position: sticky; top: 0; z-index: 9; height: 35px; font-weight: 400; }
+  .ros-board thead th.day { width: 64px; min-width: 64px; }
+  .ros-board thead th.label { z-index: 10; }
+  .ros-board .label {
+    position: sticky; left: 0; z-index: 2;
+    width: 285px; min-width: 285px; max-width: 285px; text-align: left; padding: 0 12px;
+  }
+  .ros-board tr.project > td { height: 32px; background: var(--grey-100); position: sticky; top: 35px; z-index: 7; }
+  .ros-board tr.project > td.label { z-index: 8; }
+  .ros-board tr.position > td { height: 32px; background: var(--white); position: sticky; top: 67px; z-index: 5; }
+  .ros-board tr.position > td.label { z-index: 6; }
+  .ros-board tr.worker > td { height: 36px; }
+  .ros-board .row-label { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .ros-board .row-label.l1 { padding-left: 16px; }
+  .ros-board .row-label.l2 { padding-left: 40px; }
+  .ros-board .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ros-board tr.project .name, .ros-board tr.position .name { font-weight: 500; }
+  .ros-board .av {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    background: var(--grey-100); color: #909090;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ros-board .block {
+    display: inline-block; width: 56px; height: 24px; border-radius: 4px;
+    box-shadow: inset 0 0 0 1px rgba(5, 23, 95, 0.07);
+    transition: transform .08s, box-shadow .08s;
+  }
+  .ros-board .block.day    { background: #cfe0f7; }
+  .ros-board .block.night  { background: #f6cff6; }
+  .ros-board .block.travel { background: #b9e3e6; }
+  .ros-board .block.other  { background: #d7cff6; }
+  .ros-board .block.off    { background: #cfcfcf; }
+  .ros-board td:hover > .block {
+    transform: scale(1.07);
+    box-shadow: inset 0 0 0 1px rgba(5, 23, 95, 0.14), 0 2px 7px rgba(5, 23, 95, 0.22);
+  }
+  .ros-board tbody tr:hover > td {
+    --sh-row: inset 0 1px 0 0 rgba(0, 51, 255, 0.28), inset 0 -1px 0 0 rgba(0, 51, 255, 0.28);
+  }
+  .ros-board tbody tr > td:not(.label):hover { --sh-cell: inset 0 0 0 1px rgba(0, 51, 255, 0.55); }
+
+  /* The requested stretch, laid over every row at once — an overlay, not
+     a cell, so it cannot push the board about. */
   .ros-band {
-    position: absolute; top: 0; bottom: 18px; border-radius: 4px; pointer-events: none;
-    background: rgba(0, 51, 255, 0.07); border: 1px solid rgba(0, 51, 255, 0.28);
+    position: absolute; top: 35px; bottom: 0; border-radius: 4px; pointer-events: none; z-index: 4;
+    background: rgba(0, 51, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(0, 51, 255, 0.4);
   }
   .ros-key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: var(--grey-600); }
   .ros-key span { display: inline-flex; align-items: center; gap: 6px; }
-  .ros-key .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
-  .sw-day { background: #d7e5fb; } .sw-night { background: #f0dcf2; }
-  .sw-travel { background: #d4ece2; }
-  .sw-leave { background: rgba(0,51,255,0.07); border: 1px solid rgba(0,51,255,0.28); }
+  .ros-key .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .sw-day { background: #cfe0f7; } .sw-night { background: #f6cff6; }
+  .sw-travel { background: #b9e3e6; }
+  .sw-leave { background: rgba(0,51,255,0.07); box-shadow: inset 0 0 0 1px rgba(0,51,255,0.4); }
   .rd-doc-bar { display: flex; align-items: center; gap: 6px; }
   .doc-btn {
     width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
@@ -162,6 +215,9 @@
 
   /* ─── A phone gets one column ───────────────────────────────────── */
   body.is-narrow .rd-modal { height: auto; max-height: 88vh; }
+  body.is-narrow .rd-modal { max-width: 100vw; width: 100%; height: auto; max-height: 88vh; }
+  body.is-narrow .rd-body { grid-template-columns: 1fr; }
+  body.is-narrow .rd-queue { display: none; }
   body.is-narrow .rd-split { grid-template-columns: 1fr; }
   body.is-narrow .lr-tabs { overflow-x: auto; }
 </style>
@@ -229,6 +285,14 @@
     </div>
 
     <div class="modal-body rd-body">
+      <div class="rd-queue">
+        <div class="rd-queue-head">
+          <span id="rd-queue-title">All Pending Requests</span>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2.5 4h11M4.5 8h7M6.5 12h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </div>
+        <div class="rd-queue-list" id="rd-queue-list"></div>
+      </div>
+
       <div class="rd-main">
         <div class="rd-main-head">
           <span class="rd-main-title" id="rd-main-title"></span>
@@ -263,7 +327,7 @@
             </div>
             <div class="ros-clash" id="ros-clash"></div>
             <div class="ros-scroll"><div class="ros-stack">
-              <div class="ros-grid" id="ros-grid"></div>
+              <table class="ros-board" id="ros-board"></table>
               <div class="ros-band" id="ros-band" hidden></div>
             </div></div>
             <div class="ros-key">
@@ -547,6 +611,18 @@
 
   function byId(id) { return REQUESTS.filter(function (r) { return r.id === id; })[0]; }
 
+  function renderQueue() {
+    var r = byId(openId);
+    var tab = TABS.filter(function (t) { return t.k === r.state; })[0];
+    el('rd-queue-title').textContent = 'All ' + tab.label + ' Requests';
+    var list = rowsFor(r.state, state.q.toLowerCase());
+    el('rd-queue-list').innerHTML = list.map(function (x) {
+      return '<button class="rd-q-item' + (x.id === openId ? ' on' : '') + '" type="button" data-q="' + x.id + '">' +
+        '<span class="t">' + Shell.esc(x.title) + '</span>' +
+        '<span class="s">' + Shell.esc(x.who + ' · ' + fmtRange(x.from, x.to)) + '</span></button>';
+    }).join('');
+  }
+
   function renderDetails() {
     var r = byId(openId), d = workingDays(r.from, r.to), bal = balance(r.who, r.type);
     el('rd-main-title').textContent = r.title;
@@ -577,6 +653,10 @@
   var rosFrom = null;
   var ROS_DAYS = 28;
 
+  var ICO_PERSON = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/>' +
+    '<path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+
   function renderRoster() {
     var r = byId(openId);
     var list = rosterFor(r.who);
@@ -584,64 +664,63 @@
 
     var days = [], d = new Date(rosFrom.getTime());
     for (var i = 0; i < ROS_DAYS; i++) { days.push(new Date(d.getTime())); d.setDate(d.getDate() + 1); }
-    el('ros-month').textContent = days[0].getDate() + ' ' + MONTHS[days[0].getMonth()] +
-      ' – ' + days[days.length - 1].getDate() + ' ' + MONTHS[days[days.length - 1].getMonth()];
+    el('ros-month').textContent = fmt(isoOf(days[0])) + ' – ' + fmt(isoOf(days[days.length - 1]));
 
-    var grid = el('ros-grid');
-    grid.style.gridTemplateColumns = '180px repeat(' + ROS_DAYS + ', 22px)';
+    /* Day headings read dd.mm, as they do on the rostering board. */
+    var head = '<thead><tr><th class="label"><div class="row-label"><span class="name">Roster</span></div></th>' +
+      days.map(function (x) {
+        return '<th class="day">' + pad2(x.getDate()) + '.' + pad2(x.getMonth() + 1) + '</th>';
+      }).join('') + '</tr></thead>';
 
-    var html = '<div></div>';
-    days.forEach(function (x) {
-      var wk = x.getDay() === 0 || x.getDay() === 6;
-      html += '<div class="ros-dow' + (wk ? ' wknd' : '') + '">' + 'SMTWTFS'[x.getDay()] + '</div>';
-    });
-    html += '<div></div>';
-    days.forEach(function (x) {
-      var wk = x.getDay() === 0 || x.getDay() === 6;
-      html += '<div class="ros-dnum' + (wk ? ' wknd' : '') + '">' + x.getDate() + '</div>';
-    });
-
+    var body = '';
     if (!list.length) {
-      html += '<div class="ros-lbl" style="grid-column:1/-1;max-width:none">Not rostered on anything.</div>';
+      body = '<tr class="worker"><td class="label"><div class="row-label l2">' +
+        '<span class="name">Not rostered on anything</span></div></td>' +
+        days.map(function () { return '<td></td>'; }).join('') + '</tr>';
     }
     list.forEach(function (a) {
-      html += '<div class="ros-lbl proj" data-tip="' + Shell.esc(a.project) + '">' + Shell.esc(a.project) + '</div>';
-      days.forEach(function () { html += '<div></div>'; });
-      html += '<div class="ros-lbl" data-tip="' + Shell.esc(a.shift) + '">' + Shell.esc(a.shift) + '</div>';
-      days.forEach(function (x) {
-        var wk = x.getDay() === 0 || x.getDay() === 6;
-        var on = onDay(a, x);
-        html += '<div class="ros-cell' + (on ? ' on-' + a.kind : (wk ? ' wknd' : '')) + '"' +
-          (on ? ' data-tip="' + Shell.esc(r.who + ' — ' + a.shift + ' · ' + fmt(isoOf(x))) + '"' : '') +
-          '></div>';
-      });
+      /* Project, then the position within it, then the worker on it —
+         the board's own three levels, with only one worker on this one
+         because this is one worker's roster. */
+      body += '<tr class="project"><td class="label"><div class="row-label">' +
+        '<span class="name">' + Shell.esc(a.project) + '</span></div></td>' +
+        days.map(function () { return '<td></td>'; }).join('') + '</tr>';
+      body += '<tr class="position"><td class="label"><div class="row-label l1">' +
+        '<span class="name">' + Shell.esc(a.shift) + '</span></div></td>' +
+        days.map(function () { return '<td></td>'; }).join('') + '</tr>';
+      body += '<tr class="worker"><td class="label"><div class="row-label l2">' +
+        '<span class="av">' + ICO_PERSON + '</span>' +
+        '<span class="name">' + Shell.esc(r.who) + '</span></div></td>' +
+        days.map(function (x) {
+          if (!onDay(a, x)) return '<td></td>';
+          return '<td data-tip="' + Shell.esc(r.who + ' — ' + a.shift + ' · ' + fmt(isoOf(x))) + '">' +
+            '<span class="block ' + a.kind + '"></span></td>';
+        }).join('') + '</tr>';
     });
 
-    grid.innerHTML = html;
+    el('ros-board').innerHTML = head + '<tbody>' + body + '</tbody>';
 
-    /* The requested stretch is laid over the lot, so the overlap is seen
-       rather than worked out. Its edges are read off the day columns
-       themselves rather than recomputed from track sizes. */
+    /* The requested stretch is laid over the lot, its edges read off the
+       day headings themselves rather than recomputed from track sizes. */
     var keys = days.map(isoOf);
-    var a0 = keys.indexOf(r.from), a1 = keys.indexOf(r.to);
     var band = el('ros-band');
     var inView = (r.from <= keys[keys.length - 1] && r.to >= keys[0]);
     band.hidden = !inView;
     if (inView) {
-      var nums = grid.querySelectorAll('.ros-dnum');
-      var c0 = nums[a0 === -1 ? 0 : a0], c1 = nums[a1 === -1 ? ROS_DAYS - 1 : a1];
-      var base = grid.parentNode.getBoundingClientRect();
+      var a0 = keys.indexOf(r.from), a1 = keys.indexOf(r.to);
+      var ths = el('ros-board').querySelectorAll('thead th.day');
+      var c0 = ths[a0 === -1 ? 0 : a0], c1 = ths[a1 === -1 ? ROS_DAYS - 1 : a1];
+      var base = el('ros-board').parentNode.getBoundingClientRect();
       var x0 = c0.getBoundingClientRect().left - base.left;
       var x1 = c1.getBoundingClientRect().right - base.left;
-      band.style.left = (x0 - 2) + 'px';
-      band.style.width = (x1 - x0 + 4) + 'px';
+      band.style.left = x0 + 'px';
+      band.style.width = (x1 - x0) + 'px';
     }
 
     /* The one sentence a manager is after. */
     var clash = 0, dd = new Date(r.from + 'T00:00:00'), end = new Date(r.to + 'T00:00:00');
     while (dd <= end) {
-      var any = list.some(function (a) { return onDay(a, dd); });
-      if (any) clash++;
+      if (list.some(function (a) { return onDay(a, dd); })) clash++;
       dd = addDays(dd, 1);
     }
     var need = workingDays(r.from, r.to);
@@ -690,8 +769,9 @@
     /* Open a few days before the request, so what leads up to it is on
        screen as well as the request itself. */
     rosFrom = addDays(new Date(r.from + 'T00:00:00'), -4);
+    renderQueue();
     renderDetails();
-    /* Shown first: the band's edges are measured off the day columns,
+    /* Shown first: the band's edges are measured off the day headings,
        and a dialog that is still display:none measures as nothing. */
     modal.classList.add('open');
     renderRoster();
@@ -703,6 +783,10 @@
     var tr = e.target.closest('tr[data-id]');
     if (b) { openRequest(Number(b.getAttribute('data-view'))); return; }
     if (tr) openRequest(Number(tr.getAttribute('data-id')));
+  });
+  el('rd-queue-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-q]');
+    if (b) openRequest(Number(b.getAttribute('data-q')));
   });
   modal.addEventListener('click', function (e) {
     if (e.target === modal || e.target.closest('[data-close]')) closeModal();
