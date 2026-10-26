@@ -43,11 +43,17 @@
   .period-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
   /* ─── Edit mode ────────────────────────────────────────────────── */
-  /* Editing takes over the toolbar's right-hand side rather than opening
+  /* Editing swaps the header's call to action rather than opening
      a bar of its own, so the search stays where it was. */
-  .edit-actions { display: none; align-items: center; gap: 8px; margin-left: auto; }
-  body.editing .period-actions { display: none; }
+  .edit-actions { display: none; align-items: center; gap: 8px; }
+  /* Edit is the page's one call to action; starting it swaps that button
+     for Cancel/Save and hands Add task down to the toolbar, where it only
+     makes sense once there is a draft to add to. */
+  body.editing #btn-edit { display: none; }
   body.editing .edit-actions { display: flex; }
+  #btn-new-task { display: none; color: var(--primary); }
+  #btn-new-task svg { color: var(--primary); }
+  body.editing #btn-new-task { display: inline-flex; }
   .edit-actions .btn-outline {
     height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
@@ -279,6 +285,14 @@
   .rr-code { font-size: 14px; font-weight: 500; color: var(--text-main); }
   .rr-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); }
   .recent-empty { font-size: 13px; color: var(--grey-600); }
+  .add-ctx {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 10px 12px; margin-bottom: 16px;
+    background: var(--bg-blue-light); border-radius: 8px;
+    font-size: 13px; color: var(--text-main);
+  }
+  .add-ctx .k { color: var(--grey-600); }
+  .add-ctx .sep { color: var(--grey-400); }
 
   /* .step and the footer buttons set display, which beats the browser's
      own [hidden] rule — so say it louder. */
@@ -406,7 +420,7 @@
   day card carries its own Edit. */
   /* The phone header carries its own actions and date, so the desktop
      toolbar row stands down entirely. */
-  body.is-narrow .edit-actions { width: 100%; margin-left: 0; }
+  body.is-narrow .edit-actions { width: 100%; }
   body.is-narrow .edit-actions .btn-outline,
   body.is-narrow .edit-actions .btn-primary { flex: 1; justify-content: center; }
   /* ─── Phone preview frame + viewport switcher (prototype only) ──── */
@@ -628,6 +642,20 @@
   .row-summary td { background: var(--grey-100); }
   .row-summary td.col-site, .row-summary td.col-sup { font-weight: 600; }
   .count-pill { font-size: 13px; color: var(--grey-600); }
+
+  /* Adding into a group the table already shows: the site and supervisor
+     are the row you clicked, so the dialog only has the task left to ask.
+     It stays out of the way until the row is pointed at. */
+  .grp-add {
+    margin-left: 8px; flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 24px; padding: 0 8px; border-radius: 6px;
+    border: 1px solid transparent; background: none; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--primary);
+    opacity: 0; transition: opacity var(--t-fast), background var(--t-fast);
+  }
+  #grid tbody tr:hover .grp-add, .grp-add:focus-visible { opacity: 1; }
+  .grp-add:hover { background: var(--bg-blue-light); border-color: var(--primary); }
   #grid tbody tr.row-summary:hover td { background: var(--grey-200); }
 
   /* Today reads as a tint, not as something clickable. */
@@ -655,10 +683,14 @@
             </button>
             <div class="dd-panel" id="date-dd-panel"></div>
           </div>
-          <button class="btn-primary" type="button" id="btn-new-task">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add task
+          <button class="btn-primary" type="button" id="btn-edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            Edit
           </button>
+          <div class="edit-actions" id="edit-actions">
+            <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
+            <button class="btn-primary" type="button" id="btn-save" disabled>Save</button>
+          </div>
         </div>
       </div>
 
@@ -683,14 +715,10 @@
         </div>
         <div class="period-actions">
           <button class="btn-ghost" type="button" id="btn-collapse"></button>
-          <button class="btn-ghost" type="button" id="btn-edit">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-            Edit
+          <button class="btn-ghost" type="button" id="btn-new-task">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Add task
           </button>
-        </div>
-        <div class="edit-actions" id="edit-actions">
-          <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
-          <button class="btn-primary" type="button" id="btn-save" disabled>Save</button>
         </div>
       </div>
 
@@ -761,6 +789,10 @@
       <!-- Two ways to name the task, side by side in one heading rather
            than one folded under the other, where the second was never
            found. -->
+      <!-- Opened from a group row, the site and supervisor are already
+           answered, so they are stated rather than asked. -->
+      <div class="add-ctx" id="add-ctx" hidden></div>
+
       <div class="sec">
         <div class="sec-head">
           <span class="step-title" id="sec-title">Recent tasks</span>
@@ -1107,6 +1139,16 @@
   function caret() {
     return '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
   }
+  /* Only while editing: outside a draft there is nothing for a new row to
+     sit in. The site and supervisor travel on the button, so the dialog
+     opens with the group already answered. */
+  function grpAdd(site, sup) {
+    if (!state.editing) return '';
+    return '<button class="grp-add" type="button" data-add-site="' + Shell.esc(site) + '"' +
+      (sup ? ' data-add-sup="' + Shell.esc(sup) + '"' : '') + '>' +
+      '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+      'Add task</button>';
+  }
   var ICO_SITE = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V3.5l5-1.5V14M3 14h10V6.5H8M3 14H1.5M13 14h1.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
@@ -1166,7 +1208,8 @@
           '<td class="col-site" data-tip="Site &mdash; ' + Shell.esc(site.name) + '">' +
             '<span class="tree">' + caret() + '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
           '<td class="col-sup">' + Shell.esc(sup.name) + '</td>' +
-          '<td class="col-task"><span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
+          '<td class="col-task"><span class="tree"><span class="count-pill">' + n + ' task' +
+            (n === 1 ? '' : 's') + '</span>' + grpAdd(site.name, sup.name) + '</span></td>' +
           ds.map(function (d) { return dayCellPlain(sumRow(sup.tasks, iso(d)), iso(d)); }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
         '</tr>');
@@ -1213,7 +1256,7 @@
       var siteOpen = collapsed[siteKey] !== true;
       rows.push('<tr class="row-site' + (siteOpen ? '' : ' collapsed') + '" data-key="' + Shell.esc(siteKey) + '">' +
         '<td class="col-label" data-tip="Site &mdash; ' + Shell.esc(site.name) + '"><span class="tree">' + caret() + ICO_SITE +
-          '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
+          '<span class="name">' + Shell.esc(site.name) + '</span>' + grpAdd(site.name, '') + '</span></td>' +
         ds.map(function (d) { return cellHtml(sumRow(all, iso(d))); }).join('') +
         '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(all, iso(d)); }, 0)) + '</td></tr>');
       shown++;
@@ -1223,7 +1266,7 @@
         var supKey = siteKey + '|' + sup.name, supOpen = collapsed[supKey] !== true;
         rows.push('<tr class="row-sup' + (supOpen ? '' : ' collapsed') + '" data-key="' + Shell.esc(supKey) + '">' +
           '<td class="col-label" data-tip="Supervisor &mdash; ' + Shell.esc(sup.name) + '"><span class="tree" style="padding-left:20px">' + caret() + ICO_SUP +
-            '<span class="name">' + Shell.esc(sup.name) + '</span></span></td>' +
+            '<span class="name">' + Shell.esc(sup.name) + '</span>' + grpAdd(site.name, sup.name) + '</span></td>' +
           ds.map(function (d) { return cellHtml(sumRow(sup.tasks, iso(d))); }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(sup.tasks, iso(d)); }, 0)) + '</td></tr>');
         shown++;
@@ -1786,13 +1829,20 @@
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) { return r.when; })
+      /* Started from a group, a task from a different site is not a
+         candidate — it would land somewhere other than the row clicked. */
+      .filter(function (r) { return !addCtx || r.meta.site === addCtx.site; })
       .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 6);
 
     recentTitle = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
     if (addMode === 'recent') el('sec-title').textContent = recentTitle;
 
     el('recent-list').innerHTML = recent.length ? recent.map(function (r, i) {
-      var sub = [taskRest(r.meta), r.meta.sup, r.meta.site, 'last booked ' + fmtDay(r.when)]
+      /* Inside a group, the site and supervisor are the strip above — and
+         repeating a supervisor the row overrides would just mislead. */
+      var sub = (addCtx
+                  ? [taskRest(r.meta), 'last booked ' + fmtDay(r.when)]
+                  : [taskRest(r.meta), r.meta.sup, r.meta.site, 'last booked ' + fmtDay(r.when)])
                   .filter(Boolean).join(' · ');
       return '<button class="recent-row" type="button" data-recent="' + i + '">' +
         '<span class="rr-code">' + Shell.esc(taskTitle(r.meta)) + '</span>' +
@@ -1816,16 +1866,37 @@
 
   function syncDayHint() {
     var site = addMode === 'new' ? el('nt-site').value : (addPick ? addPick.meta.site : '');
-    el('date-hint').textContent = site
+    /* The strip above already names the group, so the hint would only
+       repeat it. */
+    el('date-hint').textContent = (site && !addCtx)
       ? 'Goes to ' + site + ' with ' + supervisorFor(site) + '. Fill in the days once the row is there.'
       : '';
   }
 
   var addOnDay = null;      // set when the dialog was opened from a day
+  var addCtx = null;        // set when it was opened from a group row
 
-  function openAdd(dayIso) {
+  /* ctx is the group the add was started from: { site, sup }. With one,
+     the site is settled and only the task is still open. */
+  function openAdd(dayIso, ctx) {
     addOnDay = dayIso || null;
+    addCtx = ctx || null;
+    /* Started from a site row, the supervisor is not chosen but it is not
+       unknown either — the row will go to the same one the site's other
+       tasks go to, so it is stated rather than left to be discovered. */
+    if (addCtx && !addCtx.sup) addCtx.sup = supervisorFor(addCtx.site) || '';
     el('nt-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    if (addCtx) el('nt-site').value = addCtx.site;
+    el('nt-site').disabled = !!addCtx;
+
+    var strip = el('add-ctx');
+    strip.hidden = !addCtx;
+    if (addCtx) {
+      strip.innerHTML = '<span class="k">Site</span> ' + Shell.esc(addCtx.site) +
+        (addCtx.sup ? '<span class="sep">&middot;</span><span class="k">Supervisor</span> ' +
+          Shell.esc(addCtx.sup) : '');
+    }
+
     renderLevels();
     renderRecent();
     setAddMode('recent');
@@ -1856,7 +1927,7 @@
 
     var ds = days().map(iso);
     var date = addOnDay || (ds.indexOf(iso(TODAY)) !== -1 ? iso(TODAY) : ds[0]);
-    var sup = supervisorFor(site);
+    var sup = (addCtx && addCtx.sup) || supervisorFor(site);
     var k = keyOf(site, sup, levels);
     taskMeta[k] = { site: site, sup: sup, levels: levels };
 
@@ -2058,7 +2129,17 @@
     if (e.target === editSheet || e.target.closest('[data-close]')) editSheet.classList.remove('open');
   });
 
-  document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null); });
+  document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null, null); });
+
+  /* Capture, and ahead of the row's own collapse handler: the click is for
+     the button, not for the group it sits on. */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.grp-add') : null;
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openAdd(null, { site: b.getAttribute('data-add-site'), sup: b.getAttribute('data-add-sup') || '' });
+  }, true);
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
