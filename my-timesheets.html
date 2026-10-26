@@ -396,8 +396,6 @@
   .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; min-height: 0; }
   .add-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
   #mode-recent { border-left: 1px solid var(--grey-350); }
-  /* The side that is not the answer says so quietly. */
-  .add-col.off .step-title { color: var(--grey-600); font-weight: 400; }
   .sec-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: -4px; }
   /* One mark for required, and nothing at all for the rest: a form that
      says both "*" and "(optional)" is saying it twice in two languages. */
@@ -2255,16 +2253,6 @@
 
   /* A site's fields are its own, so they cannot be drawn before one is
      chosen — between 0 and 4 of them, per site. */
-  /* Which of the two is currently the answer. Nothing is hidden: the
-     mode is simply whichever one was touched last. */
-  function setAddMode(m) {
-    if (m === 'new') addPick = null;
-    else setLevels([]);
-    sync();
-  }
-  /* Which column is answering, said in the headings rather than by
-     disabling the other — the other is still perfectly usable, and using
-     it is how you change your mind. */
   /* The two variants are the same dialog in two shapes, so the state
      they share is kept in one place and only the showing differs. */
   function syncVariant() {
@@ -2297,12 +2285,6 @@
         li.classList.toggle('done', n < addStep);
       });
     }
-  }
-
-  function syncColumns() {
-    var first = el('nt-0'), named = !!(first && first.value);
-    el('mode-new').classList.toggle('off', !!addPick);
-    el('mode-recent').classList.toggle('off', named);
   }
 
   function renderLevels() {
@@ -2384,14 +2366,20 @@
     });
   }
 
+  /* Everything on the left narrows what is on the right, level by level:
+     a job number cuts the list, an activity cuts it further. Describing
+     the task is how you find the one you have booked before. */
   function renderRecent() {
-    var site = addSite(), sup = addSup();
-    var filtered = !!(site || sup);
+    var site = addSite(), sup = addSup(), lv = levelValues();
+    var filtered = !!(site || sup || lv.some(Boolean));
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) { return r.when; })
       .filter(function (r) { return !site || r.meta.site === site; })
       .filter(function (r) { return !sup || r.meta.sup === sup; })
+      .filter(function (r) {
+        return lv.every(function (v, i) { return !v || r.meta.levels[i] === v; });
+      })
       .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 5);
     nameCards(recent);
     /* A card picked under a different site or supervisor is no longer on
@@ -2478,9 +2466,7 @@
     renderLevels();
     addPick = null;
     addStep = 1;
-    /* Every add starts on the list: most of them are a repeat of
-       something already there. */
-    setAddMode('recent');
+    sync();
     el('add-title').textContent = 'Add a task';
     addModal.classList.add('open');
   }
@@ -2492,7 +2478,6 @@
     syncDayHint();
     syncVariant();
     syncAddGo();
-    syncColumns();
   }
 
   el('nt-site').addEventListener('change', function () {
@@ -2503,8 +2488,9 @@
     sync();
   });
   el('nt-sup').addEventListener('change', function () { addPick = null; sync(); });
-  /* And naming a level is the answer instead, so the card lets go. */
-  el('nt-levels').addEventListener('change', function () { setAddMode('new'); });
+  /* Naming a level narrows the list, and a card that stops matching
+     leaves the list — renderRecent drops the pick with it. */
+  el('nt-levels').addEventListener('change', sync);
 
   /* Picking a card is the answer, so the fields under it let go. */
   el('add-next').addEventListener('click', function () { addStep = 2; sync(); });
@@ -2524,8 +2510,10 @@
   el('recent-list').addEventListener('click', function (e) {
     var b = e.target.closest('[data-recent]');
     if (!b) return;
+    /* Marking it changes nothing else: the fields are what narrowed the
+       list down to it, so they do not disagree with it. */
     addPick = recentCache[Number(b.getAttribute('data-recent'))] || null;
-    setAddMode('recent');
+    sync();
   });
 
   el('add-go').addEventListener('click', function () {
