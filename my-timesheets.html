@@ -277,15 +277,14 @@
     padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 14px;
     flex: 0 1 auto; max-height: 68vh; overflow: auto;
   }
-  .add-modal .modal-body > .add-split { flex: 1; }
-  /* One height for all three steps: the dialog must not jump as you move
-     through them, so a short step leaves space and a long one scrolls.
-     A sheet on a phone keeps growing with its content. */
-  /* Tall enough for a site with four levels, so the dialog does not
-     resize itself as the fields come and go. */
-  .add-modal .modal-body { height: 492px; max-height: 72vh; flex: 0 0 auto; }
+  .add-modal .modal-body > .add-split { flex: 1; min-height: 0; }
+  /* Sized to its taller half rather than to the worst case, so the
+     opening state is not mostly empty; each half then scrolls inside it.
+     A sheet on a phone keeps growing with its content instead. */
+  .add-modal .modal-body { height: auto; min-height: 300px; max-height: 68vh; flex: 0 1 auto; overflow: hidden; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
-  body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
+  body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
+  body.is-narrow .add-form, body.is-narrow .add-recent { overflow: visible; }
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
 
@@ -297,18 +296,31 @@
     margin-bottom: 10px;
   }
   #nt-levels { display: flex; flex-direction: column; gap: 14px; }
-  #add-where { display: flex; flex-direction: column; gap: 14px; }
+  #add-where, #add-where-set { display: flex; flex-direction: column; gap: 14px; }
   /* The form can run to six fields, so the recent list sits beside it
      rather than below, where it would fall off the bottom. */
   /* Stretch, not start: the rule between the two halves is the dialog's
      full height, so it reads as one divided surface rather than as a
-     border hanging off the taller column. */
-  .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; min-height: 100%; }
+     border hanging off the taller column. Each half scrolls on its own —
+     a six-field site must not carry the recent list off the screen with
+     it, since the list is what the fields are being checked against. */
+  .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; min-height: 0; }
+  .add-form, .add-recent { overflow-y: auto; min-height: 0; }
   .add-form { display: flex; flex-direction: column; gap: 14px; min-width: 0; padding-right: 24px; }
   .add-recent {
     min-width: 0; display: flex; flex-direction: column; gap: 10px;
     padding-left: 24px; border-left: 1px solid var(--grey-200);
   }
+  .sec-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: -4px; }
+  /* One mark for required, and nothing at all for the rest: a form that
+     says both "*" and "(optional)" is saying it twice in two languages. */
+  .req { color: var(--error); }
+  .fld-static { display: flex; flex-direction: column; gap: 4px; }
+  .fld-static .v { font-size: 14px; line-height: 20px; color: var(--text-main); font-weight: 500; }
+  .add-need { margin-right: auto; font-size: 13px; color: var(--grey-600); }
+  /* The shell pushes the footer's buttons right; the reason has to sit
+     at the other end of that same line, so the row spans it. */
+  .add-modal .modal-footer-actions { width: 100%; margin-left: 0; }
   /* Both halves open on a heading at the same height, so the first field
      and the first card start on one line. */
   .add-split .sec-head { margin: 0; min-height: 20px; }
@@ -894,17 +906,24 @@
       <div class="add-split">
         <div class="add-form">
           <div class="sec-head">
-            <span class="step-title">Task</span>
+            <span class="step-title">Where it goes</span>
           </div>
           <div id="add-where">
             <div class="fld">
-              <label class="fld-label" for="nt-site">Site<span style="color:var(--error)">*</span></label>
+              <label class="fld-label" for="nt-site">Site<span class="req">*</span></label>
               <select id="nt-site"></select>
             </div>
             <div class="fld">
-              <label class="fld-label" for="nt-sup">Supervisor<span style="color:var(--error)">*</span></label>
+              <label class="fld-label" for="nt-sup">Supervisor<span class="req">*</span></label>
               <select id="nt-sup"></select>
             </div>
+          </div>
+          <!-- Opened from a group row the two above are settled, and a
+               disabled dropdown still invites the click it will refuse —
+               so they are printed rather than offered. -->
+          <div id="add-where-set" hidden></div>
+          <div class="sec-head" id="task-head" hidden>
+            <span class="step-title">Task</span>
           </div>
           <div id="nt-levels"></div>
           <span class="fld-hint" id="date-hint"></span>
@@ -914,6 +933,7 @@
           <div class="sec-head">
             <span class="step-title" id="sec-title">Recent tasks</span>
           </div>
+          <div class="sec-sub" id="sec-sub" hidden>Matching what you have filled in</div>
           <div class="recent-list" id="recent-list"></div>
         </div>
       </div>
@@ -921,6 +941,9 @@
 
     <div class="modal-footer">
       <div class="modal-footer-actions">
+        <!-- A disabled button that will not say why is the whole of this
+             dialog's failure mode, so it says. -->
+        <span class="add-need" id="add-need"></span>
         <button class="btn-ghost" type="button" data-close>Cancel</button>
         <button class="btn-primary" type="button" id="add-go" disabled>Add</button>
       </div>
@@ -1077,9 +1100,11 @@
   function taskTitle(meta) { return meta.levels[titleAt(meta)] || 'No task'; }
   /* "WORK-00123 · Labour" — everything else, in field order, never
      repeating the title. */
-  function taskRest(meta) {
+  function taskRest(meta, alsoSkip) {
     var i = titleAt(meta);
-    return meta.levels.filter(function (v, n) { return v && n !== i; }).join(' · ');
+    return meta.levels.filter(function (v, n) {
+      return v && n !== i && n !== alsoSkip;
+    }).join(' · ');
   }
   /* Each site runs its own allowances: an amount is claimed by quantity,
      a check is simply claimed. A claim belongs to one task on one day —
@@ -2173,16 +2198,17 @@
     var list = SUPS_BY_SITE[site] || [];
     el('nt-sup').innerHTML = '<option value="">Select…</option>' +
       list.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
-    el('nt-sup').disabled = !!addCtx || !site;
+    el('nt-sup').disabled = !site;
   }
 
   /* A site's fields are its own, so they cannot be drawn before one is
      chosen — between 0 and 4 of them, per site. */
   function renderLevels() {
     var site = addSite(), fields = fieldsFor(site), had = levelValues();
+    el('task-head').hidden = !fields.length;
     el('nt-levels').innerHTML = fields.map(function (f, i) {
       return '<div class="fld"><label class="fld-label" for="nt-' + i + '">' + Shell.esc(f.name) +
-        (i === 0 ? '<span style="color:var(--error)">*</span>' : ' <span style="color:var(--grey-600);font-weight:400">(optional)</span>') + '</label>' +
+        (i === 0 ? '<span class="req">*</span>' : '') + '</label>' +
         '<select id="nt-' + i + '" data-lvl="' + i + '"><option value="">Select…</option>' +
         f.values.map(function (v) { return '<option>' + Shell.esc(v) + '</option>'; }).join('') +
         '</select></div>';
@@ -2201,17 +2227,58 @@
   }
   function newLevels() { return levelValues(); }
 
+  /* Named, not merely refused: a button that will not say what it is
+     waiting for leaves the reader to audit six fields by eye. */
   function syncAddGo() {
-    var first = el('nt-0');
-    el('add-go').disabled = !addSite() || !addSup() || !first || !first.value;
+    var first = el('nt-0'), missing = [];
+    if (!addSite()) missing.push('site');
+    if (!addSup()) missing.push('supervisor');
+    if (addSite() && (!first || !first.value)) {
+      var f = fieldsFor(addSite())[0];
+      missing.push(f ? f.name.toLowerCase() : 'task');
+    }
+    el('add-go').disabled = missing.length > 0;
+    el('add-need').textContent = missing.length
+      ? 'Still to choose: ' + missing.join(', ') : '';
   }
 
   /* Everything booked before that still matches what has been filled in,
      most recent first. Each answer makes the list a shorter, more exact
      version of itself; with nothing filled in it is simply the last five
      tasks worked on. */
+  /* A site whose naming field repeats — Olympic Dam names tasks by work
+     order — hands two cards the same heading, and the thing that tells
+     them apart ends up in the grey line. Where a heading would be shared,
+     the first level that actually differs is promoted into it. */
+  function nameCards(list) {
+    var byTitle = Object.create(null);
+    list.forEach(function (r) {
+      r.cardTitle = taskTitle(r.meta);
+      r.cardExtra = -1;
+      (byTitle[r.cardTitle] = byTitle[r.cardTitle] || []).push(r);
+    });
+    Object.keys(byTitle).forEach(function (t) {
+      var group = byTitle[t];
+      if (group.length < 2) return;
+      var depth = 0;
+      group.forEach(function (r) { depth = Math.max(depth, r.meta.levels.length); });
+      for (var i = 0; i < depth; i++) {
+        var vals = group.map(function (r) { return r.meta.levels[i] || ''; });
+        var differs = vals.some(function (v) { return v !== vals[0]; });
+        if (!differs) continue;
+        group.forEach(function (r, k) {
+          if (!vals[k]) return;
+          r.cardTitle = t + ' · ' + vals[k];
+          r.cardExtra = i;
+        });
+        return;
+      }
+    });
+  }
+
   function renderRecent() {
     var site = addSite(), sup = addSup(), lv = levelValues();
+    var filtered = !!(site || sup || lv.some(Boolean));
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) { return r.when; })
@@ -2221,23 +2288,29 @@
         return lv.every(function (v, i) { return !v || r.meta.levels[i] === v; });
       })
       .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 5);
+    nameCards(recent);
 
     el('sec-title').textContent = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
+    /* The list narrowing as the form is filled is the point of putting
+       the two side by side, and a falling count alone reads as tasks
+       going missing. */
+    el('sec-sub').hidden = !filtered;
 
     el('recent-list').innerHTML = recent.length ? recent.map(function (r, i) {
       /* Whatever the dialog already states is left off the card: with a
          site chosen that is the site, and the supervisor a task was last
          booked under is not where this row is going anyway. */
+      var rest = taskRest(r.meta, r.cardExtra);
       var sub = (site
-                  ? [taskRest(r.meta), 'last booked ' + fmtDay(r.when)]
-                  : [taskRest(r.meta), r.meta.sup, r.meta.site, 'last booked ' + fmtDay(r.when)])
+                  ? [rest, 'last booked ' + fmtDay(r.when)]
+                  : [rest, r.meta.sup, r.meta.site, 'last booked ' + fmtDay(r.when)])
                   .filter(Boolean).join(' · ');
       /* Marked from the form rather than from a click: the fields are the
          selection, so a card stays marked only while they still say it. */
       var on = r.meta.site === site && r.meta.sup === sup &&
                lv.length && lv.every(function (v, n) { return (r.meta.levels[n] || '') === v; });
       return '<button class="recent-row' + (on ? ' sel' : '') + '" type="button" data-recent="' + i + '">' +
-        '<span class="rr-code">' + Shell.esc(taskTitle(r.meta)) + '</span>' +
+        '<span class="rr-code">' + Shell.esc(r.cardTitle) + '</span>' +
         '<span class="rr-sub">' + Shell.esc(sub) + '</span></button>';
     }).join('')
       /* Empty for two different reasons, and they need different words. */
@@ -2284,11 +2357,19 @@
     renderSups();
     if (addCtx) el('nt-sup').value = addCtx.sup || '';
 
-    /* Opened from a group, the two are answered — shown as the settled
-       fields they are, in the same place and shape as when they are
-       still a question, so the dialog is one layout rather than two. */
-    el('nt-site').disabled = !!addCtx;
-    el('nt-sup').disabled = !!addCtx || !el('nt-site').value;
+    /* Opened from a group, the two are answered. A disabled dropdown
+       still carries a chevron and still invites the click it will
+       refuse, so they are printed in their place instead. */
+    el('add-where').hidden = !!addCtx;
+    el('add-where-set').hidden = !addCtx;
+    if (addCtx) {
+      el('add-where-set').innerHTML =
+        '<div class="fld-static"><span class="fld-label">Site</span>' +
+          '<span class="v">' + Shell.esc(addCtx.site) + '</span></div>' +
+        '<div class="fld-static"><span class="fld-label">Supervisor</span>' +
+          '<span class="v">' + Shell.esc(addCtx.sup || '—') + '</span></div>';
+    }
+    el('nt-sup').disabled = !el('nt-site').value;
 
     setLevels([]);
     renderLevels();
