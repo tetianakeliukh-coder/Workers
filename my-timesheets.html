@@ -278,16 +278,18 @@
   }
   .add-modal .modal-body > .add-one { flex: 1; min-height: 0; }
   .add-one > .add-split { flex: 1; min-height: 0; }
+  .add-split.add-card { padding: 16px 0; }
+  .add-split.add-card > #mode-new { padding-left: 16px; }
+  .add-split.add-card > #mode-recent { padding-right: 16px; }
   .add-col { overflow-y: auto; }
   /* One height for every state, measured from the tallest. Sizing to
      content instead would resize the dialog under the pointer each time
      a site is named or a mode is switched — a short state leaves space,
      and that is the cheaper fault. A sheet on a phone keeps growing with
      its content instead. */
-  .add-modal .modal-body { height: 470px; max-height: 68vh; flex: 0 0 auto; overflow: hidden; }
+  .add-modal .modal-body { height: 590px; max-height: 72vh; flex: 0 0 auto; overflow: hidden; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
-  body.is-narrow #add-where, body.is-narrow #add-where-set,
   body.is-narrow .add-split { grid-template-columns: 1fr; }
   body.is-narrow #mode-new { padding-right: 0; }
   body.is-narrow #mode-recent {
@@ -309,10 +311,14 @@
   /* The form can run to six fields, so the recent list sits beside it
      rather than below, where it would fall off the bottom. */
   .add-one { display: flex; flex-direction: column; gap: 14px; }
-  .add-sep { border-top: 1px solid var(--grey-200); }
-  /* Site and supervisor read as one line of context rather than as the
-     first two of six questions. */
-  #add-where, #add-where-set { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  /* Each panel is one idea, bounded, so the two are told apart without
+     being read. */
+  .add-card {
+    border: 1px solid var(--grey-200); border-radius: 10px; padding: 16px;
+    background: var(--white);
+  }
+  /* Fields run down the page, never across it. */
+  #add-where, #add-where-set { display: flex; flex-direction: column; gap: 14px; }
   /* Two peers, with the rule between them running the column's height. */
   .add-split { display: grid; grid-template-columns: 1fr 1fr; gap: 0; align-items: stretch; min-height: 0; }
   .add-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -914,33 +920,34 @@
            top; the two ways of naming the task sit under them as peers,
            side by side, because that is what two columns say. -->
       <div class="add-one">
-        <div id="add-where">
-          <div class="fld">
-            <label class="fld-label" for="nt-site">Site<span class="req">*</span></label>
-            <select id="nt-site"></select>
+        <!-- Two panels, so where the row goes and what it is are told
+             apart at a glance rather than by reading. -->
+        <div class="add-card">
+          <div id="add-where">
+            <div class="fld">
+              <label class="fld-label" for="nt-site">Site<span class="req">*</span></label>
+              <select id="nt-site"></select>
+            </div>
+            <div class="fld">
+              <label class="fld-label" for="nt-sup">Supervisor<span class="req">*</span></label>
+              <select id="nt-sup"></select>
+            </div>
           </div>
-          <div class="fld">
-            <label class="fld-label" for="nt-sup">Supervisor<span class="req">*</span></label>
-            <select id="nt-sup"></select>
-          </div>
+          <!-- Opened from a group row the two above are settled, and a
+               disabled dropdown still invites the click it will refuse —
+               so they are printed rather than offered. -->
+          <div id="add-where-set" hidden></div>
         </div>
-        <!-- Opened from a group row the two above are settled, and a
-             disabled dropdown still invites the click it will refuse —
-             so they are printed rather than offered. -->
-        <div id="add-where-set" hidden></div>
-
-        <div class="add-sep"></div>
 
         <!-- Either column answers, never both: picking a card empties the
              fields, naming a field drops the card. The heading of the one
              not answering goes quiet, so the state is readable. -->
-        <div class="add-split">
+        <div class="add-card add-split">
           <div class="add-col" id="mode-new">
             <div class="sec-head">
               <span class="step-title">Set up a new task</span>
             </div>
             <div id="nt-levels"></div>
-            <span class="fld-hint" id="date-hint"></span>
           </div>
 
           <div class="add-col" id="mode-recent">
@@ -2363,13 +2370,9 @@
     return found || (SUPS_BY_SITE[site] || [])[0];
   }
 
-  /* Where the row lands is now stated outright — the strip when the
-     dialog came from a group, the two selects when it did not — so the
-     hint has only the days left to say. */
-  function syncDayHint() {
-    el('date-hint').textContent = addSite()
-      ? 'Fill in the days once the row is there.' : '';
-  }
+  /* The row lands with no hours and the cell editor opens on it at once,
+     which says "fill in the days" better than a sentence could. */
+  function syncDayHint() {}
 
   var addOnDay = null;      // set when the dialog was opened from a day
   var addCtx = null;        // set when it was opened from a group row
