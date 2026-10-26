@@ -693,7 +693,10 @@
     color: var(--grey-500); cursor: default; vertical-align: -2px;
   }
   .alw-mark:hover { color: var(--text-main); }
-  .hr-cell .alw-mark { pointer-events: none; }
+  /* The flag keeps its own hover inside an editable cell too, so the
+     claim can be read without opening anything — the click still falls
+     through to the cell, since a button is fired by its children. */
+  .hr-cell .alw-mark { cursor: pointer; }
   #grid tbody tr.row-alw td { border-bottom: 1px solid var(--row-divider); }
   .row-alw .alw-lbl {
     font-size: 12px; color: var(--grey-600);
