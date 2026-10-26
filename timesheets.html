@@ -359,6 +359,64 @@
     white-space: nowrap; transition: background var(--t-fast);
   }
   .edit-actions .btn-outline:hover { background: var(--bg-blue-light); }
+  [hidden] { display: none !important; }
+
+  /* ─── One cell ───────────────────────────────────────────────────── */
+  .hr-cell {
+    display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+    width: 100%; height: 30px; padding: 0 8px; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+    font-variant-numeric: tabular-nums;
+  }
+  .hr-cell:hover { border-color: var(--primary); }
+  .hr-cell.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+  /* Left of the figure, so a flagged column still lines up with a plain one. */
+  .alw-mark {
+    display: inline-flex; align-items: center; flex-shrink: 0;
+    margin-right: auto; color: var(--grey-500); cursor: pointer; vertical-align: -2px;
+  }
+  .alw-mark:hover { color: var(--text-main); }
+  td.pd-day .alw-mark { margin-right: 4px; }
+
+  .cell-pop {
+    display: none; position: fixed; z-index: 500; width: 248px; padding: 12px;
+    border-radius: 10px; background: var(--white);
+    border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
+  }
+  .cell-pop.open { display: block; }
+  .cp-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;
+    font-size: 13px; color: var(--grey-700);
+  }
+  .cp-row input {
+    width: 92px; height: 32px; padding: 0 8px; text-align: right;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+    font-variant-numeric: tabular-nums;
+  }
+  .cp-row input:focus { outline: none; border-color: var(--primary); }
+  .cp-sep {
+    margin: 10px 0 8px; padding-top: 10px; border-top: 1px solid var(--grey-200);
+    font-size: 12px; color: var(--grey-600);
+  }
+  .cp-foot { display: flex; align-items: center; justify-content: flex-start; margin-top: 10px; }
+  #cp-hrow.derived input { background: #fafafa; color: var(--grey-600); cursor: default; }
+  .alw-pick { display: grid; grid-template-columns: 1fr 54px; align-items: center; gap: 6px; }
+  .alw-pick select {
+    min-width: 0; height: 32px; padding: 0 6px;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+  }
+  .alw-pick select:focus { outline: none; border-color: var(--primary); }
+  .alw-qty {
+    width: 100%; height: 32px; padding: 0 8px; text-align: right;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+  }
+  .alw-qty:focus { outline: none; border-color: var(--primary); }
+  .alw-empty { font-size: 12px; color: var(--grey-600); padding: 2px 0; }
+
   .pd-input {
     width: 100%; max-width: 72px; height: 32px; padding: 0 8px; text-align: right;
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
@@ -526,6 +584,23 @@
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.4" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 3v10M10 3v10" stroke="currentColor" stroke-width="1.3"/></svg>
     Flat
   </button>
+</div>
+
+<!-- ── One cell ─────────────────────────────────────────────────── -->
+<div class="cell-pop" id="cell-pop" role="dialog" aria-label="Hours for this day">
+  <div id="cp-times">
+    <label class="cp-row"><span>Start</span>
+      <input id="cp-s" type="text" inputmode="numeric" placeholder="06:00" autocomplete="off" /></label>
+    <label class="cp-row"><span>Finish</span>
+      <input id="cp-f" type="text" inputmode="numeric" placeholder="14:00" autocomplete="off" /></label>
+  </div>
+  <label class="cp-row" id="cp-hrow"><span>Hours</span>
+    <input id="cp-h" type="text" inputmode="decimal" autocomplete="off" /></label>
+  <div class="cp-sep">allowance claimed for this day</div>
+  <div class="cp-alw" id="cp-alw"></div>
+  <div class="cp-foot">
+    <button class="btn-text" type="button" id="cp-clear">Clear</button>
+  </div>
 </div>
 
 <script src="assets/shell.js"></script>
@@ -1240,11 +1315,52 @@
   var pdEditing = false;
 
   function pdCellKey(leafKey, isoDate) { return leafKey + '@' + isoDate; }
-  function leafHours(leaf, isoDate) {
+  /* A cell carries the hours, the times they came from and the one
+     allowance claimed against them — the same shape the other two
+     timesheet screens keep. */
+  function leafCell(leaf, isoDate) {
     var ck = pdCellKey(leaf.id, isoDate);
     if (pdDraft && ck in pdDraft) return pdDraft[ck];
     if (ck in pdSaved) return pdSaved[ck];
-    return leaf.hours[isoDate] || 0;
+    return { h: leaf.hours[isoDate] || 0, s: '', f: '', a: [] };
+  }
+  function leafHours(leaf, isoDate) { return leafCell(leaf, isoDate).h || 0; }
+  /* site§supervisor§worker§path — the site is what decides how a cell
+     behaves, so it is read back off the key. */
+  function leafSite(leaf) { return String(leaf.id).split('\u00a7')[0]; }
+
+  var ALLOWANCES_BY_SITE = {
+    'MMA VIGILANT – 360': [
+      { name: 'Height Allowance', type: 'amount' },
+      { name: 'Rope Allowance',   type: 'amount' },
+      { name: 'Crib Break',       type: 'check' },
+      { name: 'Breakfast',        type: 'check' }
+    ],
+    'MMA VIGILANT ROV': [
+      { name: 'Dive Allowance',  type: 'amount' },
+      { name: 'Offshore Living', type: 'check' },
+      { name: 'Crib Break',      type: 'check' }
+    ],
+    'SA BHP OLYMPIC DAM': [
+      { name: 'Travel Allowance', type: 'amount' },
+      { name: 'Site Allowance',   type: 'amount' },
+      { name: 'Night Shift',      type: 'check' },
+      { name: 'Crib Break',       type: 'check' },
+      { name: 'Breakfast',        type: 'check' }
+    ]
+  };
+  function allowancesFor(site) { return ALLOWANCES_BY_SITE[site] || []; }
+  /* How a site records time, set in its own settings. */
+  var ENTRY_BY_SITE = {
+    'MMA VIGILANT – 360': 'period',
+    'MMA VIGILANT ROV':   'period',
+    'SA BHP OLYMPIC DAM': 'hours'
+  };
+  function entryModeFor(site) { return ENTRY_BY_SITE[site] === 'hours' ? 'hours' : 'period'; }
+  function allowTipOf(list) {
+    return (list || []).map(function (x) {
+      return x.type === 'amount' ? x.name + ' (' + x.qty + ')' : x.name;
+    }).join(' · ');
   }
 
   function periodDays(rows) {
@@ -1319,13 +1435,26 @@
   /* A bare number in a column of names reads as a value, so counts say
      what they count. */
   function countText(n, noun) { return n + ' ' + noun + (n === 1 ? '' : 's'); }
-  function hoursCell(n, leaf, isoDate) {
+  /* Named apart from the Timesheets tab's own hoursCell: two functions
+     of the same name in one scope, and the later one silently won —
+     which is why these day cells had been printing nothing at all. */
+  function pdHoursCell(n, leaf, isoDate) {
+    var c = leaf ? leafCell(leaf, isoDate) : null;
+    var flag = c && c.a && c.a.length
+      ? '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowTipOf(c.a)) + '">' + ICO_FLAG + '</span>'
+      : '';
     if (pdEditing && leaf) {
-      return '<td class="pd-day' + todayCls(isoDate) + '"><input class="pd-input" type="text" inputmode="decimal" ' +
-        'data-cell="' + Shell.esc(pdCellKey(leaf.id, isoDate)) + '" value="' + (n > 0 ? fmtHours(n) : '') + '" aria-label="Hours" /></td>';
+      var ck = pdCellKey(leaf.id, isoDate);
+      var changed = pdDraft && ck in pdDraft;
+      return '<td class="pd-day' + todayCls(isoDate) + '">' +
+        '<button class="hr-cell' + (changed ? ' changed' : '') + '" type="button" data-cell="' + Shell.esc(ck) + '">' +
+        flag + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
     }
-    return '<td class="pd-day' + todayCls(isoDate) + '">' + (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+    return '<td class="pd-day' + todayCls(isoDate) + '">' + flag +
+      (n > 0 ? fmtHours(n) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
+  var ICO_FLAG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+    '<path d="M7 22V2l10 5-10 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   function pdCaret() {
     return '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
   }
@@ -1408,7 +1537,7 @@
           '<td class="pf-sup">' + Shell.highlight(sup.name, state.query) + '</td>' +
           '<td class="pf-worker"><span class="count-pill">' + countText(sup.kids.length, 'worker') + '</span></td>' +
           '<td class="pf-task"><span class="count-pill">' + countText(nTasks, 'task') + '</span></td>' +
-          ds.map(function (d) { return hoursCell(sumOn(leaves, toIso(d))); }).join('') +
+          ds.map(function (d) { return pdHoursCell(sumOn(leaves, toIso(d))); }).join('') +
           '<td class="pd-total">' + fmtHours(sumAll(leaves, ds)) + '</td>' +
         '</tr>');
         first = false; count++;
@@ -1420,7 +1549,7 @@
               '<td class="pf-site"></td><td class="pf-sup"></td>' +
               '<td class="pf-worker" data-tip="Worker — ' + Shell.esc(wk.name) + '">' + Shell.highlight(wk.name, state.query) + '</td>' +
               '<td class="pf-task" data-tip="Task — ' + Shell.esc(task.name) + '">' + Shell.highlight(task.name, state.query) + '</td>' +
-              ds.map(function (d) { return hoursCell(leafHours(task, toIso(d)), task, toIso(d)); }).join('') +
+              ds.map(function (d) { return pdHoursCell(leafHours(task, toIso(d)), task, toIso(d)); }).join('') +
               '<td class="pd-total">' + fmtHours(sumAll([task], ds)) + '</td>' +
             '</tr>');
             count++;
@@ -1437,7 +1566,7 @@
     tree.forEach(function (s) { allLeaves = allLeaves.concat(leavesOf(s)); });
     out.push('<tr class="pd-foot">' +
       '<td class="pf-site">Total hours</td><td class="pf-sup"></td><td class="pf-worker"></td><td class="pf-task"></td>' +
-      ds.map(function (d) { return hoursCell(sumOn(allLeaves, toIso(d))); }).join('') +
+      ds.map(function (d) { return pdHoursCell(sumOn(allLeaves, toIso(d))); }).join('') +
       '<td class="pd-total">' + fmtHours(sumAll(allLeaves, ds)) + '</td></tr>');
 
     openKeys = keys;
@@ -1481,7 +1610,7 @@
           '<span class="pd-tree" style="padding-left:' + (level * 22) + 'px">' +
           (node.kids ? pdCaret() : '') + (icon || '') +
           '<span class="name">' + Shell.highlight(node.name, state.query) + '</span></span></td>' +
-        ds.map(function (d) { return hoursCell(sumOn(leaves, toIso(d)), leaf, toIso(d)); }).join('') +
+        ds.map(function (d) { return pdHoursCell(sumOn(leaves, toIso(d)), leaf, toIso(d)); }).join('') +
         '<td class="pd-total">' + fmtHours(sumAll(leaves, ds)) + '</td>' +
       '</tr>');
       return open;
@@ -1509,7 +1638,7 @@
     tree.forEach(function (s) { allLeaves = allLeaves.concat(leavesOf(s)); });
     out.push('<tr class="pd-foot">' +
       '<td class="pd-label">Total hours</td>' +
-      ds.map(function (d) { return hoursCell(sumOn(allLeaves, toIso(d))); }).join('') +
+      ds.map(function (d) { return pdHoursCell(sumOn(allLeaves, toIso(d))); }).join('') +
       '<td class="pd-total">' + fmtHours(sumAll(allLeaves, ds)) + '</td>' +
     '</tr>');
 
@@ -2195,21 +2324,173 @@
     Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved to the timesheets.');
   });
 
-  tbody.addEventListener('input', function (e) {
-    var box = e.target.closest('.pd-input');
-    if (!box || !pdDraft) return;
-    var raw = box.value.trim().replace(',', '.');
-    var val = raw === '' ? 0 : Number(raw);
-    if (isNaN(val) || val < 0) return;
-    var cell = box.getAttribute('data-cell');
-    pdDraft[cell] = val;
-    box.classList.add('changed');
-    var caretPos = box.selectionStart;
+  /* ─── One cell ──────────────────────────────────────────────────────
+     The same editor the other two timesheet screens use: the site says
+     whether its hours are given or worked out from times, one allowance
+     is claimed against the day, and leaving the editor keeps what is in
+     it rather than asking for a button first. */
+  var pop = document.getElementById('cell-pop'), popCell = null, popSite = '';
+
+  function elx(id) { return document.getElementById(id); }
+  function normTime(v) {
+    v = (v || '').trim();
+    if (!v) return '';
+    var m = /^(\d{1,2})[:.]?(\d{2})?$/.exec(v);
+    if (!m) return v;
+    var h = Math.min(23, Number(m[1])), mi = Math.min(59, Number(m[2] || 0));
+    return (h < 10 ? '0' : '') + h + ':' + (mi < 10 ? '0' : '') + mi;
+  }
+  function parseTime(v) {
+    var t = normTime(v), m = /^(\d{2}):(\d{2})$/.exec(t);
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+  }
+  function hoursBetween(a, b) {
+    var x = parseTime(a), y = parseTime(b);
+    if (x == null || y == null) return null;
+    var mins = y - x;
+    if (mins <= 0) mins += 24 * 60;
+    return Math.round(mins / 60 * 100) / 100;
+  }
+
+  function renderCellAllowances(site, claimed) {
+    var list = allowancesFor(site);
+    if (!list.length) {
+      elx('cp-alw').innerHTML = '<div class="alw-empty">This site has no allowances.</div>';
+      return;
+    }
+    var has = (claimed || [])[0] || null, amount = false;
+    var opts = '<option value="">None</option>' + list.map(function (a) {
+      var on = has && has.name === a.name;
+      if (on && a.type === 'amount') amount = true;
+      return '<option' + (on ? ' selected' : '') + '>' + Shell.esc(a.name) + '</option>';
+    }).join('');
+    elx('cp-alw').innerHTML = '<div class="alw-pick"><select id="cp-alw-name">' + opts + '</select>' +
+      '<input class="alw-qty" id="cp-alw-qty" type="text" inputmode="numeric" placeholder="Qty"' +
+      ' value="' + (amount ? has.qty : '') + '"' + (amount ? '' : ' hidden') + ' /></div>';
+  }
+  function cellAllowances(site) {
+    var sel = elx('cp-alw-name');
+    if (!sel || !sel.value) return [];
+    var a = null;
+    allowancesFor(site).forEach(function (x) { if (x.name === sel.value) a = x; });
+    if (!a) return [];
+    if (a.type !== 'amount') return [{ name: a.name, type: 'check' }];
+    var q = Number((elx('cp-alw-qty') || {}).value);
+    return [{ name: a.name, type: 'amount', qty: !q || q < 1 ? 1 : q }];
+  }
+  elx('cp-alw').addEventListener('change', function (e) {
+    if (!e.target.closest('#cp-alw-name')) return;
+    var sel = elx('cp-alw-name'), q = elx('cp-alw-qty'), a = null;
+    allowancesFor(popSite).forEach(function (x) { if (x.name === sel.value) a = x; });
+    var amount = !!a && a.type === 'amount';
+    q.hidden = !amount;
+    q.value = amount ? (q.value || '1') : '';
+  });
+
+  function cellAt(key) {
+    var found = null;
+    [].forEach.call(tbody.querySelectorAll('.hr-cell'), function (x) {
+      if (!found && x.getAttribute('data-cell') === key) found = x;
+    });
+    return found;
+  }
+  function savedCell(ck) {
+    if (pdDraft && ck in pdDraft) return pdDraft[ck];
+    if (ck in pdSaved) return pdSaved[ck];
+    return null;
+  }
+  function openCell(btn) {
+    popCell = btn.getAttribute('data-cell');
+    popSite = String(popCell).split('\u00a7')[0];
+    var at = popCell.lastIndexOf('@'), id = popCell.slice(0, at), iso = popCell.slice(at + 1);
+    var c = savedCell(popCell);
+    if (!c) {
+      /* Nothing typed against it yet, so whatever the grid already shows
+         for that leaf is the starting point. */
+      var n = 0;
+      [].forEach.call([0], function () {});
+      c = { h: Number(btn.textContent.trim()) || 0, s: '', f: '', a: [] };
+    }
+    var period = entryModeFor(popSite) === 'period';
+    elx('cp-times').hidden = !period;
+    elx('cp-h').disabled = period;
+    elx('cp-hrow').classList.toggle('derived', period);
+    renderCellAllowances(popSite, c.a);
+    elx('cp-h').value = c.h ? fmtHours(c.h) : '';
+    elx('cp-s').value = c.s || '';
+    elx('cp-f').value = c.f || '';
+
+    var r = btn.getBoundingClientRect();
+    pop.classList.add('open');
+    var top = r.bottom + 6, left = r.right - pop.offsetWidth;
+    if (top + pop.offsetHeight > window.innerHeight - 8) top = r.top - pop.offsetHeight - 6;
+    pop.style.top = Math.max(8, top) + 'px';
+    pop.style.left = Math.max(8, left) + 'px';
+    elx('cp-h').focus();
+    elx('cp-h').select();
+  }
+  function closeCell() { pop.classList.remove('open'); popCell = null; }
+
+  function sameCell(a, b) {
+    if (!b) return false;
+    if (a.h !== b.h || (a.s || '') !== (b.s || '') || (a.f || '') !== (b.f || '')) return false;
+    var x = a.a || [], y = b.a || [];
+    if (x.length !== y.length) return false;
+    return x.every(function (v, i) {
+      return v.name === y[i].name && v.type === y[i].type && (v.qty || 0) === (y[i].qty || 0);
+    });
+  }
+  function commitCell() {
+    if (!popCell || !pdDraft) return;
+    var period = entryModeFor(popSite) === 'period';
+    var v, sT = '', fT = '';
+    if (period) {
+      sT = normTime(elx('cp-s').value); fT = normTime(elx('cp-f').value);
+      var fromTimes = hoursBetween(sT, fT);
+      if (fromTimes == null) { sT = ''; fT = ''; v = 0; } else { v = fromTimes; }
+    } else {
+      var h = elx('cp-h').value.trim().replace(',', '.');
+      v = h === '' ? 0 : Number(h);
+    }
+    if (isNaN(v) || v < 0) v = 0;
+    var next = { h: v, s: sT, f: fT, a: cellAllowances(popSite) };
+    var was = savedCell(popCell);
+    if (!sameCell(next, was)) pdDraft[popCell] = next;
+    closeCell();
     render();
     syncPdBar();
-    var again = tbody.querySelector('.pd-input[data-cell="' + cell.replace(/"/g, '\\"') + '"]');
-    if (again) { again.focus(); try { again.setSelectionRange(caretPos, caretPos); } catch (err) {} }
+  }
+
+  ['cp-s', 'cp-f'].forEach(function (id) {
+    elx(id).addEventListener('input', function () {
+      var v = hoursBetween(elx('cp-s').value, elx('cp-f').value);
+      if (v != null) elx('cp-h').value = fmtHours(v);
+    });
+    elx(id).addEventListener('blur', function () {
+      this.value = normTime(this.value);
+      var v = hoursBetween(elx('cp-s').value, elx('cp-f').value);
+      if (v != null) elx('cp-h').value = fmtHours(v);
+    });
   });
+  elx('cp-clear').addEventListener('click', function () {
+    if (popCell && pdDraft) pdDraft[popCell] = { h: 0, s: '', f: '', a: [] };
+    closeCell(); render(); syncPdBar();
+  });
+  pop.addEventListener('click', function (e) { e.stopPropagation(); });
+  pop.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); commitCell(); }
+    if (e.key === 'Escape') { e.stopPropagation(); closeCell(); }
+  });
+  tbody.addEventListener('click', function (e) {
+    var cell = e.target.closest('.hr-cell');
+    if (!cell) return;
+    e.stopPropagation();
+    var k = cell.getAttribute('data-cell');
+    if (popCell) commitCell();
+    openCell(cellAt(k) || cell);
+  });
+  document.addEventListener('click', function () { if (popCell) commitCell(); });
+  window.addEventListener('scroll', function () { if (popCell) commitCell(); }, true);
 
   var rowsSwitch = document.getElementById('rows-switch');
   rowsSwitch.addEventListener('click', function (e) {
@@ -2224,7 +2505,7 @@
   /* The period tree keeps its own open/closed map. */
   tbody.addEventListener('click', function (e) {
     var pd = e.target.closest('[data-pd]');
-    if (!pd || state.mode !== 'period' || e.target.closest('.pd-input')) return;
+    if (!pd || state.mode !== 'period' || e.target.closest('.hr-cell')) return;
     var k = pd.getAttribute('data-pd');
     pdCollapsed[k] = pdCollapsed[k] !== true;
     render();
