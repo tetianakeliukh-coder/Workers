@@ -182,21 +182,24 @@
   }
   /* Clear on the left, Done on the right: the one that undoes and the one
      that commits sit at opposite ends of the same line. */
-  .cp-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .cp-foot { display: flex; align-items: center; justify-content: flex-start; margin-top: 10px; }
 
   /* One line per allowance the site offers: claimed or not, and for the
      ones measured by quantity, how many. */
   /* Name first, quantity after, on one line: a cell carries one claim,
      and the shape says so. */
-  .alw-pick { display: flex; align-items: center; gap: 6px; }
+  /* A grid, not a flex row: the quantity's column is there whether or
+     not an allowance uses one, so naming a different allowance never
+     resizes the name beside it. */
+  .alw-pick { display: grid; grid-template-columns: 1fr 54px; align-items: center; gap: 6px; }
   .alw-pick select {
-    flex: 1; min-width: 0; height: 32px; padding: 0 6px;
+    min-width: 0; height: 32px; padding: 0 6px;
     font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
     border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
   }
   .alw-pick select:focus { outline: none; border-color: var(--primary); }
   .alw-qty {
-    width: 54px; height: 32px; flex-shrink: 0; padding: 0 8px; text-align: right;
+    width: 100%; height: 32px; padding: 0 8px; text-align: right;
     font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
     border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
   }
@@ -971,9 +974,12 @@
        a cell carries at most one. Which ones exist is the site's. -->
   <div class="cp-sep">allowance claimed for this day</div>
   <div class="cp-alw" id="cp-alw"></div>
+  <!-- No Done: the page is in edit mode and Save at the top is the
+       commit. What is typed here is kept on the way out, so a button
+       that only repeats that would teach it was needed. Clear stays,
+       because emptying the day at a stroke is its own thing. -->
   <div class="cp-foot">
     <button class="btn-text" type="button" id="cp-clear">Clear</button>
-    <button class="btn-primary" type="button" id="cp-done">Done</button>
   </div>
 </div>
 
@@ -2085,7 +2091,6 @@
       if (v != null) el('cp-h').value = fmtHours(v);
     });
   });
-  el('cp-done').addEventListener('click', commitCell);
   el('cp-clear').addEventListener('click', function () {
     if (popKey && draft) draft[popKey + '|' + popDate] = { h: 0, s: '', f: '', a: [] };
     closeCell();
