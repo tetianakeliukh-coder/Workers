@@ -526,6 +526,39 @@ body.shell-mobile .q-fab { bottom: 20px; right: 20px; }
 /* ─── Structure switch ─────────────────────────────────────────────────
    A prototype device: the same screens, organised two ways, so the two
    can be compared rather than argued about. */
+/* ─── The prototype dock ──────────────────────────────────────────────
+   One small button in the corner holding every switcher a screen offers,
+   so the prototype's own controls stop taking a third of the bottom
+   edge from the screen they are there to show. */
+.proto-dock {
+  position: fixed; right: 20px; bottom: 20px; z-index: 402;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.proto-fab {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--white); border: 1px solid var(--grey-350);
+  box-shadow: var(--shadow-dropdown); cursor: pointer; color: var(--grey-700);
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.proto-fab:hover { color: var(--text-main); border-color: var(--grey-400); }
+.proto-fab.on { color: var(--primary); border-color: var(--primary); }
+.proto-panel {
+  display: none; flex-direction: column; gap: 10px; padding: 12px;
+  background: var(--white); border: 1px solid var(--grey-350); border-radius: 12px;
+  box-shadow: var(--shadow-dropdown);
+}
+.proto-dock.open .proto-panel { display: flex; }
+.proto-row { display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+.proto-row[hidden] { display: none; }
+.proto-lab { font-size: 12px; font-weight: 500; color: var(--grey-600); white-space: nowrap; }
+/* Three classes, to outrank the per-screen rules that pin each switcher
+   to its own corner — those live in the page, which is loaded after. */
+.proto-panel .proto-row .vp-switch {
+  position: static; left: auto; right: auto; bottom: auto; top: auto;
+  box-shadow: none; border: 1px solid var(--grey-350);
+}
+
 /* It is built with the .vp-switch class for its looks, which pins a
    right edge too — and a fixed box given both edges stretches across the
    window, laying an invisible bar over every other switcher down there.

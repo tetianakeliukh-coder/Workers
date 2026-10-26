@@ -345,11 +345,38 @@
      carries the answer as a line and asks for the task. */
   body.addvar-steps.addstep-1 .add-split,
   body.addvar-steps.addstep-1 .add-sum { display: none; }
-  body.addvar-steps.addstep-2 .add-one > .add-card:first-child { display: none; }
-  /* Each variant holds one height of its own: constant within a flow,
-     which is what must not jump, and the stepped one has no panel of
-     fields to make room for. */
+  body.addvar-steps.addstep-2 .add-one > .add-card { display: none; }
+  body.addvar-steps.addstep-2 .add-one > .add-card.add-split { display: grid; }
+  /* With the steps named above them the panels have nothing left to
+     separate, so they stop drawing themselves. */
+  body.addvar-steps .add-card { border: none; padding: 0; }
+  body.addvar-steps .add-split.add-card > #mode-new { padding-right: 20px; padding-left: 0; }
+  body.addvar-steps .add-split.add-card > #mode-recent { padding-left: 20px; }
+
+  .add-steps {
+    display: flex; align-items: center; gap: 10px; list-style: none;
+    font-size: 13px; color: var(--grey-600);
+  }
+  .add-steps li { display: flex; align-items: center; gap: 8px; }
+  .add-steps li + li::before {
+    content: ''; width: 24px; height: 1px; background: var(--grey-350); margin-right: 2px;
+  }
+  .add-steps .n {
+    width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--grey-100); color: var(--grey-600); font-size: 12px; font-weight: 600;
+  }
+  .add-steps li.on { color: var(--text-main); font-weight: 500; }
+  .add-steps li.on .n { background: var(--primary); color: var(--white); }
+  .add-steps li.done .n { background: var(--bg-blue-light); color: var(--primary); }
+  /* Each variant holds one height of its own, and the stepped one gets
+     one per step: a step is a change of screen, where a change of size
+     is expected — unlike a field appearing under the pointer. */
   body.addvar-steps .add-modal .modal-body { height: 470px; }
+  body.addvar-steps.addstep-1 .add-modal .modal-body { height: 206px; }
+  /* The stepper already names this step, so the panel's own heading
+     would be the same words twice. */
+  body.addvar-steps .add-one > .add-card > .sec-head { display: none; }
   /* Clear of the open-questions button, which sits at right 20. */
   .vp-switch.addvar-switch { right: 76px; bottom: 60px; }
   body.is-narrow .addvar-switch { display: none; }
@@ -561,8 +588,6 @@
   .vp-switch.rows-switch { right: 216px; }
   /* Four of these in one line runs off a narrow window, and the last one
      is the one nobody finds. They sit two to a row instead. */
-  .vp-switch.alw-switch { right: 328px; bottom: 60px; }
-  body.is-narrow .alw-switch { display: none; }
 
   /* ─── Week dropdown ────────────────────────────────────────────── */
   .period-dd .dd-trigger { min-width: 232px; }
@@ -763,21 +788,6 @@
      claim can be read without opening anything — the click still falls
      through to the cell, since a button is fired by its children. */
   .hr-cell .alw-mark { cursor: pointer; }
-  #grid tbody tr.row-alw td { border-bottom: 1px solid var(--row-divider); }
-  .row-alw .alw-lbl {
-    font-size: 12px; color: var(--grey-600);
-    padding-left: 62px; display: inline-block;
-  }
-  .row-flat.row-alw .alw-lbl { padding-left: 0; }
-  .row-alw td.col-day { font-size: 12px; }
-  .alw-chip { color: var(--grey-700); font-size: 12px; }
-  .alw-cell {
-    width: 100%; height: 26px; padding: 0 6px; border-radius: 6px;
-    border: 1px dashed var(--grey-350); background: var(--white); cursor: pointer;
-    font-family: var(--fs-sans); font-size: 12px; color: var(--grey-700);
-    display: flex; align-items: center; justify-content: flex-end;
-  }
-  .alw-cell:hover { border-color: var(--primary); border-style: solid; background: var(--bg-blue-light); }
 
   /* Adding into a group the table already shows: the site and supervisor
      are the row you clicked, so the dialog only has the task left to ask.
@@ -913,16 +923,6 @@
 </div>
 
 
-<div class="vp-switch alw-switch" id="alw-switch" role="group" aria-label="Allowances">
-  <button type="button" data-alwview="mark" class="on">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M7 22V2l10 5-10 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Flag
-  </button>
-  <button type="button" data-alwview="row">
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 5h11M2.5 9.5h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M4.5 12.5h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="1 2"/></svg>
-    Own row
-  </button>
-</div>
 
 <!-- ── Prototype viewport switcher ──────────────────────────────── -->
 <div class="vp-switch rows-switch" id="rows-switch" role="group" aria-label="Row layout">
@@ -972,6 +972,13 @@
            top; the two ways of naming the task sit under them as peers,
            side by side, because that is what two columns say. -->
       <div class="add-one">
+        <!-- Stepped variant only: two steps named, so the first screen
+             says there is a second. -->
+        <ol class="add-steps" id="add-steps" hidden>
+          <li data-step="1"><span class="n">1</span>Site and supervisor</li>
+          <li data-step="2"><span class="n">2</span>Task</li>
+        </ol>
+
         <!-- Two panels, so where the row goes and what it is are told
              apart at a glance rather than by reading. -->
         <div class="add-card">
@@ -1433,11 +1440,9 @@
       return x.type === 'amount' ? x.name + ' (' + x.qty + ')' : x.name;
     }).join(' · ');
   }
-  /* In 'mark' mode a cell that carries claims flags itself; in 'row' mode
-     the line underneath says it instead, so the flag would only be
-     saying it twice. */
+  /* A cell that carries a claim flags itself. */
   function alwDot(key, isoDate) {
-    if (alwView !== 'mark' || !key) return '';
+    if (!key) return '';
     var a = allowOf(key, isoDate);
     if (!a.length) return '';
     return '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowTip(a)) + '">' + ICO_ALW + '</span>';
@@ -1458,43 +1463,6 @@
     return dayCell(value, isoDate, key);
   }
 
-  /* The second display: a thin line under the task carrying that week's
-     claims, one cell per day, opening the same editor. */
-  function alwRow(t, ds) {
-    if (alwView !== 'row') return '';
-    return '<tr class="row-alw">' +
-      '<td class="col-label"><span class="alw-lbl">Allowances</span></td>' +
-      ds.map(function (d) { return alwRowCell(t.key, iso(d)); }).join('') +
-      '<td class="col-total"></td><td class="col-act"></td></tr>';
-  }
-  function alwRowFlat(t, ds) {
-    if (alwView !== 'row') return '';
-    return '<tr class="row-alw row-flat">' +
-      '<td class="col-site"></td><td class="col-sup"></td>' +
-      '<td class="col-task"><span class="alw-lbl">Allowances</span></td>' +
-      ds.map(function (d) { return alwRowCell(t.key, iso(d)); }).join('') +
-      '<td class="col-total"></td><td class="col-act"></td></tr>';
-  }
-  function alwRowCell(key, isoDate) {
-    var a = allowOf(key, isoDate), lock = statusFor(key, isoDate).locked;
-    var inner = a.length
-      ? '<span class="alw-chip">' + a.map(function (x) {
-          return Shell.esc(abbr(x.name)) + (x.type === 'amount' ? ' ' + x.qty : '');
-        }).join('') + '</span>'
-      : '<span class="cell-empty">&mdash;</span>';
-    if (!state.editing || lock) {
-      return '<td class="col-day' + todayCls(isoDate) + '"' +
-        (a.length ? ' data-tip="Allowance &mdash; ' + Shell.esc(allowTip(a)) + '"' : '') + '>' + inner + '</td>';
-    }
-    return '<td class="col-day' + todayCls(isoDate) + '">' +
-      '<button class="hr-cell alw-cell" type="button" data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
-      (a.length ? ' data-tip="Allowance &mdash; ' + Shell.esc(allowTip(a)) + '"' : '') + '>' + inner + '</button></td>';
-  }
-  /* "Height Allowance" in a 92px column is "Height" — the tooltip and the
-     editor both carry the whole name. */
-  function abbr(name) {
-    return name.replace(/\s*Allowance$/, '');
-  }
   function caret() {
     return '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
   }
@@ -1513,7 +1481,6 @@
   var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
   var rowsMode = 'flat';
-  var alwView = 'mark';     // prototype: 'mark' or 'row'
 
   /* The label columns are draggable: narrow them and the day columns get
      the space back. */
@@ -1587,8 +1554,6 @@
             '<td class="col-act"></td>' +
           '</tr>');
           count++;
-          var ar = alwRowFlat(t, ds);
-          if (ar) { rows.push(ar); count++; }
         });
       });
     });
@@ -1647,8 +1612,6 @@
             '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             '<td class="col-act"></td></tr>');
           shown++;
-          var ar = alwRow(t, ds);
-          if (ar) { rows.push(ar); shown++; }
         });
       });
     });
@@ -1928,15 +1891,6 @@
     });
     renderWeek();
   }
-  var alwSwitch = document.getElementById('alw-switch');
-  alwSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-alwview]');
-    if (!b) return;
-    alwView = b.getAttribute('data-alwview');
-    alwSwitch.querySelectorAll('[data-alwview]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    renderGrid();
-  });
-
   var rowsSwitch = document.getElementById('rows-switch');
   rowsSwitch.addEventListener('click', function (e) {
     var b = e.target.closest('[data-rows]');
@@ -2322,6 +2276,18 @@
     var onStepOne = stepped && addStep === 1;
     el('add-next').hidden = !onStepOne;
     el('add-go').hidden = onStepOne;
+
+    /* The stepper belongs to the two-step shape, and only where there
+       are two steps left to take — from a group row the first is
+       already behind you. */
+    el('add-steps').hidden = !stepped;
+    if (stepped) {
+      [].forEach.call(el('add-steps').children, function (li) {
+        var n = Number(li.getAttribute('data-step'));
+        li.classList.toggle('on', n === addStep);
+        li.classList.toggle('done', n < addStep);
+      });
+    }
   }
 
   function syncColumns() {

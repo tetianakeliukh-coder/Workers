@@ -546,6 +546,72 @@
     initTips(document);
     renderQuestions();
     renderStructureSwitch();
+    initProtoDock();
+  }
+
+  /* ─── The prototype dock ───────────────────────────────────────────
+     Every switcher on a screen is a prototype device, not product, and
+     four of them laid along the bottom edge take a third of it. They are
+     gathered behind one small button and labelled, so the screen under
+     them is the thing on show. */
+  var ICO_SLIDERS = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none">' +
+    '<path d="M3 6h9M15 6h2M3 14h2M8 14h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+    '<circle cx="13.5" cy="6" r="2" stroke="currentColor" stroke-width="1.6"/>' +
+    '<circle cx="6.5" cy="14" r="2" stroke="currentColor" stroke-width="1.6"/></svg>';
+
+  function initProtoDock() {
+    var items = [].slice.call(document.querySelectorAll('.vp-switch'));
+    if (!items.length || document.getElementById('proto-dock')) return;
+
+    var dock = document.createElement('div');
+    dock.className = 'proto-dock';
+    dock.id = 'proto-dock';
+
+    var panel = document.createElement('div');
+    panel.className = 'proto-panel';
+    items.forEach(function (sw) {
+      var row = document.createElement('div');
+      row.className = 'proto-row';
+      var lab = document.createElement('span');
+      lab.className = 'proto-lab';
+      /* The structure switcher carries its own label inside itself; the
+         rest name themselves to a screen reader. */
+      var own = sw.querySelector('.sw-label');
+      if (own) { lab.textContent = own.textContent.trim(); own.parentNode.removeChild(own); }
+      else lab.textContent = (sw.getAttribute('aria-label') || 'Option').replace(/^Prototype /, '');
+      sw.classList.add('in-dock');
+      row.appendChild(lab);
+      row.appendChild(sw);
+      panel.appendChild(row);
+    });
+
+    var btn = document.createElement('button');
+    btn.className = 'proto-fab';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Prototype options');
+    btn.setAttribute('data-tip', 'Prototype options');
+    btn.innerHTML = ICO_SLIDERS;
+
+    dock.appendChild(panel);
+    dock.appendChild(btn);
+    document.body.appendChild(dock);
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      /* A switcher the screen has hidden for this width should not leave
+         an empty row behind it. */
+      [].forEach.call(panel.querySelectorAll('.proto-row'), function (r) {
+        var sw = r.querySelector('.vp-switch');
+        r.hidden = !sw || getComputedStyle(sw).display === 'none';
+      });
+      dock.classList.toggle('open');
+      btn.classList.toggle('on', dock.classList.contains('open'));
+    });
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () {
+      dock.classList.remove('open');
+      btn.classList.remove('on');
+    });
   }
 
   if (document.readyState === 'loading') {
