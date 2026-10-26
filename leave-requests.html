@@ -93,7 +93,11 @@
 
   /* The request is read once; the roster is scanned, so it takes the
      room. */
-  .rd-split { display: grid; grid-template-columns: 320px 1fr; gap: 20px; padding: 20px 24px; min-height: 0; overflow: auto; }
+  /* start, not stretch: the details card is as tall as what it says. */
+  .rd-split {
+    display: grid; grid-template-columns: 320px 1fr; gap: 20px;
+    padding: 20px 24px; min-height: 0; overflow: auto; align-items: start;
+  }
   .rd-card { border: 1px solid var(--grey-350); border-radius: 10px; padding: 16px; }
   .rd-card-title { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 12px; }
   .rd-rows { display: grid; grid-template-columns: 116px 1fr; gap: 10px 16px; align-items: baseline; }
@@ -113,6 +117,7 @@
      reads daily should not be a second dialect of itself. */
   .rd-roster {
     display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0;
+    border: 1px solid var(--grey-350); border-radius: 10px; padding: 16px;
   }
   .rd-roster-head { display: flex; align-items: center; gap: 12px; }
   .ros-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
@@ -128,6 +133,11 @@
   }
   .ros-stack { position: relative; width: max-content; }
   table.ros-board { border-collapse: separate; border-spacing: 0; width: max-content; }
+  /* The shell sets a row height for every table on the page — 52px for a
+     body row, 44 for a head — which is right for a list of records and
+     wrong for a board. The board's rows are its own. */
+  .ros-board thead tr { height: 32px; }
+  .ros-board tbody tr { height: auto; }
   .ros-board th, .ros-board td {
     padding: 0; margin: 0; box-sizing: border-box;
     border-right: 1px solid var(--grey-300); border-bottom: 1px solid var(--grey-300);
@@ -138,18 +148,21 @@
   }
   .ros-board th:last-child, .ros-board td:last-child { border-right: none; }
   .ros-board tbody tr:last-child > td { border-bottom: none; }
-  .ros-board thead th { position: sticky; top: 0; z-index: 9; height: 35px; font-weight: 400; }
+  .ros-board thead th { position: sticky; top: 0; z-index: 9; height: 32px; font-weight: 400; }
+  /* The days being asked for, said in the headings as well as by the box. */
+  .ros-board thead th.day.req { background: #e9eeff; color: var(--primary); font-weight: 600; }
   .ros-board thead th.day { width: 64px; min-width: 64px; }
   .ros-board thead th.label { z-index: 10; }
   .ros-board .label {
     position: sticky; left: 0; z-index: 2;
     width: 285px; min-width: 285px; max-width: 285px; text-align: left; padding: 0 12px;
   }
-  .ros-board tr.project > td { height: 32px; background: var(--grey-100); position: sticky; top: 35px; z-index: 7; }
-  .ros-board tr.project > td.label { z-index: 8; }
-  .ros-board tr.position > td { height: 32px; background: var(--white); position: sticky; top: 67px; z-index: 5; }
-  .ros-board tr.position > td.label { z-index: 6; }
-  .ros-board tr.worker > td { height: 36px; }
+  .ros-board tr.project > td { height: 28px; background: var(--grey-100); position: sticky; top: 32px; z-index: 7; }
+  .ros-board tr.position > td { height: 32px; background: var(--white); }
+  /* Every sticky label sits above the band and above the day cells, or
+     a block slides over the names as the board scrolls. */
+  .ros-board td.label, .ros-board tr.project > td.label, .ros-board tr.position > td.label { z-index: 10; }
+  .ros-board thead th.label { z-index: 12; }
   .ros-board .row-label { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .ros-board .row-label.l1 { padding-left: 16px; }
   .ros-board .row-label.l2 { padding-left: 40px; }
@@ -182,8 +195,16 @@
   /* The requested stretch, laid over every row at once — an overlay, not
      a cell, so it cannot push the board about. */
   .ros-band {
-    position: absolute; top: 35px; bottom: 0; border-radius: 4px; pointer-events: none; z-index: 4;
-    background: rgba(0, 51, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(0, 51, 255, 0.4);
+    position: absolute; top: 0; bottom: 0; border-radius: 6px; pointer-events: none; z-index: 8;
+    background: rgba(0, 51, 255, 0.06); box-shadow: inset 0 0 0 2px var(--primary);
+  }
+  /* Under the box rather than over its top edge, where the sticky day
+     headings are painted above it. */
+  .ros-band .tag {
+    position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
+    height: 18px; padding: 0 8px; border-radius: 6px 6px 0 0;
+    background: var(--primary); color: var(--white);
+    font-size: 11px; font-weight: 600; line-height: 18px; white-space: nowrap;
   }
   .ros-key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: var(--grey-600); }
   .ros-key span { display: inline-flex; align-items: center; gap: 6px; }
@@ -669,7 +690,9 @@
     /* Day headings read dd.mm, as they do on the rostering board. */
     var head = '<thead><tr><th class="label"><div class="row-label"><span class="name">Roster</span></div></th>' +
       days.map(function (x) {
-        return '<th class="day">' + pad2(x.getDate()) + '.' + pad2(x.getMonth() + 1) + '</th>';
+        var k = isoOf(x), inReq = k >= r.from && k <= r.to;
+        return '<th class="day' + (inReq ? ' req' : '') + '">' +
+          pad2(x.getDate()) + '.' + pad2(x.getMonth() + 1) + '</th>';
       }).join('') + '</tr></thead>';
 
     var body = '';
@@ -679,18 +702,15 @@
         days.map(function () { return '<td></td>'; }).join('') + '</tr>';
     }
     list.forEach(function (a) {
-      /* Project, then the position within it, then the worker on it —
-         the board's own three levels, with only one worker on this one
-         because this is one worker's roster. */
+      /* Project, then the position — and the blocks sit on the position
+         row rather than on a row of their own. Whose roster this is was
+         settled by the heading above it; repeating the name on every
+         line only pushed the board taller. */
       body += '<tr class="project"><td class="label"><div class="row-label">' +
         '<span class="name">' + Shell.esc(a.project) + '</span></div></td>' +
         days.map(function () { return '<td></td>'; }).join('') + '</tr>';
       body += '<tr class="position"><td class="label"><div class="row-label l1">' +
         '<span class="name">' + Shell.esc(a.shift) + '</span></div></td>' +
-        days.map(function () { return '<td></td>'; }).join('') + '</tr>';
-      body += '<tr class="worker"><td class="label"><div class="row-label l2">' +
-        '<span class="av">' + ICO_PERSON + '</span>' +
-        '<span class="name">' + Shell.esc(r.who) + '</span></div></td>' +
         days.map(function (x) {
           if (!onDay(a, x)) return '<td></td>';
           return '<td data-tip="' + Shell.esc(r.who + ' — ' + a.shift + ' · ' + fmt(isoOf(x))) + '">' +
@@ -715,6 +735,8 @@
       var x1 = c1.getBoundingClientRect().right - base.left;
       band.style.left = x0 + 'px';
       band.style.width = (x1 - x0) + 'px';
+      band.innerHTML = '<span class="tag">Requested &middot; ' +
+        Shell.esc(fmtRange(r.from, r.to)) + '</span>';
     }
 
     /* The one sentence a manager is after. */
