@@ -320,19 +320,19 @@
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
-  .modal.add-modal { max-width: 560px; width: 100%; max-height: min(840px, 90vh); }
+  .modal.add-modal { max-width: 800px; width: 100%; max-height: min(680px, 88vh); }
   /* The shell's modal body is flex:1 with a zero basis, which collapses
      when the dialog has no fixed height. Outer padding is 24 on every
      side of every part of the dialog — header, body and footer agree —
      and the gaps inside are 14. */
   .add-modal .modal-body {
     padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px;
-    flex: 0 1 auto; min-height: 0; overflow-y: auto;
+    flex: 1 1 auto; min-height: 0; overflow: hidden;
   }
-  /* Step one is three questions, not a screenful: it is as tall as it is. */
   body.addstep-1 .add-modal .modal-body { flex: 0 0 auto; overflow: visible; }
+  /* Step one is three questions, not a screenful: it is as tall as it is. */
   .add-modal .modal-footer { padding: 16px 24px 20px; }
-  .add-modal .modal-body > .add-one { flex: 0 1 auto; min-height: 0; }
+  .add-modal .modal-body > .add-one { flex: 1 1 auto; min-height: 0; }
 
   /* ─── Step two: one list, one form ────────────────────────────────
      Three sizes carry the whole dialog and nothing else is allowed in:
@@ -343,7 +343,15 @@
     font-size: 12px; font-weight: 500; line-height: 16px; color: var(--grey-600);
     text-transform: uppercase; letter-spacing: 0.5px;
   }
-  .sect { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
+  .sect { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; min-width: 0; }
+  /* Two peers, told apart by a rule rather than by a gap. */
+  .add-cols {
+    display: grid; grid-template-columns: minmax(0, 1fr) 268px; gap: 0 20px;
+    flex: 1 1 auto; min-height: 0;
+  }
+  .add-cols > .sect { min-height: 0; }
+  .sect-form { padding-left: 20px; border-left: 1px solid var(--grey-300); }
+  .tsearch { flex: 0 0 auto; height: 32px; }
   .sect-head {
     display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
     flex: 0 0 auto;
@@ -355,11 +363,10 @@
   .sect-head .n { font-size: 12px; font-weight: 400; color: var(--grey-600); }
   .sect-head .n.on { color: var(--primary); font-weight: 500; }
 
-  .tlist { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; max-height: 186px; overflow-y: auto; }
-  .tlist.short { max-height: 128px; }
-  .tnew { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
-  .or-rule { flex: 0 0 auto; }
-  .tfields { display: flex; flex-direction: column; gap: 10px; }
+  .tlist { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 92px; overflow-y: auto; }
+  /* The one above the columns is a summary, not a chooser. */
+  .tlist.short { flex: 0 0 auto; max-height: 120px; }
+  .tfields { display: flex; flex-direction: column; gap: 10px; flex: 0 1 auto; overflow-y: auto; }
 
   /* One row shape for everything in the list: a tick, a name, a grey
      line under it. Where it came from changes the grey line, not the row. */
@@ -431,7 +438,7 @@
   }
   /* The form can run to six fields, so the recent list sits beside it
      rather than below, where it would fall off the bottom. */
-  .add-one { display: flex; flex-direction: column; gap: 18px; flex: 0 1 auto; min-height: 0; }
+  .add-one { display: flex; flex-direction: column; gap: 18px; flex: 1 1 auto; min-height: 0; }
   /* Each panel is one idea, bounded, so the two are told apart without
      being read. */
   /* The same grey the inputs are drawn in: two shades of border inside
@@ -458,9 +465,7 @@
   /* Step one asks where, and nothing else is on screen; step two carries
      that answer as the line above and asks for the tasks. */
   body.addstep-1 #sect-new,
-  body.addstep-1 #sect-list,
-  body.addstep-1 .or-rule,
-  body.addstep-1 .tnew,
+  body.addstep-1 .add-cols,
   body.addstep-1 .add-sum { display: none; }
   body.addstep-2 #step-where,
   body.from-group #step-where { display: none; }
@@ -1058,10 +1063,8 @@
           <button class="btn-text" type="button" id="add-sum-change">Change</button>
         </div>
 
-        <!-- Step two is one list and one form. Everything that will be
-             added is ticked in the same list, whether it was recognised
-             there or set up underneath — two places showing what you had
-             chosen was the thing that got confusing. -->
+        <!-- What has been set up here, above both columns, because it is
+             the result of either of them. -->
         <div class="sect" id="sect-new" hidden>
           <div class="sect-head">
             <h4>New tasks</h4>
@@ -1069,25 +1072,35 @@
           <div class="tlist short" id="new-list"></div>
         </div>
 
-        <div class="sect" id="sect-list">
-          <div class="sect-head">
-            <h4>Select from recent tasks</h4>
-            <span class="n" id="pick-n"></span>
+        <!-- A list and a form are both tall, and stacking them left the
+             list three rows high. Side by side the list gets the whole
+             height of the dialog and the form costs it nothing. -->
+        <div class="add-cols">
+          <div class="sect" id="sect-list">
+            <div class="sect-head">
+              <h4>Select from recent tasks</h4>
+              <span class="n" id="pick-n"></span>
+            </div>
+            <!-- With more than a screenful, finding one is a search, not
+                 a scroll — which is also what it will be in production,
+                 where a site has hundreds. -->
+            <label class="search-bar tsearch">
+              <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              <input class="search-input-el" id="task-q" type="text" placeholder="Search tasks" autocomplete="off" />
+            </label>
+            <div class="tlist" id="recent-list"></div>
           </div>
-          <div class="tlist" id="recent-list"></div>
-        </div>
 
-        <div class="or-rule"><span>or create a task</span></div>
-
-        <div class="tnew">
-          <div class="tfields" id="tfields"></div>
-          <!-- Disabled until the task has a name. Pressing it puts the
-               task at the top of the list above, ticked, and clears the
-               fields for the next one. -->
-          <button class="btn-outline add-more" type="button" id="add-more">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add another task
-          </button>
+          <div class="sect sect-form">
+            <div class="sect-head"><h4>Or create a task</h4></div>
+            <div class="tfields" id="tfields"></div>
+            <!-- Filling the fields is what creates it; this only says
+                 "and one more", so it clears them for the next. -->
+            <button class="btn-outline add-more" type="button" id="add-more">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Add another task
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -2539,7 +2552,9 @@
       }).join('');
 
     el('recent-list').innerHTML = html ||
-      '<div class="recent-empty">Nothing booked here before &mdash; create one below.</div>';
+      '<div class="recent-empty">' + (el('task-q').value.trim()
+        ? 'Nothing matches that.'
+        : 'Nothing booked here before &mdash; create one on the right.') + '</div>';
 
     var ticked = allPicked().length - cards.length;
     el('pick-n').textContent = ticked ? ticked + ' selected' : '';
@@ -2627,12 +2642,17 @@
      first — the list a block offers as a shortcut to filling itself in. */
   function recentFor() {
     var site = addSite(), sup = addSup();
+    var q = (el('task-q').value || '').trim().toLowerCase();
     var recent = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) { return r.when; })
       .filter(function (r) { return !site || r.meta.site === site; })
       .filter(function (r) { return !sup || r.meta.sup === sup; })
-      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 8);
+      /* With a site's whole history on the list, finding one is a search. */
+      .filter(function (r) {
+        return !q || pathOf(r.meta.levels).toLowerCase().indexOf(q) !== -1;
+      })
+      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 40);
     nameCards(recent);
     recentCache = recent;
     return recent;
@@ -2675,6 +2695,7 @@
 
     cards = []; ticks = Object.create(null);
     editing = { levels: [] };
+    el('task-q').value = '';
     addStep = 1;
     sync();
     el('add-title').textContent = 'Add a task';
@@ -2736,6 +2757,8 @@
     cards.splice(Number(drop.getAttribute('data-dropb')), 1);
     sync();
   });
+
+  el('task-q').addEventListener('input', function () { renderStack(); });
 
   el('recent-list').addEventListener('click', function (e) {
     var t = e.target.closest('[data-tick]');
