@@ -352,12 +352,14 @@
     flex: 1 1 auto; min-height: 0;
   }
   .add-cols > .sect { min-height: 0; }
-  .sect-form {
+  #sect-list {
     padding: 14px; border-radius: 10px; background: var(--grey-100);
     border: 1px solid var(--grey-300); gap: 10px;
   }
+  #sect-list .recent-row, #sect-list .search-bar { background: var(--white); }
+  .sect-form { padding-left: 18px; border-left: 1px solid var(--grey-300); gap: 10px; }
   .form-scroll { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; }
-  .sect-form select { background-color: var(--white); }
+
   .sub-head {
     font-size: 11px; font-weight: 600; color: var(--grey-600);
     text-transform: uppercase; letter-spacing: 0.5px;
@@ -404,7 +406,7 @@
   .rr-sub { font-size: 12px; font-weight: 400; line-height: 16px; color: var(--grey-600);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* Set up here and now, rather than recognised: the same row, marked. */
-  .recent-row.made { border-color: var(--primary); }
+  .recent-row.made { border-color: var(--primary); cursor: pointer; }
   .recent-row .ico-btn {
     width: 26px; height: 26px; flex-shrink: 0;
     border: none; border-radius: 6px; background: none; cursor: pointer;
@@ -468,7 +470,7 @@
      hierarchy in it, so the label and the answer are told apart. */
   .add-sum {
     display: flex; align-items: baseline; gap: 6px;
-    padding: 9px 12px; border-radius: 8px; background: var(--grey-100);
+    padding: 0 0 12px; border-bottom: 1px solid var(--grey-300);
     font-size: 14px; color: var(--text-main); flex: 0 0 auto;
   }
   .add-sum .k { font-size: 12px; font-weight: 400; color: var(--grey-600); }
@@ -2547,11 +2549,11 @@
     el('new-n').textContent = cards.length === 1 ? 'New task' : 'New tasks (' + cards.length + ')';
     el('new-list').innerHTML = cards.map(function (c, n) {
       var meta = metaOf(c.levels);
-      return '<div class="recent-row made">' +
+      return '<div class="recent-row sel made" data-dropb="' + n + '">' +
+        '<span class="rr-tick">' + ICO_TICK + '</span>' +
         '<span class="rr-body"><span class="rr-code">' + Shell.esc(taskTitle(meta)) + '</span>' +
         '<span class="rr-sub">' + Shell.esc(taskRest(meta, -1) || 'Set up here') + '</span></span>' +
         '<button class="ico-btn" type="button" data-edit="' + n + '" aria-label="Edit this task" data-tip="Edit">' + ICO_PENCIL + '</button>' +
-        '<button class="ico-btn drop" type="button" data-dropb="' + n + '" aria-label="Remove this task" data-tip="Remove">' + ICO_X + '</button>' +
       '</div>';
     }).join('');
 
