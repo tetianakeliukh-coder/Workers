@@ -249,7 +249,7 @@
   .alw-pick select {
     min-width: 0; height: 32px; padding: 0 6px;
     font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
-    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+    border: 1px solid var(--grey-350); border-radius: 6px; background-color: var(--white);
   }
   .alw-pick select:focus { outline: none; border-color: var(--primary); }
   .alw-qty {
@@ -323,17 +323,18 @@
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
-  .modal.add-modal { max-width: 800px; width: 100%; }
+  .modal.add-modal { max-width: 800px; width: 100%; height: min(840px, 88vh); }
   /* The shell's modal body is flex:1 with a zero basis, which collapses
      when the dialog has no fixed height. Outer padding is 24 on every
      side of every part of the dialog — header, body and footer agree —
      and the gaps inside are 14. */
   .add-modal .modal-body {
     padding: 16px 24px; display: flex; flex-direction: column; gap: 14px;
-    flex: 0 0 auto; height: 540px; overflow: hidden;
+    flex: 1 1 auto; min-height: 0; overflow: hidden;
   }
   /* Step one is three questions, not a screenful: it is as tall as it is. */
-  body.addstep-1 .add-modal .modal-body { height: auto; overflow: visible; }
+  body.addstep-1 .modal.add-modal { height: auto; }
+  body.addstep-1 .add-modal .modal-body { flex: 0 0 auto; overflow: visible; }
   .add-modal .modal-footer { padding: 16px 24px 20px; }
   .add-modal .modal-body > .add-one { flex: 1 1 auto; min-height: 0; }
 
@@ -348,9 +349,13 @@
   .add-col { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
   /* A rule, not a gap: the two columns are two different questions. */
   .sel-col { padding-left: 20px; border-left: 1px solid var(--grey-350); gap: 8px; }
+  /* Reserved, not occupied: the column holds its width from the start so
+     the first task added does not resize the dialog under the pointer. */
+  .sel-col[hidden] { display: flex; visibility: hidden; }
+  /* Enough room that the list of recent tasks reads as a list. */
   #pick-card {
     display: flex; flex-direction: column; gap: 14px;
-    flex: 1 1 auto; min-height: 90px; overflow-y: auto;
+    flex: 1 1 auto; min-height: 170px; overflow-y: auto;
   }
   .pick-recent { display: flex; flex-direction: column; gap: 8px; flex: 1 0 auto; }
   /* "Set up a new task" and "Select a recent task" are alternatives, and
@@ -369,9 +374,13 @@
   .sel-list { display: flex; flex-direction: column; gap: 6px; flex: 0 1 auto; min-height: 0; overflow-y: auto; }
   .sel-col { justify-content: flex-start; }
   .sel-empty { margin: 0; font-size: 13px; line-height: 18px; color: var(--grey-600); }
-  /* A chosen task is the same card it was chosen from, so that what was
-     picked is recognisable as what was on offer. */
-  .sel-list .recent-row { cursor: default; border-color: var(--primary); background: var(--bg-blue-light); }
+  /* A plain list: these are not on offer any more, so they are not
+     drawn as something to click. */
+  .sel-list .recent-row {
+    cursor: default; border: none; background: none;
+    padding: 6px 0; border-radius: 0;
+  }
+  .sel-list .recent-row + .recent-row { border-top: 1px solid var(--grey-200); }
   .rr-x {
     width: 24px; height: 24px; flex-shrink: 0; margin-left: auto;
     border: none; border-radius: 6px; background: none; cursor: pointer;
@@ -379,7 +388,7 @@
   }
   .rr-x:hover { background: rgba(0,51,255,0.1); color: var(--primary); }
   /* A field is a field: one to a line, however many the site has. */
-  #nt-levels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  #nt-levels { display: flex; flex-direction: column; gap: 10px; }
   .new-task { display: flex; flex-direction: column; gap: 12px; flex: 0 0 auto; }
   .pick-new { align-self: flex-start; color: var(--primary); }
 
@@ -416,7 +425,8 @@
      and that is the cheaper fault. A sheet on a phone keeps growing with
      its content instead. */
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
-  body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
+  body.is-narrow .modal.add-modal { height: auto; }
+  body.is-narrow .add-modal .modal-body { max-height: 68vh; flex: 0 1 auto; overflow: auto; }
 
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
@@ -481,7 +491,7 @@
   .add-steps li.on { color: var(--text-main); font-weight: 500; }
   .add-steps li.on .n { background: var(--primary); color: var(--white); }
   .add-steps li.done .n { background: var(--bg-blue-light); color: var(--primary); }
-  body.addstep-1 .modal.add-modal { max-width: 480px; }
+  body.addstep-1 .modal.add-modal { max-width: 480px; height: auto; }
 
   body.addstep-1 .add-need { display: none; }
   /* Cancel and Next belong at the end of the line, like every other
@@ -657,8 +667,12 @@
   .stp-sep { flex: 0 1 28px; height: 1px; background: var(--grey-350); min-width: 10px; }
   .stp:disabled { cursor: default; }
 
-  /* ─── Selects: the chevron sits as far from the edge as the text ── */
-  .fld select, .add-modal select {
+  /* ─── Selects ─────────────────────────────────────────────────────
+     Unanswered, a select shows its prompt in the grey a placeholder is
+     written in — black there reads as an answer already given. */
+  select:has(option[value=""]:checked) { color: var(--grey-600); }
+  /* The chevron sits as far from the edge as the text. */
+  .fld select, .add-modal select, .cp-row select, .alw-pick select {
     appearance: none; -webkit-appearance: none;
     padding-right: 34px;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23757575' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -789,8 +803,7 @@
   .fld-static .v { font-size: 14px; line-height: 20px; color: var(--text-main); font-weight: 500; }
   .add-need { margin-right: auto; font-size: 13px; color: var(--grey-600); }
   .add-one .sec-head { margin: 0; }
-  .recent-row:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
-  .recent-row.sel { border-color: var(--primary); background: var(--bg-blue-light); }
+  .recent-row:hover { border-color: var(--border-hover); }
   .rr-code { font-size: 14px; font-weight: 500; color: var(--text-main); }
   .rr-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); }
   .recent-empty { font-size: 13px; color: var(--grey-600); }
@@ -866,12 +879,12 @@
   }
   .day-add { border-color: var(--grey-200); }
   .add-shift { margin-top: 12px; }
-  .fld { display: flex; flex-direction: column; gap: 6px; }
+  .fld { display: flex; flex-direction: column; gap: 5px; }
   .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
   .fld select {
-    width: 100%; height: 40px; padding: 0 10px;
+    width: 100%; height: 36px; padding: 0 10px;
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
-    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    background-color: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
   }
   .fld select:focus { outline: none; border-color: var(--primary); }
   .fld select:disabled {
@@ -1042,15 +1055,15 @@
             <div class="new-task" id="new-task">
               <div class="sec-head">
                 <span class="step-title">Set up a new task</span>
+                <!-- It does not save the row: it turns what has been
+                     named into one task in the column beside it, and
+                     clears the fields for the next. -->
+                <button class="btn-outline pick-new" type="button" id="sec-switch" disabled>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                  Add task
+                </button>
               </div>
               <div id="nt-levels"></div>
-              <!-- It does not save the row: it turns what has been named
-                   into one task in the column beside it, and clears the
-                   fields for the next. -->
-              <button class="btn-ghost pick-new" type="button" id="sec-switch" disabled>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                Add task
-              </button>
             </div>
 
             <div class="or-rule"><span>or</span></div>
@@ -1066,11 +1079,11 @@
             </div>
           </div>
 
-          <div class="add-col sel-col" id="basket">
-            <!-- The right-hand column is what will be saved. -->
+          <!-- The right-hand column is what will be saved. It is not
+               shown until there is something in it. -->
+          <div class="add-col sel-col" id="basket" hidden>
             <div class="sec-head"><span class="step-title" id="basket-n">Selected</span></div>
             <div class="sel-list" id="basket-list"></div>
-            <p class="sel-empty" id="basket-empty">Nothing chosen yet. Set a task up on the left, or pick one you have had before.</p>
           </div>
         </div>
       </div>
@@ -1348,9 +1361,20 @@
   add(addDays(THIS_MON, 4), 'SA BHP OLYMPIC DAM', 'Grace Okafor', G, 4, '', '',
     [{ name: 'Night Shift', type: 'check' }]);
 
-  /* Older work, so the quick picks can say when each was last used. */
+  /* Older work, so the quick picks can say when each was last used —
+     and enough of it that the list of recent tasks is a list. */
   add(addDays(THIS_MON, -24), 'MMA VIGILANT – 360', 'Tom Halloran', H, 10);
   add(addDays(THIS_MON, -38), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1155', 'Labour', 'Day'], 7.5);
+  add(addDays(THIS_MON, -11), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00124', 'Replace hydraulic hose', 'Labour', 'Clean-up'], 6);
+  add(addDays(THIS_MON, -17), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00187', 'Weld handrail section', 'Weather standby', 'Preparation'], 4.5);
+  add(addDays(THIS_MON, -19), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00201', 'Deck plating repair', 'Weather standby', 'Clean-up'], 3);
+  add(addDays(THIS_MON, -26), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00123', 'Replace hydraulic hose', 'Labour', 'Clean-up'], 7);
+  add(addDays(THIS_MON, -31), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00124', 'Weld handrail section', 'Labour', 'Preparation'], 5.5);
+  add(addDays(THIS_MON, -13), 'MMA VIGILANT ROV', 'Priya Nair', ['JOB-00451', 'ROV dive', 'Labour'], 8);
+  add(addDays(THIS_MON, -21), 'MMA VIGILANT ROV', 'Priya Nair', ['JOB-00492', 'Deck handling', 'Weather standby'], 4);
+  add(addDays(THIS_MON, -29), 'MMA VIGILANT ROV', 'Priya Nair', ['JOB-00478', 'Tooling change', 'Labour'], 6.5);
+  add(addDays(THIS_MON, -15), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00123', 'CC-1163', 'Labour', 'Night'], 9);
+  add(addDays(THIS_MON, -22), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1140', 'Waiting for materials', 'Day'], 5);
 
   /* ─── State ───────────────────────────────────────────────────── */
   var state = { range: 'week', from: null, to: null, query: '', editing: false, selDay: iso(TODAY) };
@@ -1603,7 +1627,7 @@
         (over ? '. ' + fmtHours(all) + ' h booked — more than ' + DAY_CAP : '') + '">' +
         '<span class="day-head' + (today ? ' is-today' : '') + '">' +
         '<span class="dow">' + DOW[d.getDay()] + '</span>' +
-        '<span class="dnum">' + fmtDay(d) + stMark(k) + '</span>' +
+        '<span class="dnum">' + stMark(k) + fmtDay(d) + '</span>' +
         '<span class="dtot' + (over ? ' over' : '') + '">' +
           (shown > 0 ? fmtHours(shown) + ' h' : '<span class="cell-empty">&mdash;</span>') +
         '</span></span></th>';
@@ -2546,7 +2570,7 @@
       .filter(function (r) {
         return lv.every(function (v, i) { return !v || r.meta.levels[i] === v; });
       })
-      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 5);
+      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 8);
     nameCards(recent);
 
     el('sec-title').textContent = 'Select a recent task' + (recent.length ? ' (' + recent.length + ')' : '');
@@ -2584,8 +2608,8 @@
     return basket.some(function (x) { return x.key === key; });
   }
   function renderBasket() {
-    el('basket-empty').hidden = !!basket.length;
-    el('basket-n').textContent = basket.length ? 'Selected (' + basket.length + ')' : 'Selected';
+    el('basket').hidden = !basket.length;
+    el('basket-n').textContent = 'Selected (' + basket.length + ')';
     el('basket-list').innerHTML = basket.map(function (x, i) {
       return '<div class="recent-row">' +
         '<span class="rr-body"><span class="rr-code">' + Shell.esc(x.title) + '</span>' +
