@@ -320,7 +320,7 @@
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
-  .modal.add-modal { max-width: 800px; width: 100%; max-height: min(680px, 88vh); }
+  .modal.add-modal { max-width: 820px; width: 100%; height: min(660px, 88vh); }
   /* The shell's modal body is flex:1 with a zero basis, which collapses
      when the dialog has no fixed height. Outer padding is 24 on every
      side of every part of the dialog — header, body and footer agree —
@@ -344,13 +344,25 @@
     text-transform: uppercase; letter-spacing: 0.5px;
   }
   .sect { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; min-width: 0; }
-  /* Two peers, told apart by a rule rather than by a gap. */
+  /* Not two peers: the list is the way most weeks are filled in, so it
+     has the page and the width, and creating one sits beside it on a
+     panel of its own — the way an aside reads as an aside. */
   .add-cols {
-    display: grid; grid-template-columns: minmax(0, 1fr) 268px; gap: 0 20px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0 18px;
     flex: 1 1 auto; min-height: 0;
   }
   .add-cols > .sect { min-height: 0; }
-  .sect-form { padding-left: 20px; border-left: 1px solid var(--grey-300); }
+  .sect-form {
+    padding: 14px; border-radius: 10px; background: var(--grey-100);
+    border: 1px solid var(--grey-300); gap: 10px;
+  }
+  .form-scroll { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; }
+  .sect-form select { background-color: var(--white); }
+  .sub-head {
+    font-size: 11px; font-weight: 600; color: var(--grey-600);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  #sect-new { gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--grey-300); }
   .tsearch { flex: 0 0 auto; height: 32px; }
   .sect-head {
     display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
@@ -366,7 +378,7 @@
   .tlist { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 92px; overflow-y: auto; }
   /* The one above the columns is a summary, not a chooser. */
   .tlist.short { flex: 0 0 auto; max-height: 120px; }
-  .tfields { display: flex; flex-direction: column; gap: 10px; flex: 0 1 auto; overflow-y: auto; }
+  .tfields { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
 
   /* One row shape for everything in the list: a tick, a name, a grey
      line under it. Where it came from changes the grey line, not the row. */
@@ -424,7 +436,9 @@
      and that is the cheaper fault. A sheet on a phone keeps growing with
      its content instead. */
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
+  body.is-narrow .modal.add-modal { height: auto; }
   body.is-narrow .add-modal .modal-body { max-height: 68vh; flex: 0 1 auto; overflow: auto; }
+  body.is-narrow .add-cols { display: flex; flex-direction: column; gap: 16px; }
 
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
@@ -464,7 +478,6 @@
 
   /* Step one asks where, and nothing else is on screen; step two carries
      that answer as the line above and asks for the tasks. */
-  body.addstep-1 #sect-new,
   body.addstep-1 .add-cols,
   body.addstep-1 .add-sum { display: none; }
   body.addstep-2 #step-where,
@@ -490,7 +503,7 @@
   .add-steps li.on { color: var(--text-main); font-weight: 500; }
   .add-steps li.on .n { background: var(--primary); color: var(--white); }
   .add-steps li.done .n { background: var(--bg-blue-light); color: var(--primary); }
-  body.addstep-1 .modal.add-modal { max-width: 480px; }
+  body.addstep-1 .modal.add-modal { max-width: 480px; height: auto; }
 
   body.addstep-1 .add-need { display: none; }
   /* Cancel and Next belong at the end of the line, like every other
@@ -1063,18 +1076,11 @@
           <button class="btn-text" type="button" id="add-sum-change">Change</button>
         </div>
 
-        <!-- What has been set up here, above both columns, because it is
-             the result of either of them. -->
-        <div class="sect" id="sect-new" hidden>
-          <div class="sect-head">
-            <h4>New tasks</h4>
-          </div>
-          <div class="tlist short" id="new-list"></div>
-        </div>
-
         <!-- A list and a form are both tall, and stacking them left the
              list three rows high. Side by side the list gets the whole
-             height of the dialog and the form costs it nothing. -->
+             height of the dialog and the form costs it nothing. Which of
+             the two leads is said by width and by ground: the list is on
+             the page, the form is on a panel beside it. -->
         <div class="add-cols">
           <div class="sect" id="sect-list">
             <div class="sect-head">
@@ -1093,13 +1099,21 @@
 
           <div class="sect sect-form">
             <div class="sect-head"><h4>Or create a task</h4></div>
-            <div class="tfields" id="tfields"></div>
-            <!-- Filling the fields is what creates it; this only says
-                 "and one more", so it clears them for the next. -->
-            <button class="btn-outline add-more" type="button" id="add-more">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              Add another task
-            </button>
+            <div class="form-scroll">
+              <!-- What creating has produced so far, at the top of the
+                   half that produced it. -->
+              <div class="sect" id="sect-new" hidden>
+                <span class="sub-head" id="new-n"></span>
+                <div class="tlist short" id="new-list"></div>
+              </div>
+              <div class="tfields" id="tfields"></div>
+              <!-- Filling the fields is what creates it; this only says
+                   "and one more", so it clears them for the next. -->
+              <button class="btn-outline add-more" type="button" id="add-more">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Add another task
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2530,6 +2544,7 @@
     cards.forEach(function (c) { madeKeys[keyFor(c.levels)] = 1; });
 
     el('sect-new').hidden = !cards.length;
+    el('new-n').textContent = cards.length === 1 ? 'New task' : 'New tasks (' + cards.length + ')';
     el('new-list').innerHTML = cards.map(function (c, n) {
       var meta = metaOf(c.levels);
       return '<div class="recent-row made">' +
