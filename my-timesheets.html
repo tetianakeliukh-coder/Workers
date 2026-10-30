@@ -87,9 +87,12 @@
     position: sticky; top: 0; z-index: 3; background: var(--white); vertical-align: bottom;
   }
   .grid-card thead th.col-label { z-index: 4; }
+  /* Two lines, not three: the weekday sits beside the date, the day's
+     total under them. The column is no wider for it. */
   .day-head { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 16px; }
-  .day-head .dow { font-size: 12px; font-weight: 400; color: var(--grey-600); }
-  .day-head .dnum { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .day-head .dline { display: flex; align-items: baseline; gap: 4px; }
+  .day-head .dow { font-size: 11px; font-weight: 400; color: var(--grey-600); }
+  .day-head .dnum { font-size: 13px; font-weight: 500; color: var(--text-main); }
   .day-head.is-today .dow, .day-head.is-today .dnum { color: var(--primary); }
   /* The day's own total, under its date: the figure being checked. */
   .day-head .dtot { font-size: 11px; font-weight: 500; color: var(--grey-600); font-variant-numeric: tabular-nums; }
@@ -134,14 +137,16 @@
   th.col-site, td.col-site, th.col-sup, td.col-sup, th.col-task, td.col-task {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  /* The three label headings read on the same line as the dates beside
+     them rather than dropping to the bottom of a taller row. */
+  #grid thead th { vertical-align: middle; }
   td.col-site { font-weight: 600; }
   td.col-sup { font-weight: 500; }
   #grid tbody tr.group-top > td { border-top: 1px solid var(--grey-350); }
-  .sx-left td.col-task::after, .sx-left th.col-task::after {
-    content: ''; position: absolute; top: 0; bottom: 0; left: 100%; width: 1px;
-    background: var(--grey-400); pointer-events: none;
-  }
-  .sx-left td.col-task, .sx-left th.col-task { overflow: visible; }
+  /* The edge between the frozen columns and the days is drawn as a
+     shadow, not as a pseudo-element needing overflow:visible — that let
+     every task name spill across the day columns as the table scrolled. */
+  .sx-left td.col-task, .sx-left th.col-task { box-shadow: 1px 0 0 var(--grey-400); }
 
   /* A cell holds hours, and may hold the times they came from. It opens
      rather than being typed into directly, because times need somewhere
@@ -165,7 +170,11 @@
   /* A status and an allowance were two grey marks in the same corner of
      the same cell, and nothing told them apart. The status carries the
      colour its chip carries elsewhere; the allowance stays grey. */
+  /* Allowance first, then status, then the figure. Only the first of
+     them claims the gap, or the number is shunted twice. */
   .hr-st { display: inline-flex; align-items: center; flex-shrink: 0; margin-right: auto; }
+  .hr-st.st-draft { color: var(--grey-400); }
+  .alw-mark + .hr-st { margin-right: auto; margin-left: 4px; }
   .hr-st.st-revised   { color: #78b818; }
   .hr-st.st-submitted { color: #1a85cd; }
   .hr-st.st-finalised { color: #289e1a; }
@@ -174,7 +183,7 @@
   td.col-day .alw-mark { margin-right: 4px; }
   /* Status and allowance both sit left; only the first of them claims
      the gap, or the figure is shunted a second time. */
-  .hr-cell .hr-st + .alw-mark { margin-right: 0; margin-left: -2px; }
+  .hr-cell .alw-mark + .hr-st { margin-left: 2px; }
 
   .cell-pop {
     display: none; position: fixed; z-index: 500; width: 248px; padding: 12px;
@@ -200,6 +209,11 @@
   /* Clear on the left, Done on the right: the one that undoes and the one
      that commits sit at opposite ends of the same line. */
   .cp-foot { display: flex; align-items: center; justify-content: flex-start; margin-top: 10px; }
+  /* A day that will not take what was typed says so here, where the
+     typing happened, and not only in a message that slides away. */
+  .cp-err { margin: -2px 0 0; font-size: 12px; line-height: 16px; color: var(--error); }
+  .cp-row.err input, #cp-hrow.err input { border-color: var(--error); background: #fdf2f3; }
+  .cp-row.err > span { color: var(--error); }
 
   /* One line per allowance the site offers: claimed or not, and for the
      ones measured by quantity, how many. */
@@ -298,15 +312,21 @@
 
   /* Step two: filters on a line, the list under them, the basket last. */
   #pick-card { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
-  .pick-bar { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-  #nt-levels { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; flex: 1; min-width: 0; }
-  #nt-levels .fld { flex: 1 1 150px; min-width: 0; max-width: 220px; }
-  .pick-new { flex-shrink: 0; color: var(--primary); }
+  /* A field is a field: one to a line, however many the site has. */
+  #nt-levels { display: flex; flex-direction: column; gap: 12px; }
+  .new-task { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: 1px solid var(--grey-350); }
+  .pick-new { align-self: flex-start; color: var(--primary); }
 
   /* A row is ticked, not clicked once and lost: several tasks go on at
-     the same time, which is how a week is actually set up. */
-  .recent-list { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; min-height: 0; flex: 1; }
-  .recent-row { flex-direction: row; align-items: center; gap: 10px; }
+     the same time, which is how a week is actually set up. The tick sits
+     inside the card the screen already had, rather than replacing it. */
+  /* flex-shrink stays off: in a column that is already height-bound the
+     list would otherwise shrink to nothing and take the cards with it. */
+  .recent-list {
+    display: flex; flex-direction: column; gap: 6px;
+    overflow-y: auto; flex: 0 0 auto; max-height: 196px;
+  }
+  .recent-row { display: flex; flex-direction: row; align-items: center; gap: 10px; }
   .recent-row .rr-tick {
     width: 18px; height: 18px; flex-shrink: 0; border-radius: 4px;
     border: 1.5px solid var(--grey-400); background: var(--white);
@@ -341,10 +361,10 @@
      a site is named or a mode is switched — a short state leaves space,
      and that is the cheaper fault. A sheet on a phone keeps growing with
      its content instead. */
-  .add-modal .modal-body { height: 606px; max-height: 74vh; flex: 0 0 auto; overflow: hidden; }
+  .add-modal .modal-body { max-height: 74vh; flex: 0 0 auto; overflow: hidden; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
-  body.is-narrow #nt-levels .fld { max-width: none; flex-basis: 100%; }
+
   .add-sub { font-size: 14px; line-height: 20px; color: var(--grey-700); margin: 0; }
   .add-sub b { color: var(--text-main); font-weight: 500; }
 
@@ -385,6 +405,8 @@
   body.addstep-1 #pick-card,
   body.addstep-1 .add-sum { display: none; }
   body.addstep-2 .add-one > .add-card:first-of-type { display: none; }
+  /* From a group row there is no step one, so the settled pair stays. */
+  body.from-group .add-one > .add-card:first-of-type { display: block; }
 
   /* The steps span the dialog, each taking half of it, so the second is
      as plainly there as the first. */
@@ -408,9 +430,9 @@
   .add-steps li.done .n { background: var(--bg-blue-light); color: var(--primary); }
   /* One height per step: a step is a change of screen, where a change
      of size is expected — unlike a field appearing under the pointer. */
-  .add-modal .modal-body { height: 470px; }
+  .add-modal .modal-body { height: 540px; flex: 0 0 auto; overflow: hidden; }
   body.addstep-1 .modal.add-modal { max-width: 480px; }
-  body.addstep-1 .add-modal .modal-body { height: 240px; }
+  body.addstep-1 .add-modal .modal-body { height: 258px; }
   body.addstep-1 #add-where .fld { max-width: none; }
   body.addstep-1 .add-need { display: none; }
   /* The last field had nothing between it and the footer rule. */
@@ -630,13 +652,21 @@
   .dd-wrap.locked .dd-caret { opacity: 0.4; }
 
   /* View mode says where adding lives, because nothing else does. */
+  /* A note, not a banner: an outline the width of what it says, in a
+     blue quiet enough not to be mistaken for the call to action. */
   .add-hint {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px; border-radius: 8px;
-    background: var(--bg-blue-light); color: var(--text-main);
+    display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
+    padding: 7px 8px 7px 12px; border-radius: 8px;
+    background: var(--white); border: 1px solid #c7d4f5; color: var(--grey-700);
     font-size: 13px; line-height: 18px;
   }
-  .add-hint svg { flex-shrink: 0; color: var(--primary); }
+  .add-hint svg { flex-shrink: 0; color: #7f94c9; }
+  .add-hint .x {
+    width: 20px; height: 20px; flex-shrink: 0; margin-left: 4px;
+    border: none; border-radius: 50%; background: none; cursor: pointer;
+    color: var(--grey-500); display: flex; align-items: center; justify-content: center;
+  }
+  .add-hint .x:hover { background: var(--grey-100); color: var(--text-main); }
   body.editing .add-hint { display: none; }
 
   /* ─── Allowances ───────────────────────────────────────────────────
@@ -649,7 +679,7 @@
      no longer lines up with the next. */
   .alw-mark {
     display: inline-flex; align-items: center; flex-shrink: 0;
-    margin-right: auto; color: var(--grey-500); cursor: default; vertical-align: -2px;
+    margin-right: 0; color: var(--grey-500); cursor: default; vertical-align: -2px;
   }
   .alw-mark:hover { color: var(--text-main); }
   /* The flag keeps its own hover inside an editable cell too, so the
@@ -664,15 +694,17 @@
      knows about. The label is the tooltip. */
   /* Named rather than drawn: an icon alone made the one control on the
      row a guess. At the page's own control height. */
+  /* Plain text: the rule down the left of the column is what sets the
+     actions apart, so the button does not need an outline of its own. */
   .grp-add {
     flex-shrink: 0; margin-left: auto;
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    height: 36px; padding: 0 12px; border-radius: 8px;
-    border: 1px solid var(--grey-350); background: var(--white); cursor: pointer;
-    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; white-space: nowrap;
-    color: var(--primary); transition: border-color var(--t-fast), background var(--t-fast);
+    height: 28px; padding: 0 6px; border-radius: 6px;
+    border: none; background: none; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 13px; font-weight: 500; white-space: nowrap;
+    color: var(--primary); transition: background var(--t-fast);
   }
-  .grp-add:hover { border-color: var(--primary); background: var(--bg-blue-light); }
+  .grp-add:hover { background: var(--bg-blue-light); }
   /* Row actions live at the right-hand end of the table, the way they do
      on every other OPMS grid — not among the day columns, which is where
      the eye is reading numbers. It stays put while the days scroll. */
@@ -680,7 +712,7 @@
      column rather than as the end of the one before it. */
   th.col-act, td.col-act {
     position: sticky; right: 0; z-index: 2;
-    width: 146px; padding: 4px 16px; text-align: right;
+    width: 126px; padding: 4px 16px; text-align: right;
     background: var(--white); border-left: 1px solid var(--grey-350);
   }
   #grid thead th.col-act { z-index: 6; }
@@ -855,9 +887,12 @@
         </div>
       </div>
 
-      <div class="add-hint">
+      <div class="add-hint" id="add-hint">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.3v4M8 4.8v.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         To add a task, open edit mode.
+        <button class="x" type="button" id="add-hint-x" aria-label="Dismiss">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
       </div>
 
       <!-- ── Desktop: the period grid ── -->
@@ -975,24 +1010,26 @@
           <button class="btn-text" type="button" id="add-sum-change">Change</button>
         </div>
 
-        <!-- Step two is one column: the site's fields narrow the list,
-             the list is ticked, and what has been ticked gathers at the
-             bottom. Several tasks go on at once, which is how a week is
-             actually set up. -->
+        <!-- Step two, one column top to bottom: what the request is
+             narrowed by, the tasks that match, then the basket. Setting
+             a new one up is the last resort, so it sits last. -->
         <div class="add-card" id="pick-card">
-          <div class="pick-bar">
+          <div class="sec-head">
+            <span class="step-title" id="sec-title">Recent tasks</span>
+            <span class="sec-sub" id="sec-sub" hidden>Matching the fields below</span>
+          </div>
+          <div class="recent-list" id="recent-list"></div>
+
+          <div class="new-task" id="new-task">
+            <div class="sec-head">
+              <span class="step-title">Set up a new task</span>
+            </div>
             <div id="nt-levels"></div>
             <button class="btn-ghost pick-new" type="button" id="sec-switch">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-              Set up a new task
+              Add this task
             </button>
           </div>
-
-          <div class="sec-head">
-            <span class="step-title" id="sec-title">Recent tasks</span>
-            <span class="sec-sub" id="sec-sub" hidden>Matching the fields above</span>
-          </div>
-          <div class="recent-list" id="recent-list"></div>
 
           <div class="basket" id="basket" hidden>
             <span class="basket-n" id="basket-n"></span>
@@ -1062,6 +1099,7 @@
     <input id="cp-h" type="text" inputmode="decimal" autocomplete="off" /></label>
   <!-- The claim for this task on this day — one, chosen by name, because
        a cell carries at most one. Which ones exist is the site's. -->
+  <p class="cp-err" id="cp-err" hidden></p>
   <div class="cp-sep">allowance claimed for this day</div>
   <div class="cp-alw" id="cp-alw"></div>
   <!-- No Done: the page is in edit mode and Save at the top is the
@@ -1406,12 +1444,23 @@
     return sheetStatus(isoDate, m && m.site);
   }
 
+  /* One order everywhere, so a row of cells reads as a column: the
+     allowance when there is one, then the status, then the figure. A
+     timesheet is always in some state, so the status is always there —
+     Draft included, or the marks would jump about between rows. */
+  function stMark(key, isoDate, tip) {
+    if (!key) return '';
+    var name = statusName(key, isoDate), st = STATUS_META[name] || STATUS_META.Draft;
+    var ico = st.icon || ICO_DRAFT;
+    return '<span class="hr-st st-' + name.toLowerCase() + '"' +
+      (tip ? ' data-tip="' + Shell.esc(name) + '"' : '') + '>' + ico + '</span>';
+  }
+  var ICO_DRAFT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none">' +
+    '<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2.2 2"/></svg>';
+
   function dayCell(value, isoDate, key) {
-    var st = key ? statusFor(key, isoDate) : null;
     return '<td class="col-day' + todayCls(isoDate) + '">' +
-      (st && st.icon ? '<span class="hr-st st-' + statusName(key, isoDate).toLowerCase() +
-        '" data-tip="' + statusName(key, isoDate) + '">' + st.icon + '</span>' : '') +
-      alwDot(key, isoDate) +
+      alwDot(key, isoDate) + stMark(key, isoDate, true) +
       (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
 
@@ -1420,14 +1469,12 @@
       (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
 
-  /* Three coins falling into an open hand — the mark the product now
-     uses for an allowance. */
-  var ICO_ALW = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
-    '<circle cx="8" cy="4" r="1.5" stroke="currentColor" stroke-width="1.6"/>' +
-    '<circle cx="14" cy="6" r="1.5" stroke="currentColor" stroke-width="1.6"/>' +
-    '<circle cx="11" cy="10" r="1.5" stroke="currentColor" stroke-width="1.6"/>' +
-    '<path d="M3.5 14.5v3a4 4 0 004 4h7.5a4 4 0 003.6-2.3l1.7-3.6a1.4 1.4 0 00-2.4-1.4L14 18" ' +
-      'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  /* hand-coins, as the product draws it. */
+  var ICO_ALW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/>' +
+    '<path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/>' +
+    '<path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/></svg>';
   /* Worded as Supervisor Timesheets words it, down to the brackets. */
   function allowTip(list) {
     return (list || []).map(function (x) {
@@ -1451,8 +1498,7 @@
         (overCap(isoDate) ? ' over' : '') + '" type="button" ' +
         'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
         (lock ? ' disabled data-tip="' + statusName(key, isoDate) + ' — hours can no longer be changed"' : '') + '>' +
-        (st.icon ? '<span class="hr-st st-' + statusName(key, isoDate).toLowerCase() + '">' + st.icon + '</span>' : '') +
-        alwDot(key, isoDate) +
+        alwDot(key, isoDate) + stMark(key, isoDate, false) +
         (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
     }
     return dayCell(value, isoDate, key);
@@ -1464,6 +1510,11 @@
   /* Only while editing: outside a draft there is nothing for a new row to
      sit in. The site and supervisor travel on the button, so the dialog
      opens with the group already answered. */
+  /* Nothing is added outside edit mode, so the column is not kept
+     empty on the right in view mode taking the width it would need. */
+  function actHead() { return state.editing ? '<th class="col-act"></th>' : ''; }
+  function actCell(inner) { return state.editing ? '<td class="col-act">' + inner + '</td>' : ''; }
+
   function grpAdd(site, sup) {
     if (!state.editing) return '';
     return '<button class="grp-add" type="button"' +
@@ -1504,7 +1555,8 @@
       var shown = dayTotal(k, true), all = dayTotal(k, false), over = all > DAY_CAP;
       return '<th class="col-day' + (today ? ' tdy' : '') + (over ? ' over' : '') + '">' +
         '<span class="day-head' + (today ? ' is-today' : '') + '">' +
-        '<span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + fmtDay(d) + '</span>' +
+        '<span class="dline"><span class="dow">' + DOW[d.getDay()] + '</span>' +
+          '<span class="dnum">' + fmtDay(d) + '</span></span>' +
         '<span class="dtot"' + (over ? ' data-tip="' + fmtHours(all) + ' h booked on this day — more than ' + DAY_CAP + '"' : '') + '>' +
           (shown > 0 ? fmtHours(shown) + ' h' : '&mdash;') + '</span></span></th>';
     }).join('');
@@ -1517,13 +1569,13 @@
     gridCols.innerHTML = '<col style="width:' + wPx('site') + '" /><col style="width:' + wPx('sup') + '" />' +
       '<col style="width:' + wPx('task') + '" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') +
-      '<col style="width:96px" /><col style="width:146px" />';
+      '<col style="width:96px" />' + (state.editing ? '<col style="width:126px" />' : '');
 
     gridHead.innerHTML = '<tr>' +
       '<th class="col-site" data-w="site">Site' + Shell.colGrip() + '</th>' +
       '<th class="col-sup" data-w="sup">Supervisor' + Shell.colGrip() + '</th>' +
       '<th class="col-task" data-w="task">Task' + Shell.colGrip() + '</th>' +
-      dayHeadCells(ds) + '<th class="col-total">Total</th><th class="col-act"></th></tr>';
+      dayHeadCells(ds) + '<th class="col-total">Total</th>' + actHead() + '</tr>';
     syncStickyX();
 
     /* Every site + supervisor opens with its own summary line — how many tasks
@@ -1541,7 +1593,7 @@
           '<td class="col-task"><span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
           ds.map(function (d) { return dayCellPlain(sumRow(sup.tasks, iso(d)), iso(d)); }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
-          '<td class="col-act">' + grpAdd(site.name, sup.name) + '</td>' +
+          actCell(grpAdd(site.name, sup.name)) +
         '</tr>');
         first = false; count++;
         if (!open) return;
@@ -1552,7 +1604,7 @@
             '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
-            '<td class="col-act"></td>' +
+            actCell('') +
           '</tr>');
           count++;
         });
@@ -1560,7 +1612,7 @@
     });
 
     if (!rows.length) {
-      rows.push('<tr><td colspan="' + (ds.length + 5) + '" style="color:var(--grey-600)">No hours recorded this week.</td></tr>');
+      rows.push('<tr><td colspan="' + (ds.length + 4 + (state.editing ? 1 : 0)) + '" style="color:var(--grey-600)">No hours recorded this week.</td></tr>');
     }
     gridBody.innerHTML = rows.join('');
 
@@ -1573,14 +1625,14 @@
     var ds = days();
     gridCols.innerHTML = '<col style="width:' + wPx('label') + '" />' +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') +
-      '<col style="width:96px" /><col style="width:146px" />';
+      '<col style="width:96px" />' + (state.editing ? '<col style="width:126px" />' : '');
 
     gridHead.innerHTML = '<tr><th class="col-label" data-w="label">Breakdown' + Shell.colGrip() + '</th>' +
       ds.map(function (d) {
         var today = iso(d) === iso(TODAY);
         return '<th class="col-day' + (today ? ' tdy' : '') + '"><span class="day-head' + (today ? ' is-today' : '') + '">' +
           '<span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + fmtDay(d) + '</span></span></th>';
-      }).join('') + '<th class="col-total">Total</th><th class="col-act"></th></tr>';
+      }).join('') + '<th class="col-total">Total</th>' + actHead() + '</tr>';
 
     var tree = weekTree(), rows = [], shown = 0;
     tree.forEach(function (site) {
@@ -1591,7 +1643,7 @@
           '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
         ds.map(function (d) { return cellHtml(sumRow(all, iso(d))); }).join('') +
         '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(all, iso(d)); }, 0)) + '</td>' +
-        '<td class="col-act">' + grpAdd(site.name, '') + '</td></tr>');
+        actCell(grpAdd(site.name, '')) + '</tr>');
       shown++;
       if (!siteOpen) return;
 
@@ -1602,7 +1654,7 @@
             '<span class="name">' + Shell.esc(sup.name) + '</span></span></td>' +
           ds.map(function (d) { return cellHtml(sumRow(sup.tasks, iso(d))); }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
-          '<td class="col-act">' + grpAdd(site.name, sup.name) + '</td></tr>');
+          actCell(grpAdd(site.name, sup.name)) + '</tr>');
         shown++;
         if (!supOpen) return;
 
@@ -1611,14 +1663,14 @@
             '<td class="col-label" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
-            '<td class="col-act"></td></tr>');
+            actCell('') + '</tr>');
           shown++;
         });
       });
     });
 
     if (!rows.length) {
-      rows.push('<tr><td class="col-label" colspan="' + (ds.length + 3) + '" style="color:var(--grey-600)">' +
+      rows.push('<tr><td class="col-label" colspan="' + (ds.length + 2 + (state.editing ? 1 : 0)) + '" style="color:var(--grey-600)">' +
         'No hours recorded this week.</td></tr>');
     }
     gridBody.innerHTML = rows.join('');
@@ -2119,6 +2171,10 @@
     el('cp-s').value = c.s || '';
     el('cp-f').value = c.f || '';
     renderCellAllowances(popKey, c.a);
+    /* A fresh cell opens clean, whatever the last one said. */
+    el('cp-err').hidden = true;
+    el('cp-hrow').classList.remove('err');
+    [].forEach.call(el('cp-times').children, function (x) { x.classList.remove('err'); });
 
     var r = btn.getBoundingClientRect();
     pop.classList.add('open');
@@ -2129,6 +2185,31 @@
     el('cp-h').focus();
     el('cp-h').select();
   }
+  /* What the day has left once this cell's own hours are set aside. */
+  function roomLeft() {
+    if (!popKey) return DAY_CAP;
+    return Math.max(0, Math.round((DAY_CAP - (dayTotal(popDate, false) - cellOf(popKey, popDate).h)) * 100) / 100);
+  }
+  function typedHours() {
+    if (entryModeOf(popKey) === 'period') {
+      var v = hoursBetween(el('cp-s').value, el('cp-f').value);
+      return v == null ? 0 : v;
+    }
+    var h = el('cp-h').value.trim().replace(',', '.');
+    return h === '' ? 0 : Number(h);
+  }
+  function syncCellErr() {
+    if (!popKey) return;
+    var left = roomLeft(), v = typedHours(), over = !isNaN(v) && v > left;
+    el('cp-err').hidden = !over;
+    if (over) {
+      el('cp-err').textContent = fmtHours(left) + ' h left on this day, but ' +
+        fmtHours(v) + ' h was entered.';
+    }
+    el('cp-hrow').classList.toggle('err', over);
+    [].forEach.call(el('cp-times').children, function (r) { r.classList.toggle('err', over); });
+  }
+
   function closeCell() { pop.classList.remove('open'); popKey = null; }
 
   /* Two cells are the same when they say the same thing — so an editor
@@ -2162,8 +2243,11 @@
        over every task, not only the ones a search has left on screen. */
     var others = dayTotal(popDate, false) - cellOf(popKey, popDate).h;
     if (others + v > DAY_CAP) {
+      var asked = v;
       v = Math.max(0, Math.round((DAY_CAP - others) * 100) / 100);
-      Shell.snackbar('A day holds ' + DAY_CAP + ' hours. Kept to ' + fmtHours(v) + ' h.');
+      Shell.snackbar('A day holds ' + DAY_CAP + ' hours and ' + fmtHours(others) +
+        ' h are already on it. ' + fmtHours(asked) + ' h kept to ' + fmtHours(v) + ' h.',
+        { ms: 6000 });
     }
     var next = { h: v, s: sT, f: fT, a: cellAllowances() };
     if (!sameCell(next, cellOf(popKey, popDate))) draft[popKey + '|' + popDate] = next;
@@ -2171,10 +2255,12 @@
     renderGrid(); renderWeek(); syncEditBar();
   }
 
+  el('cp-h').addEventListener('input', syncCellErr);
   ['cp-s', 'cp-f'].forEach(function (id) {
     el(id).addEventListener('input', function () {
       var v = hoursBetween(el('cp-s').value, el('cp-f').value);
       if (v != null) el('cp-h').value = fmtHours(v);
+      syncCellErr();
     });
     el(id).addEventListener('blur', function () {
       this.value = normTime(this.value);
@@ -2271,6 +2357,7 @@
   function syncVariant() {
     /* Opened from a group row the first step is already behind you. */
     var stepped = !addCtx;
+    document.body.classList.toggle('from-group', !!addCtx);
     document.body.classList.toggle('addstep-1', stepped && addStep === 1);
     document.body.classList.toggle('addstep-2', !stepped || addStep === 2);
 
@@ -2470,9 +2557,10 @@
     renderSups();
     if (addCtx) el('nt-sup').value = addCtx.sup || '';
 
-    /* Opened from a group, the two are answered. A disabled dropdown
-       still carries a chevron and still invites the click it will
-       refuse, so they are printed in their place instead. */
+    /* Opened from a group, the two are answered — printed in place of
+       the dropdowns, because a disabled dropdown still invites the click
+       it will refuse. They are still shown: knowing where the task is
+       going is the point of the step they replace. */
     el('add-where').hidden = !!addCtx;
     el('add-where-set').hidden = !addCtx;
     if (addCtx) {
@@ -2787,6 +2875,8 @@
     if (addModal.classList.contains('open')) { addModal.classList.remove('open'); return; }
     if (state.editing) exitEdit();
   });
+
+  el('add-hint-x').addEventListener('click', function () { el('add-hint').hidden = true; });
 
   render();
   applyViewport();

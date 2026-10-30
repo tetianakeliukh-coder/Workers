@@ -326,7 +326,9 @@
     el.classList.add('visible');
     clearTimeout(snackTimer);
     if (!opts.persistent) {
-      snackTimer = setTimeout(function () { el.classList.remove('visible'); }, 2600);
+      /* A message that explains a refusal needs longer on screen than
+         one that confirms something went as expected. */
+      snackTimer = setTimeout(function () { el.classList.remove('visible'); }, opts.ms || 2600);
     }
   }
 
