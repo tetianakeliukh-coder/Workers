@@ -32,7 +32,7 @@
      is already showing the names in its own headings. */
   .gb-wrap { position: relative; display: inline-flex; align-items: center; }
   .gb-trigger {
-    display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px;
+    display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px;
     border-radius: 8px; background: var(--white); border: 1px solid var(--grey-350);
     cursor: pointer; font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
   }
@@ -193,7 +193,7 @@
   body.editing #btn-edit, body.editing #gb-wrap, body.editing #cols-wrap { display: none; }
   .edit-note { font-size: 13px; color: var(--grey-600); white-space: nowrap; }
   .btn-outline {
-    height: 32px; padding: 0 16px; border-radius: 8px; cursor: pointer;
+    height: 36px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
     background: var(--white); border: 1px solid var(--primary); color: var(--primary);
     font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
@@ -218,21 +218,15 @@
     background: var(--grey-100); border-color: var(--grey-300);
     color: var(--grey-600); cursor: default;
   }
+  /* A status and an allowance were two grey marks in the same corner of
+     the same cell. The status carries the colour its chip carries; the
+     allowance stays grey. */
   .hr-st {
-    display: inline-flex; align-items: center; flex-shrink: 0;
-    color: var(--grey-500); margin-right: auto;
+    display: inline-flex; align-items: center; flex-shrink: 0; margin-right: auto;
   }
-
-  /* Removing a row is its own column at the right, not a cross tucked
-     behind the task's name where it reads as part of the text. It only
-     appears while editing, and only rows added in this sitting carry it
-     — anything already saved is not the table's to throw away. */
-  th.col-act, td.col-act {
-    position: sticky; right: 0; z-index: 2; background: inherit;
-    text-align: right; padding: 0 12px 0 4px;
-  }
-  #grid thead th.col-act { z-index: 4; }
-  body.editing th.col-hrs, body.editing td.col-hrs { right: 44px; }
+  .hr-st.st-revised   { color: #78b818; }
+  .hr-st.st-submitted { color: #1a85cd; }
+  .hr-st.st-finalised { color: #289e1a; }
   td.col-day .hr-st { margin-right: 4px; }
   /* The chip carries its own dot already, so the icon replaces it. */
   .status-sec .st-ico { display: inline-flex; align-items: center; margin-right: -2px; }
@@ -913,8 +907,13 @@
       return x.type === 'amount' ? x.name + ' (' + x.qty + ')' : x.name;
     }).join(' · ');
   }
-  var ICO_FLAG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
-    '<path d="M7 22V2l10 5-10 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  /* Three coins falling into an open hand. */
+  var ICO_FLAG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+    '<circle cx="8" cy="4" r="1.5" stroke="currentColor" stroke-width="1.6"/>' +
+    '<circle cx="14" cy="6" r="1.5" stroke="currentColor" stroke-width="1.6"/>' +
+    '<circle cx="11" cy="10" r="1.5" stroke="currentColor" stroke-width="1.6"/>' +
+    '<path d="M3.5 14.5v3a4 4 0 004 4h7.5a4 4 0 003.6-2.3l1.7-3.6a1.4 1.4 0 00-2.4-1.4L14 18" ' +
+      'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   /* Left of the figure: a mark that follows the number pushes it off the
      right edge, and then one column no longer lines up with the next. */
   function alwMark(c) {
@@ -932,7 +931,7 @@
     var st = statusOf(e), lock = st.locked;
     return '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
       '" type="button" data-cell="' + k + '"' + (lock ? ' disabled data-tip="' + e.status + ' — hours can no longer be changed"' : '') + '>' +
-      (st.icon ? '<span class="hr-st">' + st.icon + '</span>' : '') +
+      (st.icon ? '<span class="hr-st st-' + String(e.status).toLowerCase() + '">' + st.icon + '</span>' : '') +
       alwMark(c) +
       (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
       '</button>';

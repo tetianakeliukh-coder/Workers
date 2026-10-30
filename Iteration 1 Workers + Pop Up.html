@@ -1,0 +1,2713 @@
+<title>Workers — OPMS</title>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary:        #0033ff;
+    --white:          #ffffff;
+    --black:          #000000;
+    --grey-300:       #e0e0e0;
+    --grey-350:       #dddddd;
+    --grey-400:       #bdbdbd;
+    --grey-600:       #757575;
+    --grey-700:       #616161;
+    --grey-800:       #424242;
+    --bg-blue-light:  #ecf1f8;
+    --error-light:    #d42c40;
+    --text-main:      #081115;
+    --text-87:        rgba(8,17,21,0.87);
+    --row-divider:    rgba(0,0,0,0.12);
+    --fs-sans:        'Segoe UI', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --fs-roboto:      Roboto, 'Segoe UI', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  html, body { height: 100%; background: var(--white); color: var(--text-main); }
+  body { font-family: var(--fs-sans); -webkit-font-smoothing: antialiased; }
+
+  .page { display: flex; min-height: 100vh; }
+
+  /* ─── Sidebar ─── */
+  .sidebar {
+    width: 222px; flex-shrink: 0;
+    display: flex; flex-direction: column; justify-content: space-between;
+    border-right: 1px solid var(--grey-350);
+    min-height: 100vh; background: var(--white);
+  }
+  .sidebar-top { padding: 8px; }
+  .logo-area { padding: 20px 16px 24px; }
+  .nav-list, .footer-nav { list-style: none; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 8px;
+    text-decoration: none; color: var(--text-main); cursor: default;
+  }
+  .nav-item.r4 { border-radius: 4px; }
+  .nav-item.active { background: var(--bg-blue-light); }
+  .nav-icon { flex-shrink: 0; }
+  .nav-label {
+    font-size: 14px; line-height: 18px; letter-spacing: 0.14px;
+    font-weight: 400; padding: 4px 0; white-space: nowrap;
+  }
+
+  .sidebar-footer { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 24px; }
+  .footer-nav { display: flex; flex-direction: column; }
+
+  .account-block { border-top: 1px solid var(--grey-300); padding: 12px 16px 0; }
+  .account-row { display: flex; align-items: center; gap: 10px; }
+  .av-wrap { position: relative; flex-shrink: 0; }
+  .av {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #cdd4ea;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: #3a4b8c;
+    border: 0.5px solid #fafafa; overflow: hidden;
+  }
+  .av-online {
+    position: absolute; bottom: 0; right: 0;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #17b26a; border: 1.5px solid var(--white);
+  }
+  .ac-info { display: flex; flex-direction: column; gap: 2px; }
+  .ac-name-row { display: flex; align-items: center; gap: 6px; }
+  .ac-name { font-weight: 500; font-size: 14px; line-height: 18px; color: var(--grey-800); letter-spacing: 0.14px; white-space: nowrap; }
+  .ac-email { font-size: 12px; line-height: 16px; color: var(--grey-600); letter-spacing: 0.12px; white-space: nowrap; }
+
+  .notif-wrap { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
+  .notif-dot {
+    position: absolute; top: -2px; right: -2px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--error-light); border: 1.125px solid var(--white);
+  }
+
+  /* ─── Main ─── */
+  .main { flex: 1; padding: 24px; overflow-x: auto; }
+  .content { display: flex; flex-direction: column; gap: 12px; }
+
+  .page-header { display: flex; align-items: center; justify-content: space-between; }
+  .page-title {
+    font-family: var(--fs-roboto); font-weight: 700; font-size: 20px;
+    line-height: 24px; color: var(--black); letter-spacing: 0.24px;
+  }
+  .btn-create {
+    background: var(--primary); color: var(--white); border: none;
+    height: 32px; padding: 0 16px; border-radius: 12px;
+    font-size: 14px; font-weight: 500; line-height: 18px;
+    cursor: pointer; white-space: nowrap; font-family: var(--fs-sans);
+    display: inline-flex; align-items: center;
+  }
+
+  .table-section { display: flex; flex-direction: column; gap: 12px; }
+
+  /* ─── Search bar + dropdown ─── */
+  .search-wrap { position: relative; width: 370px; }
+
+  .search-bar {
+    display: flex; align-items: center; gap: 4px;
+    background: var(--white); border: 1px solid var(--grey-350);
+    border-radius: 8px; height: 36px; padding: 10px 12px;
+    width: 100%; transition: border-color 0.15s;
+  }
+  .search-bar:focus-within { border-color: #aab6cc; }
+
+  .search-input-el {
+    border: none; outline: none; background: transparent;
+    font-size: 14px; color: var(--text-main); width: 100%;
+    font-family: var(--fs-sans); line-height: 20px; padding: 0;
+  }
+  .search-input-el::placeholder { color: var(--grey-400); }
+
+  /* ─── Results banner ─── */
+  .results-banner {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0 10px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .results-banner.visible { display: flex; }
+
+  .rb-prefix { color: var(--grey-600); white-space: nowrap; }
+  .rb-term   { color: var(--primary); font-weight: 500; white-space: nowrap; }
+  .rb-dot    { color: var(--grey-350); flex-shrink: 0; }
+  .rb-cat    { color: var(--grey-600); white-space: nowrap; }
+  .rb-count  { color: var(--grey-700); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .rb-clear  {
+    margin-left: 4px;
+    background: none; border: none; cursor: pointer; padding: 0;
+    color: var(--grey-600); line-height: 1;
+    font-size: 16px; display: flex; align-items: center;
+    border-radius: 50%; width: 18px; height: 18px; justify-content: center;
+    flex-shrink: 0;
+  }
+  .rb-clear:hover { background: var(--grey-200); color: var(--grey-800); }
+
+  /* ─── View selector ─── */
+  .view-selector {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px; border-radius: 8px;
+    background: var(--white); border: 1px solid var(--grey-350);
+    font-size: 14px; font-weight: 500; color: var(--grey-800);
+    cursor: pointer; font-family: var(--fs-sans); white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .view-selector:hover { border-color: #aab6cc; background: var(--bg-blue-light); }
+  .view-selector.active { border-color: var(--primary); color: var(--primary); background: var(--bg-blue-light); }
+
+  /* ─── View selector dropdown panel ─── */
+  .vs-wrap { position: relative; }
+  .vs-panel {
+    display: none; position: absolute; top: calc(100% + 6px); left: 0;
+    min-width: 220px; background: var(--white);
+    border: 1px solid var(--grey-350); border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10); z-index: 100; padding: 4px 0;
+  }
+  .vs-panel.open { display: block; }
+  .vs-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 10px 0 12px; height: 36px; cursor: pointer;
+    transition: background 0.1s;
+  }
+  .vs-item:hover { background: var(--bg-blue-light); }
+  .vs-item-check {
+    width: 14px; height: 14px; flex-shrink: 0; color: var(--primary); visibility: hidden;
+  }
+  .vs-item.active .vs-item-check { visibility: visible; }
+  .vs-item-name {
+    flex: 1; font-size: 14px; font-family: var(--fs-sans); color: var(--text-main);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .vs-item.active .vs-item-name { color: var(--primary); font-weight: 500; }
+  .vs-del-btn {
+    width: 26px; height: 26px; border-radius: 6px; border: none; flex-shrink: 0;
+    background: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; color: var(--grey-400); transition: background 0.1s, color 0.1s;
+  }
+  .vs-del-btn:hover { background: #fce8e8; color: #c0392b; }
+  .vs-separator { border: none; border-top: 1px solid var(--grey-300); margin: 4px 0; }
+  .modal-delete-btn {
+    height: 40px; padding: 0 26px; border-radius: 20px; border: none;
+    background: #dc3545; font-size: 14px; font-weight: 500; color: var(--white);
+    cursor: pointer; font-family: var(--fs-sans); transition: background 0.15s;
+  }
+  .modal-delete-btn:hover { background: #b02a37; }
+  .del-view-msg { font-size: 14px; color: var(--grey-700); font-family: var(--fs-sans); line-height: 1.5; margin: 0; }
+  .del-view-name { font-weight: 600; color: var(--text-main); }
+
+  /* ─── Columns button & panel ─── */
+  .btn-columns {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px; border-radius: 8px;
+    background: var(--white); border: 1px solid var(--grey-350);
+    font-size: 14px; font-weight: 500; line-height: 18px;
+    color: var(--grey-800); cursor: pointer; font-family: var(--fs-sans);
+    white-space: nowrap; transition: border-color 0.15s, background 0.15s;
+  }
+  .btn-columns:hover { border-color: #aab6cc; background: var(--bg-blue-light); }
+  .btn-columns.active { background: var(--bg-blue-light); border-color: var(--primary); color: var(--primary); }
+
+  .col-panel-wrap { position: relative; }
+  .col-panel {
+    display: none; position: absolute; top: calc(100% + 6px); right: 0;
+    min-width: 200px; background: var(--white);
+    border: 1px solid var(--grey-350); border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    z-index: 50; padding: 6px 0; overflow: hidden;
+  }
+  .col-panel.open { display: block; }
+  .col-panel-section { padding: 6px 14px 2px; font-size: 11px; font-weight: 600; color: var(--grey-400); text-transform: uppercase; letter-spacing: 0.6px; }
+  .col-panel-divider { border: none; border-top: 1px solid var(--grey-300); margin: 6px 0; }
+  .col-panel-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0 14px; height: 36px; cursor: pointer; user-select: none;
+    transition: background 0.1s;
+  }
+  .col-panel-row:hover { background: var(--bg-blue-light); }
+  .col-chk-box {
+    width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+    border: 1.5px solid var(--grey-400); background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .col-panel-row input[type="checkbox"] { display: none; }
+  .col-panel-row input:checked + .col-chk-box {
+    background: var(--primary); border-color: var(--primary);
+  }
+  .col-panel-row input:checked + .col-chk-box::after {
+    content: ''; width: 9px; height: 5px;
+    border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
+    transform: rotate(-45deg) translateY(-1px); display: block;
+  }
+  .col-panel-name { font-size: 14px; color: var(--text-main); }
+
+  /* ─── Filters button ─── */
+  .btn-filters {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px; border-radius: 8px;
+    background: var(--white); border: 1px solid var(--grey-350);
+    font-size: 14px; font-weight: 500; line-height: 18px;
+    color: var(--grey-800); cursor: pointer; font-family: var(--fs-sans);
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .btn-filters:hover { border-color: #aab6cc; background: var(--bg-blue-light); }
+  .btn-filters.active {
+    background: var(--bg-blue-light); border-color: var(--primary);
+    color: var(--primary);
+  }
+  .btn-filters .filter-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 16px; height: 16px; border-radius: 8px;
+    background: var(--primary); color: var(--white);
+    font-size: 11px; font-weight: 600; line-height: 1; padding: 0 4px;
+  }
+
+  /* ─── Table ─── */
+  .table-card {
+    background: var(--white); border: 1px solid var(--grey-350);
+    border-radius: 12px; overflow: hidden;
+  }
+  .table-scroll { overflow-x: auto; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    table-layout: fixed; min-width: 980px;
+  }
+  colgroup .col-name      { width: 220px; }
+  colgroup .col-id        { width: 96px; }
+  colgroup .col-status    { width: 114px; }
+  colgroup .col-positions { width: 280px; }
+  colgroup .col-act       { width: 90px; }
+
+  .cell-name { display: flex; align-items: center; gap: 10px; }
+  .worker-avatar {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; overflow: hidden;
+  }
+  .col-name-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  thead th.col-name { padding-left: 62px; }
+
+  .status-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 24px; padding: 0 10px; border-radius: 12px; font-size: 13px; white-space: nowrap;
+  }
+  .status-badge.active   { color: #17b26a; border: 1px solid #17b26a; }
+  .status-badge.archived { color: var(--grey-600); border: 1px solid var(--grey-400); }
+  td.col-site, td.col-positions { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+  thead tr { height: 44px; }
+  thead th {
+    text-align: left; padding: 6px 24px 6px 16px;
+    font-weight: 500; font-size: 14px; line-height: 24px;
+    color: var(--text-87); letter-spacing: 0.17px;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--row-divider);
+    background: var(--white);
+  }
+  thead th:last-child { padding: 6px 16px; }
+
+  tbody tr { height: 52px; }
+  tbody tr:not(:last-child) td { border-bottom: 1px solid var(--row-divider); }
+  tbody tr.hidden { display: none; }
+
+  tbody td {
+    padding: 6px 16px; font-size: 14px; line-height: 20px;
+    letter-spacing: 0.15px; font-weight: 400; vertical-align: middle;
+  }
+  td.col-last  { color: var(--text-main); white-space: nowrap; }
+  td.col-first { color: var(--text-87);   white-space: nowrap; }
+  td.col-id    { color: var(--text-87);   white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.col-act   { padding: 6px 12px 6px 6px; }
+
+  .action-cell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .view-link {
+    background: var(--white); border: none; height: 20px; border-radius: 4px;
+    padding: 0; font-size: 14px; font-weight: 500; line-height: 18px;
+    color: var(--primary); cursor: pointer; white-space: nowrap;
+    font-family: var(--fs-sans); display: flex; align-items: center;
+  }
+  .more-btn {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+  }
+
+  /* highlight matched text in table cells */
+  mark { background: #fef08a; color: var(--text-main); border-radius: 2px; padding: 0 1px; font-style: normal; }
+
+  /* empty state */
+  .empty-row td {
+    text-align: center; color: var(--grey-600);
+    font-size: 14px; padding: 32px 16px;
+    border-bottom: none !important;
+  }
+
+  /* ─── Filters Drawer ─── */
+  .drawer-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.32);
+    z-index: 100;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+  .drawer-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .filters-drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 380px; max-width: 100vw;
+    background: var(--white);
+    z-index: 101;
+    display: flex; flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+  }
+  .filters-drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 20px 18px 24px;
+    flex-shrink: 0;
+  }
+  .drawer-title-row { display: flex; align-items: center; gap: 8px; }
+  .drawer-title {
+    font-family: var(--fs-roboto); font-size: 20px; font-weight: 700;
+    line-height: 24px; color: var(--black);
+  }
+  .drawer-title-badge {
+    display: none; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; border-radius: 11px;
+    background: var(--primary); color: var(--white);
+    font-size: 12px; font-weight: 600; line-height: 1; padding: 0 5px;
+  }
+  .drawer-close {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer; border-radius: 6px;
+    color: var(--grey-700); transition: background 0.15s;
+  }
+  .drawer-close:hover { background: var(--grey-300); color: var(--grey-800); }
+
+  .drawer-divider {
+    border: none; border-top: 1px solid var(--grey-300);
+    margin: 0; flex-shrink: 0;
+  }
+
+  .applied-section {
+    padding: 10px 24px 14px; flex-shrink: 0; display: none;
+  }
+  .applied-section.visible { display: block; }
+  .applied-header-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
+  }
+  .applied-label { font-size: 14px; font-weight: 600; color: var(--black); }
+  .clear-all-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--primary);
+    padding: 0; font-family: var(--fs-sans); transition: opacity 0.15s;
+  }
+  .clear-all-btn:hover { opacity: 0.7; }
+
+  .applied-filter-row {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-bottom: 4px;
+  }
+  .applied-filter-label { font-size: 13px; color: var(--grey-700); white-space: nowrap; flex-shrink: 0; }
+  .applied-chip {
+    display: inline-flex; align-items: center; gap: 3px;
+    height: 24px; padding: 0 4px 0 8px;
+    background: #ebebeb; border-radius: 12px; font-size: 12px; line-height: 1; flex-shrink: 0;
+  }
+  .applied-chip-label { color: var(--text-main); white-space: nowrap; }
+  .applied-chip-x {
+    display: flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: none; border: none; cursor: pointer; padding: 0;
+    color: var(--grey-600); transition: color 0.12s;
+  }
+  .applied-chip-x:hover { color: var(--grey-800); }
+
+  /* ─── Advanced mode ─── */
+  .filter-mode-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2px; margin-bottom: 12px;
+  }
+  .filter-mode-switch {
+    position: relative; width: 44px; height: 26px; flex-shrink: 0; cursor: pointer;
+  }
+  .filter-mode-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .filter-mode-track {
+    position: absolute; inset: 0; border-radius: 13px;
+    background: var(--grey-350); transition: background 0.2s;
+  }
+  .filter-mode-thumb {
+    position: absolute; top: 3px; left: 3px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--white); box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+    transition: transform 0.2s;
+  }
+  .filter-mode-switch input:checked ~ .filter-mode-track { background: var(--primary); }
+  .filter-mode-switch input:checked ~ .filter-mode-thumb { transform: translateX(18px); }
+  .filter-mode-label {
+    font-size: 14px; font-weight: 500; color: var(--text-main); cursor: pointer; user-select: none;
+  }
+
+  .filter-fields-row { display: flex; gap: 8px; align-items: flex-start; }
+  .filter-fields-row .fms-wrap { flex: 1; min-width: 0; }
+  .operator-select {
+    display: none; flex: 0 0 38%;
+    height: 44px; padding: 0 30px 0 12px; border-radius: 8px;
+    border: 1px solid var(--grey-350); background: var(--white);
+    font-size: 14px; font-family: var(--fs-sans); color: var(--grey-800);
+    appearance: none; -webkit-appearance: none; cursor: pointer; outline: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3.5 5.5l3.5 3.5 3.5-3.5' stroke='%23757575' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    transition: border-color 0.15s;
+  }
+  .operator-select:focus { border-color: #aab6cc; }
+  .filters-drawer.advanced-mode .operator-select { display: block; }
+  .filters-drawer.advanced-mode .filter-fields-row .fms-wrap { flex: 1; min-width: 0; }
+  .filters-drawer.advanced-mode .fms-field {
+    min-height: 44px; max-height: 44px; flex-wrap: nowrap; overflow: hidden; align-items: center;
+  }
+  .fms-more-badge {
+    font-size: 12px; color: var(--grey-600); white-space: nowrap;
+    flex-shrink: 0; line-height: 1; padding: 0 2px;
+  }
+
+  .drawer-body {
+    flex: 1; overflow-y: auto; padding: 16px 24px 20px;
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filter-label { font-size: 14px; font-weight: 400; color: var(--text-main); line-height: 20px; }
+
+  .filter-select-wrap { position: relative; }
+  .filter-select {
+    width: 100%; height: 44px; padding: 0 36px 0 14px;
+    border: 1px solid var(--grey-350); border-radius: 8px;
+    background: var(--white);
+    font-size: 14px; font-family: var(--fs-sans); color: var(--text-main);
+    appearance: none; -webkit-appearance: none;
+    cursor: pointer; outline: none; transition: border-color 0.15s;
+  }
+  .filter-select:focus { border-color: #aab6cc; }
+  .filter-select[data-empty="true"] { color: var(--grey-400); }
+  .filter-select-wrap::after {
+    content: '';
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    width: 16px; height: 16px; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M4 6l4 4 4-4' stroke='%23757575' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: center;
+  }
+
+  .drawer-footer {
+    display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+    padding: 16px 24px; flex-shrink: 0;
+  }
+  .applied-header-actions { display: flex; align-items: center; gap: 8px; }
+  .save-as-view-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--primary);
+    padding: 0; font-family: var(--fs-sans); transition: opacity 0.15s;
+  }
+  .save-as-view-btn:hover { opacity: 0.7; }
+
+  /* ─── Save as View modal ─── */
+  .modal-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(8, 17, 21, 0.40);
+    align-items: center; justify-content: center;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--white); border-radius: 14px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+    width: 440px; max-width: calc(100vw - 32px);
+    padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 20px;
+  }
+  .modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title {
+    font-size: 18px; font-weight: 600; color: var(--text-main);
+    font-family: var(--fs-sans);
+  }
+  .modal-close {
+    width: 28px; height: 28px; border-radius: 6px; border: none;
+    background: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; color: var(--grey-600);
+    transition: background 0.15s, color 0.15s;
+  }
+  .modal-close:hover { background: var(--bg-blue-light); color: var(--text-main); }
+  .modal-body { display: flex; flex-direction: column; gap: 8px; }
+  .modal-label {
+    font-size: 14px; font-weight: 400; color: var(--text-main);
+    font-family: var(--fs-sans);
+  }
+  .modal-input-wrap { position: relative; }
+  .modal-input {
+    width: 100%; box-sizing: border-box;
+    height: 44px; padding: 0 12px;
+    border: 1.5px solid var(--grey-350); border-radius: 8px;
+    font-size: 14px; font-family: var(--fs-sans); color: var(--text-main);
+    outline: none; transition: border-color 0.15s;
+  }
+  .modal-input::placeholder { color: var(--grey-400); }
+  .modal-input:focus { border-color: var(--primary); }
+  .modal-char-count {
+    position: absolute; bottom: 10px; right: 12px;
+    font-size: 12px; color: var(--grey-400); pointer-events: none;
+    font-family: var(--fs-sans);
+  }
+  .modal-footer {
+    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  }
+  .modal-cancel-btn {
+    height: 40px; padding: 0 22px; border-radius: 20px;
+    background: var(--white); border: 1.5px solid var(--primary);
+    font-size: 14px; font-weight: 500; color: var(--primary);
+    cursor: pointer; font-family: var(--fs-sans); transition: background 0.15s;
+  }
+  .modal-cancel-btn:hover { background: var(--bg-blue-light); }
+  .modal-save-btn {
+    height: 40px; padding: 0 26px; border-radius: 20px;
+    background: var(--primary); border: none;
+    font-size: 14px; font-weight: 500; color: var(--white);
+    cursor: pointer; font-family: var(--fs-sans); transition: background 0.15s, opacity 0.15s;
+  }
+  .modal-save-btn:hover { background: #0028cc; }
+  .modal-save-btn:disabled { opacity: 0.4; cursor: default; }
+  .view-selector-label { pointer-events: none; }
+  .applied-header-sep { color: var(--grey-400); font-size: 13px; user-select: none; }
+  .drawer-cancel-btn {
+    height: 40px; padding: 0 22px; border-radius: 20px;
+    background: var(--white); border: 1.5px solid var(--primary);
+    font-size: 14px; font-weight: 500; color: var(--primary);
+    cursor: pointer; font-family: var(--fs-sans); transition: background 0.15s;
+  }
+  .drawer-cancel-btn:hover { background: var(--bg-blue-light); }
+  .drawer-apply-btn {
+    height: 40px; padding: 0 26px; border-radius: 20px;
+    background: var(--primary); border: none;
+    font-size: 14px; font-weight: 500; color: var(--white);
+    cursor: pointer; font-family: var(--fs-sans); transition: background 0.15s;
+  }
+  .drawer-apply-btn:hover { background: #0028cc; }
+
+  /* ── ADDITIONAL FILTERS COLLAPSIBLE — delete this block to revert ── */
+  .additional-filters-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 12px 0 10px;
+    background: none; border: none; border-top: 1px solid var(--grey-300);
+    cursor: pointer; font-size: 11px; font-weight: 600;
+    color: var(--grey-600); text-transform: uppercase; letter-spacing: 0.05em;
+    font-family: var(--fs-sans); margin-top: 4px;
+  }
+  .additional-filters-toggle:hover { color: var(--text-main); }
+  .additional-filters-toggle:hover .af-chevron { color: var(--grey-700); }
+  .af-chevron { flex-shrink: 0; color: var(--grey-400); transition: transform 0.2s; }
+  .additional-filters-toggle[aria-expanded="true"] .af-chevron { transform: rotate(180deg); }
+  .additional-filters-body { display: none; }
+  .additional-filters-body.open { display: flex; flex-direction: column; gap: 16px; }
+  /* ── END ADDITIONAL FILTERS COLLAPSIBLE ── */
+
+  /* ─── Filter Search (inside drawer) ─── */
+  .filter-search-section {
+    padding: 12px 24px;
+    flex-shrink: 0;
+  }
+  .filter-search-wrap { position: relative; }
+  .filter-search-bar {
+    display: flex; align-items: center; gap: 8px;
+    height: 36px; padding: 0 12px;
+    border: 1px solid var(--grey-350); border-radius: 8px;
+    background: var(--white); transition: border-color 0.15s;
+  }
+  .filter-search-bar:focus-within { border-color: #aab6cc; }
+  .filter-search-input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-size: 14px; color: var(--text-main); font-family: var(--fs-sans); line-height: 20px;
+  }
+  .filter-search-input::placeholder { color: var(--grey-400); }
+
+  .filter-search-dd {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(5,23,95,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    z-index: 10; overflow: hidden;
+    opacity: 0; pointer-events: none; transform: translateY(-4px);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+  }
+  .filter-search-dd.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+  .fsd-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; height: 40px; cursor: pointer; user-select: none;
+  }
+  .fsd-row:hover, .fsd-row.hi { background: var(--bg-blue-light); }
+  .fsd-term {
+    flex: 1; font-size: 14px; color: var(--text-main);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+  }
+  .fsd-term b { font-weight: 500; }
+  .fsd-cat { font-size: 13px; color: var(--grey-600); white-space: nowrap; flex-shrink: 0; }
+  .fsd-no-results { padding: 12px; font-size: 14px; color: var(--grey-600); text-align: center; }
+
+  /* ─── Custom Multi-Select ─── */
+  .fms-wrap { position: relative; }
+  .fms-field {
+    display: flex; align-items: flex-start; flex-wrap: wrap; gap: 5px;
+    min-height: 44px; padding: 8px 36px 8px 12px;
+    border: 1px solid var(--grey-350); border-radius: 8px;
+    background: var(--white); cursor: pointer; position: relative;
+    transition: border-color 0.15s; outline: none; user-select: none;
+  }
+  .fms-field:focus, .fms-field.open { border-color: #aab6cc; }
+  .fms-placeholder { font-size: 14px; color: var(--grey-400); line-height: 28px; pointer-events: none; }
+  .fms-chevron {
+    position: absolute; right: 12px; top: 14px;
+    pointer-events: none; color: var(--grey-600);
+    transition: transform 0.15s;
+  }
+  .fms-field.open .fms-chevron { transform: rotate(180deg); }
+
+  .fms-chip {
+    display: inline-flex; align-items: center; gap: 3px;
+    height: 24px; padding: 0 4px 0 8px;
+    background: var(--bg-blue-light); border-radius: 12px;
+    font-size: 12px; line-height: 1; flex-shrink: 0;
+  }
+  .fms-chip-label {
+    color: var(--primary); font-weight: 500; white-space: nowrap;
+    max-width: 180px; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fms-chip-x {
+    display: flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: none; border: none; cursor: pointer; padding: 0;
+    color: var(--grey-600); flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+  }
+  .fms-chip-x:hover { background: rgba(0,51,255,0.12); color: var(--primary); }
+
+  .fms-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(5,23,95,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    z-index: 20; overflow-y: auto; max-height: 220px;
+    opacity: 0; pointer-events: none; transform: translateY(-4px);
+    transition: opacity 0.12s ease, transform 0.12s ease;
+  }
+  .fms-dropdown.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+  .fms-option {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; height: 40px; cursor: pointer; font-size: 14px;
+    color: var(--text-main); user-select: none;
+  }
+  .fms-option:hover { background: var(--bg-blue-light); }
+  .fms-option.sel { color: var(--primary); font-weight: 500; }
+  .fms-option-label { flex: 1; }
+  .fms-check {
+    width: 16px; height: 16px; flex-shrink: 0; opacity: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3 8l4 4 6-6' stroke='%230033ff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: center;
+  }
+  .fms-option.sel .fms-check { opacity: 1; }
+
+  /* ─── Worker Detail Popup ─── */
+  .wp-backdrop {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(8,17,21,0.5);
+    align-items: center; justify-content: center;
+  }
+  .wp-backdrop.open { display: flex; }
+
+  .wp-modal {
+    width: 95vw; height: 92vh; border-radius: 14px;
+    display: flex; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    background: var(--white);
+  }
+
+  /* Sidebar */
+  .wp-sidebar {
+    width: 260px; flex-shrink: 0;
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--grey-300);
+    background: var(--white);
+    overflow: hidden;
+  }
+  .wp-sidebar-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 16px 12px;
+    flex-shrink: 0;
+  }
+  .wp-sidebar-title { font-size: 20px; font-weight: 700; color: var(--text-main); }
+  .wp-sidebar-close {
+    width: 28px; height: 28px; border-radius: 6px; border: none;
+    background: none; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; color: var(--grey-600);
+    transition: background 0.15s, color 0.15s;
+  }
+  .wp-sidebar-close:hover { background: var(--bg-blue-light); color: var(--text-main); }
+
+  .wp-back-link {
+    display: flex; align-items: center; gap: 6px;
+    padding: 4px 16px 12px;
+    font-size: 14px; color: var(--primary); cursor: pointer;
+    text-decoration: none; flex-shrink: 0;
+    background: none; border: none; font-family: var(--fs-sans);
+  }
+  .wp-back-link:hover { opacity: 0.75; }
+
+  .wp-worker-list {
+    flex: 1; overflow-y: auto;
+    padding: 4px 8px 16px;
+  }
+  .wp-worker-item {
+    padding: 8px 10px; border-radius: 6px;
+    font-size: 13px; color: var(--text-main);
+    cursor: pointer; user-select: none;
+    transition: background 0.1s;
+  }
+  .wp-worker-item:hover { background: var(--bg-blue-light); }
+  .wp-worker-item.active { background: #eeeeee; font-weight: 500; }
+
+  /* Right content */
+  .wp-content {
+    flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* Header */
+  .wp-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--grey-300);
+    flex-shrink: 0;
+  }
+  .wp-header-name {
+    font-size: 18px; font-weight: 600; color: var(--text-main);
+    flex-shrink: 0;
+  }
+  .wp-header-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 24px; padding: 0 10px; border-radius: 12px; font-size: 13px;
+    flex-shrink: 0;
+  }
+  .wp-header-badge.active { color: #17b26a; border: 1px solid #17b26a; }
+  .wp-header-badge.archived { color: var(--grey-600); border: 1px solid var(--grey-400); }
+  .wp-ext-link {
+    display: flex; align-items: center; cursor: pointer;
+    color: var(--primary); flex-shrink: 0;
+    background: none; border: none; padding: 0;
+  }
+  .wp-header-spacer { flex: 1; }
+  .wp-three-dot {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--grey-300); background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--grey-600); flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .wp-three-dot:hover { background: var(--bg-blue-light); }
+
+  /* Tabs */
+  .wp-tabs {
+    display: flex; align-items: flex-end;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--grey-300);
+    flex-shrink: 0;
+  }
+  .wp-tab {
+    padding: 12px 16px; font-size: 14px; color: var(--grey-700);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    transition: color 0.15s; white-space: nowrap;
+    background: none; border-top: none; border-left: none; border-right: none;
+    font-family: var(--fs-sans); margin-bottom: -1px;
+  }
+  .wp-tab:hover { color: var(--text-main); }
+  .wp-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+
+  /* Tab panels */
+  .wp-tab-panel { display: none; flex: 1; overflow-y: auto; }
+  .wp-tab-panel.active { display: flex; }
+
+  /* ── General tab ── */
+  .wp-general { padding: 24px; display: flex; gap: 20px; flex: 1; min-width: 0; }
+  .wp-left-panel { width: 440px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
+  .wp-right-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+
+  .wp-contact-card {
+    border: 1px solid var(--grey-300); border-radius: 10px; padding: 16px;
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .wp-contact-avatar {
+    width: 80px; height: 80px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; color: var(--white);
+  }
+  .wp-contact-rows { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .wp-contact-row { display: flex; align-items: center; gap: 8px; }
+  .wp-contact-label { font-size: 13px; color: var(--grey-600); width: 100px; flex-shrink: 0; }
+  .wp-contact-value { font-size: 13px; color: var(--text-main); flex: 1; }
+  .wp-contact-icons { display: flex; gap: 4px; flex-shrink: 0; }
+  .wp-icon-btn {
+    width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+    background: none; border: none; cursor: pointer; color: var(--primary); padding: 0;
+  }
+  .wp-icon-btn:hover { opacity: 0.7; }
+
+  .wp-docs-section {}
+  .wp-docs-label { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
+  .wp-doc-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 6px; font-size: 13px;
+    color: var(--text-main); cursor: pointer;
+    transition: background 0.1s;
+  }
+  .wp-doc-item:hover { background: var(--bg-blue-light); }
+  .wp-doc-item.active { background: var(--bg-blue-light); }
+
+  /* Toolbar */
+  .wp-toolbar {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--grey-300); border-radius: 8px;
+    padding: 6px 12px; flex-shrink: 0;
+  }
+  .wp-toolbar-btn {
+    width: 32px; height: 32px; border: 1px solid var(--grey-300);
+    border-radius: 6px; background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--grey-700);
+    transition: background 0.15s;
+  }
+  .wp-toolbar-btn:hover { background: var(--bg-blue-light); }
+  .wp-toolbar-sep { width: 1px; height: 24px; background: var(--grey-300); margin: 0 2px; flex-shrink: 0; }
+  .wp-toolbar-page { font-size: 13px; color: var(--grey-700); padding: 0 4px; white-space: nowrap; }
+
+  .wp-doc-card {
+    border: 1px solid var(--grey-300); border-radius: 10px; padding: 20px;
+    flex: 1;
+  }
+  .wp-doc-card-header { display: flex; gap: 14px; align-items: flex-start; }
+  .wp-doc-card-avatar {
+    width: 80px; height: 80px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, #2ec4b6 0%, #3b7dd8 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 700; color: var(--white);
+  }
+  .wp-doc-card-info { flex: 1; }
+  .wp-doc-card-name { font-size: 16px; font-weight: 500; color: var(--text-main); margin-bottom: 2px; }
+  .wp-doc-card-position { font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 10px; }
+  .wp-doc-card-detail { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--grey-700); margin-bottom: 4px; }
+  .wp-doc-card-summary-title { font-size: 16px; font-weight: 700; color: var(--text-main); margin: 16px 0 8px; }
+  .wp-doc-card-summary-text { font-size: 13px; color: var(--grey-700); line-height: 1.6; }
+
+  /* ── Rostering tab ── */
+  .wp-rostering { padding: 24px; flex: 1; }
+  .wp-roster-card {
+    border: 1px solid var(--grey-300); border-radius: 10px; overflow: hidden;
+  }
+  .wp-roster-record { padding: 16px; }
+  .wp-roster-record + .wp-roster-record { border-top: 1px solid var(--grey-300); padding-top: 16px; }
+  .wp-roster-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .wp-roster-row:last-child { margin-bottom: 0; }
+  .wp-roster-label { font-size: 13px; color: var(--grey-600); min-width: 120px; flex-shrink: 0; }
+  .wp-roster-value { font-size: 14px; color: var(--text-main); }
+  .wp-roster-sites { display: flex; flex-direction: column; gap: 2px; }
+
+  /* ── Schedule tab ── */
+  .wp-schedule { padding: 24px; flex: 1; }
+  .wp-schedule-card {
+    border: 1px solid var(--grey-300); border-radius: 10px; padding: 16px;
+    display: flex; gap: 0;
+  }
+  .wp-cal { width: 280px; flex-shrink: 0; }
+  .wp-cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .wp-cal-month { font-size: 14px; font-weight: 700; color: var(--text-main); }
+  .wp-cal-nav {
+    width: 24px; height: 24px; border-radius: 4px;
+    border: 1px solid var(--grey-300); background: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--grey-700);
+  }
+  .wp-cal-nav:hover { background: var(--bg-blue-light); }
+  .wp-cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+  }
+  .wp-cal-dow {
+    font-size: 12px; color: var(--grey-600); text-align: center;
+    padding: 4px 0;
+  }
+  .wp-cal-day {
+    font-size: 12px; text-align: center; padding: 4px 2px;
+    border-radius: 4px; min-height: 24px; line-height: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wp-cal-day.teal-light { background: #4dd0c4; color: #fff; }
+  .wp-cal-day.teal-dark  { background: #1a7a6e; color: #fff; }
+  .wp-cal-day.blue       { background: var(--primary); color: #fff; }
+  .wp-cal-day.grey       { background: var(--grey-300); color: var(--grey-700); }
+  .wp-cal-day.empty      { background: none; }
+
+  .wp-job-info {
+    flex: 1; padding-left: 24px;
+    border-left: 1px solid var(--grey-300);
+  }
+  .wp-job-section-label {
+    font-size: 12px; color: var(--grey-600); text-transform: uppercase;
+    letter-spacing: 0.04em; margin-bottom: 8px;
+  }
+  .wp-job-title { font-size: 14px; font-weight: 500; color: var(--text-main); margin-bottom: 2px; }
+  .wp-job-role  { font-size: 14px; color: var(--text-main); margin-bottom: 2px; }
+  .wp-job-date  { font-size: 13px; color: var(--grey-600); }
+  .wp-job-spacer { margin-top: 20px; }
+</style>
+
+<div class="page">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="logo-area">
+        <svg width="87" height="19" viewBox="0 0 87 19" fill="none" aria-label="OPMS">
+          <rect x="0" y="0" width="19" height="19" rx="3.5" fill="#0033ff"/>
+          <path d="M5 9.5C5 7.015 7.015 5 9.5 5S14 7.015 14 9.5 11.985 14 9.5 14 5 11.985 5 9.5z" stroke="white" stroke-width="1.6" fill="none"/>
+          <circle cx="9.5" cy="9.5" r="2" fill="white"/>
+          <text x="25" y="14.5" fill="#0033ff" font-family="system-ui,'Segoe UI',sans-serif" font-weight="700" font-size="13.5" letter-spacing="0.8">pms</text>
+        </svg>
+      </div>
+      <nav>
+        <ul class="nav-list">
+          <li><a class="nav-item">
+            <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.5 7.6 8 2l6.5 5.6" stroke="#081115" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6.7V14h3.6v-3.6h2.8V14H13V6.7" stroke="#081115" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="nav-label">Home</span>
+          </a></li>
+          <li><a class="nav-item">
+            <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3.5 2h6L13 5.5V14h-9.5V2z" stroke="#081115" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 2v3.5H13" stroke="#081115" stroke-width="1.3" stroke-linejoin="round"/><path d="M5.5 8.5h5M5.5 11h5" stroke="#081115" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <span class="nav-label">Documents</span>
+          </a></li>
+          <li><a class="nav-item active">
+            <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="5.5" r="2.5" stroke="#081115" stroke-width="1.3"/><path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="#081115" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <span class="nav-label">Workers</span>
+          </a></li>
+          <li><a class="nav-item r4">
+            <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="#081115" stroke-width="1.3"/><path d="M2 7h12" stroke="#081115" stroke-width="1.3"/><path d="M6.5 3v10" stroke="#081115" stroke-width="1.3"/></svg>
+            <span class="nav-label">Manage Vacancies</span>
+          </a></li>
+          <li><a class="nav-item">
+            <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="1.5" stroke="#081115" stroke-width="1.3"/><path d="M5 2v2M11 2v2" stroke="#081115" stroke-width="1.3" stroke-linecap="round"/><path d="M2 6h12" stroke="#081115" stroke-width="1.3"/><path d="M6 6v8M10 6v8" stroke="#081115" stroke-width="1.3"/><path d="M2 10h12" stroke="#081115" stroke-width="1.3"/></svg>
+            <span class="nav-label">Rostering</span>
+          </a></li>
+          <li><a class="nav-item r4">
+            <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 3.5 10 8h2L8.5 14 4 8.5H6L3 4" stroke="#081115" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="nav-label">Travel</span>
+          </a></li>
+          <li><a class="nav-item r4">
+            <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8.5" r="5.5" stroke="#081115" stroke-width="1.3"/><path d="M8 5.5v3.3l2.2 2" stroke="#081115" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="nav-label">Timesheets</span>
+          </a></li>
+          <li><a class="nav-item r4">
+            <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="1.5" y="8.5" width="3" height="5.5" rx="0.6" stroke="#081115" stroke-width="1.2"/><rect x="6" y="6" width="3" height="8" rx="0.6" stroke="#081115" stroke-width="1.2"/><rect x="10.5" y="2.5" width="3" height="11.5" rx="0.6" stroke="#081115" stroke-width="1.2"/></svg>
+            <span class="nav-label">Reports</span>
+          </a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="sidebar-footer">
+      <ul class="footer-nav">
+        <li><a class="nav-item r4">
+          <svg class="nav-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 5.5c0-.8.7-1.5 1.5-1.5H7l1.5 2H13c.8 0 1.5.7 1.5 1.5V13c0 .8-.7 1.5-1.5 1.5H3.5C2.7 14.5 2 13.8 2 13V5.5z" stroke="#081115" stroke-width="1.3"/></svg>
+          <span class="nav-label">Org Documents</span>
+        </a></li>
+        <li><a class="nav-item r4">
+          <div class="notif-wrap">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2a4.5 4.5 0 0 1 4.5 4.5V9l1.5 2H2l1.5-2V6.5A4.5 4.5 0 0 1 8 2z" stroke="#081115" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" stroke="#081115" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <div class="notif-dot"></div>
+          </div>
+          <span class="nav-label">Notifications</span>
+        </a></li>
+      </ul>
+      <div class="account-block">
+        <div class="account-row">
+          <div class="av-wrap">
+            <div class="av">OR</div>
+            <div class="av-online"></div>
+          </div>
+          <div class="ac-info">
+            <div class="ac-name-row">
+              <span class="ac-name">Olivia Rhye</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style="flex-shrink:0"><path d="M3 4.5l3 3 3-3" stroke="#757575" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <span class="ac-email">olivia@untitledui.com</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+    <div class="content">
+
+      <div class="page-header">
+        <h1 class="page-title">Workers</h1>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="vs-wrap" id="vs-wrap">
+            <button class="view-selector" id="view-selector-btn" aria-haspopup="true" aria-expanded="false">
+              <span class="view-selector-label" id="view-selector-label">All Workers</span>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="vs-panel" id="vs-panel" role="menu"></div>
+          </div>
+          <button class="btn-create">Create Worker</button>
+        </div>
+      </div>
+
+      <div class="table-section">
+
+        <!-- Search -->
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div class="search-wrap">
+            <div class="search-bar" id="search-bar">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="flex-shrink:0">
+                <circle cx="9" cy="9" r="5.5" stroke="#bdbdbd" stroke-width="1.4"/>
+                <path d="M13.5 13.5l3 3" stroke="#bdbdbd" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              <input
+                class="search-input-el"
+                id="search-input"
+                type="text"
+                placeholder="Search workers"
+                autocomplete="off"
+                spellcheck="false"
+                aria-label="Search workers"
+              >
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="col-panel-wrap">
+              <button class="btn-columns" id="btn-columns" aria-expanded="false" aria-haspopup="true">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+                  <rect x="6" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+                  <rect x="11" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+                </svg>
+                Columns
+              </button>
+              <div class="col-panel" id="col-panel" role="menu">
+                <div class="col-panel-section">Visible</div>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="id" checked><span class="col-chk-box"></span><span class="col-panel-name">OPMS ID</span></label>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="status" checked><span class="col-chk-box"></span><span class="col-panel-name">Status</span></label>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="site" checked><span class="col-chk-box"></span><span class="col-panel-name">Site</span></label>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="positions" checked><span class="col-chk-box"></span><span class="col-panel-name">Positions</span></label>
+                <hr class="col-panel-divider">
+                <div class="col-panel-section">Additional</div>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="email"><span class="col-chk-box"></span><span class="col-panel-name">Email</span></label>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="work-email"><span class="col-chk-box"></span><span class="col-panel-name">Work Email</span></label>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="mobile"><span class="col-chk-box"></span><span class="col-panel-name">Mobile</span></label>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="phone"><span class="col-chk-box"></span><span class="col-panel-name">Phone</span></label>
+                <label class="col-panel-row"><input type="checkbox" class="col-chk" data-col="work-phone"><span class="col-chk-box"></span><span class="col-panel-name">Work Phone</span></label>
+              </div>
+            </div>
+            <button class="btn-filters" id="btn-filters">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M2 4h12M4.5 8h7M7 12h2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+              Filters
+            </button>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-card">
+          <div class="table-scroll">
+            <table>
+              <colgroup>
+                <col class="col-name">
+                <col class="col-id" data-col="id">
+                <col class="col-status" data-col="status">
+                <col class="col-site" data-col="site">
+                <col class="col-positions" data-col="positions">
+                <col data-col="email" style="width:160px;display:none">
+                <col data-col="work-email" style="width:160px;display:none">
+                <col data-col="mobile" style="width:130px;display:none">
+                <col data-col="phone" style="width:130px;display:none">
+                <col data-col="work-phone" style="width:130px;display:none">
+                <col class="col-act">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th class="col-name">Last Name</th>
+                  <th data-col="id">OPMS ID</th>
+                  <th data-col="status">Status</th>
+                  <th data-col="site">Site</th>
+                  <th data-col="positions">Positions</th>
+                  <th data-col="email" style="display:none">Email</th>
+                  <th data-col="work-email" style="display:none">Work Email</th>
+                  <th data-col="mobile" style="display:none">Mobile</th>
+                  <th data-col="phone" style="display:none">Phone</th>
+                  <th data-col="work-phone" style="display:none">Work Phone</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="table-body">
+                <tr data-i="0"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#3b7dd8;color:#fff">SJ</div><span class="col-name-text">Smith John</span></div></td><td class="col-id">111111</td><td class="col-status"><span class="status-badge active">Active</span></td><td class="col-site">MMA VIGILANT – 360</td><td class="col-positions">Safety Officer</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="1"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#c4845c;color:#fff">SE</div><span class="col-name-text">Stone Emma</span></div></td><td class="col-id">234323</td><td class="col-status"><span class="status-badge archived">Archived</span></td><td class="col-site">MMA VIGILANT ROV</td><td class="col-positions">Crane Operator, Rigger</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="2"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#7b6c9e;color:#fff">AS</div><span class="col-name-text">Adams Sophia</span></div></td><td class="col-id">455323</td><td class="col-status"><span class="status-badge archived">Archived</span></td><td class="col-site">SA BHP OLYMPIC DAM SXFPU</td><td class="col-positions">Boilermaker</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="3"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#4a9b6f;color:#fff">MA</div><span class="col-name-text">Miller Ava</span></div></td><td class="col-id">126865</td><td class="col-status"><span class="status-badge active">Active</span></td><td class="col-site">SA BHP OLYMPIC DAM SCAFFOLD MAINTENANCE</td><td class="col-positions">Pipefitter</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="4"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#b85555;color:#fff">CE</div><span class="col-name-text">Clark Emma</span></div></td><td class="col-id">555555</td><td class="col-status"><span class="status-badge active">Active</span></td><td class="col-site">MMA VIGILANT – 360</td><td class="col-positions">Supervisor</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="5"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#3a7ab5;color:#fff">BL</div><span class="col-name-text">Baker Liam</span></div></td><td class="col-id">754356</td><td class="col-status"><span class="status-badge active">Active</span></td><td class="col-site">MMA VIGILANT ROV</td><td class="col-positions">Electrician, Welder</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="6"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#8b7355;color:#fff">BO</div><span class="col-name-text">Brown Olivia</span></div></td><td class="col-id">643457</td><td class="col-status"><span class="status-badge active">Active</span></td><td class="col-site">SA BHP OLYMPIC DAM SXFPU</td><td class="col-positions">Foreman</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="7"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#5b8c8c;color:#fff">CO</div><span class="col-name-text">Clark Olivia</span></div></td><td class="col-id">098562</td><td class="col-status"><span class="status-badge archived">Archived</span></td><td class="col-site">SA BHP OLYMPIC DAM SCAFFOLD &#x2026; + 2</td><td class="col-positions">Scaffolder</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="8"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#7a8cb5;color:#fff">HA</div><span class="col-name-text">Hill Allison</span></div></td><td class="col-id">567853</td><td class="col-status"><span class="status-badge archived">Archived</span></td><td class="col-site">MMA VIGILANT – 360</td><td class="col-positions">Project Manager, Quality Inspector, Laborer</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="9"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#5a7a5a;color:#fff">DN</div><span class="col-name-text">Davis Noah</span></div></td><td class="col-id">789123</td><td class="col-status"><span class="status-badge active">Active</span></td><td class="col-site">MMA VIGILANT ROV</td><td class="col-positions">Mechanic</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="10"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#b5827a;color:#fff">HA</div><span class="col-name-text">Hill Allison</span></div></td><td class="col-id">432198</td><td class="col-status"><span class="status-badge archived">Archived</span></td><td class="col-site">SA BHP OLYMPIC DAM SXFPU</td><td class="col-positions">Quality Inspector</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+                <tr data-i="11"><td class="col-name"><div class="cell-name"><div class="worker-avatar" style="background:#8c6b5a;color:#fff">BC</div><span class="col-name-text">Brown Chad</span></div></td><td class="col-id">654321</td><td class="col-status"><span class="status-badge active">Active</span></td><td class="col-site">MMA VIGILANT – 360</td><td class="col-positions">Forklift Operator</td><td class="col-act"><div class="action-cell"><button class="view-link">View</button><span class="more-btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="3.8" r="1.3" fill="#616161"/><circle cx="8" cy="8.3" r="1.3" fill="#616161"/><circle cx="8" cy="12.8" r="1.3" fill="#616161"/></svg></span></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Filters Drawer -->
+<div class="drawer-overlay" id="drawer-overlay"></div>
+<aside class="filters-drawer" id="filters-drawer" role="dialog" aria-modal="true" aria-label="Filters">
+  <div class="drawer-header">
+    <div class="drawer-title-row">
+      <h2 class="drawer-title">Filters</h2>
+      <span class="drawer-title-badge" id="applied-badge"></span>
+    </div>
+    <button class="drawer-close" id="drawer-close" aria-label="Close filters">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <hr class="drawer-divider">
+
+  <div class="filter-search-section">
+    <div class="filter-mode-row">
+      <label class="filter-mode-label" for="filter-mode-toggle">Advanced Filters</label>
+      <label class="filter-mode-switch" aria-label="Advanced Filters">
+        <input type="checkbox" id="filter-mode-toggle">
+        <span class="filter-mode-track"></span>
+        <span class="filter-mode-thumb"></span>
+      </label>
+    </div>
+    <div class="filter-search-wrap">
+      <div class="filter-search-bar">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="flex-shrink:0">
+          <circle cx="7" cy="7" r="4.5" stroke="#bdbdbd" stroke-width="1.3"/>
+          <path d="M11 11l2.5 2.5" stroke="#bdbdbd" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <input class="filter-search-input" id="filter-search-input" type="text"
+          placeholder="Search filters..." autocomplete="off" spellcheck="false"
+          aria-label="Search filters" aria-autocomplete="list" aria-controls="filter-search-dd">
+      </div>
+      <div class="filter-search-dd" id="filter-search-dd" role="listbox"></div>
+    </div>
+  </div>
+
+  <div class="applied-section" id="applied-section">
+    <div class="applied-header-row">
+      <span class="applied-label">Applied:</span>
+      <div class="applied-header-actions">
+        <button class="save-as-view-btn" id="drawer-save-view">Save as View</button>
+        <span class="applied-header-sep">|</span>
+        <button class="clear-all-btn" id="clear-all-filters">Clear All</button>
+      </div>
+    </div>
+    <div class="applied-filters-list" id="applied-filters-list"></div>
+  </div>
+
+  <hr class="drawer-divider">
+
+  <div class="drawer-body">
+
+    <div class="filter-group">
+      <label class="filter-label">Status</label>
+      <div class="filter-fields-row">
+        <select class="operator-select" id="op-f-status"><option value="is">Is</option><option value="not">Is Not</option></select>
+        <div class="fms-wrap" id="fms-wrap-f-status">
+          <div class="fms-field" id="fms-field-f-status" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+            <span class="fms-placeholder">Select</span>
+            <svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="fms-dropdown" id="fms-dd-f-status" role="listbox" aria-multiselectable="true">
+            <div class="fms-option" role="option" data-value="Active"><span class="fms-option-label">Active</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Inactive"><span class="fms-option-label">Inactive</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Pending Review"><span class="fms-option-label">Pending Review</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Suspended"><span class="fms-option-label">Suspended</span><span class="fms-check"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Position</label>
+      <div class="filter-fields-row">
+        <select class="operator-select" id="op-f-position"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+        <div class="fms-wrap" id="fms-wrap-f-position">
+          <div class="fms-field" id="fms-field-f-position" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+            <span class="fms-placeholder">Select</span>
+            <svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="fms-dropdown" id="fms-dd-f-position" role="listbox" aria-multiselectable="true">
+            <div class="fms-option" role="option" data-value="Software Engineer"><span class="fms-option-label">Software Engineer</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Project Manager"><span class="fms-option-label">Project Manager</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Site Supervisor"><span class="fms-option-label">Site Supervisor</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Safety Officer"><span class="fms-option-label">Safety Officer</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Operations Manager"><span class="fms-option-label">Operations Manager</span><span class="fms-check"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Site</label>
+      <div class="filter-fields-row">
+        <select class="operator-select" id="op-f-site"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+        <div class="fms-wrap" id="fms-wrap-f-site">
+          <div class="fms-field" id="fms-field-f-site" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="fms-dropdown" id="fms-dd-f-site" role="listbox" aria-multiselectable="true">
+            <div class="fms-option" role="option" data-value="MMA VIGILANT – 360"><span class="fms-option-label">MMA VIGILANT – 360</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="MMA VIGILANT ROV"><span class="fms-option-label">MMA VIGILANT ROV</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="SA BHP OLYMPIC DAM SXFPU"><span class="fms-option-label">SA BHP OLYMPIC DAM SXFPU</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="SA BHP OLYMPIC DAM SCAFFOLD MAINTENANCE"><span class="fms-option-label">SA BHP OLYMPIC DAM SCAFFOLD MAINTENANCE</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Gorgon LNG Platform"><span class="fms-option-label">Gorgon LNG Platform</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Wheatstone Offshore"><span class="fms-option-label">Wheatstone Offshore</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="North Rankin Complex"><span class="fms-option-label">North Rankin Complex</span><span class="fms-check"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Availability</label>
+      <div class="filter-fields-row">
+        <select class="operator-select" id="op-f-availability"><option value="is">Is</option><option value="not">Is Not</option></select>
+        <div class="fms-wrap" id="fms-wrap-f-availability">
+          <div class="fms-field" id="fms-field-f-availability" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="fms-dropdown" id="fms-dd-f-availability" role="listbox" aria-multiselectable="true">
+            <div class="fms-option" role="option" data-value="Available"><span class="fms-option-label">Available</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="On Leave"><span class="fms-option-label">On Leave</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Deployed"><span class="fms-option-label">Deployed</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Standby"><span class="fms-option-label">Standby</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Unavailable"><span class="fms-option-label">Unavailable</span><span class="fms-check"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Contract Type</label>
+      <div class="filter-fields-row">
+        <select class="operator-select" id="op-f-contract"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+        <div class="fms-wrap" id="fms-wrap-f-contract">
+          <div class="fms-field" id="fms-field-f-contract" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="fms-dropdown" id="fms-dd-f-contract" role="listbox" aria-multiselectable="true">
+            <div class="fms-option" role="option" data-value="Permanent"><span class="fms-option-label">Permanent</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Contractor"><span class="fms-option-label">Contractor</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Casual"><span class="fms-option-label">Casual</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Fixed Term"><span class="fms-option-label">Fixed Term</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Labour Hire"><span class="fms-option-label">Labour Hire</span><span class="fms-check"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <label class="filter-label">Work State</label>
+      <div class="filter-fields-row">
+        <select class="operator-select" id="op-f-work-state"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+        <div class="fms-wrap" id="fms-wrap-f-work-state">
+          <div class="fms-field" id="fms-field-f-work-state" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="fms-dropdown" id="fms-dd-f-work-state" role="listbox" aria-multiselectable="true">
+            <div class="fms-option" role="option" data-value="Western Australia"><span class="fms-option-label">Western Australia</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Queensland"><span class="fms-option-label">Queensland</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="South Australia"><span class="fms-option-label">South Australia</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Northern Territory"><span class="fms-option-label">Northern Territory</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="New South Wales"><span class="fms-option-label">New South Wales</span><span class="fms-check"></span></div>
+            <div class="fms-option" role="option" data-value="Victoria"><span class="fms-option-label">Victoria</span><span class="fms-check"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADDITIONAL FILTERS COLLAPSIBLE START — to revert: remove this button + the wrapper div below, keeping only the filter-group divs inside -->
+    <button class="additional-filters-toggle" id="additional-filters-toggle" aria-expanded="false">
+      <span>Additional Filters</span>
+      <svg class="af-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="additional-filters-body" id="additional-filters-body">
+
+      <div class="filter-group">
+        <label class="filter-label">Document Type</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-doc-type"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-doc-type">
+            <div class="fms-field" id="fms-field-f-doc-type" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+              <span class="fms-placeholder">Select</span>
+              <svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="fms-dropdown" id="fms-dd-f-doc-type" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="Passport"><span class="fms-option-label">Passport</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Driver's License"><span class="fms-option-label">Driver's License</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Work Permit"><span class="fms-option-label">Work Permit</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Visa"><span class="fms-option-label">Visa</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Certificate of Training"><span class="fms-option-label">Certificate of Training</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Employer</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-employer"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-employer">
+            <div class="fms-field" id="fms-field-f-employer" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+              <span class="fms-placeholder">Select</span>
+              <svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="fms-dropdown" id="fms-dd-f-employer" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="Australian Offshore Services"><span class="fms-option-label">Australian Offshore Services</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Australian Oil &amp; Gas Pty Ltd"><span class="fms-option-label">Australian Oil &amp; Gas Pty Ltd</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Global Resources Ltd"><span class="fms-option-label">Global Resources Ltd</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Pacific Mining Corp"><span class="fms-option-label">Pacific Mining Corp</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Northern Territory Construction"><span class="fms-option-label">Northern Territory Construction</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Home Address Country</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-country"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-country">
+            <div class="fms-field" id="fms-field-f-country" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox">
+              <span class="fms-placeholder">Select</span>
+              <svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="fms-dropdown" id="fms-dd-f-country" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="Australia"><span class="fms-option-label">Australia</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="New Zealand"><span class="fms-option-label">New Zealand</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="United States"><span class="fms-option-label">United States</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="United Kingdom"><span class="fms-option-label">United Kingdom</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Canada"><span class="fms-option-label">Canada</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Nationality</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-nationality"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-nationality">
+            <div class="fms-field" id="fms-field-f-nationality" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="fms-dropdown" id="fms-dd-f-nationality" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="Australian"><span class="fms-option-label">Australian</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="New Zealander"><span class="fms-option-label">New Zealander</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="British"><span class="fms-option-label">British</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="American"><span class="fms-option-label">American</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Filipino"><span class="fms-option-label">Filipino</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Indian"><span class="fms-option-label">Indian</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="South African"><span class="fms-option-label">South African</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Medical Status</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-medical"><option value="is">Is</option><option value="not">Is Not</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-medical">
+            <div class="fms-field" id="fms-field-f-medical" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="fms-dropdown" id="fms-dd-f-medical" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="Valid"><span class="fms-option-label">Valid</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Expired"><span class="fms-option-label">Expired</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Pending Review"><span class="fms-option-label">Pending Review</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Not Submitted"><span class="fms-option-label">Not Submitted</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Exempt"><span class="fms-option-label">Exempt</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Training Certification</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-cert"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-cert">
+            <div class="fms-field" id="fms-field-f-cert" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="fms-dropdown" id="fms-dd-f-cert" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="HUET"><span class="fms-option-label">HUET</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="BOSIET"><span class="fms-option-label">BOSIET</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="FOET"><span class="fms-option-label">FOET</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="First Aid"><span class="fms-option-label">First Aid</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="H2S Awareness"><span class="fms-option-label">H2S Awareness</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Fire Fighting"><span class="fms-option-label">Fire Fighting</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Confined Space"><span class="fms-option-label">Confined Space</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Rigging"><span class="fms-option-label">Rigging</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Visa Type</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-visa"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-visa">
+            <div class="fms-field" id="fms-field-f-visa" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="fms-dropdown" id="fms-dd-f-visa" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="Citizen"><span class="fms-option-label">Citizen</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Permanent Resident"><span class="fms-option-label">Permanent Resident</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="482 Skilled Worker"><span class="fms-option-label">482 Skilled Worker</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="186 Employer Nominated"><span class="fms-option-label">186 Employer Nominated</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="400 Temporary Work"><span class="fms-option-label">400 Temporary Work</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Working Holiday"><span class="fms-option-label">Working Holiday</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Language</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-language"><option value="inc">Include</option><option value="exc">Exclude</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-language">
+            <div class="fms-field" id="fms-field-f-language" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="fms-dropdown" id="fms-dd-f-language" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="English"><span class="fms-option-label">English</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Filipino"><span class="fms-option-label">Filipino</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Hindi"><span class="fms-option-label">Hindi</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Spanish"><span class="fms-option-label">Spanish</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Portuguese"><span class="fms-option-label">Portuguese</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Mandarin"><span class="fms-option-label">Mandarin</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="French"><span class="fms-option-label">French</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <label class="filter-label">Security Clearance</label>
+        <div class="filter-fields-row">
+          <select class="operator-select" id="op-f-clearance"><option value="is">Is</option><option value="not">Is Not</option></select>
+          <div class="fms-wrap" id="fms-wrap-f-clearance">
+            <div class="fms-field" id="fms-field-f-clearance" tabindex="0" role="combobox" aria-expanded="false" aria-haspopup="listbox"><span class="fms-placeholder">Select</span><svg class="fms-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="fms-dropdown" id="fms-dd-f-clearance" role="listbox" aria-multiselectable="true">
+              <div class="fms-option" role="option" data-value="None Required"><span class="fms-option-label">None Required</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Basic"><span class="fms-option-label">Basic</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="Baseline"><span class="fms-option-label">Baseline</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="NV1"><span class="fms-option-label">NV1</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="NV2"><span class="fms-option-label">NV2</span><span class="fms-check"></span></div>
+              <div class="fms-option" role="option" data-value="PV"><span class="fms-option-label">PV</span><span class="fms-check"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- ADDITIONAL FILTERS COLLAPSIBLE END -->
+
+  </div>
+
+  <hr class="drawer-divider">
+
+  <div class="drawer-footer">
+    <button class="drawer-cancel-btn" id="drawer-cancel">Cancel</button>
+    <button class="drawer-apply-btn" id="drawer-apply">Apply</button>
+  </div>
+</aside>
+
+<!-- Worker Detail Popup -->
+<div class="wp-backdrop" id="wp-backdrop" role="dialog" aria-modal="true" aria-label="Worker Detail">
+  <div class="wp-modal">
+
+    <!-- Left sidebar -->
+    <div class="wp-sidebar">
+      <div class="wp-sidebar-top">
+        <span class="wp-sidebar-title">Workers</span>
+        <button class="wp-sidebar-close" id="wp-close" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <button class="wp-back-link" id="wp-back">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        All Workers
+      </button>
+      <div class="wp-worker-list" id="wp-worker-list"></div>
+    </div>
+
+    <!-- Right content -->
+    <div class="wp-content">
+      <!-- Header -->
+      <div class="wp-header">
+        <span class="wp-header-name" id="wp-header-name">Smith John, 111111</span>
+        <span class="wp-header-badge active" id="wp-header-badge">Active</span>
+        <button class="wp-ext-link" title="Open in new tab" tabindex="-1">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M6 2.5H2.5A1.5 1.5 0 0 0 1 4v7.5A1.5 1.5 0 0 0 2.5 13H10a1.5 1.5 0 0 0 1.5-1.5V8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M8.5 1H13v4.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7L13 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        </button>
+        <div class="wp-header-spacer"></div>
+        <button class="wp-three-dot" title="More options">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>
+        </button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="wp-tabs">
+        <button class="wp-tab active" data-tab="general">General</button>
+        <button class="wp-tab" data-tab="rostering">Rostering</button>
+        <button class="wp-tab" data-tab="schedule">Schedule</button>
+      </div>
+
+      <!-- General tab -->
+      <div class="wp-tab-panel active" id="wp-panel-general">
+        <div class="wp-general">
+          <div class="wp-left-panel">
+            <!-- Contact card -->
+            <div class="wp-contact-card">
+              <div class="wp-contact-avatar" id="wp-contact-avatar">SJ</div>
+              <div class="wp-contact-rows" id="wp-contact-rows">
+                <!-- filled by JS -->
+              </div>
+            </div>
+            <!-- Documents -->
+            <div class="wp-docs-section">
+              <div class="wp-docs-label">Documents:</div>
+              <div id="wp-doc-list"></div>
+            </div>
+          </div>
+          <div class="wp-right-panel">
+            <!-- Toolbar -->
+            <div class="wp-toolbar">
+              <button class="wp-toolbar-btn" title="Zoom out">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4.5 7h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <button class="wp-toolbar-btn" title="Zoom in">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3"/><path d="M11 11l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M7 4.5v5M4.5 7h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <div class="wp-toolbar-sep"></div>
+              <button class="wp-toolbar-btn" title="Previous page">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 4L6 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <span class="wp-toolbar-page">1/13</span>
+              <button class="wp-toolbar-btn" title="Next page">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <div class="wp-toolbar-sep"></div>
+              <button class="wp-toolbar-btn" title="Download">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 13h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+              <button class="wp-toolbar-btn" title="Edit">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11L11 2.5z" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+            </div>
+            <!-- Document card -->
+            <div class="wp-doc-card">
+              <div class="wp-doc-card-header">
+                <div class="wp-doc-card-avatar" id="wp-doc-avatar">SJ</div>
+                <div class="wp-doc-card-info">
+                  <div class="wp-doc-card-name" id="wp-doc-card-name">Smith, John</div>
+                  <div class="wp-doc-card-position" id="wp-doc-card-pos">Boilermaker</div>
+                  <div class="wp-doc-card-detail">
+                    <span>📍</span>
+                    <span>25 Industrial Rd, Sydney, NSW 2000, Australia</span>
+                  </div>
+                  <div class="wp-doc-card-detail">
+                    <span>📞</span>
+                    <span id="wp-doc-card-phone">+61 400 123 456</span>
+                  </div>
+                  <div class="wp-doc-card-detail">
+                    <span>✉</span>
+                    <span id="wp-doc-card-email">john.smith@example.com</span>
+                  </div>
+                </div>
+              </div>
+              <div class="wp-doc-card-summary-title">Professional Summary</div>
+              <div class="wp-doc-card-summary-text" id="wp-doc-card-summary">
+                An experienced and dedicated professional with over 10 years in the offshore and industrial sectors. Proven track record of delivering high-quality work in demanding environments, including remote offshore platforms and large-scale construction sites across Australia. Holds all required safety certifications including BOSIET, HUET and FOET. Committed to maintaining the highest standards of workmanship and workplace safety.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rostering tab -->
+      <div class="wp-tab-panel" id="wp-panel-rostering">
+        <div class="wp-rostering">
+          <div class="wp-roster-card">
+            <div class="wp-roster-record">
+              <div class="wp-roster-row">
+                <span class="wp-roster-label">Company</span>
+                <span class="wp-roster-value">Australian Marine, Renewables, HUC &amp; Construction</span>
+              </div>
+              <div class="wp-roster-row">
+                <span class="wp-roster-label">Status</span>
+                <span class="wp-roster-value"><span class="status-badge active">Active</span></span>
+              </div>
+              <div class="wp-roster-row">
+                <span class="wp-roster-label">Sites</span>
+                <div class="wp-roster-sites wp-roster-value">
+                  <span>MMA VIGILANT – 360</span>
+                  <span>MMA VIGILANT ROV</span>
+                </div>
+              </div>
+            </div>
+            <div class="wp-roster-record">
+              <div class="wp-roster-row">
+                <span class="wp-roster-label">Company</span>
+                <span class="wp-roster-value">New Zealand Onshore Recruitment</span>
+              </div>
+              <div class="wp-roster-row">
+                <span class="wp-roster-label">Status</span>
+                <span class="wp-roster-value"><span class="status-badge archived">Archived</span></span>
+              </div>
+              <div class="wp-roster-row">
+                <span class="wp-roster-label">Sites</span>
+                <div class="wp-roster-sites wp-roster-value">
+                  <span>SA BHP OLYMPIC DAM SXFPU</span>
+                  <span>SA BHP OLYMPIC DAM SCAFFOLD MAINTENANCE</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Schedule tab -->
+      <div class="wp-tab-panel" id="wp-panel-schedule">
+        <div class="wp-schedule">
+          <div class="wp-schedule-card">
+            <!-- Calendar -->
+            <div class="wp-cal">
+              <div class="wp-cal-header">
+                <button class="wp-cal-nav">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 2L4 6l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <span class="wp-cal-month">March 2025 ▾</span>
+                <button class="wp-cal-nav">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+              </div>
+              <div class="wp-cal-grid" id="wp-cal-grid">
+                <!-- DOW headers -->
+                <div class="wp-cal-dow">Su</div>
+                <div class="wp-cal-dow">Mo</div>
+                <div class="wp-cal-dow">Tu</div>
+                <div class="wp-cal-dow">We</div>
+                <div class="wp-cal-dow">Th</div>
+                <div class="wp-cal-dow">Fr</div>
+                <div class="wp-cal-dow">Sa</div>
+                <!-- Days inserted by JS -->
+              </div>
+            </div>
+            <!-- Job info -->
+            <div class="wp-job-info">
+              <div class="wp-job-section-label">Current Job</div>
+              <div class="wp-job-title">RX Shutdown Scaffolding</div>
+              <div class="wp-job-role">Advanced Scaffolder</div>
+              <div class="wp-job-date">Until 15 March</div>
+              <div class="wp-job-spacer"></div>
+              <div class="wp-job-section-label">Next Job</div>
+              <div class="wp-job-title">RX Shutdown Scaffolding</div>
+              <div class="wp-job-role">Advanced Scaffolder</div>
+              <div class="wp-job-date">From 20 March</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- .wp-content -->
+  </div><!-- .wp-modal -->
+</div><!-- .wp-backdrop -->
+
+<div class="modal-backdrop" id="del-view-modal" role="dialog" aria-modal="true" aria-labelledby="del-view-title">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="del-view-title">Delete View</span>
+      <button class="modal-close" id="del-view-close" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="del-view-msg" id="del-view-msg">Are you sure you want to delete this view?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-cancel-btn" id="del-view-cancel">Cancel</button>
+      <button class="modal-delete-btn" id="del-view-confirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="save-view-modal" role="dialog" aria-modal="true" aria-labelledby="save-view-title">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="save-view-title">Save as View</span>
+      <button class="modal-close" id="save-view-close" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <label class="modal-label" for="view-name-input">Name this view:</label>
+      <div class="modal-input-wrap">
+        <input class="modal-input" id="view-name-input" type="text" maxlength="50" placeholder="e.g. Active Offshore Workers" autocomplete="off">
+        <span class="modal-char-count" id="view-name-count">0/50</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-cancel-btn" id="save-view-cancel">Cancel</button>
+      <button class="modal-save-btn" id="save-view-confirm" disabled>Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── DOM refs ───────────────────────────────────────────────────
+  const input = document.getElementById('search-input');
+  const tbody = document.getElementById('table-body');
+  const rows  = Array.from(tbody.querySelectorAll('tr[data-i]'));
+
+  // ── Helpers ────────────────────────────────────────────────────
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Simple text search with yellow highlight ───────────────────
+  function highlightEl(el, q) {
+    var orig = el.dataset.orig || el.textContent;
+    el.dataset.orig = orig;
+    if (!q) { el.textContent = orig; return false; }
+    var i = orig.toLowerCase().indexOf(q);
+    if (i > -1) {
+      el.innerHTML = esc(orig.slice(0, i)) + '<mark>' + esc(orig.slice(i, i + q.length)) + '</mark>' + esc(orig.slice(i + q.length));
+      return true;
+    }
+    el.textContent = orig; return false;
+  }
+
+  input.addEventListener('input', function() {
+    var q = input.value.toLowerCase().trim();
+    rows.forEach(function(row) {
+      var nameEl = row.querySelector('.col-name-text');
+      var idEl   = row.querySelector('td.col-id');
+      var match  = highlightEl(nameEl, q) | highlightEl(idEl, q);
+      row.classList.toggle('hidden', q !== '' && !match);
+    });
+  });
+
+  // ── Filters Drawer ─────────────────────────────────────────────
+  var filtersBtn        = document.getElementById('btn-filters');
+  var drawerOverlay     = document.getElementById('drawer-overlay');
+  var filterDrawer      = document.getElementById('filters-drawer');
+  var drawerCloseBtn    = document.getElementById('drawer-close');
+  var drawerCancelBtn   = document.getElementById('drawer-cancel');
+  var drawerApplyBtn    = document.getElementById('drawer-apply');
+  var clearAllBtn       = document.getElementById('clear-all-filters');
+  var appliedBadge      = document.getElementById('applied-badge');
+  var filterSearchInput = document.getElementById('filter-search-input');
+  var filterSearchDD    = document.getElementById('filter-search-dd');
+  var appliedSection    = document.getElementById('applied-section');
+  var appliedFiltersList= document.getElementById('applied-filters-list');
+  var FMS_IDS = ['f-position', 'f-doc-type', 'f-employer', 'f-country', 'f-status', 'f-site', 'f-nationality', 'f-contract', 'f-work-state', 'f-medical', 'f-cert', 'f-availability', 'f-visa', 'f-language', 'f-clearance'];
+
+  var FILTER_OPTIONS = [
+    { value: 'Software Engineer',             filterId: 'f-position', filterLabel: 'Position' },
+    { value: 'Project Manager',               filterId: 'f-position', filterLabel: 'Position' },
+    { value: 'Site Supervisor',               filterId: 'f-position', filterLabel: 'Position' },
+    { value: 'Safety Officer',                filterId: 'f-position', filterLabel: 'Position' },
+    { value: 'Operations Manager',            filterId: 'f-position', filterLabel: 'Position' },
+    { value: 'Passport',                      filterId: 'f-doc-type', filterLabel: 'Document Type' },
+    { value: "Driver's License",              filterId: 'f-doc-type', filterLabel: 'Document Type' },
+    { value: 'Work Permit',                   filterId: 'f-doc-type', filterLabel: 'Document Type' },
+    { value: 'Visa',                          filterId: 'f-doc-type', filterLabel: 'Document Type' },
+    { value: 'Certificate of Training',       filterId: 'f-doc-type', filterLabel: 'Document Type' },
+    { value: 'Australian Offshore Services',  filterId: 'f-employer', filterLabel: 'Employer' },
+    { value: 'Australian Oil & Gas Pty Ltd',  filterId: 'f-employer', filterLabel: 'Employer' },
+    { value: 'Global Resources Ltd',          filterId: 'f-employer', filterLabel: 'Employer' },
+    { value: 'Pacific Mining Corp',           filterId: 'f-employer', filterLabel: 'Employer' },
+    { value: 'Northern Territory Construction', filterId: 'f-employer', filterLabel: 'Employer' },
+    { value: 'Australia',                     filterId: 'f-country',  filterLabel: 'Home Address Country' },
+    { value: 'New Zealand',                   filterId: 'f-country',  filterLabel: 'Home Address Country' },
+    { value: 'United States',                 filterId: 'f-country',  filterLabel: 'Home Address Country' },
+    { value: 'United Kingdom',                filterId: 'f-country',  filterLabel: 'Home Address Country' },
+    { value: 'Canada',                        filterId: 'f-country',  filterLabel: 'Home Address Country' },
+    { value: 'Active',                        filterId: 'f-status',       filterLabel: 'Status' },
+    { value: 'Inactive',                      filterId: 'f-status',       filterLabel: 'Status' },
+    { value: 'Pending Review',                filterId: 'f-status',       filterLabel: 'Status' },
+    { value: 'Suspended',                     filterId: 'f-status',       filterLabel: 'Status' },
+    { value: 'MMA VIGILANT – 360',            filterId: 'f-site',         filterLabel: 'Site' },
+    { value: 'MMA VIGILANT ROV',              filterId: 'f-site',         filterLabel: 'Site' },
+    { value: 'SA BHP OLYMPIC DAM SXFPU',      filterId: 'f-site',         filterLabel: 'Site' },
+    { value: 'SA BHP OLYMPIC DAM SCAFFOLD MAINTENANCE', filterId: 'f-site', filterLabel: 'Site' },
+    { value: 'Gorgon LNG Platform',           filterId: 'f-site',         filterLabel: 'Site' },
+    { value: 'Wheatstone Offshore',           filterId: 'f-site',         filterLabel: 'Site' },
+    { value: 'North Rankin Complex',          filterId: 'f-site',         filterLabel: 'Site' },
+    { value: 'Australian',                    filterId: 'f-nationality',  filterLabel: 'Nationality' },
+    { value: 'New Zealander',                 filterId: 'f-nationality',  filterLabel: 'Nationality' },
+    { value: 'British',                       filterId: 'f-nationality',  filterLabel: 'Nationality' },
+    { value: 'American',                      filterId: 'f-nationality',  filterLabel: 'Nationality' },
+    { value: 'Filipino',                      filterId: 'f-nationality',  filterLabel: 'Nationality' },
+    { value: 'Indian',                        filterId: 'f-nationality',  filterLabel: 'Nationality' },
+    { value: 'South African',                 filterId: 'f-nationality',  filterLabel: 'Nationality' },
+    { value: 'Permanent',                     filterId: 'f-contract',     filterLabel: 'Contract Type' },
+    { value: 'Contractor',                    filterId: 'f-contract',     filterLabel: 'Contract Type' },
+    { value: 'Casual',                        filterId: 'f-contract',     filterLabel: 'Contract Type' },
+    { value: 'Fixed Term',                    filterId: 'f-contract',     filterLabel: 'Contract Type' },
+    { value: 'Labour Hire',                   filterId: 'f-contract',     filterLabel: 'Contract Type' },
+    { value: 'Western Australia',             filterId: 'f-work-state',   filterLabel: 'Work State' },
+    { value: 'Queensland',                    filterId: 'f-work-state',   filterLabel: 'Work State' },
+    { value: 'South Australia',               filterId: 'f-work-state',   filterLabel: 'Work State' },
+    { value: 'Northern Territory',            filterId: 'f-work-state',   filterLabel: 'Work State' },
+    { value: 'New South Wales',               filterId: 'f-work-state',   filterLabel: 'Work State' },
+    { value: 'Victoria',                      filterId: 'f-work-state',   filterLabel: 'Work State' },
+    { value: 'Valid',                         filterId: 'f-medical',      filterLabel: 'Medical Status' },
+    { value: 'Expired',                       filterId: 'f-medical',      filterLabel: 'Medical Status' },
+    { value: 'Pending Review',                filterId: 'f-medical',      filterLabel: 'Medical Status' },
+    { value: 'Not Submitted',                 filterId: 'f-medical',      filterLabel: 'Medical Status' },
+    { value: 'Exempt',                        filterId: 'f-medical',      filterLabel: 'Medical Status' },
+    { value: 'HUET',                          filterId: 'f-cert',         filterLabel: 'Training Certification' },
+    { value: 'BOSIET',                        filterId: 'f-cert',         filterLabel: 'Training Certification' },
+    { value: 'FOET',                          filterId: 'f-cert',         filterLabel: 'Training Certification' },
+    { value: 'First Aid',                     filterId: 'f-cert',         filterLabel: 'Training Certification' },
+    { value: 'H2S Awareness',                 filterId: 'f-cert',         filterLabel: 'Training Certification' },
+    { value: 'Fire Fighting',                 filterId: 'f-cert',         filterLabel: 'Training Certification' },
+    { value: 'Confined Space',                filterId: 'f-cert',         filterLabel: 'Training Certification' },
+    { value: 'Rigging',                       filterId: 'f-cert',         filterLabel: 'Training Certification' },
+    { value: 'Available',                     filterId: 'f-availability', filterLabel: 'Availability' },
+    { value: 'On Leave',                      filterId: 'f-availability', filterLabel: 'Availability' },
+    { value: 'Deployed',                      filterId: 'f-availability', filterLabel: 'Availability' },
+    { value: 'Standby',                       filterId: 'f-availability', filterLabel: 'Availability' },
+    { value: 'Unavailable',                   filterId: 'f-availability', filterLabel: 'Availability' },
+    { value: 'Citizen',                       filterId: 'f-visa',         filterLabel: 'Visa Type' },
+    { value: 'Permanent Resident',            filterId: 'f-visa',         filterLabel: 'Visa Type' },
+    { value: '482 Skilled Worker',            filterId: 'f-visa',         filterLabel: 'Visa Type' },
+    { value: '186 Employer Nominated',        filterId: 'f-visa',         filterLabel: 'Visa Type' },
+    { value: '400 Temporary Work',            filterId: 'f-visa',         filterLabel: 'Visa Type' },
+    { value: 'Working Holiday',               filterId: 'f-visa',         filterLabel: 'Visa Type' },
+    { value: 'English',                       filterId: 'f-language',     filterLabel: 'Language' },
+    { value: 'Filipino',                      filterId: 'f-language',     filterLabel: 'Language' },
+    { value: 'Hindi',                         filterId: 'f-language',     filterLabel: 'Language' },
+    { value: 'Spanish',                       filterId: 'f-language',     filterLabel: 'Language' },
+    { value: 'Portuguese',                    filterId: 'f-language',     filterLabel: 'Language' },
+    { value: 'Mandarin',                      filterId: 'f-language',     filterLabel: 'Language' },
+    { value: 'French',                        filterId: 'f-language',     filterLabel: 'Language' },
+    { value: 'None Required',                 filterId: 'f-clearance',    filterLabel: 'Security Clearance' },
+    { value: 'Basic',                         filterId: 'f-clearance',    filterLabel: 'Security Clearance' },
+    { value: 'Baseline',                      filterId: 'f-clearance',    filterLabel: 'Security Clearance' },
+    { value: 'NV1',                           filterId: 'f-clearance',    filterLabel: 'Security Clearance' },
+    { value: 'NV2',                           filterId: 'f-clearance',    filterLabel: 'Security Clearance' },
+    { value: 'PV',                            filterId: 'f-clearance',    filterLabel: 'Security Clearance' },
+  ];
+
+  // activeFilters: { filterId: { values: string[], filterLabel: string } }
+  var activeFilters = {};
+  var fsResults     = [];
+  var fsHiIdx       = -1;
+  var fsBlurTimer   = null;
+  var openFmsId     = null;
+
+  // ── Multi-select state helpers ─────────────────────────────────
+  function toggleFilterValue(filterId, value, filterLabel) {
+    if (!activeFilters[filterId]) {
+      activeFilters[filterId] = { values: [], filterLabel: filterLabel };
+    }
+    var arr = activeFilters[filterId].values;
+    var idx = arr.indexOf(value);
+    if (idx > -1) {
+      arr.splice(idx, 1);
+      if (arr.length === 0) delete activeFilters[filterId];
+    } else {
+      arr.push(value);
+    }
+    refreshField(filterId);
+    renderApplied();
+    updateDrawerState();
+  }
+
+  function clearFilterId(filterId) {
+    delete activeFilters[filterId];
+    refreshField(filterId);
+    renderApplied();
+    updateDrawerState();
+  }
+
+  function refreshField(filterId) {
+    var isAdv   = filterDrawer.classList.contains('advanced-mode');
+    var field   = document.getElementById('fms-field-' + filterId);
+    if (!field) return;
+    var placeholder = field.querySelector('.fms-placeholder');
+    var chevron     = field.querySelector('.fms-chevron');
+    var values      = activeFilters[filterId] ? activeFilters[filterId].values : [];
+    var fl          = activeFilters[filterId] ? activeFilters[filterId].filterLabel : '';
+
+    Array.from(field.querySelectorAll('.fms-chip, .fms-more-badge')).forEach(function(c) { c.remove(); });
+
+    if (values.length === 0) {
+      placeholder.style.display = '';
+    } else {
+      placeholder.style.display = 'none';
+      var renderValues = isAdv ? [values[0]] : values;
+      renderValues.forEach(function(val) {
+        var chip = document.createElement('div');
+        chip.className = 'fms-chip';
+        chip.innerHTML =
+          '<span class="fms-chip-label">' + esc(val) + '</span>' +
+          '<button class="fms-chip-x" type="button" aria-label="Remove ' + esc(val) + '">' +
+            '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
+          '</button>';
+        (function(v) {
+          chip.querySelector('.fms-chip-x').addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFilterValue(filterId, v, fl);
+          });
+        })(val);
+        field.insertBefore(chip, chevron);
+      });
+      if (isAdv && values.length > 1) {
+        var badge = document.createElement('span');
+        badge.className = 'fms-more-badge';
+        badge.textContent = '+' + (values.length - 1);
+        field.insertBefore(badge, chevron);
+      }
+    }
+
+    var dd = document.getElementById('fms-dd-' + filterId);
+    if (dd) {
+      dd.querySelectorAll('.fms-option').forEach(function(opt) {
+        opt.classList.toggle('sel', values.indexOf(opt.dataset.value) > -1);
+      });
+    }
+  }
+
+  function highlight(text, q) {
+    var lo = text.toLowerCase(), loq = q.toLowerCase().trim();
+    if (!loq) return esc(text);
+    var i = lo.indexOf(loq);
+    if (i < 0) return esc(text);
+    return esc(text.slice(0, i)) + '<b>' + esc(text.slice(i, i + loq.length)) + '</b>' + esc(text.slice(i + loq.length));
+  }
+
+  function renderApplied() {
+    var keys = Object.keys(activeFilters);
+    appliedFiltersList.innerHTML = keys.map(function(fid) {
+      var f = activeFilters[fid];
+      return (
+        '<div class="applied-filter-row">' +
+          '<span class="applied-filter-label">' + esc(f.filterLabel) + ':&nbsp;</span>' +
+          f.values.map(function(val) {
+            return (
+              '<span class="applied-chip" data-fid="' + esc(fid) + '" data-value="' + esc(val) + '">' +
+                '<span class="applied-chip-label">' + esc(val) + '</span>' +
+                '<button class="applied-chip-x" type="button" aria-label="Remove ' + esc(val) + '">' +
+                  '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
+                '</button>' +
+              '</span>'
+            );
+          }).join('') +
+        '</div>'
+      );
+    }).join('');
+
+    appliedFiltersList.querySelectorAll('.applied-chip-x').forEach(function(btn) {
+      var chip = btn.closest('.applied-chip');
+      var fid  = chip.dataset.fid;
+      var val  = chip.dataset.value;
+      btn.addEventListener('click', function() {
+        var fl = activeFilters[fid] ? activeFilters[fid].filterLabel : '';
+        toggleFilterValue(fid, val, fl);
+      });
+    });
+  }
+
+  function updateDrawerState() {
+    var count = Object.values(activeFilters).reduce(function(sum, f) { return sum + f.values.length; }, 0);
+    appliedBadge.textContent = count || '';
+    appliedBadge.style.display = count > 0 ? 'inline-flex' : 'none';
+    appliedSection.classList.toggle('visible', count > 0);
+    filtersBtn.classList.toggle('active', count > 0);
+    var existingBadge = filtersBtn.querySelector('.filter-badge');
+    if (count > 0) {
+      if (!existingBadge) {
+        var b = document.createElement('span');
+        b.className = 'filter-badge';
+        filtersBtn.appendChild(b);
+        existingBadge = b;
+      }
+      existingBadge.textContent = count;
+    } else if (existingBadge) {
+      existingBadge.remove();
+    }
+  }
+
+  // ── Custom multi-select fields ─────────────────────────────────
+  function openFMS(filterId) {
+    if (openFmsId && openFmsId !== filterId) closeFMS(openFmsId);
+    var field = document.getElementById('fms-field-' + filterId);
+    var dd    = document.getElementById('fms-dd-' + filterId);
+    if (!field || !dd) return;
+    field.classList.add('open'); field.setAttribute('aria-expanded', 'true');
+    dd.classList.add('open');
+    openFmsId = filterId;
+  }
+
+  function closeFMS(filterId) {
+    var field = document.getElementById('fms-field-' + filterId);
+    var dd    = document.getElementById('fms-dd-' + filterId);
+    if (field) { field.classList.remove('open'); field.setAttribute('aria-expanded', 'false'); }
+    if (dd)    { dd.classList.remove('open'); }
+    if (openFmsId === filterId) openFmsId = null;
+  }
+
+  FMS_IDS.forEach(function(fid) {
+    var field = document.getElementById('fms-field-' + fid);
+    var dd    = document.getElementById('fms-dd-' + fid);
+    var fl    = field.closest('.filter-group').querySelector('.filter-label').textContent;
+    if (!field || !dd) return;
+
+    field.addEventListener('click', function(e) {
+      if (e.target.closest('.fms-chip-x')) return;
+      field.classList.contains('open') ? closeFMS(fid) : openFMS(fid);
+    });
+
+    field.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        field.classList.contains('open') ? closeFMS(fid) : openFMS(fid);
+      } else if (e.key === 'Escape') {
+        closeFMS(fid);
+      }
+    });
+
+    dd.querySelectorAll('.fms-option').forEach(function(opt) {
+      opt.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        toggleFilterValue(fid, opt.dataset.value, fl);
+      });
+    });
+  });
+
+  document.addEventListener('mousedown', function(e) {
+    if (openFmsId) {
+      var wrap = document.getElementById('fms-wrap-' + openFmsId);
+      if (wrap && !wrap.contains(e.target)) closeFMS(openFmsId);
+    }
+  });
+
+  // ── Filter search dropdown ─────────────────────────────────────
+  function closeFSD() {
+    filterSearchDD.classList.remove('open');
+    fsHiIdx = -1;
+  }
+
+  function setFSHi(idx) {
+    filterSearchDD.querySelectorAll('.fsd-row').forEach(function(r, i) {
+      r.classList.toggle('hi', i === idx);
+    });
+    fsHiIdx = idx;
+  }
+
+  function renderFSD(q) {
+    var lo = q.toLowerCase().trim();
+    if (!lo) { closeFSD(); return; }
+
+    fsResults = FILTER_OPTIONS.filter(function(opt) {
+      return opt.value.toLowerCase().includes(lo);
+    }).slice(0, 6);
+
+    if (fsResults.length === 0) {
+      filterSearchDD.innerHTML = '<div class="fsd-no-results">No matching filters</div>';
+      filterSearchDD.classList.add('open'); return;
+    }
+
+    filterSearchDD.innerHTML = fsResults.map(function(r, i) {
+      return (
+        '<div class="fsd-row" role="option" data-i="' + i + '">' +
+          '<span class="fsd-term">' + highlight(r.value, q) + '</span>' +
+          '<span class="fsd-cat">' + esc(r.filterLabel) + '</span>' +
+        '</div>'
+      );
+    }).join('');
+
+    filterSearchDD.querySelectorAll('.fsd-row').forEach(function(row) {
+      row.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        var opt = fsResults[parseInt(row.dataset.i)];
+        toggleFilterValue(opt.filterId, opt.value, opt.filterLabel);
+        filterSearchInput.value = ''; closeFSD();
+      });
+    });
+
+    filterSearchDD.classList.add('open'); fsHiIdx = -1;
+  }
+
+  filterSearchInput.addEventListener('input', function() { renderFSD(filterSearchInput.value); });
+
+  filterSearchInput.addEventListener('keydown', function(e) {
+    var fsdRows = filterSearchDD.querySelectorAll('.fsd-row');
+    if (!filterSearchDD.classList.contains('open')) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault(); setFSHi(Math.min(fsHiIdx + 1, fsdRows.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault(); setFSHi(Math.max(fsHiIdx - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (fsHiIdx >= 0 && fsResults[fsHiIdx]) {
+        var opt = fsResults[fsHiIdx];
+        toggleFilterValue(opt.filterId, opt.value, opt.filterLabel);
+        filterSearchInput.value = ''; closeFSD();
+      }
+    } else if (e.key === 'Escape') { closeFSD(); }
+  });
+
+  filterSearchInput.addEventListener('focus', function() {
+    if (fsBlurTimer) { clearTimeout(fsBlurTimer); fsBlurTimer = null; }
+    if (filterSearchInput.value.trim()) renderFSD(filterSearchInput.value);
+  });
+  filterSearchInput.addEventListener('blur', function() {
+    fsBlurTimer = setTimeout(closeFSD, 160);
+  });
+
+  // ── Drawer open / close ────────────────────────────────────────
+  function openDrawer() {
+    filterDrawer.classList.add('open');
+    drawerOverlay.classList.add('open');
+  }
+
+  function closeDrawer() {
+    filterDrawer.classList.remove('open');
+    drawerOverlay.classList.remove('open');
+    closeFSD();
+    if (openFmsId) closeFMS(openFmsId);
+  }
+
+  filtersBtn.addEventListener('click', openDrawer);
+  drawerCloseBtn.addEventListener('click', closeDrawer);
+  drawerCancelBtn.addEventListener('click', closeDrawer);
+  drawerOverlay.addEventListener('click', closeDrawer);
+
+  drawerApplyBtn.addEventListener('click', closeDrawer);
+
+  clearAllBtn.addEventListener('click', function() {
+    var fids = Object.keys(activeFilters);
+    activeFilters = {};
+    fids.forEach(refreshField);
+    renderApplied();
+    updateDrawerState();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && filterDrawer.classList.contains('open')) closeDrawer();
+  });
+
+  // ── Advanced mode toggle ───────────────────────────────────────
+  var filterModeToggle = document.getElementById('filter-mode-toggle');
+  filterModeToggle.addEventListener('change', function() {
+    filterDrawer.classList.toggle('advanced-mode', filterModeToggle.checked);
+    FMS_IDS.forEach(function(id) { refreshField(id); });
+  });
+
+  // ── ADDITIONAL FILTERS COLLAPSIBLE — delete this block to revert ──
+  var afToggle = document.getElementById('additional-filters-toggle');
+  var afBody   = document.getElementById('additional-filters-body');
+  afToggle.addEventListener('click', function() {
+    var open = afBody.classList.toggle('open');
+    afToggle.setAttribute('aria-expanded', String(open));
+  });
+  // ── END ADDITIONAL FILTERS COLLAPSIBLE ──
+
+  // ── Columns panel ──────────────────────────────────────────────
+  var btnColumns  = document.getElementById('btn-columns');
+  var colPanel    = document.getElementById('col-panel');
+  var tableEl     = document.querySelector('table');
+
+  // Inject optional column cells into every row
+  var OPTIONAL_COLS = [
+    { key: 'email',      values: ['smith.john@gmail.com','stone.emma@gmail.com','adams.sophia@gmail.com','miller.ava@gmail.com','clark.emma@gmail.com','baker.liam@gmail.com','brown.olivia@gmail.com','clark.olivia@gmail.com','hill.allison@gmail.com','davis.noah@gmail.com','hill.a2@gmail.com','brown.chad@gmail.com'] },
+    { key: 'work-email', values: ['s.john@corp.com','s.emma@corp.com','a.sophia@corp.com','m.ava@corp.com','c.emma@corp.com','b.liam@corp.com','b.olivia@corp.com','c.olivia@corp.com','h.allison@corp.com','d.noah@corp.com','h.a2@corp.com','b.chad@corp.com'] },
+    { key: 'mobile',     values: ['+61 412 345 678','+61 423 456 789','+61 434 567 890','+61 445 678 901','+61 456 789 012','+61 467 890 123','+61 478 901 234','+61 489 012 345','+61 490 123 456','+61 401 234 567','+61 412 000 099','+61 423 111 100'] },
+    { key: 'phone',      values: ['+61 2 9876 5432','+61 2 9765 4321','+61 2 9654 3210','+61 2 9543 2109','+61 2 9432 1098','+61 2 9321 0987','+61 2 9210 9876','+61 2 9109 8765','+61 2 9098 7654','+61 2 9987 6543','+61 2 9876 5441','+61 2 9765 4322'] },
+    { key: 'work-phone', values: ['+61 7 3100 2001','+61 7 3100 2002','+61 7 3100 2003','+61 7 3100 2004','+61 7 3100 2005','+61 7 3100 2006','+61 7 3100 2007','+61 7 3100 2008','+61 7 3100 2009','+61 7 3100 2010','+61 7 3100 2011','+61 7 3100 2012'] },
+  ];
+
+  rows.forEach(function(row, i) {
+    var actCell = row.querySelector('.col-act');
+    OPTIONAL_COLS.forEach(function(opt) {
+      var td = document.createElement('td');
+      td.dataset.col = opt.key;
+      td.style.display = 'none';
+      td.style.fontSize = '13px';
+      td.style.color = 'var(--grey-700)';
+      td.textContent = opt.values[i] || '—';
+      row.insertBefore(td, actCell);
+    });
+  });
+
+  function setColumnVisible(col, visible) {
+    // th, td, col elements
+    document.querySelectorAll('[data-col="' + col + '"]').forEach(function(el) {
+      el.style.display = visible ? '' : 'none';
+    });
+  }
+
+  function openColPanel() {
+    colPanel.classList.add('open');
+    btnColumns.classList.add('active');
+    btnColumns.setAttribute('aria-expanded', 'true');
+  }
+  function closeColPanel() {
+    colPanel.classList.remove('open');
+    btnColumns.classList.remove('active');
+    btnColumns.setAttribute('aria-expanded', 'false');
+  }
+
+  btnColumns.addEventListener('click', function(e) {
+    e.stopPropagation();
+    colPanel.classList.contains('open') ? closeColPanel() : openColPanel();
+  });
+
+  colPanel.querySelectorAll('.col-chk').forEach(function(chk) {
+    chk.addEventListener('change', function() {
+      setColumnVisible(chk.dataset.col, chk.checked);
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!colPanel.contains(e.target) && e.target !== btnColumns) closeColPanel();
+  });
+
+  // ── View management (dropdown + save + delete) ───────────────
+  var vsSelectorBtn   = document.getElementById('view-selector-btn');
+  var vsPanel         = document.getElementById('vs-panel');
+  var vsWrap          = document.getElementById('vs-wrap');
+  var viewSelectorLbl = document.getElementById('view-selector-label');
+  var savedViews = [
+    { id: 1, name: 'Active Offshore Workers', filters: {
+      'f-status': { values: ['Active'], filterLabel: 'Status' },
+      'f-site':   { values: ['MMA VIGILANT – 360', 'Gorgon LNG Platform'], filterLabel: 'Site' },
+    }},
+    { id: 2, name: 'Gorgon LNG Team', filters: {
+      'f-site':     { values: ['Gorgon LNG Platform'], filterLabel: 'Site' },
+      'f-contract': { values: ['Permanent', 'Contractor'], filterLabel: 'Contract Type' },
+    }},
+    { id: 3, name: 'Pending Medical Review', filters: {
+      'f-medical': { values: ['Pending Review'], filterLabel: 'Medical Status' },
+      'f-status':  { values: ['Active'], filterLabel: 'Status' },
+    }},
+    { id: 4, name: 'WA Site Supervisors', filters: {
+      'f-work-state': { values: ['Western Australia'], filterLabel: 'Work State' },
+      'f-position':   { values: ['Site Supervisor'], filterLabel: 'Position' },
+    }},
+  ];
+  var activeViewId = null;
+  var vsNextId     = 5;
+
+  function cloneFilters(f) {
+    var c = {};
+    Object.keys(f).forEach(function(k) {
+      c[k] = { values: f[k].values.slice(), filterLabel: f[k].filterLabel };
+    });
+    return c;
+  }
+
+  function applyViewFilters(filters) {
+    var fids = Object.keys(activeFilters);
+    activeFilters = cloneFilters(filters);
+    var allIds = fids.concat(Object.keys(filters));
+    allIds.filter(function(id, i, a) { return a.indexOf(id) === i; }).forEach(refreshField);
+    renderApplied();
+    updateDrawerState();
+  }
+
+  function renderVsPanel() {
+    vsPanel.innerHTML = '';
+    // All Workers
+    vsPanel.appendChild(makeVsItem(null, 'All Workers', false));
+    if (savedViews.length > 0) {
+      var sep = document.createElement('hr');
+      sep.className = 'vs-separator';
+      vsPanel.appendChild(sep);
+      savedViews.forEach(function(v) {
+        vsPanel.appendChild(makeVsItem(v.id, v.name, true));
+      });
+    }
+  }
+
+  function makeVsItem(id, name, deletable) {
+    var item = document.createElement('div');
+    item.className = 'vs-item' + (activeViewId === id ? ' active' : '');
+    item.setAttribute('role', 'menuitem');
+    item.innerHTML =
+      '<svg class="vs-item-check" width="14" height="14" viewBox="0 0 14 14" fill="none">' +
+        '<path d="M2.5 7l3.5 3.5 5.5-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg>' +
+      '<span class="vs-item-name">' + esc(name) + '</span>';
+    if (deletable) {
+      var delBtn = document.createElement('button');
+      delBtn.className = 'vs-del-btn';
+      delBtn.setAttribute('aria-label', 'Delete ' + name);
+      delBtn.innerHTML =
+        '<svg width="14" height="14" viewBox="0 0 14 14" fill="none">' +
+          '<path d="M2 3.5h10M5.5 3.5V2.5h3v1M5.5 6v4M8.5 6v4M3 3.5l.7 7.5h6.6L11 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
+      (function(vid, vname) {
+        delBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          closeVsPanel();
+          openDelViewModal(vid, vname);
+        });
+      })(id, name);
+      item.appendChild(delBtn);
+    }
+    (function(vid, vname, vfilters) {
+      item.addEventListener('click', function() {
+        activeViewId = vid;
+        viewSelectorLbl.textContent = vname;
+        vsSelectorBtn.classList.toggle('active', vid !== null);
+        if (vid === null) {
+          var fids = Object.keys(activeFilters);
+          activeFilters = {};
+          fids.forEach(refreshField);
+          renderApplied();
+          updateDrawerState();
+        } else {
+          applyViewFilters(vfilters);
+        }
+        closeVsPanel();
+      });
+    })(id, name, deletable ? (savedViews.find(function(v){ return v.id === id; }) || {}).filters || {} : {});
+    return item;
+  }
+
+  function openVsPanel() {
+    renderVsPanel();
+    vsPanel.classList.add('open');
+    vsSelectorBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeVsPanel() {
+    vsPanel.classList.remove('open');
+    vsSelectorBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  vsSelectorBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    vsPanel.classList.contains('open') ? closeVsPanel() : openVsPanel();
+  });
+  document.addEventListener('click', function(e) {
+    if (!vsWrap.contains(e.target)) closeVsPanel();
+  });
+
+  // ── Save as View modal ────────────────────────────────────────
+  var saveViewModal = document.getElementById('save-view-modal');
+  var viewNameInput = document.getElementById('view-name-input');
+  var viewNameCount = document.getElementById('view-name-count');
+  var viewSaveBtn   = document.getElementById('save-view-confirm');
+  var MAX_VIEW_NAME = 50;
+
+  function openSaveViewModal() {
+    viewNameInput.value = '';
+    viewNameCount.textContent = '0/' + MAX_VIEW_NAME;
+    viewSaveBtn.disabled = true;
+    saveViewModal.classList.add('open');
+    setTimeout(function() { viewNameInput.focus(); }, 50);
+  }
+  function closeSaveViewModal() { saveViewModal.classList.remove('open'); }
+
+  document.getElementById('drawer-save-view').addEventListener('click', openSaveViewModal);
+  document.getElementById('save-view-close').addEventListener('click', closeSaveViewModal);
+  document.getElementById('save-view-cancel').addEventListener('click', closeSaveViewModal);
+  saveViewModal.addEventListener('click', function(e) { if (e.target === saveViewModal) closeSaveViewModal(); });
+
+  viewNameInput.addEventListener('input', function() {
+    var len = viewNameInput.value.length;
+    viewNameCount.textContent = len + '/' + MAX_VIEW_NAME;
+    viewSaveBtn.disabled = viewNameInput.value.trim().length === 0;
+  });
+
+  viewSaveBtn.addEventListener('click', function() {
+    var name = viewNameInput.value.trim();
+    if (!name) return;
+    var id = vsNextId++;
+    savedViews.push({ id: id, name: name, filters: cloneFilters(activeFilters) });
+    activeViewId = id;
+    viewSelectorLbl.textContent = name;
+    vsSelectorBtn.classList.add('active');
+    closeSaveViewModal();
+    closeDrawer();
+  });
+
+  // ── Delete View confirmation ──────────────────────────────────
+  var delViewModal   = document.getElementById('del-view-modal');
+  var delViewMsg     = document.getElementById('del-view-msg');
+  var delViewConfirm = document.getElementById('del-view-confirm');
+  var pendingDelId   = null;
+
+  function openDelViewModal(id, name) {
+    pendingDelId = id;
+    delViewMsg.innerHTML = 'Are you sure you want to delete <span class="del-view-name">"' + esc(name) + '"</span>? This cannot be undone.';
+    delViewModal.classList.add('open');
+  }
+  function closeDelViewModal() {
+    delViewModal.classList.remove('open');
+    pendingDelId = null;
+  }
+
+  document.getElementById('del-view-close').addEventListener('click', closeDelViewModal);
+  document.getElementById('del-view-cancel').addEventListener('click', closeDelViewModal);
+  delViewModal.addEventListener('click', function(e) { if (e.target === delViewModal) closeDelViewModal(); });
+
+  delViewConfirm.addEventListener('click', function() {
+    savedViews = savedViews.filter(function(v) { return v.id !== pendingDelId; });
+    if (activeViewId === pendingDelId) {
+      activeViewId = null;
+      viewSelectorLbl.textContent = 'All Workers';
+      vsSelectorBtn.classList.remove('active');
+    }
+    closeDelViewModal();
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (saveViewModal.classList.contains('open')) closeSaveViewModal();
+      if (delViewModal.classList.contains('open')) closeDelViewModal();
+      if (filterDrawer.classList.contains('open')) closeDrawer();
+      if (wpBackdrop.classList.contains('open')) closeWp();
+    }
+    if (e.key === 'Enter' && saveViewModal.classList.contains('open') && !viewSaveBtn.disabled) viewSaveBtn.click();
+    if (e.key === 'Enter' && delViewModal.classList.contains('open')) delViewConfirm.click();
+  });
+
+  // ── Worker Detail Popup ────────────────────────────────────────
+  var WP_WORKERS = [
+    { name: 'Smith John',   id: '111111', status: 'active',   email: 'smith.john@gmail.com',   workEmail: 's.john@corp.com',    mobile: '+61 412 345 678', phone: '+61 2 9876 5432', workPhone: '+61 7 3100 2001', initials: 'SJ', avatarBg: '#3b7dd8' },
+    { name: 'Stone Emma',   id: '234323', status: 'archived', email: 'stone.emma@gmail.com',   workEmail: 's.emma@corp.com',    mobile: '+61 412 234 567', phone: '+61 2 9876 1234', workPhone: '+61 7 3100 1002', initials: 'SE', avatarBg: '#e87d4a' },
+    { name: 'Adams Sophia', id: '455323', status: 'archived', email: 'adams.sophia@gmail.com', workEmail: 'a.sophia@corp.com',  mobile: '+61 412 111 222', phone: '+61 2 8800 1234', workPhone: '+61 7 3100 1003', initials: 'AS', avatarBg: '#7c6bc4' },
+    { name: 'Miller Ava',   id: '126865', status: 'active',   email: 'miller.ava@gmail.com',   workEmail: 'm.ava@corp.com',     mobile: '+61 412 333 444', phone: '+61 2 9801 5678', workPhone: '+61 7 3100 1004', initials: 'MA', avatarBg: '#4caf8a' },
+    { name: 'Clark Emma',   id: '555555', status: 'active',   email: 'clark.emma@gmail.com',   workEmail: 'c.emma@corp.com',    mobile: '+61 412 555 666', phone: '+61 2 9876 9012', workPhone: '+61 7 3100 1005', initials: 'CE', avatarBg: '#d0654a' },
+    { name: 'Baker Liam',   id: '754356', status: 'active',   email: 'baker.liam@gmail.com',   workEmail: 'b.liam@corp.com',    mobile: '+61 412 777 888', phone: '+61 2 9876 3456', workPhone: '+61 7 3100 1006', initials: 'BL', avatarBg: '#3b7dd8' },
+    { name: 'Brown Olivia', id: '643457', status: 'active',   email: 'brown.olivia@gmail.com', workEmail: 'b.olivia@corp.com',  mobile: '+61 412 999 000', phone: '+61 2 9876 7890', workPhone: '+61 7 3100 1007', initials: 'BO', avatarBg: '#7c6bc4' },
+    { name: 'Clark Olivia', id: '098562', status: 'archived', email: 'clark.olivia@gmail.com', workEmail: 'c.olivia@corp.com',  mobile: '+61 412 123 456', phone: '+61 2 9876 2345', workPhone: '+61 7 3100 1008', initials: 'CO', avatarBg: '#4caf8a' },
+    { name: 'Hill Allison', id: '567853', status: 'archived', email: 'hill.allison@gmail.com', workEmail: 'h.allison@corp.com', mobile: '+61 412 234 890', phone: '+61 2 9876 6789', workPhone: '+61 7 3100 1009', initials: 'HA', avatarBg: '#e87d4a' },
+    { name: 'Davis Noah',   id: '789123', status: 'active',   email: 'davis.noah@gmail.com',   workEmail: 'd.noah@corp.com',    mobile: '+61 412 345 901', phone: '+61 2 9876 0123', workPhone: '+61 7 3100 1010', initials: 'DN', avatarBg: '#d0654a' },
+    { name: 'Hill Allison', id: '432198', status: 'archived', email: 'hill.a2@gmail.com',      workEmail: 'h.a2@corp.com',     mobile: '+61 412 456 012', phone: '+61 2 9876 4567', workPhone: '+61 7 3100 1011', initials: 'HA', avatarBg: '#3b7dd8' },
+    { name: 'Brown Chad',   id: '654321', status: 'active',   email: 'brown.chad@gmail.com',   workEmail: 'b.chad@corp.com',   mobile: '+61 412 567 123', phone: '+61 2 9876 8901', workPhone: '+61 7 3100 1012', initials: 'BC', avatarBg: '#4caf8a' },
+  ];
+
+  var wpBackdrop    = document.getElementById('wp-backdrop');
+  var wpHeaderName  = document.getElementById('wp-header-name');
+  var wpHeaderBadge = document.getElementById('wp-header-badge');
+  var wpWorkerList  = document.getElementById('wp-worker-list');
+  var wpContactAvtr = document.getElementById('wp-contact-avatar');
+  var wpContactRows = document.getElementById('wp-contact-rows');
+  var wpDocList     = document.getElementById('wp-doc-list');
+  var wpDocAvatar   = document.getElementById('wp-doc-avatar');
+  var wpDocCardName = document.getElementById('wp-doc-card-name');
+  var wpDocCardPos  = document.getElementById('wp-doc-card-pos');
+  var wpDocCardPhone= document.getElementById('wp-doc-card-phone');
+  var wpDocCardEmail= document.getElementById('wp-doc-card-email');
+  var wpCalGrid     = document.getElementById('wp-cal-grid');
+  var wpCurrentIdx  = 0;
+
+  // SVG icons for contact rows
+  var SVG_COPY = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2 10V2h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  var SVG_MAIL = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M1 4l6 4 6-4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+  var SVG_MSG  = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 2h12v8H8l-3 2V10H1V2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  var SVG_PHONE= '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2h3l1.5 3-2 1.5c.8 1.8 2 3 3.8 3.8L10 8.5l3 1.5v3a1 1 0 0 1-1 1C4.5 14 0 9.5 0 3a1 1 0 0 1 1-1h1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+
+  function wpEsc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function wpGetDocs(w) {
+    var parts = w.name.split(' ');
+    var first = parts[1] || parts[0];
+    var last  = parts[0];
+    var base  = first + ' ' + last;
+    return [
+      base + ' – CV.pdf',
+      base + ' – Driver Licence.pdf',
+      base + ' – Passport.pdf',
+      base + ' – Employment Contract.pdf',
+      base + ' – Performance Review.pdf',
+    ];
+  }
+
+  function wpRenderWorker(idx) {
+    wpCurrentIdx = idx;
+    var w = WP_WORKERS[idx];
+
+    // Header
+    wpHeaderName.textContent = w.name + ', ' + w.id;
+    wpHeaderBadge.className = 'wp-header-badge ' + w.status;
+    wpHeaderBadge.textContent = w.status === 'active' ? 'Active' : 'Archived';
+
+    // Sidebar highlight
+    var items = wpWorkerList.querySelectorAll('.wp-worker-item');
+    items.forEach(function(item, i) {
+      item.classList.toggle('active', i === idx);
+    });
+
+    // Contact avatar
+    wpContactAvtr.style.background = w.avatarBg;
+    wpContactAvtr.textContent = w.initials;
+
+    // Contact rows
+    var contactData = [
+      { label: 'Email',       value: w.email,     icons: SVG_COPY + SVG_MAIL },
+      { label: 'Work Email',  value: w.workEmail, icons: SVG_COPY + SVG_MAIL },
+      { label: 'Mobile',      value: w.mobile,    icons: SVG_MSG  + SVG_PHONE },
+      { label: 'Phone',       value: w.phone,     icons: SVG_MSG  + SVG_PHONE },
+      { label: 'Work Phone',  value: w.workPhone, icons: SVG_MSG  + SVG_PHONE },
+    ];
+    wpContactRows.innerHTML = contactData.map(function(r) {
+      return '<div class="wp-contact-row">' +
+        '<span class="wp-contact-label">' + wpEsc(r.label) + '</span>' +
+        '<span class="wp-contact-value">' + wpEsc(r.value) + '</span>' +
+        '<span class="wp-contact-icons">' +
+          '<button class="wp-icon-btn" title="Copy">' + r.icons.split('</svg>')[0] + '</svg></button>' +
+          '<button class="wp-icon-btn" title="Action">' + r.icons.split('</svg>')[1] + '</svg></button>' +
+        '</span>' +
+      '</div>';
+    }).join('');
+
+    // Documents list
+    var docs = wpGetDocs(w);
+    var fileIconSVG = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 1h6l3 3v9H3V1z" stroke="#9e9e9e" stroke-width="1.2" stroke-linejoin="round"/><path d="M9 1v3h3" stroke="#9e9e9e" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+    wpDocList.innerHTML = docs.map(function(d, i) {
+      return '<div class="wp-doc-item' + (i === 0 ? ' active' : '') + '">' +
+        fileIconSVG + wpEsc(d) + '</div>';
+    }).join('');
+
+    // Doc card
+    var nameParts = w.name.split(' ');
+    var lastName  = nameParts[0];
+    var firstName = nameParts[1] || nameParts[0];
+    wpDocAvatar.textContent = w.initials;
+    wpDocCardName.textContent = lastName + ', ' + firstName;
+    wpDocCardPos.textContent = 'Boilermaker';
+    wpDocCardPhone.textContent = w.mobile;
+    wpDocCardEmail.textContent = w.email;
+
+    // Reset to General tab
+    document.querySelectorAll('.wp-tab').forEach(function(t) {
+      t.classList.toggle('active', t.dataset.tab === 'general');
+    });
+    document.querySelectorAll('.wp-tab-panel').forEach(function(p) {
+      p.classList.toggle('active', p.id === 'wp-panel-general');
+    });
+  }
+
+  function wpRenderSidebar() {
+    wpWorkerList.innerHTML = WP_WORKERS.map(function(w, i) {
+      return '<div class="wp-worker-item" data-wi="' + i + '">' +
+        wpEsc(w.name) + ', ' + wpEsc(w.id) +
+      '</div>';
+    }).join('');
+    wpWorkerList.querySelectorAll('.wp-worker-item').forEach(function(item) {
+      item.addEventListener('click', function() {
+        wpRenderWorker(parseInt(item.dataset.wi, 10));
+      });
+    });
+  }
+
+  function wpRenderCalendar() {
+    // March 2025: starts on Saturday (index 6), 31 days
+    var grid = wpCalGrid;
+    // Remove old day cells (keep the 7 DOW headers)
+    var existing = grid.querySelectorAll('.wp-cal-day');
+    existing.forEach(function(el) { el.parentNode.removeChild(el); });
+
+    var startOffset = 6; // Saturday
+    // Empty cells before day 1
+    for (var e = 0; e < startOffset; e++) {
+      var blank = document.createElement('div');
+      blank.className = 'wp-cal-day empty';
+      grid.appendChild(blank);
+    }
+    for (var d = 1; d <= 31; d++) {
+      var cell = document.createElement('div');
+      cell.className = 'wp-cal-day';
+      cell.textContent = d;
+      if (d === 1) {
+        cell.classList.add('grey');
+      } else if (d >= 2 && d <= 15) {
+        cell.classList.add('teal-light');
+      } else if (d >= 16 && d <= 19) {
+        cell.classList.add('teal-dark');
+      } else if (d >= 30 && d <= 31) {
+        cell.classList.add('blue');
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  function openWp(idx) {
+    wpRenderSidebar();
+    wpRenderCalendar();
+    wpRenderWorker(idx);
+    wpBackdrop.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeWp() {
+    wpBackdrop.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Close buttons
+  document.getElementById('wp-close').addEventListener('click', closeWp);
+  document.getElementById('wp-back').addEventListener('click', closeWp);
+
+  // Backdrop click
+  wpBackdrop.addEventListener('click', function(e) {
+    if (e.target === wpBackdrop) closeWp();
+  });
+
+  // Tab switching
+  document.querySelectorAll('.wp-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var name = tab.dataset.tab;
+      document.querySelectorAll('.wp-tab').forEach(function(t) {
+        t.classList.toggle('active', t.dataset.tab === name);
+      });
+      document.querySelectorAll('.wp-tab-panel').forEach(function(p) {
+        p.classList.toggle('active', p.id === 'wp-panel-' + name);
+      });
+    });
+  });
+
+  // View buttons on table rows
+  document.querySelectorAll('.view-link').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var row = btn.closest('tr[data-i]');
+      if (!row) return;
+      var idx = parseInt(row.getAttribute('data-i'), 10);
+      if (isNaN(idx) || idx < 0 || idx >= WP_WORKERS.length) return;
+      openWp(idx);
+    });
+  });
+
+})();
+</script>
