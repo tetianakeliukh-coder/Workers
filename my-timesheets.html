@@ -2618,10 +2618,17 @@
         '</div>';
       }).join('');
 
+    var q = el('task-q').value.trim();
+    var matched = recent.filter(function (r) {
+      return !q || pathOf(r.meta.levels).toLowerCase().indexOf(q.toLowerCase()) !== -1;
+    }).length;
+    if (q && !matched) {
+      /* The pinned rows stay; a line says they are not the search's doing. */
+      html += '<div class="recent-empty">No results for &ldquo;' + Shell.esc(q) + '&rdquo;.' +
+        (html ? ' The tasks above are the ones you have already selected.' : '') + '</div>';
+    }
     el('recent-list').innerHTML = html ||
-      '<div class="recent-empty">' + (el('task-q').value.trim()
-        ? 'Nothing matches that.'
-        : 'Nothing booked here before &mdash; create one on the right.') + '</div>';
+      '<div class="recent-empty">Nothing booked here before &mdash; create one on the right.</div>';
 
     var ticked = allPicked().length - cards.length;
     el('pick-n').textContent = ticked ? ticked + ' selected' : '';
