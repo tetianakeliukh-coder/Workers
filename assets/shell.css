@@ -198,7 +198,7 @@ body.shell-mobile .shell-scrim.open { display: block; }
   display: flex; align-items: center; gap: 6px;
   background: var(--white); border: 1px solid var(--grey-350);
   border-radius: 8px; height: 36px; padding: 10px 12px;
-  width: 100%; transition: border-color var(--t-fast);
+  width: 100%; font-size: 14px; transition: border-color var(--t-fast);
 }
 .search-bar:focus-within { border-color: var(--border-hover); }
 .search-icon { flex-shrink: 0; color: var(--grey-400); }

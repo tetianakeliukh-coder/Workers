@@ -132,6 +132,9 @@
   }
   #grid thead th.col-hrs { z-index: 4; }
   td.col-hrs { font-weight: 600; }
+  /* An editable cell fills the column, so the column's own side padding
+     would be counted twice; the cell carries its own. */
+  td.col-hrs:has(.hr-cell) { padding-left: 8px; padding-right: 8px; }
   /* A hairline on its left while there is anything scrolled under it. */
   .sx-right .col-hrs::before {
     content: ''; position: absolute; top: 0; bottom: 0; right: 100%; width: 1px;
@@ -263,7 +266,8 @@
     margin-right: auto; color: var(--grey-500); cursor: pointer; vertical-align: -2px;
   }
   .alw-mark:hover { color: var(--text-main); }
-  .hr-cell .hr-st + .alw-mark { margin-right: 0; margin-left: -2px; }
+  .hr-cell .alw-mark + .hr-st { margin-right: auto; margin-left: 2px; }
+  .hr-cell .alw-mark:has(+ .hr-st) { margin-right: 0; }
   .cp-note { margin: 10px 0 0; font-size: 12px; line-height: 16px; color: var(--grey-600); }
   .cp-row {
     display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;
@@ -705,21 +709,21 @@
      already saying it. */
   var FIELDS = [
     { k: 'date',    label: 'Date',       w: 165, group: true,  get: function (e) { return fmtDay(fromIso(e.date)); } },
-    { k: 'site',    label: 'Site',       w: 190, group: true,  get: function (e) { return e.site; } },
+    { k: 'site',    label: 'Site',       w: 215, group: true,  get: function (e) { return e.site; } },
     { k: 'sup',     label: 'Supervisor', w: 175, group: true,  get: function (e) { return e.sup; } },
     { k: 'worker',  label: 'Worker',     w: 150, group: true,  get: function (e) { return e.worker; } },
-    { k: 'project', label: 'Project',    w: 190, group: true,  get: function (e) { return e.project; } },
-    { k: 'status',  label: 'Status',     w: 120, group: true,  get: function (e) { return e.status; } },
+    { k: 'project', label: 'Project',    w: 210, group: true,  get: function (e) { return e.project; } },
+    { k: 'status',  label: 'Status',     w: 160, group: true,  get: function (e) { return e.status; } },
     { k: 'task',    label: 'Task',       w: 300, group: true,  get: function (e) { return e.task; } },
     { k: 'times',   label: 'Start - Finish', w: 140, group: false,
       get: function (e) { return e.start && e.finish ? e.start + ' - ' + e.finish : ''; } },
     { k: 'allow',   label: 'Allowance',  w: 200, group: false, get: function (e) { return allowText(e); } },
-    { k: 'hours',   label: 'Hours',      w: 90,  group: false, num: true, get: function (e) { return e.hours === '' ? '' : fmtHours(e.hours); } }
+    { k: 'hours',   label: 'Hours',      w: 112,  group: false, num: true, get: function (e) { return e.hours === '' ? '' : fmtHours(e.hours); } }
   ];
   function field(k) { return FIELDS.filter(function (f) { return f.k === k; })[0]; }
   /* A column cannot be dragged below what its own content needs. */
   var MIN_W = { date: 120, site: 140, sup: 130, worker: 120, project: 130,
-                status: 110, task: 160, times: 120, allow: 140, hours: 80 };
+                status: 120, task: 160, times: 120, allow: 140, hours: 96 };
 
   function allowText(e) {
     return (e.allowances || []).map(function (x) {
@@ -931,8 +935,8 @@
     var st = statusOf(e), lock = st.locked;
     return '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
       '" type="button" data-cell="' + k + '"' + (lock ? ' disabled data-tip="' + e.status + ' — hours can no longer be changed"' : '') + '>' +
-      (st.icon ? '<span class="hr-st st-' + String(e.status).toLowerCase() + '">' + st.icon + '</span>' : '') +
       alwMark(c) +
+      (st.icon ? '<span class="hr-st st-' + String(e.status).toLowerCase() + '">' + st.icon + '</span>' : '') +
       (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
       '</button>';
   }
@@ -940,7 +944,8 @@
      has no Status column to carry it. */
   function dayValue(e, isoDate) {
     var c = cellOf(e, isoDate), st = statusOf(e);
-    return (st.icon ? '<span class="hr-st" data-tip="' + e.status + '">' + st.icon + '</span>' : '') +
+    return alwMark(c) +
+      (st.icon ? '<span class="hr-st" data-tip="' + e.status + '">' + st.icon + '</span>' : '') +
       (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h));
   }
   /* A field the context could not supply arrives as a cell on the row,
@@ -1166,7 +1171,8 @@
         }).join('') +
         rest.map(function (c) {
           var cls = (c.num ? 'num' : '') + (c.k === 'hours' ? ' col-hrs' : '');
-          return '<td class="' + cls + '">' + cellHtml(e, c) + '</td>';
+          var tip = c.k === 'task' ? ' data-tip="' + Shell.esc(c.label + ' — ' + c.get(e)) + '"' : '';
+          return '<td class="' + cls + '"' + tip + '>' + cellHtml(e, c) + '</td>';
         }).join('') + actCell(e) +
       '</tr>';
     }

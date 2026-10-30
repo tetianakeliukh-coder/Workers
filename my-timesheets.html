@@ -87,17 +87,28 @@
     position: sticky; top: 0; z-index: 3; background: var(--white); vertical-align: bottom;
   }
   .grid-card thead th.col-label { z-index: 4; }
-  /* Two lines, not three: the weekday sits beside the date, the day's
-     total under them. The column is no wider for it. */
   .day-head { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 16px; }
-  .day-head .dline { display: flex; align-items: baseline; gap: 4px; }
-  .day-head .dow { font-size: 11px; font-weight: 400; color: var(--grey-600); }
-  .day-head .dnum { font-size: 13px; font-weight: 500; color: var(--text-main); }
+  .day-head .dow { font-size: 12px; font-weight: 400; color: var(--grey-600); }
+  .day-head .dnum { font-size: 14px; font-weight: 500; color: var(--text-main); }
+
+  /* The second heading row: a day's total, under the date it belongs to
+     and under a rule, with the left of the row saying what it is. */
+  #grid thead tr.tot-row th {
+    height: 30px; padding-top: 0; padding-bottom: 6px;
+    border-top: 1px solid var(--grey-350);
+    font-size: 13px; font-weight: 600; color: var(--text-main);
+    font-variant-numeric: tabular-nums; text-align: right;
+  }
+  #grid thead tr.tot-row th.tot-label {
+    font-size: 12px; font-weight: 500; color: var(--grey-600); text-align: right;
+  }
+  #grid thead tr.tot-row th.over { color: var(--error); background: rgba(166, 13, 31, 0.07); }
+  #grid thead tr:first-child th { padding-bottom: 6px; }
   .day-head.is-today .dow, .day-head.is-today .dnum { color: var(--primary); }
   /* The day's own total, under its date: the figure being checked. */
-  .day-head .dtot { font-size: 11px; font-weight: 500; color: var(--grey-600); font-variant-numeric: tabular-nums; }
-  th.col-day.over .dtot { color: var(--error); }
-  th.col-day.over { background: rgba(166, 13, 31, 0.07); }
+  /* A figure is never cut: the column is sized for the widest one it can
+     hold, and nothing in it ellipsises. */
+  th.col-day, td.col-day { white-space: nowrap; overflow: visible; text-overflow: clip; }
   /* A cell whose day has gone over says so where the number is. */
   .hr-cell.over { border-color: var(--error); background: #fdf2f3; }
 
@@ -132,8 +143,8 @@
 
   /* Flat rows: the three label columns stay put while the days scroll. */
   th.col-site, td.col-site { position: sticky; left: 0; z-index: 2; background: inherit; }
-  th.col-sup,  td.col-sup  { position: sticky; left: var(--x-sup, 200px); z-index: 2; background: inherit; }
-  th.col-task, td.col-task { position: sticky; left: var(--x-task, 350px); z-index: 2; background: inherit; }
+  th.col-sup,  td.col-sup  { position: sticky; left: var(--x-sup, 232px); z-index: 2; background: inherit; }
+  th.col-task, td.col-task { position: sticky; left: var(--x-task, 382px); z-index: 2; background: inherit; }
   th.col-site, td.col-site, th.col-sup, td.col-sup, th.col-task, td.col-task {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
@@ -307,11 +318,10 @@
     padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 14px;
     flex: 0 1 auto; max-height: 68vh; overflow: auto;
   }
-  .add-modal .modal-body > .add-one { flex: 1; min-height: 0; }
-  .add-one > #pick-card { flex: 1; min-height: 0; }
+  .add-modal .modal-body > .add-one { flex: 0 0 auto; }
 
   /* Step two: filters on a line, the list under them, the basket last. */
-  #pick-card { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  #pick-card { display: flex; flex-direction: column; gap: 14px; }
   /* A field is a field: one to a line, however many the site has. */
   #nt-levels { display: flex; flex-direction: column; gap: 12px; }
   .new-task { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: 1px solid var(--grey-350); }
@@ -326,9 +336,19 @@
     display: flex; flex-direction: column; gap: 6px;
     overflow-y: auto; flex: 0 0 auto; max-height: 196px;
   }
-  .recent-row { display: flex; flex-direction: row; align-items: center; gap: 10px; }
+  /* The card the screen already had, with a tick added inside it on the
+     left — not a new component. */
+  /* The card the screen has always had — white, its own thin border,
+     the same padding — with a tick added inside it on the left. */
+  .recent-row {
+    display: flex; flex-direction: row; align-items: center; gap: 10px;
+    width: 100%; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-align: left;
+    background: var(--white); border: 1px solid var(--grey-350);
+    font-family: var(--fs-sans);
+    transition: border-color var(--t-fast), background var(--t-fast);
+  }
   .recent-row .rr-tick {
-    width: 18px; height: 18px; flex-shrink: 0; border-radius: 4px;
+    width: 16px; height: 16px; flex-shrink: 0; border-radius: 4px;
     border: 1.5px solid var(--grey-400); background: var(--white);
     display: flex; align-items: center; justify-content: center; color: var(--white);
   }
@@ -389,8 +409,8 @@
   }
   /* Fields run down the page, never across it — and at a field's width,
      not the panel's: a select stretched over 680px reads as a banner. */
-  #add-where, #add-where-set { display: flex; flex-direction: column; gap: 14px; }
-  #add-where .fld, #add-where-set .fld-static { max-width: 299px; }
+  /* Two short answers, one line. */
+  #add-where, #add-where-set { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   /* The carried answer: one line, not a panel. */
   .add-sum {
     display: flex; align-items: center; gap: 10px;
@@ -430,13 +450,13 @@
   .add-steps li.done .n { background: var(--bg-blue-light); color: var(--primary); }
   /* One height per step: a step is a change of screen, where a change
      of size is expected — unlike a field appearing under the pointer. */
-  .add-modal .modal-body { height: 540px; flex: 0 0 auto; overflow: hidden; }
+  .add-modal .modal-body { height: 540px; flex: 0 0 auto; overflow-y: auto; }
   body.addstep-1 .modal.add-modal { max-width: 480px; }
-  body.addstep-1 .add-modal .modal-body { height: 258px; }
-  body.addstep-1 #add-where .fld { max-width: none; }
+
   body.addstep-1 .add-need { display: none; }
   /* The last field had nothing between it and the footer rule. */
   body.addstep-1 #add-where { padding-bottom: 8px; }
+  body.addstep-1 .add-modal .modal-body { height: 206px; }
   /* Cancel and Next belong at the end of the line, like every other
      dialog's buttons. */
   .add-modal .modal-footer-actions { justify-content: flex-end; }
@@ -655,12 +675,13 @@
   /* A note, not a banner: an outline the width of what it says, in a
      blue quiet enough not to be mistaken for the call to action. */
   .add-hint {
-    display: inline-flex; align-items: center; gap: 8px; align-self: flex-start;
-    padding: 7px 8px 7px 12px; border-radius: 8px;
-    background: var(--white); border: 1px solid #c7d4f5; color: var(--grey-700);
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 10px 9px 14px; border-radius: 8px;
+    background: var(--white); border: 1px solid var(--grey-350); color: var(--grey-700);
     font-size: 13px; line-height: 18px;
   }
-  .add-hint svg { flex-shrink: 0; color: #7f94c9; }
+  .add-hint svg { flex-shrink: 0; color: var(--grey-500); }
+  .add-hint .x { margin-left: auto; }
   .add-hint .x {
     width: 20px; height: 20px; flex-shrink: 0; margin-left: 4px;
     border: none; border-radius: 50%; background: none; cursor: pointer;
@@ -704,16 +725,21 @@
     font-family: var(--fs-sans); font-size: 13px; font-weight: 500; white-space: nowrap;
     color: var(--primary); transition: background var(--t-fast);
   }
-  .grp-add:hover { background: var(--bg-blue-light); }
+  /* The row behind it is often grey, where a blue tint reads as nothing.
+     White lifts off either background. */
+  .grp-add:hover { background: var(--white); box-shadow: 0 0 0 1px var(--grey-350) inset; }
   /* Row actions live at the right-hand end of the table, the way they do
      on every other OPMS grid — not among the day columns, which is where
      the eye is reading numbers. It stays put while the days scroll. */
   /* A rule down the left of the actions column, so it reads as its own
      column rather than as the end of the one before it. */
+  /* The rule runs the height of the column, on every row including the
+     headings, so the actions read as their own column. */
   th.col-act, td.col-act {
     position: sticky; right: 0; z-index: 2;
     width: 126px; padding: 4px 16px; text-align: right;
-    background: var(--white); border-left: 1px solid var(--grey-350);
+    background: var(--white);
+    box-shadow: inset 1px 0 0 var(--grey-350);
   }
   #grid thead th.col-act { z-index: 6; }
   /* Sticky cells paint their own background, so the ones the rest of the
@@ -1394,6 +1420,11 @@
   /* What a day adds up to across every task on it, searched or not. A
      search narrows what is shown; it does not shorten the day. */
   var DAY_CAP = 24;
+  /* A day column never truncates its figure. The widest a cell can hold
+     is the allowance mark, the status mark and a number of four digits
+     with three decimals — so the column is cut to that, not to what a
+     typical 8 looks like. */
+  var DAY_W = 112;
   function dayTotal(isoDate, searchedOnly) {
     var n = 0;
     Object.keys(taskMeta).forEach(function (k) {
@@ -1530,7 +1561,7 @@
 
   /* The label columns are draggable: narrow them and the day columns get
      the space back. */
-  var colW = { site: 200, sup: 150, task: 260, label: 360 };
+  var colW = { site: 232, sup: 150, task: 260, label: 360 };
   function wPx(k) { return colW[k] + 'px'; }
   /* Each column gets its own floor — a Site dragged down to a Hours-sized
      stub reads as a bug, not as a narrow column. */
@@ -1547,19 +1578,32 @@
     g.style.setProperty('--x-task', (colW.site + colW.sup) + 'px');
   }
 
-  /* Each day carries its own total in the heading — the figure a worker
-     is checking against, and the one that cannot pass 24. */
+  /* The heading is two rows: the date on the first, the day's total on
+     the second under a rule — the same shape as the Total column on the
+     right, turned on its side. */
   function dayHeadCells(ds) {
     return ds.map(function (d) {
       var k = iso(d), today = k === iso(TODAY);
-      var shown = dayTotal(k, true), all = dayTotal(k, false), over = all > DAY_CAP;
-      return '<th class="col-day' + (today ? ' tdy' : '') + (over ? ' over' : '') + '">' +
+      return '<th class="col-day' + (today ? ' tdy' : '') + '">' +
         '<span class="day-head' + (today ? ' is-today' : '') + '">' +
-        '<span class="dline"><span class="dow">' + DOW[d.getDay()] + '</span>' +
-          '<span class="dnum">' + fmtDay(d) + '</span></span>' +
-        '<span class="dtot"' + (over ? ' data-tip="' + fmtHours(all) + ' h booked on this day — more than ' + DAY_CAP + '"' : '') + '>' +
-          (shown > 0 ? fmtHours(shown) + ' h' : '&mdash;') + '</span></span></th>';
+        '<span class="dow">' + DOW[d.getDay()] + '</span>' +
+        '<span class="dnum">' + fmtDay(d) + '</span></span></th>';
     }).join('');
+  }
+  function dayTotalCells(ds) {
+    return ds.map(function (d) {
+      var k = iso(d), today = k === iso(TODAY);
+      var shown = dayTotal(k, true), all = dayTotal(k, false), over = all > DAY_CAP;
+      return '<th class="col-day dtot-cell' + (today ? ' tdy' : '') + (over ? ' over' : '') + '"' +
+        (over ? ' data-tip="' + fmtHours(all) + ' h booked on this day — more than ' + DAY_CAP + '"' : '') + '>' +
+        (shown > 0 ? fmtHours(shown) + ' h' : '<span class="cell-empty">&mdash;</span>') + '</th>';
+    }).join('');
+  }
+  /* The left of that second row says what the row is. */
+  function totalRow(ds, labelCols) {
+    return '<tr class="tot-row">' + labelCols + dayTotalCells(ds) +
+      '<th class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + dayTotal(iso(d), true); }, 0)) + '</th>' +
+      (state.editing ? '<th class="col-act"></th>' : '') + '</tr>';
   }
 
   /* Flat: site, supervisor and task each get their own column, and a value
@@ -1568,14 +1612,17 @@
     var ds = days();
     gridCols.innerHTML = '<col style="width:' + wPx('site') + '" /><col style="width:' + wPx('sup') + '" />' +
       '<col style="width:' + wPx('task') + '" />' +
-      ds.map(function () { return '<col style="width:92px" />'; }).join('') +
+      ds.map(function () { return '<col style="width:' + DAY_W + 'px" />'; }).join('') +
       '<col style="width:96px" />' + (state.editing ? '<col style="width:126px" />' : '');
 
     gridHead.innerHTML = '<tr>' +
       '<th class="col-site" data-w="site">Site' + Shell.colGrip() + '</th>' +
       '<th class="col-sup" data-w="sup">Supervisor' + Shell.colGrip() + '</th>' +
       '<th class="col-task" data-w="task">Task' + Shell.colGrip() + '</th>' +
-      dayHeadCells(ds) + '<th class="col-total">Total</th>' + actHead() + '</tr>';
+      dayHeadCells(ds) + '<th class="col-total">Total</th>' + actHead() + '</tr>' +
+      totalRow(ds,
+        '<th class="col-site"></th><th class="col-sup"></th>' +
+        '<th class="col-task tot-label">Total</th>');
     syncStickyX();
 
     /* Every site + supervisor opens with its own summary line — how many tasks
@@ -1589,7 +1636,7 @@
             '" data-key="' + Shell.esc(fk) + '">' +
           '<td class="col-site" data-tip="Site &mdash; ' + Shell.esc(site.name) + '">' +
             '<span class="tree">' + caret() + '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
-          '<td class="col-sup">' + Shell.esc(sup.name) + '</td>' +
+          '<td class="col-sup" data-tip="Supervisor &mdash; ' + Shell.esc(sup.name) + '">' + Shell.esc(sup.name) + '</td>' +
           '<td class="col-task"><span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
           ds.map(function (d) { return dayCellPlain(sumRow(sup.tasks, iso(d)), iso(d)); }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
@@ -1624,15 +1671,12 @@
     if (rowsMode === 'flat') return renderFlat();
     var ds = days();
     gridCols.innerHTML = '<col style="width:' + wPx('label') + '" />' +
-      ds.map(function () { return '<col style="width:92px" />'; }).join('') +
+      ds.map(function () { return '<col style="width:' + DAY_W + 'px" />'; }).join('') +
       '<col style="width:96px" />' + (state.editing ? '<col style="width:126px" />' : '');
 
     gridHead.innerHTML = '<tr><th class="col-label" data-w="label">Breakdown' + Shell.colGrip() + '</th>' +
-      ds.map(function (d) {
-        var today = iso(d) === iso(TODAY);
-        return '<th class="col-day' + (today ? ' tdy' : '') + '"><span class="day-head' + (today ? ' is-today' : '') + '">' +
-          '<span class="dow">' + DOW[d.getDay()] + '</span><span class="dnum">' + fmtDay(d) + '</span></span></th>';
-      }).join('') + '<th class="col-total">Total</th>' + actHead() + '</tr>';
+      dayHeadCells(ds) + '<th class="col-total">Total</th>' + actHead() + '</tr>' +
+      totalRow(ds, '<th class="col-label tot-label">Total</th>');
 
     var tree = weekTree(), rows = [], shown = 0;
     tree.forEach(function (site) {
