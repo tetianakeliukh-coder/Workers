@@ -319,7 +319,7 @@
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
-  .modal.add-modal { max-width: 600px; width: 100%; }
+  .modal.add-modal { max-width: 800px; width: 100%; }
   /* The shell's modal body is flex:1 with a zero basis, which collapses when
      the dialog has no fixed height — size it to its content instead. */
   .add-modal .modal-body {
@@ -332,13 +332,20 @@
      chosen, then the way to name one that does not exist yet. Only the
      middle of those scrolls, so the button at the end is always on
      screen — having to scroll to reach it was the whole complaint. */
+  .add-cols {
+    display: grid; grid-template-columns: minmax(0, 1fr) 282px; gap: 0 20px;
+    flex: 1 1 auto; min-height: 0;
+  }
+  .add-col { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+  /* A rule, not a gap: the two columns are two different questions. */
+  .sel-col { padding-left: 20px; border-left: 1px solid var(--grey-350); gap: 8px; }
   #pick-card {
     display: flex; flex-direction: column; gap: 14px;
     flex: 1 1 auto; min-height: 90px; overflow-y: auto;
   }
   .pick-recent { display: flex; flex-direction: column; gap: 8px; flex: 1 0 auto; }
-  .sel-wrap { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; }
-  .sel-list { display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; }
+  .sel-list { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .sel-empty { margin: 0; font-size: 13px; line-height: 18px; color: var(--grey-600); }
   /* A chosen task is the same card it was chosen from, so that what was
      picked is recognisable as what was on offer. */
   .sel-list .recent-row { cursor: default; border-color: var(--primary); background: var(--bg-blue-light); }
@@ -428,8 +435,7 @@
 
   /* Step one asks where, and nothing else is on screen; step two carries
      that answer as the line above and asks for the tasks. */
-  body.addstep-1 #pick-card,
-  body.addstep-1 #new-task,
+  body.addstep-1 #add-cols,
   body.addstep-1 .add-sum { display: none; }
   body.addstep-2 #step-where,
   body.from-group #step-where { display: none; }
@@ -482,6 +488,37 @@
   .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
   /* Sits to the left of the preview switcher — needs to outrank .vp-switch. */
   .vp-switch.rows-switch { right: 216px; }
+  .vp-switch.add-switch { right: 420px; }
+
+  /* ─── Naming a task in the row itself ──────────────────────────────
+     A task is up to six answers and the grid has one column to put them
+     in — so they are not asked for all at once. Each answer settles into
+     the breadcrumb the row will end up showing, and only the next one
+     outstanding is a control. One select at a time fits where six never
+     would, and the cell reads as the name it is becoming. */
+  .chain { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .chain .done {
+    font-size: 14px; color: var(--text-main); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto;
+  }
+  .chain .bar { color: var(--grey-400); flex-shrink: 0; }
+  .chain select {
+    flex: 1 1 110px; min-width: 96px; max-width: 220px; height: 28px; padding: 0 26px 0 8px;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
+    background-color: var(--white); border: 1px solid var(--primary); border-radius: 6px;
+  }
+  .chain select:focus { outline: none; box-shadow: 0 0 0 2px rgba(0, 51, 255, 0.16); }
+  .chain select:disabled { border-color: var(--grey-350); color: var(--grey-600); background-color: #fafafa; }
+  .chain .chain-x {
+    width: 24px; height: 24px; flex-shrink: 0; margin-left: 2px;
+    border: none; border-radius: 6px; background: none; cursor: pointer;
+    color: var(--grey-600); display: flex; align-items: center; justify-content: center;
+  }
+  .chain .chain-x:hover { background: var(--grey-100); color: var(--error); }
+  /* A row that is still being named is marked as unfinished, the same
+     blue the dialog's picks are marked in. */
+  tr.row-pending td { background: var(--bg-blue-light); }
+  tr.row-pending td.col-day .hr-cell { border-style: dashed; }
   /* Four of these in one line runs off a narrow window, and the last one
      is the one nobody finds. They sit two to a row instead. */
 
@@ -968,6 +1005,17 @@
   </button>
 </div>
 
+<div class="vp-switch add-switch" id="add-switch" role="group" aria-label="How a task is added">
+  <button type="button" data-add="dialog" class="on">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3.5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5h12" stroke="currentColor" stroke-width="1.3"/></svg>
+    Dialog
+  </button>
+  <button type="button" data-add="inline">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h7M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12.5 6.5v3M11 8h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    Inline
+  </button>
+</div>
+
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
   <button type="button" data-vp="desktop" class="on">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 14h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -1035,37 +1083,41 @@
           <button class="btn-text" type="button" id="add-sum-change">Change</button>
         </div>
 
-        <!-- Step two: what is already chosen, then what can be chosen,
-             then the way to name one that does not exist yet. -->
-        <div id="pick-card">
-          <div class="sel-wrap" id="basket" hidden>
-            <div class="sec-head"><span class="step-title" id="basket-n"></span></div>
-            <div class="sel-list" id="basket-list"></div>
-          </div>
-
-          <div class="pick-recent">
-            <div class="sec-head">
-              <span class="step-title" id="sec-title">Recent tasks</span>
-              <span class="sec-sub" id="sec-sub" hidden>Matching the fields below</span>
+        <!-- Step two: what can be chosen on the left, what has been
+             chosen on the right. Stacked, the second grew down into the
+             first and neither could be read. -->
+        <div class="add-cols" id="add-cols">
+          <div class="add-col">
+            <div id="pick-card">
+              <div class="pick-recent">
+                <div class="sec-head">
+                  <span class="step-title" id="sec-title">Recent tasks</span>
+                  <span class="sec-sub" id="sec-sub" hidden>Matching the fields below</span>
+                </div>
+                <div class="recent-list" id="recent-list"></div>
+              </div>
             </div>
-            <div class="recent-list" id="recent-list"></div>
+
+            <div class="new-task" id="new-task">
+              <div class="sec-head">
+                <span class="step-title">Set up a new task</span>
+              </div>
+              <div id="nt-levels"></div>
+              <!-- It does not add the row: it puts one more task in the
+                   column beside it, ready for the next to be named. -->
+              <button class="btn-ghost pick-new" type="button" id="sec-switch">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Add new task
+              </button>
+            </div>
           </div>
 
-        </div>
-
-        <div class="new-task" id="new-task">
-          <div class="sec-head">
-            <span class="step-title">Set up a new task</span>
+          <div class="add-col sel-col" id="basket">
+            <div class="sec-head"><span class="step-title" id="basket-n">Selected</span></div>
+            <div class="sel-list" id="basket-list"></div>
+            <p class="sel-empty" id="basket-empty">Nothing chosen yet. Tick a task on the left, or set one up underneath it.</p>
           </div>
-          <div id="nt-levels"></div>
-          <!-- It does not add the row: it puts one more task in the
-               list above, ready for the next one to be named. -->
-          <button class="btn-ghost pick-new" type="button" id="sec-switch">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add new task
-          </button>
         </div>
-      </div>
     </div>
 
     <div class="modal-footer">
@@ -1555,6 +1607,130 @@
   function actHead() { return state.editing ? '<th class="col-act"></th>' : ''; }
   function actCell(inner) { return state.editing ? '<td class="col-act">' + inner + '</td>' : ''; }
 
+  /* ─── Adding in the row itself ─────────────────────────────────────
+     The other way of adding, kept beside the dialog rather than instead
+     of it: the row lands first and is named where it lands.
+
+     A task needs up to six answers and the grid has one label column, so
+     the answers are not all asked at once. Those already given have
+     settled into the breadcrumb the row will show for good; the next one
+     outstanding is the only control on screen. Site and supervisor are
+     answers too — from a group row they are already given, from the page
+     button they are the first two asked.                               */
+  var addMode = 'dialog';
+  var tmpN = 0;
+
+  function slotsFor(meta) {
+    var out = [];
+    /* Site and supervisor are shown as controls only while unanswered:
+       once settled, the group the row sits in already says them. */
+    out.push({ k: 'site', label: 'Site', value: meta.site, values: SITES, show: false });
+    out.push({ k: 'sup', label: 'Supervisor', value: meta.sup,
+               values: SUPS_BY_SITE[meta.site] || [], show: false });
+    fieldsFor(meta.site).forEach(function (f, i) {
+      out.push({ k: 'lvl' + i, label: f.name, value: meta.levels[i] || '', values: f.values, show: true });
+    });
+    return out;
+  }
+  function chainHtml(key) {
+    var meta = taskMeta[key], slots = slotsFor(meta), parts = [], open = null;
+    slots.forEach(function (sl) {
+      if (open) return;
+      if (sl.value) { if (sl.show) parts.push(sl); return; }
+      open = sl;
+    });
+    var html = '<span class="chain">';
+    parts.forEach(function (sl) {
+      html += '<span class="done">' + Shell.esc(sl.value) + '</span><span class="bar">|</span>';
+    });
+    if (open) {
+      html += '<select data-slot="' + open.k + '" data-row="' + Shell.esc(key) + '" aria-label="' + Shell.esc(open.label) + '">' +
+        '<option value="">' + Shell.esc(open.label) + '…</option>' +
+        open.values.map(function (v) { return '<option>' + Shell.esc(v) + '</option>'; }).join('') +
+        '</select>';
+    } else if (parts.length) {
+      /* Nothing left to answer: the last bar has nothing after it. */
+      html = html.replace(/<span class="bar">\|<\/span>$/, '');
+    }
+    html += '<button class="chain-x" type="button" data-drop-row="' + Shell.esc(key) + '" aria-label="Discard this row" data-tip="Discard this row">' +
+      '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
+    return html + '</span>';
+  }
+  function isPending(key) { return !!(taskMeta[key] && taskMeta[key].pending); }
+  /* The label a task row shows: its name, or the controls that are still
+     deciding what that name is. */
+  function taskLabel(t) {
+    if (isPending(t.key)) return chainHtml(t.key);
+    return Shell.esc(t.label);
+  }
+
+  function startInline(site, sup) {
+    if (!state.editing) enterEdit();
+    var key = 'tmp§' + (++tmpN);
+    taskMeta[key] = { site: site || '', sup: sup || '', levels: [], pending: true };
+    extraRows.push(key);
+    /* A row nobody can see is a row nobody fills in. */
+    if (site) {
+      delete collapsed['s:' + site];
+      if (sup) { delete collapsed['s:' + site + '|' + sup]; delete collapsed[flatKey(site, sup)]; }
+    }
+    justAdded = key;
+    render();
+    var sel = gridBody.querySelector('[data-row="' + key + '"]');
+    if (sel) { sel.focus(); sel.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
+  }
+
+  /* An answer either fills a slot or, once the last one is in, turns the
+     row into the task it was describing — hours typed along the way move
+     with it, because they were always meant for this row. */
+  function answerSlot(key, slot, value) {
+    var meta = taskMeta[key];
+    if (slot === 'site') {
+      meta.site = value; meta.sup = ''; meta.levels = [];
+    } else if (slot === 'sup') {
+      meta.sup = value;
+    } else {
+      meta.levels[Number(slot.slice(3))] = value;
+    }
+    var fields = fieldsFor(meta.site);
+    var done = meta.site && meta.sup && fields.length &&
+      fields.every(function (f, i) { return !!meta.levels[i]; });
+    if (done) settleInline(key);
+    render();
+    if (!done) {
+      var sel = gridBody.querySelector('[data-row="' + key + '"]');
+      if (sel) sel.focus();
+    }
+  }
+  function settleInline(key) {
+    var meta = taskMeta[key];
+    var real = keyOf(meta.site, meta.sup, meta.levels);
+    delete taskMeta[key];
+    taskMeta[real] = { site: meta.site, sup: meta.sup, levels: meta.levels.slice() };
+    extraRows = extraRows.filter(function (x) { return x !== key; });
+    if (extraRows.indexOf(real) === -1) extraRows.push(real);
+    /* Hours typed into the row before it had a name belong to the name. */
+    if (draft) {
+      Object.keys(draft).forEach(function (dk) {
+        if (dk.indexOf(key + '|') !== 0) return;
+        var date = dk.slice(key.length + 1);
+        if (!(real + '|' + date in draft)) draft[real + '|' + date] = draft[dk];
+        delete draft[dk];
+      });
+    }
+    justAdded = real;
+  }
+  function dropInline(key) {
+    delete taskMeta[key];
+    extraRows = extraRows.filter(function (x) { return x !== key; });
+    if (draft) {
+      Object.keys(draft).forEach(function (dk) {
+        if (dk.indexOf(key + '|') === 0) delete draft[dk];
+      });
+    }
+    render();
+  }
+
   function grpAdd(site, sup) {
     if (!state.editing) return '';
     return '<button class="grp-add" type="button"' +
@@ -1649,9 +1825,11 @@
         if (!open) return;
 
         sup.tasks.forEach(function (t) {
-          rows.push('<tr class="row-flat' + (t.key === justAdded ? ' just-added' : '') + '">' +
+          rows.push('<tr class="row-flat' + (t.key === justAdded ? ' just-added' : '') +
+              (isPending(t.key) ? ' row-pending' : '') + '">' +
             '<td class="col-site"></td><td class="col-sup"></td>' +
-            '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
+            '<td class="col-task"' + (isPending(t.key) ? '' : ' data-tip="Task &mdash; ' + Shell.esc(t.label) + '"') + '>' +
+              taskLabel(t) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell('') +
@@ -1705,8 +1883,10 @@
         if (!supOpen) return;
 
         sup.tasks.forEach(function (t) {
-          rows.push('<tr class="row-task' + (t.key === justAdded ? ' just-added' : '') + '">' +
-            '<td class="col-label" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
+          rows.push('<tr class="row-task' + (t.key === justAdded ? ' just-added' : '') +
+              (isPending(t.key) ? ' row-pending' : '') + '">' +
+            '<td class="col-label"' + (isPending(t.key) ? '' : ' data-tip="Task &mdash; ' + Shell.esc(t.label) + '"') + '>' +
+              taskLabel(t) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell('') + '</tr>');
@@ -2588,8 +2768,8 @@
     return basket.some(function (x) { return x.key === key; });
   }
   function renderBasket() {
-    el('basket').hidden = !basket.length;
-    el('basket-n').textContent = 'Selected (' + basket.length + ')';
+    el('basket-empty').hidden = !!basket.length;
+    el('basket-n').textContent = basket.length ? 'Selected (' + basket.length + ')' : 'Selected';
     el('basket-list').innerHTML = basket.map(function (x, i) {
       return '<div class="recent-row">' +
         '<span class="rr-body"><span class="rr-code">' + Shell.esc(x.title) + '</span>' +
@@ -2930,7 +3110,29 @@
     if (e.target === editSheet || e.target.closest('[data-close]')) editSheet.classList.remove('open');
   });
 
-  document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null, null); });
+  document.getElementById('btn-new-task').addEventListener('click', function () {
+    if (addMode === 'inline') startInline('', '');
+    else openAdd(null, null);
+  });
+  var addSwitch = document.getElementById('add-switch');
+  addSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-add]');
+    if (!b) return;
+    addMode = b.getAttribute('data-add');
+    addSwitch.querySelectorAll('[data-add]').forEach(function (x) { x.classList.toggle('on', x === b); });
+  });
+  /* Answering a slot, and giving up on a row that was never named. */
+  gridBody.addEventListener('change', function (e) {
+    var sel = e.target.closest('[data-slot]');
+    if (!sel) return;
+    answerSlot(sel.getAttribute('data-row'), sel.getAttribute('data-slot'), sel.value);
+  });
+  gridBody.addEventListener('click', function (e) {
+    var x = e.target.closest('[data-drop-row]');
+    if (!x) return;
+    e.stopPropagation();
+    dropInline(x.getAttribute('data-drop-row'));
+  }, true);
 
   /* Capture, and ahead of the row's own collapse handler: the click is for
      the button, not for the group it sits on. */
@@ -2939,7 +3141,9 @@
     if (!b) return;
     e.preventDefault();
     e.stopPropagation();
-    openAdd(null, { site: b.getAttribute('data-add-site'), sup: b.getAttribute('data-add-sup') || '' });
+    var site = b.getAttribute('data-add-site'), sup = b.getAttribute('data-add-sup') || '';
+    if (addMode === 'inline') startInline(site, sup || supervisorFor(site) || '');
+    else openAdd(null, { site: site, sup: sup });
   }, true);
 
   document.addEventListener('keydown', function (e) {
