@@ -407,6 +407,11 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   /* Set up here and now, rather than recognised: the same row, marked. */
   .recent-row.made { border-color: var(--primary); cursor: pointer; }
+  /* Where the ticked ones stop and the rest of the history starts. */
+  #recent-list .recent-row.sel + .recent-row:not(.sel) {
+    margin-top: 10px; padding-top: 14px; border-top: 1px solid var(--grey-300);
+    border-radius: 0 0 8px 8px;
+  }
   .recent-row .ico-btn {
     width: 26px; height: 26px; flex-shrink: 0;
     border: none; border-radius: 6px; background: none; cursor: pointer;
@@ -1415,6 +1420,33 @@
   add(addDays(THIS_MON, -29), 'MMA VIGILANT ROV', 'Priya Nair', ['JOB-00478', 'Tooling change', 'Labour'], 6.5);
   add(addDays(THIS_MON, -15), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00123', 'CC-1163', 'Labour', 'Night'], 9);
   add(addDays(THIS_MON, -22), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1140', 'Waiting for materials', 'Day'], 5);
+
+  /* A site a worker has been on for months has a long history, and the
+     dialog has to hold up against one. */
+  var WO   = ['WORK-00123', 'WORK-00124', 'WORK-00187', 'WORK-00201'];
+  var TSK  = ['Repair the machine', 'Replace hydraulic hose', 'Weld handrail section', 'Deck plating repair'];
+  var TYP  = ['Labour', 'Weather standby'];
+  var SUB  = ['Preparation', 'Clean-up'];
+  var seed = 7;
+  function pick(list) { seed = (seed * 97 + 41) % 9973; return list[seed % list.length]; }
+  for (var h = 0; h < 22; h++) {
+    add(addDays(THIS_MON, -(12 + h * 3)), 'MMA VIGILANT – 360', 'Grace Okafor',
+      [pick(WO), pick(TSK), pick(TYP), pick(SUB)], 6);
+    add(addDays(THIS_MON, -(14 + h * 3)), 'MMA VIGILANT – 360', 'Tom Halloran',
+      [pick(WO), pick(TSK), pick(TYP), pick(SUB)], 5);
+  }
+  var JOB = ['JOB-00451', 'JOB-00478', 'JOB-00492'];
+  var ACT = ['ROV dive', 'Deck handling', 'Tooling change'];
+  for (var h2 = 0; h2 < 14; h2++) {
+    add(addDays(THIS_MON, -(13 + h2 * 4)), 'MMA VIGILANT ROV', 'Priya Nair',
+      [pick(JOB), pick(ACT), pick(TYP)], 7);
+  }
+  var CC = ['CC-1140', 'CC-1155', 'CC-1163'];
+  var SHIFT = ['Day', 'Night'];
+  for (var h3 = 0; h3 < 14; h3++) {
+    add(addDays(THIS_MON, -(16 + h3 * 4)), 'SA BHP OLYMPIC DAM', 'Marcus Webb',
+      [pick(WO), pick(CC), pick(['Labour', 'Waiting for materials']), pick(SHIFT)], 8);
+  }
 
   /* ─── State ───────────────────────────────────────────────────── */
   var state = { range: 'week', from: null, to: null, query: '', editing: false, selDay: iso(TODAY) };
@@ -2665,11 +2697,17 @@
     }).filter(function (r) { return r.when; })
       .filter(function (r) { return !site || r.meta.site === site; })
       .filter(function (r) { return !sup || r.meta.sup === sup; })
-      /* With a site's whole history on the list, finding one is a search. */
+      /* With a site's whole history on the list, finding one is a search —
+         but a row that is already ticked is never filtered out of it. */
       .filter(function (r) {
-        return !q || pathOf(r.meta.levels).toLowerCase().indexOf(q) !== -1;
+        return ticks[keyOf(site, sup || supervisorFor(site), r.meta.levels)] ||
+          !q || pathOf(r.meta.levels).toLowerCase().indexOf(q) !== -1;
       })
-      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 40);
+      .sort(function (a, b) { return (b.when || 0) - (a.when || 0); });
+    /* Ticked first, so a long list still shows what has been chosen. */
+    var on = function (r) { return ticks[keyOf(site, sup || supervisorFor(site), r.meta.levels)] ? 0 : 1; };
+    recent.sort(function (a, b) { return on(a) - on(b); });
+    recent = recent.slice(0, 60);
     nameCards(recent);
     recentCache = recent;
     return recent;
