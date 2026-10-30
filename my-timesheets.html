@@ -349,9 +349,15 @@
   .add-col { display: flex; flex-direction: column; gap: 14px; min-height: 0; }
   /* A rule, not a gap: the two columns are two different questions. */
   .sel-col { padding-left: 20px; border-left: 1px solid var(--grey-350); gap: 8px; }
-  /* Reserved, not occupied: the column holds its width from the start so
-     the first task added does not resize the dialog under the pointer. */
-  .sel-col[hidden] { display: flex; visibility: hidden; }
+  .sel-scroll { display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow-y: auto; }
+  .sel-sub {
+    margin: 0; font-size: 12px; font-weight: 500; color: var(--grey-600);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .sel-sub.adding { color: var(--primary); margin-top: 10px; }
+  .sel-sub:empty { display: none; }
+  /* Already there: present, not on offer. */
+  .sel-list.muted .rr-code { font-weight: 400; color: var(--grey-700); }
   /* Enough room that the list of recent tasks reads as a list. */
   #pick-card {
     display: flex; flex-direction: column; gap: 14px;
@@ -371,7 +377,7 @@
   .or-rule::before, .or-rule::after {
     content: ''; flex: 1 1 auto; height: 1px; background: var(--grey-350);
   }
-  .sel-list { display: flex; flex-direction: column; gap: 6px; flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+  .sel-list { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; }
   .sel-col { justify-content: flex-start; }
   .sel-empty { margin: 0; font-size: 13px; line-height: 18px; color: var(--grey-600); }
   /* A plain list: these are not on offer any more, so they are not
@@ -390,7 +396,10 @@
   /* A field is a field: one to a line, however many the site has. */
   #nt-levels { display: flex; flex-direction: column; gap: 10px; }
   .new-task { display: flex; flex-direction: column; gap: 12px; flex: 0 0 auto; }
-  .pick-new { align-self: flex-start; color: var(--primary); }
+  /* The section's own action: an outline in the accent colour, so it is
+     plainly a button and plainly not the dialog's Save. */
+  .pick-new { flex-shrink: 0; height: 32px; padding: 0 12px; border-color: var(--primary); color: var(--primary); }
+  .pick-new:hover { border-color: var(--primary); background: var(--bg-blue-light); }
 
   /* A row is ticked, not clicked once and lost: several tasks go on at
      the same time, which is how a week is actually set up. The tick sits
@@ -696,7 +705,20 @@
 
   /* Summary line that opens each site + supervisor block in the flat layout. */
   /* The row that was just added: findable at a glance. */
-  #grid tbody tr.just-added > td { background: var(--bg-blue-light); }
+  /* A row that has just arrived says so for a moment and then stops: a
+     mark that never goes away is not news, and several rows arriving at
+     once need to be findable without reading the whole week. */
+  #grid tbody tr.just-added > td {
+    background: var(--bg-blue-light);
+    animation: land 2.4s ease-out forwards;
+  }
+  @keyframes land {
+    0%, 55% { background: #dbe4fb; box-shadow: inset 2px 0 0 var(--primary); }
+    100% { background: var(--white); box-shadow: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #grid tbody tr.just-added > td { animation: none; }
+  }
 
   .row-summary td { background: var(--grey-100); }
   .row-summary td.col-site, .row-summary td.col-sup { font-weight: 600; }
@@ -989,6 +1011,14 @@
 
 
 <!-- ── Prototype viewport switcher ──────────────────────────────── -->
+<div class="vp-switch fields-switch" id="fields-switch" role="group" aria-label="Fields that name a task">
+  <button type="button" data-fields="0" class="on">Site&rsquo;s own</button>
+  <button type="button" data-fields="1">1 field</button>
+  <button type="button" data-fields="2">2</button>
+  <button type="button" data-fields="3">3</button>
+  <button type="button" data-fields="4">4</button>
+</div>
+
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
   <button type="button" data-vp="desktop" class="on">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 14h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -1079,11 +1109,16 @@
             </div>
           </div>
 
-          <!-- The right-hand column is what will be saved. It is not
-               shown until there is something in it. -->
-          <div class="add-col sel-col" id="basket" hidden>
-            <div class="sec-head"><span class="step-title" id="basket-n">Selected</span></div>
-            <div class="sel-list" id="basket-list"></div>
+          <!-- Where these tasks are going: the rows already on that
+               timesheet, and the ones about to join them. -->
+          <div class="add-col sel-col" id="basket">
+            <div class="sec-head"><span class="step-title">On this timesheet</span></div>
+            <div class="sel-scroll">
+              <p class="sel-sub" id="here-n"></p>
+              <div class="sel-list muted" id="here-list"></div>
+              <p class="sel-sub adding" id="basket-n"></p>
+              <div class="sel-list" id="basket-list"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1303,7 +1338,13 @@
     'MMA VIGILANT ROV':   ['Priya Nair'],
     'SA BHP OLYMPIC DAM': ['Grace Okafor', 'Marcus Webb']
   };
-  function fieldsFor(site) { return SITE_FIELDS[site] || []; }
+  /* 0 means the site's own list; anything else is the prototype being
+     asked what the dialog looks like with that many. */
+  var FIELD_CAP = 0;
+  function fieldsFor(site) {
+    var list = SITE_FIELDS[site] || [];
+    return FIELD_CAP ? list.slice(0, FIELD_CAP) : list;
+  }
   function pathOf(levels) { return levels.filter(Boolean).join(' | '); }
   function keyOf(site, sup, levels) { return site + '§' + sup + '§' + pathOf(levels); }
 
@@ -1382,6 +1423,10 @@
   var draft = null;          // 'key|date' -> hours, while editing
   var extraRows = [];        // keys added during this edit
   var justAdded = null;      // the task added last, so it can be found
+  var justAddedSet = [];     // every task from the last Add, so they all flash
+  function isJustAdded(k) {
+    return k === justAdded || justAddedSet.indexOf(k) !== -1;
+  }
 
   /* One column per day in the active range. With no date filter the range
      spans whatever the worker has booked. */
@@ -1678,7 +1723,7 @@
         if (!open) return;
 
         sup.tasks.forEach(function (t) {
-          rows.push('<tr class="row-flat' + (t.key === justAdded ? ' just-added' : '') + '">' +
+          rows.push('<tr class="row-flat' + (isJustAdded(t.key) ? ' just-added' : '') + '">' +
             '<td class="col-site"></td><td class="col-sup"></td>' +
             '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
@@ -1734,7 +1779,7 @@
         if (!supOpen) return;
 
         sup.tasks.forEach(function (t) {
-          rows.push('<tr class="row-task' + (t.key === justAdded ? ' just-added' : '') + '">' +
+          rows.push('<tr class="row-task' + (isJustAdded(t.key) ? ' just-added' : '') + '">' +
             '<td class="col-label" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
@@ -2607,9 +2652,28 @@
   function inBasket(key) {
     return basket.some(function (x) { return x.key === key; });
   }
+  /* What that site and supervisor already have on this week's timesheet —
+     the thing the new rows are joining. */
+  function alreadyHere() {
+    var site = addSite(), sup = addSup();
+    if (!site) return [];
+    return weekKeys().filter(function (k) {
+      var m = taskMeta[k];
+      return m.site === site && (!sup || m.sup === sup);
+    }).map(function (k) {
+      return { title: taskTitle(taskMeta[k]), sub: taskRest(taskMeta[k], -1) };
+    });
+  }
   function renderBasket() {
-    el('basket').hidden = !basket.length;
-    el('basket-n').textContent = 'Selected (' + basket.length + ')';
+    var here = alreadyHere();
+    el('here-n').textContent = here.length ? 'Already there (' + here.length + ')' : 'Nothing here yet';
+    el('here-list').innerHTML = here.map(function (x) {
+      return '<div class="recent-row"><span class="rr-body">' +
+        '<span class="rr-code">' + Shell.esc(x.title) + '</span>' +
+        (x.sub ? '<span class="rr-sub">' + Shell.esc(x.sub) + '</span>' : '') +
+        '</span></div>';
+    }).join('');
+    el('basket-n').textContent = basket.length ? 'Adding (' + basket.length + ')' : '';
     el('basket-list').innerHTML = basket.map(function (x, i) {
       return '<div class="recent-row">' +
         '<span class="rr-body"><span class="rr-code">' + Shell.esc(x.title) + '</span>' +
@@ -2755,8 +2819,10 @@
       if (extraRows.indexOf(k) === -1) extraRows.push(k);
       lastKey = k;
     });
-    /* The last one added is the one the cell editor opens on. */
+    /* The last one added is the one the cell editor opens on; all of them
+       are marked, so a batch can be found at a glance. */
     justAdded = lastKey;
+    justAddedSet = picks.map(function (p) { return keyOf(site, sup, p.levels); });
     /* Dropping rows inside a folded group hides what you just did, so
        whichever group they land in is opened. */
     delete collapsed['s:' + site];
@@ -2766,9 +2832,11 @@
     render();
     if (picks.length > 1) Shell.snackbar(picks.length + ' tasks added to this week.');
 
-    var row = document.querySelector('tr.just-added');
-    if (row) {
-      row.scrollIntoView({ block: 'center' });
+    /* Scroll to the first of them, not the last: the batch reads downwards. */
+    var landed = document.querySelectorAll('tr.just-added');
+    var row = landed[landed.length - 1];
+    if (landed.length) {
+      landed[0].scrollIntoView({ block: 'center' });
       var box = row.querySelector('.hr-cell:not([disabled])[data-date="' + date + '"]') ||
                 row.querySelector('.hr-cell:not([disabled])');
       if (box) openCell(box);
@@ -2949,6 +3017,21 @@
   });
 
   document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null, null); });
+  var fieldsSwitch = document.getElementById('fields-switch');
+  fieldsSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-fields]');
+    if (!b) return;
+    FIELD_CAP = Number(b.getAttribute('data-fields'));
+    fieldsSwitch.querySelectorAll('[data-fields]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    /* Fewer fields is a different set of answers, so what was part-named
+       with the old set is dropped rather than half-kept. */
+    if (addModal.classList.contains('open')) {
+      basket = [];
+      setLevels([]);
+      renderLevels();
+      sync();
+    }
+  });
 
 
   /* Capture, and ahead of the row's own collapse handler: the click is for

@@ -170,7 +170,25 @@ body.shell-mobile .shell-scrim.open { display: block; }
 .btn-primary:disabled, .btn-primary:disabled:hover {
   background: var(--grey-300); color: var(--grey-600); cursor: default;
 }
-.btn-ghost:disabled, .btn-outline:disabled { opacity: 0.5; cursor: default; }
+/* The outline button had only a disabled rule and no rule of its own, so
+   every one of them was rendering as a raw browser button. */
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 16px; border-radius: 8px;
+  background: var(--white); border: 1px solid var(--grey-400);
+  font-size: 14px; font-weight: 500; line-height: 18px;
+  color: var(--text-main); cursor: pointer; font-family: var(--fs-sans);
+  white-space: nowrap; transition: border-color var(--t-fast), background var(--t-fast);
+}
+.btn-outline svg { flex-shrink: 0; }
+.btn-outline:hover { border-color: var(--text-main); }
+.btn-ghost:disabled { opacity: 0.5; cursor: default; }
+/* Half-opacity washed out the border too, and an outline button is its
+   border — it greys instead. */
+.btn-outline:disabled, .btn-outline:disabled:hover {
+  background: var(--white); border-color: var(--grey-300);
+  color: var(--grey-500); cursor: default;
+}
 .btn-ghost:disabled:hover { border-color: var(--grey-350); background: var(--white); }
 
 .btn-ghost {
