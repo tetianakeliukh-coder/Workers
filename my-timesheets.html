@@ -89,7 +89,7 @@
   }
   .grid-card thead th.col-label { z-index: 4; }
   .day-head { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 16px; }
-  .day-head .dnum { font-size: 12px; font-weight: 400; color: var(--grey-600); white-space: nowrap; }
+  .day-head .dnum { font-size: 12px; font-weight: 500; color: var(--grey-600); white-space: nowrap; }
 
   /* A day's total belongs to its date, not to a row of its own: a rule
      across the table read as a second heading and broke the line that
@@ -334,60 +334,49 @@
   .add-modal .modal-footer { padding: 16px 24px 20px; }
   .add-modal .modal-body > .add-one { flex: 1 1 auto; min-height: 0; }
 
-  /* Step two is a stack of task blocks. One block is one task: the set
-     of fields its site names work with. Finished, it folds to a line, and
-     the button under the stack opens the next — which is where the hand
-     already is, unlike a control at the top of the dialog. */
-  .tstack { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-  .tblock { padding: 2px 0 14px; }
-  .tblock + .tblock { border-top: 1px solid var(--grey-300); padding-top: 14px; }
-  .tblock-head {
-    display: flex; align-items: center; gap: 8px; min-width: 0;
-    font-size: 13px; color: var(--grey-600);
-  }
-  .tblock-n {
-    flex-shrink: 0; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px;
-    display: inline-flex; align-items: center; justify-content: center;
-    background: var(--grey-100); color: var(--grey-700); font-size: 12px; font-weight: 600;
-  }
-  .tblock.done .tblock-n { background: var(--bg-blue-light); color: var(--primary); }
-  .tblock-title {
-    font-size: 14px; font-weight: 500; color: var(--text-main);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto;
-  }
-  .tblock-sub {
-    font-size: 12px; color: var(--grey-600); min-width: 0;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto;
-  }
-  .tblock-head .btn-text { flex-shrink: 0; font-size: 13px; }
-  .tblock-head .ico-btn {
-    width: 26px; height: 26px; flex-shrink: 0;
-    border: none; border-radius: 6px; background: none; cursor: pointer;
-    color: var(--grey-600); display: flex; align-items: center; justify-content: center;
-  }
-  .tblock-head .ico-btn:hover { background: var(--grey-100); color: var(--text-main); }
-  .tblock-head .ico-btn.drop:hover { color: var(--error); }
-  .tblock-head .spacer { margin-left: auto; }
-  .tfields { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  /* Step two: the tasks already set up, as cards; under them the one
+     editor, with the list of what has been booked before beneath its
+     fields rather than behind a switch. */
+  .tstack { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; max-height: 184px; overflow-y: auto; }
+  .tstack:empty { display: none; }
+  .tnew { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-height: 120px; }
+  .tfields { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
+  .recent-list { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 60px; overflow-y: auto; }
 
-  /* The shortcut lives inside the block it fills in, so taking it is the
-     same act as answering the fields rather than a different one. */
-  .tpick { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
-  .tpick-list { display: flex; flex-direction: column; gap: 6px; max-height: 188px; overflow-y: auto; }
-  .tpick-head { font-size: 12px; font-weight: 500; color: var(--grey-600); text-transform: uppercase; letter-spacing: 0.4px; }
-
-  .recent-list { display: flex; flex-direction: column; gap: 6px; }
+  /* A task that has been set up looks like a task you have had before,
+     because by then it is one. */
   .recent-row {
     display: flex; flex-direction: row; align-items: center; gap: 10px;
-    width: 100%; padding: 8px 12px; border-radius: 8px; cursor: pointer; text-align: left;
+    width: 100%; padding: 8px 12px; border-radius: 8px; text-align: left;
     background: var(--white); border: 1px solid var(--grey-350);
     font-family: var(--fs-sans);
     transition: border-color var(--t-fast), background var(--t-fast);
   }
-  .recent-row .rr-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; }
+  button.recent-row { cursor: pointer; }
+  .recent-row .rr-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; flex: 1 1 auto; }
+  .recent-row.sel { border-color: var(--grey-300); background: #fafafa; }
+  .recent-row.sel .rr-code, .recent-row.sel .rr-sub { color: var(--grey-500); }
+  .tcard { border-color: var(--primary); background: var(--bg-blue-light); }
+  .tcard .ico-btn {
+    width: 26px; height: 26px; flex-shrink: 0;
+    border: none; border-radius: 6px; background: none; cursor: pointer;
+    color: var(--grey-600); display: flex; align-items: center; justify-content: center;
+  }
+  .tcard .ico-btn:hover { background: rgba(0,51,255,0.1); color: var(--primary); }
+  .tcard .ico-btn.drop:hover { background: rgba(166,13,31,0.08); color: var(--error); }
 
-  /* The button that starts the next block sits under the stack, where the
-     last field left off. */
+  .or-rule {
+    display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+    font-size: 12px; color: var(--grey-600);
+  }
+  .or-rule span {
+    flex: 0 0 auto; padding: 2px 10px; border-radius: 11px;
+    background: var(--grey-100); text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .or-rule::before, .or-rule::after {
+    content: ''; flex: 1 1 auto; height: 1px; background: var(--grey-350);
+  }
+
   .add-more { align-self: flex-start; flex-shrink: 0; height: 32px; padding: 0 12px;
     border-color: var(--primary); color: var(--primary); }
   .add-more:hover { border-color: var(--primary); background: var(--bg-blue-light); }
@@ -440,6 +429,7 @@
   /* Step one asks where, and nothing else is on screen; step two carries
      that answer as the line above and asks for the tasks. */
   body.addstep-1 #tstack,
+  body.addstep-1 #tnew,
   body.addstep-1 #add-more,
   body.addstep-1 .add-sum { display: none; }
   body.addstep-2 #step-where,
@@ -1048,6 +1038,19 @@
              Picking something booked before fills the block in rather
              than being a second, competing way to answer. -->
         <div class="tstack" id="tstack"></div>
+
+        <!-- One editor, and the list of what has been booked before sits
+             under it rather than behind a switch: naming a task and
+             recognising one are the same job, done on one screen. -->
+        <div class="tnew" id="tnew">
+          <div class="tfields" id="tfields"></div>
+          <div class="or-rule"><span>or pick one booked before</span></div>
+          <div class="recent-list" id="recent-list"></div>
+        </div>
+
+        <!-- It folds what is in the editor into a card and opens the next,
+             so a task becomes a task when you say it is finished and not
+             the moment the last field happens to be answered. -->
         <button class="btn-outline add-more" type="button" id="add-more">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Add another task
@@ -2433,92 +2436,75 @@
     }
   }
 
-  /* ─── The stack of blocks ──────────────────────────────────────────
-     One block is one task. Its fields are the site's, so changing the
-     site empties the stack rather than half-keeping it. A block that is
-     fully answered folds to a line; the one still being answered shows
-     its fields. */
-  var blocks = [];          // [{ levels: [], open: bool }]
-  var openPick = -1;        // which block has its recent list showing
+  /* ─── Tasks set up, and the one being set up ───────────────────────
+     Cards for the tasks already named, then one editor. A task becomes a
+     card when the reader says it is finished — pressing "Add another
+     task" — not the instant its last field is answered, which moved the
+     form out from under the hand that was still on it. */
+  var cards = [];           // [{ levels: [] }] — tasks already set up
+  var editing = { levels: [] };  // the one being named now
 
-  function newBlock() { return { levels: [], open: true }; }
-  function blockDone(b) {
+  function levelsDone(lv) {
     var fields = fieldsFor(addSite());
-    return fields.length > 0 && fields.every(function (f, i) { return !!b.levels[i]; });
+    return fields.length > 0 && fields.every(function (f, i) { return !!lv[i]; });
   }
-  function blockKey(b) {
-    return keyOf(addSite(), addSup() || supervisorFor(addSite()), b.levels);
+  function keyFor(lv) {
+    return keyOf(addSite(), addSup() || supervisorFor(addSite()), lv);
   }
-  function doneBlocks() { return blocks.filter(blockDone); }
-
-  function blockFields(b, n) {
-    var fields = fieldsFor(addSite());
-    return '<div class="tfields">' + fields.map(function (f, i) {
-      /* A value that would repeat a task already in the stack is closed
-         off where it is offered, not refused afterwards. */
-      var prefix = b.levels.slice(0, i);
-      return '<div class="fld"><label class="fld-label" for="b' + n + 'f' + i + '">' +
-        Shell.esc(f.name) + '<span class="req">*</span></label>' +
-        '<select id="b' + n + 'f' + i + '" data-b="' + n + '" data-lvl="' + i + '">' +
-        '<option value="">Select&hellip;</option>' +
-        f.values.map(function (v) {
-          var dup = false;
-          if (i === fields.length - 1) {
-            var k = keyOf(addSite(), addSup() || supervisorFor(addSite()), prefix.concat([v]));
-            dup = blocks.some(function (x, xi) { return xi !== n && blockDone(x) && blockKey(x) === k; });
-          }
-          return '<option' + (dup ? ' disabled' : '') +
-            (b.levels[i] === v ? ' selected' : '') + '>' + Shell.esc(v) + '</option>';
-        }).join('') + '</select></div>';
-    }).join('') + '</div>';
+  function allPicked() {
+    var out = cards.slice();
+    if (levelsDone(editing.levels)) out.push({ levels: editing.levels.slice() });
+    return out;
   }
+  function metaOf(lv) { return { site: addSite(), sup: addSup(), levels: lv }; }
 
   var ICO_PENCIL = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var ICO_X = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
 
-  function renderStack() {
-    var site = addSite();
-    el('tstack').innerHTML = blocks.map(function (b, n) {
-      var done = blockDone(b), folded = done && !b.open;
-      var meta = { site: site, sup: addSup(), levels: b.levels };
-      var head;
-      if (folded) {
-        head = '<span class="tblock-n">' + (n + 1) + '</span>' +
-          '<span class="tblock-title">' + Shell.esc(taskTitle(meta)) + '</span>' +
-          '<span class="tblock-sub">' + Shell.esc(taskRest(meta, -1)) + '</span>' +
-          '<button class="ico-btn" type="button" data-edit="' + n + '" aria-label="Edit this task" data-tip="Edit">' + ICO_PENCIL + '</button>' +
-          '<button class="ico-btn drop" type="button" data-dropb="' + n + '" aria-label="Remove this task" data-tip="Remove">' + ICO_X + '</button>';
-      } else {
-        head = '<span class="tblock-n">' + (n + 1) + '</span>' +
-          '<span>Task ' + (n + 1) + '</span>' +
-          '<button class="btn-text spacer" type="button" data-pick="' + n + '">' +
-            (openPick === n ? 'Enter fields instead' : 'Pick from recent') + '</button>' +
-          (blocks.length > 1
-            ? '<button class="ico-btn drop" type="button" data-dropb="' + n + '" aria-label="Remove this task" data-tip="Remove">' + ICO_X + '</button>'
-            : '');
-      }
-      return '<div class="tblock' + (done ? ' done' : '') + '" data-block="' + n + '">' +
-        '<div class="tblock-head">' + head + '</div>' +
-        (folded ? '' : (openPick === n ? pickList(n) : blockFields(b, n))) +
-      '</div>';
-    }).join('');
-    el('add-more').disabled = !blocks.length || !blockDone(blocks[blocks.length - 1]);
+  function cardBody(meta, extra) {
+    var sub = taskRest(meta, typeof extra === 'number' ? extra : -1);
+    return '<span class="rr-body"><span class="rr-code">' + Shell.esc(taskTitle(meta)) + '</span>' +
+      (sub ? '<span class="rr-sub">' + Shell.esc(sub) + '</span>' : '') + '</span>';
   }
 
-  /* The shortcut, drawn inside the block it will fill in. */
-  function pickList(n) {
+  function renderStack() {
+    el('tstack').innerHTML = cards.map(function (c, n) {
+      return '<div class="recent-row tcard">' + cardBody(metaOf(c.levels)) +
+        '<button class="ico-btn" type="button" data-edit="' + n + '" aria-label="Edit this task" data-tip="Edit">' + ICO_PENCIL + '</button>' +
+        '<button class="ico-btn drop" type="button" data-dropb="' + n + '" aria-label="Remove this task" data-tip="Remove">' + ICO_X + '</button>' +
+      '</div>';
+    }).join('');
+
+    var fields = fieldsFor(addSite());
+    el('tfields').innerHTML = fields.map(function (f, i) {
+      return '<div class="fld"><label class="fld-label" for="nf' + i + '">' +
+        Shell.esc(f.name) + '<span class="req">*</span></label>' +
+        '<select id="nf' + i + '" data-lvl="' + i + '">' +
+        '<option value="">Select&hellip;</option>' +
+        f.values.map(function (v) {
+          /* A value that would repeat a card is closed off where it is
+             offered rather than refused afterwards. */
+          var dup = false;
+          if (i === fields.length - 1) {
+            var k = keyFor(editing.levels.slice(0, i).concat([v]));
+            dup = cards.some(function (c) { return keyFor(c.levels) === k; });
+          }
+          return '<option' + (dup ? ' disabled' : '') +
+            (editing.levels[i] === v ? ' selected' : '') + '>' + Shell.esc(v) + '</option>';
+        }).join('') + '</select></div>';
+    }).join('');
+
     var recent = recentFor();
-    return '<div class="tpick">' +
-      '<span class="tpick-head">' + (recent.length ? 'Booked before (' + recent.length + ')' : 'Nothing booked here before') + '</span>' +
-      (recent.length
-        ? '<div class="tpick-list">' + recent.map(function (r, i) {
-            return '<button class="recent-row" type="button" data-take="' + n + '" data-r="' + i + '">' +
-              '<span class="rr-body"><span class="rr-code">' + Shell.esc(r.cardTitle) + '</span>' +
-              '<span class="rr-sub">' + Shell.esc([taskRest(r.meta, r.cardExtra), 'last booked ' + fmtDay(r.when)].filter(Boolean).join(' · ')) + '</span></span>' +
-            '</button>';
-          }).join('') + '</div>'
-        : '') +
-    '</div>';
+    el('recent-list').innerHTML = recent.length ? recent.map(function (r, i) {
+      var taken = cards.some(function (c) { return keyFor(c.levels) === keyFor(r.meta.levels); });
+      return '<button class="recent-row' + (taken ? ' sel' : '') + '" type="button" data-r="' + i + '"' +
+        (taken ? ' disabled' : '') + '>' +
+        cardBody(r.meta, r.cardExtra) +
+        '<span class="rr-sub">' + (taken ? 'added' : 'last booked ' + fmtDay(r.when)) + '</span>' +
+      '</button>';
+    }).join('') : '<div class="recent-empty">Nothing booked here before.</div>';
+
+    el('add-more').disabled = !levelsDone(editing.levels);
   }
 
   /* Named, not merely refused: a button that will not say what it is
@@ -2529,7 +2515,7 @@
     if (!addSup()) missing.push('supervisor');
     /* Either half answers it, so neither is named: "work order" would be
        wrong advice to anyone about to pick a card instead. */
-    if (addSite() && !doneBlocks().length) missing.push('task');
+    if (addSite() && !allPicked().length) missing.push('task');
     el('add-go').disabled = missing.length > 0;
     el('add-next').disabled = !addSite() || !addSup();
     /* On step one only the step-one answers are outstanding. */
@@ -2624,8 +2610,8 @@
 
     el('nt-sup').disabled = !el('nt-site').value;
 
-    blocks = [newBlock()];
-    openPick = -1;
+    cards = [];
+    editing = { levels: [] };
     addStep = 1;
     sync();
     el('add-title').textContent = 'Add a task';
@@ -2643,70 +2629,66 @@
 
   el('nt-site').addEventListener('change', function () {
     renderSups();
-    /* Tasks belong to a site, so changing it empties the stack. */
-    blocks = [newBlock()];
-    openPick = -1;
+    /* Tasks belong to a site, so changing it empties what was set up. */
+    cards = [];
+    editing = { levels: [] };
     sync();
   });
   el('nt-sup').addEventListener('change', sync);
   el('add-next').addEventListener('click', function () { addStep = 2; sync(); });
   el('add-sum-change').addEventListener('click', function () { addStep = 1; sync(); });
 
-  /* Answering a field in a block. The stack is redrawn, and the focus
-     moves on to the next field of that block, so a task can be named
-     without the hand leaving the keyboard. */
-  el('tstack').addEventListener('change', function (e) {
-    var sel = e.target.closest('[data-b]');
+  /* Answering a field moves the focus to the next one, so a task can be
+     named without the hand leaving the keyboard — and nothing folds
+     underneath it while it is still typing. */
+  el('tfields').addEventListener('change', function (e) {
+    var sel = e.target.closest('[data-lvl]');
     if (!sel) return;
-    var n = Number(sel.getAttribute('data-b')), i = Number(sel.getAttribute('data-lvl'));
-    var b = blocks[n];
-    b.levels[i] = sel.value;
+    var i = Number(sel.getAttribute('data-lvl'));
+    editing.levels[i] = sel.value;
     /* Answering an earlier field invalidates the ones under it. */
-    b.levels.length = i + 1;
-    if (blockDone(b)) b.open = false;
+    editing.levels.length = i + 1;
     sync();
-    var next = el('tstack').querySelector('#b' + n + 'f' + (i + 1));
+    var next = el('tfields').querySelector('#nf' + (i + 1));
     if (next) next.focus();
   });
 
-  el('tstack').addEventListener('click', function (e) {
-    var t = e.target.closest('[data-pick],[data-edit],[data-dropb],[data-take]');
-    if (!t) return;
-    if (t.hasAttribute('data-pick')) {
-      var n = Number(t.getAttribute('data-pick'));
-      openPick = openPick === n ? -1 : n;
-      sync();
-      return;
-    }
-    if (t.hasAttribute('data-edit')) {
-      blocks[Number(t.getAttribute('data-edit'))].open = true;
-      sync();
-      return;
-    }
-    if (t.hasAttribute('data-dropb')) {
-      blocks.splice(Number(t.getAttribute('data-dropb')), 1);
-      if (!blocks.length) blocks = [newBlock()];
-      openPick = -1;
-      sync();
-      return;
-    }
-    /* Taking a card fills that block in — the same act as answering its
-       fields, which is why it happens inside the block. */
-    var bn = Number(t.getAttribute('data-take'));
-    var r = recentCache[Number(t.getAttribute('data-r'))];
+  /* Taking one booked before fills the same fields in, so the shortcut
+     and the form end in the same place. */
+  el('recent-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-r]');
+    if (!b) return;
+    var r = recentCache[Number(b.getAttribute('data-r'))];
     if (!r) return;
-    blocks[bn].levels = r.meta.levels.slice();
-    blocks[bn].open = false;
-    openPick = -1;
+    editing.levels = r.meta.levels.slice();
     sync();
   });
 
-  /* The next block starts where the last one ended. */
-  el('add-more').addEventListener('click', function () {
-    blocks.push(newBlock());
-    openPick = -1;
+  el('tstack').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-edit],[data-dropb]');
+    if (!t) return;
+    if (t.hasAttribute('data-dropb')) {
+      cards.splice(Number(t.getAttribute('data-dropb')), 1);
+      sync();
+      return;
+    }
+    /* Editing a card puts it back in the editor. Whatever was half-typed
+       there was never committed, so it goes. */
+    var n = Number(t.getAttribute('data-edit'));
+    editing = { levels: cards[n].levels.slice() };
+    cards.splice(n, 1);
     sync();
-    var first = el('tstack').querySelector('#b' + (blocks.length - 1) + 'f0');
+    var first = el('tfields').querySelector('select');
+    if (first) first.focus();
+  });
+
+  /* What is in the editor becomes a card, and the editor starts over. */
+  el('add-more').addEventListener('click', function () {
+    if (!levelsDone(editing.levels)) return;
+    cards.push({ levels: editing.levels.slice() });
+    editing = { levels: [] };
+    sync();
+    var first = el('tfields').querySelector('select');
     if (first) first.focus();
   });
 
@@ -2714,7 +2696,7 @@
     var site = addSite(), sup = addSup() || supervisorFor(site);
     /* Every block that is fully named, each one once. */
     var seen = Object.create(null), picks = [];
-    doneBlocks().forEach(function (b) {
+    allPicked().forEach(function (b) {
       var k = keyOf(site, sup, b.levels);
       if (seen[k]) return;
       seen[k] = 1;
@@ -2940,8 +2922,8 @@
     /* Fewer fields is a different set of answers, so what was part-named
        with the old set is dropped rather than half-kept. */
     if (addModal.classList.contains('open')) {
-      blocks = [newBlock()];
-      openPick = -1;
+      cards = [];
+      editing = { levels: [] };
       sync();
     }
   });
