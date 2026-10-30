@@ -320,61 +320,88 @@
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
-  .modal.add-modal { max-width: 560px; width: 100%; max-height: min(760px, 86vh); }
+  .modal.add-modal { max-width: 560px; width: 100%; max-height: min(840px, 90vh); }
   /* The shell's modal body is flex:1 with a zero basis, which collapses
      when the dialog has no fixed height. Outer padding is 24 on every
      side of every part of the dialog — header, body and footer agree —
      and the gaps inside are 14. */
   .add-modal .modal-body {
-    padding: 16px 24px; display: flex; flex-direction: column; gap: 14px;
-    flex: 0 1 auto; min-height: 0; overflow: hidden;
+    padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px;
+    flex: 0 1 auto; min-height: 0; overflow-y: auto;
   }
   /* Step one is three questions, not a screenful: it is as tall as it is. */
   body.addstep-1 .add-modal .modal-body { flex: 0 0 auto; overflow: visible; }
   .add-modal .modal-footer { padding: 16px 24px 20px; }
-  .add-modal .modal-body > .add-one { flex: 1 1 auto; min-height: 0; }
+  .add-modal .modal-body > .add-one { flex: 0 1 auto; min-height: 0; }
 
-  /* Step two: the tasks already set up, as cards; under them the one
-     editor, with the list of what has been booked before beneath its
-     fields rather than behind a switch. */
-  .tstack { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; max-height: 184px; overflow-y: auto; }
-  .tstack:empty { display: none; }
-  .tnew { display: flex; flex-direction: column; gap: 12px; flex: 1 1 auto; min-height: 120px; }
-  .tfields { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
-  .recent-list { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 60px; overflow-y: auto; }
+  /* ─── Step two: one list, one form ────────────────────────────────
+     Three sizes carry the whole dialog and nothing else is allowed in:
+     18/700 for its title, 13/600 for a section heading, 14/500 for a
+     task's name, and one grey 12/400 for every line underneath. Sections
+     are 18px apart and the things inside one are 8. */
+  .modal-step {
+    font-size: 12px; font-weight: 500; line-height: 16px; color: var(--grey-600);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .sect { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .sect-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    flex: 0 0 auto;
+  }
+  .sect-head h4 {
+    margin: 0; font-family: var(--fs-sans);
+    font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-main);
+  }
+  .sect-head .n { font-size: 12px; font-weight: 400; color: var(--grey-600); }
+  .sect-head .n.on { color: var(--primary); font-weight: 500; }
 
-  /* A task that has been set up looks like a task you have had before,
-     because by then it is one. */
+  .tlist { display: flex; flex-direction: column; gap: 6px; flex: 0 0 auto; max-height: 186px; overflow-y: auto; }
+  .tnew { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
+  .tfields { display: flex; flex-direction: column; gap: 10px; }
+
+  /* One row shape for everything in the list: a tick, a name, a grey
+     line under it. Where it came from changes the grey line, not the row. */
   .recent-row {
     display: flex; flex-direction: row; align-items: center; gap: 10px;
     width: 100%; padding: 8px 12px; border-radius: 8px; text-align: left;
     background: var(--white); border: 1px solid var(--grey-350);
-    font-family: var(--fs-sans);
+    font-family: var(--fs-sans); cursor: pointer;
     transition: border-color var(--t-fast), background var(--t-fast);
   }
-  button.recent-row { cursor: pointer; }
-  .recent-row .rr-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; flex: 1 1 auto; }
-  .recent-row.sel { border-color: var(--grey-300); background: #fafafa; }
-  .recent-row.sel .rr-code, .recent-row.sel .rr-sub { color: var(--grey-500); }
-  .tcard { border-color: var(--primary); background: var(--bg-blue-light); }
-  .tcard .ico-btn {
+  .recent-row:hover { border-color: var(--border-hover); }
+  .recent-row .rr-tick {
+    width: 16px; height: 16px; flex-shrink: 0; border-radius: 4px;
+    border: 1.5px solid var(--grey-400); background: var(--white);
+    display: flex; align-items: center; justify-content: center; color: var(--white);
+  }
+  .recent-row.sel .rr-tick { background: var(--primary); border-color: var(--primary); }
+  .recent-row .rr-tick svg { opacity: 0; }
+  .recent-row.sel .rr-tick svg { opacity: 1; }
+  .recent-row .rr-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+  .rr-code { font-size: 14px; font-weight: 500; line-height: 19px; color: var(--text-main);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rr-sub { font-size: 12px; font-weight: 400; line-height: 16px; color: var(--grey-600);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* Set up here and now, rather than recognised: the same row, marked. */
+  .recent-row.made { border-color: var(--primary); }
+  .recent-row .ico-btn {
     width: 26px; height: 26px; flex-shrink: 0;
     border: none; border-radius: 6px; background: none; cursor: pointer;
     color: var(--grey-600); display: flex; align-items: center; justify-content: center;
   }
-  .tcard .ico-btn:hover { background: rgba(0,51,255,0.1); color: var(--primary); }
-  .tcard .ico-btn.drop:hover { background: rgba(166,13,31,0.08); color: var(--error); }
+  .recent-row .ico-btn:hover { background: var(--grey-100); color: var(--text-main); }
+  .recent-empty { font-size: 13px; line-height: 18px; color: var(--grey-600); padding: 2px 0; }
 
+  /* The rule is the heading of what comes after it, so there is one
+     thing there and not a rule and a heading. */
   .or-rule {
-    display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
-    font-size: 12px; color: var(--grey-600);
+    display: flex; align-items: center; gap: 10px; flex: 0 0 auto; margin: 4px 0 -2px;
+    font-size: 12px; font-weight: 500; color: var(--grey-600);
+    text-transform: uppercase; letter-spacing: 0.5px;
   }
-  .or-rule span {
-    flex: 0 0 auto; padding: 2px 10px; border-radius: 11px;
-    background: var(--grey-100); text-transform: uppercase; letter-spacing: 0.4px;
-  }
+  .or-rule span { flex: 0 0 auto; }
   .or-rule::before, .or-rule::after {
-    content: ''; flex: 1 1 auto; height: 1px; background: var(--grey-350);
+    content: ''; flex: 1 1 auto; height: 1px; background: var(--grey-300);
   }
 
   .add-more { align-self: flex-start; flex-shrink: 0; height: 32px; padding: 0 12px;
@@ -402,7 +429,7 @@
   }
   /* The form can run to six fields, so the recent list sits beside it
      rather than below, where it would fall off the bottom. */
-  .add-one { display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; min-height: 0; }
+  .add-one { display: flex; flex-direction: column; gap: 18px; flex: 0 1 auto; min-height: 0; }
   /* Each panel is one idea, bounded, so the two are told apart without
      being read. */
   /* The same grey the inputs are drawn in: two shades of border inside
@@ -428,9 +455,9 @@
 
   /* Step one asks where, and nothing else is on screen; step two carries
      that answer as the line above and asks for the tasks. */
-  body.addstep-1 #tstack,
-  body.addstep-1 #tnew,
-  body.addstep-1 #add-more,
+  body.addstep-1 #sect-list,
+  body.addstep-1 .or-rule,
+  body.addstep-1 .tnew,
   body.addstep-1 .add-sum { display: none; }
   body.addstep-2 #step-where,
   body.from-group #step-where { display: none; }
@@ -693,7 +720,7 @@
   .add-hint {
     display: flex; align-items: center; gap: 8px;
     padding: 9px 8px 9px 14px; border-radius: 8px;
-    background: var(--white); border: 1px solid var(--grey-350); color: var(--text-main);
+    background: var(--grey-100); border: 1px solid var(--grey-350); color: var(--text-main);
     font-size: 13px; line-height: 18px;
   }
   .add-hint svg { flex-shrink: 0; color: var(--grey-600); }
@@ -702,7 +729,7 @@
     border: none; border-radius: 6px; background: none; cursor: pointer;
     color: var(--grey-600); display: flex; align-items: center; justify-content: center;
   }
-  .add-hint .x:hover { background: var(--grey-100); color: var(--text-main); }
+  .add-hint .x:hover { background: var(--grey-200); color: var(--text-main); }
   body.editing .add-hint { display: none; }
 
   /* ─── Allowances ───────────────────────────────────────────────────
@@ -991,6 +1018,7 @@
     <div class="modal-header">
       <div class="modal-heading">
         <span class="modal-title" id="add-title">Add a task</span>
+        <span class="modal-step" id="add-step-label"></span>
       </div>
       <button class="modal-close" type="button" data-close aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -1003,11 +1031,6 @@
       <div class="add-one">
         <!-- Stepped variant only: two steps named, so the first screen
              says there is a second. -->
-        <ol class="add-steps" id="add-steps">
-          <li data-step="1"><span class="n">1</span>Select site and supervisor</li>
-          <li data-step="2"><span class="n">2</span>Select tasks</li>
-        </ol>
-
         <!-- Inside a step the dialog is already the panel, so the two
              answers are not boxed a second time. -->
         <div id="step-where">
@@ -1032,29 +1055,30 @@
           <button class="btn-text" type="button" id="add-sum-change">Change</button>
         </div>
 
-        <!-- Step two: one task to a block, stacked. A block is the set
-             of fields a site names its work with; finishing one folds it
-             to a line and the button under the stack starts the next.
-             Picking something booked before fills the block in rather
-             than being a second, competing way to answer. -->
-        <div class="tstack" id="tstack"></div>
-
-        <!-- One editor, and the list of what has been booked before sits
-             under it rather than behind a switch: naming a task and
-             recognising one are the same job, done on one screen. -->
-        <div class="tnew" id="tnew">
-          <div class="tfields" id="tfields"></div>
-          <div class="or-rule"><span>or pick one booked before</span></div>
-          <div class="recent-list" id="recent-list"></div>
+        <!-- Step two is one list and one form. Everything that will be
+             added is ticked in the same list, whether it was recognised
+             there or set up underneath — two places showing what you had
+             chosen was the thing that got confusing. -->
+        <div class="sect" id="sect-list">
+          <div class="sect-head">
+            <h4>Select tasks</h4>
+            <span class="n" id="pick-n"></span>
+          </div>
+          <div class="tlist" id="recent-list"></div>
         </div>
 
-        <!-- It folds what is in the editor into a card and opens the next,
-             so a task becomes a task when you say it is finished and not
-             the moment the last field happens to be answered. -->
-        <button class="btn-outline add-more" type="button" id="add-more">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          Add another task
-        </button>
+        <div class="or-rule"><span>or create a task</span></div>
+
+        <div class="tnew">
+          <div class="tfields" id="tfields"></div>
+          <!-- Disabled until the task has a name. Pressing it puts the
+               task at the top of the list above, ticked, and clears the
+               fields for the next one. -->
+          <button class="btn-outline add-more" type="button" id="add-more">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Add task
+          </button>
+        </div>
       </div>
     </div>
 
@@ -2426,23 +2450,21 @@
     el('add-next').hidden = !onStepOne;
     el('add-go').hidden = onStepOne;
 
-    el('add-steps').hidden = !stepped;
-    if (stepped) {
-      [].forEach.call(el('add-steps').children, function (li) {
-        var n = Number(li.getAttribute('data-step'));
-        li.classList.toggle('on', n === addStep);
-        li.classList.toggle('done', n < addStep);
-      });
-    }
+    /* A line of type instead of a band of chips: the step is worth one
+       line of the dialog, not a sixth of it. */
+    el('add-step-label').textContent = stepped
+      ? (onStepOne ? 'Step 1 of 2 — where the task goes' : 'Step 2 of 2')
+      : '';
+    el('add-step-label').hidden = !stepped;
   }
 
-  /* ─── Tasks set up, and the one being set up ───────────────────────
-     Cards for the tasks already named, then one editor. A task becomes a
-     card when the reader says it is finished — pressing "Add another
-     task" — not the instant its last field is answered, which moved the
-     form out from under the hand that was still on it. */
-  var cards = [];           // [{ levels: [] }] — tasks already set up
-  var editing = { levels: [] };  // the one being named now
+  /* ─── One list of tasks, and a form under it ───────────────────────
+     Everything that will be added is a ticked row in the same list,
+     whether it was recognised there or set up underneath. Two places
+     showing what had been chosen was what got confusing. */
+  var cards = [];                 // tasks set up here, newest first
+  var ticks = Object.create(null); // keys of recent tasks ticked
+  var editing = { levels: [] };    // the one being named now
 
   function levelsDone(lv) {
     var fields = fieldsFor(addSite());
@@ -2452,28 +2474,59 @@
     return keyOf(addSite(), addSup() || supervisorFor(addSite()), lv);
   }
   function allPicked() {
-    var out = cards.slice();
-    if (levelsDone(editing.levels)) out.push({ levels: editing.levels.slice() });
+    var out = cards.slice(), seen = Object.create(null);
+    out.forEach(function (c) { seen[keyFor(c.levels)] = 1; });
+    recentCache.forEach(function (r) {
+      var k = keyFor(r.meta.levels);
+      if (ticks[k] && !seen[k]) { seen[k] = 1; out.push({ levels: r.meta.levels.slice() }); }
+    });
     return out;
   }
   function metaOf(lv) { return { site: addSite(), sup: addSup(), levels: lv }; }
 
   var ICO_PENCIL = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
-  var ICO_X = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  var ICO_TICK = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-  function cardBody(meta, extra) {
-    var sub = taskRest(meta, typeof extra === 'number' ? extra : -1);
-    return '<span class="rr-body"><span class="rr-code">' + Shell.esc(taskTitle(meta)) + '</span>' +
-      (sub ? '<span class="rr-sub">' + Shell.esc(sub) + '</span>' : '') + '</span>';
+  function row(cls, title, sub, attrs, tail) {
+    return '<div class="recent-row sel ' + cls + '" ' + attrs + '>' +
+      '<span class="rr-tick">' + ICO_TICK + '</span>' +
+      '<span class="rr-body"><span class="rr-code">' + Shell.esc(title) + '</span>' +
+      (sub ? '<span class="rr-sub">' + Shell.esc(sub) + '</span>' : '') + '</span>' +
+      (tail || '') + '</div>';
   }
 
   function renderStack() {
-    el('tstack').innerHTML = cards.map(function (c, n) {
-      return '<div class="recent-row tcard">' + cardBody(metaOf(c.levels)) +
+    var recent = recentFor();
+    var madeKeys = Object.create(null);
+    cards.forEach(function (c) { madeKeys[keyFor(c.levels)] = 1; });
+
+    var html = cards.map(function (c, n) {
+      var meta = metaOf(c.levels);
+      return '<div class="recent-row sel made" data-untick="made:' + n + '">' +
+        '<span class="rr-tick">' + ICO_TICK + '</span>' +
+        '<span class="rr-body"><span class="rr-code">' + Shell.esc(taskTitle(meta)) + '</span>' +
+        '<span class="rr-sub">' + Shell.esc(taskRest(meta, -1) || 'New task') + '</span></span>' +
         '<button class="ico-btn" type="button" data-edit="' + n + '" aria-label="Edit this task" data-tip="Edit">' + ICO_PENCIL + '</button>' +
-        '<button class="ico-btn drop" type="button" data-dropb="' + n + '" aria-label="Remove this task" data-tip="Remove">' + ICO_X + '</button>' +
       '</div>';
     }).join('');
+
+    html += recent.filter(function (r) { return !madeKeys[keyFor(r.meta.levels)]; })
+      .map(function (r) {
+        var k = keyFor(r.meta.levels), on = !!ticks[k];
+        var sub = [taskRest(r.meta, r.cardExtra), 'last booked ' + fmtDay(r.when)].filter(Boolean).join(' · ');
+        return '<div class="recent-row' + (on ? ' sel' : '') + '" data-tick="' + Shell.esc(k) + '">' +
+          '<span class="rr-tick">' + ICO_TICK + '</span>' +
+          '<span class="rr-body"><span class="rr-code">' + Shell.esc(r.cardTitle) + '</span>' +
+          '<span class="rr-sub">' + Shell.esc(sub) + '</span></span>' +
+        '</div>';
+      }).join('');
+
+    el('recent-list').innerHTML = html ||
+      '<div class="recent-empty">Nothing booked here before &mdash; create one below.</div>';
+
+    var n = allPicked().length;
+    el('pick-n').textContent = n ? n + ' selected' : '';
+    el('pick-n').classList.toggle('on', n > 0);
 
     var fields = fieldsFor(addSite());
     el('tfields').innerHTML = fields.map(function (f, i) {
@@ -2482,28 +2535,20 @@
         '<select id="nf' + i + '" data-lvl="' + i + '">' +
         '<option value="">Select&hellip;</option>' +
         f.values.map(function (v) {
-          /* A value that would repeat a card is closed off where it is
-             offered rather than refused afterwards. */
+          /* A value that would repeat something already in the list is
+             closed off where it is offered. */
           var dup = false;
           if (i === fields.length - 1) {
             var k = keyFor(editing.levels.slice(0, i).concat([v]));
-            dup = cards.some(function (c) { return keyFor(c.levels) === k; });
+            dup = !!madeKeys[k];
           }
           return '<option' + (dup ? ' disabled' : '') +
             (editing.levels[i] === v ? ' selected' : '') + '>' + Shell.esc(v) + '</option>';
         }).join('') + '</select></div>';
     }).join('');
 
-    var recent = recentFor();
-    el('recent-list').innerHTML = recent.length ? recent.map(function (r, i) {
-      var taken = cards.some(function (c) { return keyFor(c.levels) === keyFor(r.meta.levels); });
-      return '<button class="recent-row' + (taken ? ' sel' : '') + '" type="button" data-r="' + i + '"' +
-        (taken ? ' disabled' : '') + '>' +
-        cardBody(r.meta, r.cardExtra) +
-        '<span class="rr-sub">' + (taken ? 'added' : 'last booked ' + fmtDay(r.when)) + '</span>' +
-      '</button>';
-    }).join('') : '<div class="recent-empty">Nothing booked here before.</div>';
-
+    /* "Add another task" only once there is one to add another to. */
+    el('add-more').lastChild.textContent = cards.length ? ' Add another task' : ' Add task';
     el('add-more').disabled = !levelsDone(editing.levels);
   }
 
@@ -2610,7 +2655,7 @@
 
     el('nt-sup').disabled = !el('nt-site').value;
 
-    cards = [];
+    cards = []; ticks = Object.create(null);
     editing = { levels: [] };
     addStep = 1;
     sync();
@@ -2630,7 +2675,7 @@
   el('nt-site').addEventListener('change', function () {
     renderSups();
     /* Tasks belong to a site, so changing it empties what was set up. */
-    cards = [];
+    cards = []; ticks = Object.create(null);
     editing = { levels: [] };
     sync();
   });
@@ -2653,39 +2698,39 @@
     if (next) next.focus();
   });
 
-  /* Taking one booked before fills the same fields in, so the shortcut
-     and the form end in the same place. */
+  /* Ticking a row in the list, and taking one back out of it. A task set
+     up here is unticked by being removed, which is the same thing. */
   el('recent-list').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-r]');
-    if (!b) return;
-    var r = recentCache[Number(b.getAttribute('data-r'))];
-    if (!r) return;
-    editing.levels = r.meta.levels.slice();
-    sync();
-  });
-
-  el('tstack').addEventListener('click', function (e) {
-    var t = e.target.closest('[data-edit],[data-dropb]');
-    if (!t) return;
-    if (t.hasAttribute('data-dropb')) {
-      cards.splice(Number(t.getAttribute('data-dropb')), 1);
+    var pen = e.target.closest('[data-edit]');
+    if (pen) {
+      /* Editing puts it back in the form. Whatever was half-typed there
+         was never added, so it goes. */
+      var n = Number(pen.getAttribute('data-edit'));
+      editing = { levels: cards[n].levels.slice() };
+      cards.splice(n, 1);
+      sync();
+      var f = el('tfields').querySelector('select');
+      if (f) f.focus();
+      return;
+    }
+    var made = e.target.closest('[data-untick]');
+    if (made) {
+      cards.splice(Number(made.getAttribute('data-untick').slice(5)), 1);
       sync();
       return;
     }
-    /* Editing a card puts it back in the editor. Whatever was half-typed
-       there was never committed, so it goes. */
-    var n = Number(t.getAttribute('data-edit'));
-    editing = { levels: cards[n].levels.slice() };
-    cards.splice(n, 1);
+    var t = e.target.closest('[data-tick]');
+    if (!t) return;
+    var k = t.getAttribute('data-tick');
+    if (ticks[k]) delete ticks[k]; else ticks[k] = 1;
     sync();
-    var first = el('tfields').querySelector('select');
-    if (first) first.focus();
   });
 
-  /* What is in the editor becomes a card, and the editor starts over. */
+  /* What is in the form joins the list above, ticked, and the form
+     starts over. */
   el('add-more').addEventListener('click', function () {
     if (!levelsDone(editing.levels)) return;
-    cards.push({ levels: editing.levels.slice() });
+    cards.unshift({ levels: editing.levels.slice() });
     editing = { levels: [] };
     sync();
     var first = el('tfields').querySelector('select');
@@ -2922,7 +2967,7 @@
     /* Fewer fields is a different set of answers, so what was part-named
        with the old set is dropped rather than half-kept. */
     if (addModal.classList.contains('open')) {
-      cards = [];
+      cards = []; ticks = Object.create(null);
       editing = { levels: [] };
       sync();
     }
