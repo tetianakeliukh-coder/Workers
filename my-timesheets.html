@@ -90,7 +90,11 @@
   .grid-card thead th.col-label { z-index: 4; }
   .day-head { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 16px; }
   .day-head .dow { font-size: 12px; font-weight: 400; color: var(--grey-600); }
-  .day-head .dnum { font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .day-head .dnum {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 14px; font-weight: 500; color: var(--text-main);
+  }
+  .day-head .dnum .hr-st { margin: 0; }
 
   /* A day's total belongs to its date, not to a row of its own: a rule
      across the table read as a second heading and broke the line that
@@ -320,12 +324,17 @@
 
   /* ─── Add task ─────────────────────────────────────────────────── */
   .modal.add-modal { max-width: 800px; width: 100%; }
-  /* The shell's modal body is flex:1 with a zero basis, which collapses when
-     the dialog has no fixed height — size it to its content instead. */
+  /* The shell's modal body is flex:1 with a zero basis, which collapses
+     when the dialog has no fixed height. Outer padding is 24 on every
+     side of every part of the dialog — header, body and footer agree —
+     and the gaps inside are 14. */
   .add-modal .modal-body {
-    padding: 16px 24px 8px; display: flex; flex-direction: column; gap: 14px;
-    flex: 0 1 auto; max-height: 68vh; overflow: auto;
+    padding: 16px 24px; display: flex; flex-direction: column; gap: 14px;
+    flex: 0 0 auto; height: 540px; overflow: hidden;
   }
+  /* Step one is three questions, not a screenful: it is as tall as it is. */
+  body.addstep-1 .add-modal .modal-body { height: auto; overflow: visible; }
+  .add-modal .modal-footer { padding: 16px 24px 20px; }
   .add-modal .modal-body > .add-one { flex: 1 1 auto; min-height: 0; }
 
   /* Step two, top to bottom: what has been chosen, then what can be
@@ -344,7 +353,21 @@
     flex: 1 1 auto; min-height: 90px; overflow-y: auto;
   }
   .pick-recent { display: flex; flex-direction: column; gap: 8px; flex: 1 0 auto; }
-  .sel-list { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  /* "Set up a new task" and "Select a recent task" are alternatives, and
+     a hairline alone did not say so. */
+  .or-rule {
+    display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+    margin: 4px 0; font-size: 12px; color: var(--grey-600);
+  }
+  .or-rule span {
+    flex: 0 0 auto; padding: 2px 10px; border-radius: 11px;
+    background: var(--grey-100); text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .or-rule::before, .or-rule::after {
+    content: ''; flex: 1 1 auto; height: 1px; background: var(--grey-350);
+  }
+  .sel-list { display: flex; flex-direction: column; gap: 6px; flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+  .sel-col { justify-content: flex-start; }
   .sel-empty { margin: 0; font-size: 13px; line-height: 18px; color: var(--grey-600); }
   /* A chosen task is the same card it was chosen from, so that what was
      picked is recognisable as what was on offer. */
@@ -357,7 +380,7 @@
   .rr-x:hover { background: rgba(0,51,255,0.1); color: var(--primary); }
   /* A field is a field: one to a line, however many the site has. */
   #nt-levels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
-  .new-task { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: 1px solid var(--grey-350); flex: 0 0 auto; }
+  .new-task { display: flex; flex-direction: column; gap: 12px; flex: 0 0 auto; }
   .pick-new { align-self: flex-start; color: var(--primary); }
 
   /* A row is ticked, not clicked once and lost: several tasks go on at
@@ -392,8 +415,6 @@
      a site is named or a mode is switched — a short state leaves space,
      and that is the cheaper fault. A sheet on a phone keeps growing with
      its content instead. */
-  .add-modal .modal-body { max-height: 74vh; flex: 0 0 auto; overflow: hidden; }
-  .add-modal .modal-body { display: flex; flex-direction: column; }
   .edit-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; }
   body.is-narrow .add-modal .modal-body { height: auto; max-height: 68vh; flex: 0 1 auto; overflow: auto; }
 
@@ -460,15 +481,9 @@
   .add-steps li.on { color: var(--text-main); font-weight: 500; }
   .add-steps li.on .n { background: var(--primary); color: var(--white); }
   .add-steps li.done .n { background: var(--bg-blue-light); color: var(--primary); }
-  /* One height per step: a step is a change of screen, where a change
-     of size is expected — unlike a field appearing under the pointer. */
-  .add-modal .modal-body { height: 540px; flex: 0 0 auto; overflow-y: auto; }
   body.addstep-1 .modal.add-modal { max-width: 480px; }
 
   body.addstep-1 .add-need { display: none; }
-  /* The last field had nothing between it and the footer rule. */
-  body.addstep-1 #add-where { padding-bottom: 8px; }
-  body.addstep-1 .add-modal .modal-body { height: 206px; }
   /* Cancel and Next belong at the end of the line, like every other
      dialog's buttons. */
   .add-modal .modal-footer-actions { justify-content: flex-end; }
@@ -487,250 +502,6 @@
   .vp-switch button:hover { background: var(--grey-100); color: var(--text-main); }
   .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
   /* Sits to the left of the preview switcher — needs to outrank .vp-switch. */
-  .vp-switch.rows-switch { right: 216px; }
-  .vp-switch.add-switch { right: 420px; }
-
-  /* ─── Naming a task in the row itself ──────────────────────────────
-     A task is up to six answers and the grid has one column to put them
-     in — so they are not asked for all at once. Each answer settles into
-     the breadcrumb the row will end up showing, and only the next one
-     outstanding is a control. One select at a time fits where six never
-     would, and the cell reads as the name it is becoming. */
-  .chain { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .chain .done {
-    font-size: 14px; color: var(--text-main); white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto;
-  }
-  .chain .bar { color: var(--grey-400); flex-shrink: 0; }
-  .chain select {
-    flex: 1 1 110px; min-width: 96px; max-width: 220px; height: 28px; padding: 0 26px 0 8px;
-    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
-    background-color: var(--white); border: 1px solid var(--primary); border-radius: 6px;
-  }
-  .chain select:focus { outline: none; box-shadow: 0 0 0 2px rgba(0, 51, 255, 0.16); }
-  .chain select:disabled { border-color: var(--grey-350); color: var(--grey-600); background-color: #fafafa; }
-  .chain .chain-x {
-    width: 24px; height: 24px; flex-shrink: 0; margin-left: 2px;
-    border: none; border-radius: 6px; background: none; cursor: pointer;
-    color: var(--grey-600); display: flex; align-items: center; justify-content: center;
-  }
-  .chain .chain-x:hover { background: var(--grey-100); color: var(--error); }
-  /* A row that is still being named is marked as unfinished, the same
-     blue the dialog's picks are marked in. */
-  tr.row-pending td { background: var(--bg-blue-light); }
-  tr.row-pending td.col-day .hr-cell { border-style: dashed; }
-  /* Four of these in one line runs off a narrow window, and the last one
-     is the one nobody finds. They sit two to a row instead. */
-
-  /* ─── Week dropdown ────────────────────────────────────────────── */
-  .period-dd .dd-trigger { min-width: 232px; }
-  .dd-item .sub { margin-left: auto; font-size: 12px; color: var(--grey-600); }
-  /* ─── Date range calendar ─────────────────────────────────────────
-     The same two-month picker Supervisor Timesheets uses. Its markup came over
-     when the two date controls were unified; these rules did not, so the
-     calendar was rendering as one unstyled column. Scoped to #date-cal so
-     nothing collides with the week picker's own rules. */
-  .dd-panel.cal-mode { min-width: 0; padding: 0; }
-  .dd-panel.cal-mode #date-quick { display: none; }
-  #date-cal { display: none; }
-  .dd-panel.cal-mode #date-cal { display: block; }
-
-  #date-cal { width: 600px; padding: 8px 8px 0; }
-  #date-cal .cal-head { display: flex; align-items: center; padding: 4px 8px 6px; }
-  #date-cal .cal-nav {
-    width: 32px; height: 32px; flex-shrink: 0; border: none; border-radius: 50%;
-    background: none; cursor: pointer; color: var(--grey-700);
-    display: flex; align-items: center; justify-content: center;
-  }
-  #date-cal .cal-nav:hover { background: var(--grey-200); }
-  #date-cal .cal-nav.next svg { transform: rotate(180deg); }
-  #date-cal .cal-title { flex: 1; text-align: center; font-size: 15px; font-weight: 500; color: var(--text-main); }
-
-  #date-cal .cal-months { display: flex; gap: 24px; padding: 0 8px; }
-  #date-cal .cal-month { flex: 1; }
-  #date-cal .cal-dow, #date-cal .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-  #date-cal .cal-dow span {
-    height: 30px; line-height: 30px; text-align: center; font-size: 12px; color: var(--grey-600);
-  }
-
-  /* The cell carries the range band; the button carries the day circle. */
-  #date-cal .cal-cell { height: 36px; display: flex; align-items: center; justify-content: center; }
-  #date-cal .cal-cell.in { background: var(--bg-blue-light); }
-  #date-cal .cal-cell.start { border-radius: 18px 0 0 18px; }
-  #date-cal .cal-cell.end { border-radius: 0 18px 18px 0; }
-  #date-cal .cal-cell.start.end { border-radius: 18px; }
-  #date-cal .cal-day {
-    width: 34px; height: 34px; border: none; border-radius: 50%; background: none;
-    cursor: pointer; font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
-  }
-  #date-cal .cal-day:hover { background: var(--grey-200); }
-  #date-cal .cal-day.today { border: 1px solid var(--grey-400); }
-  #date-cal .cal-cell.sel .cal-day { background: var(--primary); color: var(--white); font-weight: 500; }
-  #date-cal .cal-cell.sel .cal-day.today { border-color: var(--primary); }
-
-  #date-cal .cal-foot {
-    margin-top: 8px; padding: 10px 16px; border-top: 1px solid var(--grey-300);
-    font-size: 13px; color: var(--grey-600);
-  }
-  /* A phone has no room for two months side by side — show one, and let
-     the arrows walk between them. */
-  body.is-narrow .dd-panel.cal-mode { left: 0; right: 0; }
-  body.is-narrow #date-cal { width: auto; max-width: 100%; }
-  body.is-narrow #date-cal .cal-months { gap: 0; }
-  body.is-narrow #date-cal .cal-month + .cal-month { display: none; }
-  body.is-narrow #date-cal .cal-head .cal-title + .cal-title { display: none; }
-  /* ─── Mobile header + sheet ───────────────────────────────────────
-     Three bands, told apart by the space between them: the page title
-     stands alone, the controls sit 12px apart as one group, and the list
-     of days starts 16px below them with 8px between cards. */
-  body.is-narrow .content {
-    display: flex; flex-direction: column; gap: 12px;
-  }
-  body.is-narrow .page-header { display: block; margin-bottom: 4px; order: 1; }
-  body.is-narrow .page-header .header-actions { display: none; }
-  body.is-narrow .m-actions { order: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; }
-  body.is-narrow .m-actions .btn-ghost, body.is-narrow .m-actions .btn-primary {
-    width: 100%; justify-content: center; height: 32px;
-  }
-  /* The toolbar keeps its search on a phone; the grid-only controls go. */
-  body.is-narrow .period-bar { order: 3; display: block; margin: 0; }
-  body.is-narrow .period-bar .search-wrap { width: 100%; }
-  body.is-narrow .period-bar .search-bar { height: 32px; }
-  body.is-narrow .m-date .dd-trigger { height: 32px; }
-  body.is-narrow .period-bar .period-actions { display: none; }
-  body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
-  body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
-  body.is-narrow .m-date .dd-panel { left: 0; right: 0; }
-  body.is-narrow .week-view { order: 6; margin-top: 12px; }
-  body.is-narrow .day-list { gap: 8px; }
-  body.is-narrow .week-total { display: none; }
-  .m-actions, .m-date { display: none; }
-
-  /* A sheet, not a box: flush to the bottom with a grabber on top. */
-  body.is-narrow .modal-backdrop { align-items: flex-end; padding: 0; }
-  body.is-narrow .modal.add-modal, body.is-narrow .modal.edit-modal, body.is-narrow .modal.confirm-modal {
-    max-width: 390px; width: 100%; max-height: 92vh;
-    border-radius: 18px 18px 0 0; padding-top: 8px;
-  }
-  body.is-narrow .modal.add-modal::before, body.is-narrow .modal.edit-modal::before,
-  body.is-narrow .modal.confirm-modal::before {
-    content: ''; display: block; width: 38px; height: 4px; margin: 0 auto 4px;
-    border-radius: 2px; background: var(--grey-350);
-  }
-  body.is-narrow .add-modal .modal-footer, body.is-narrow .edit-modal .modal-footer,
-  body.is-narrow .confirm-modal .modal-footer {
-    padding-bottom: 22px;
-  }
-  body.is-narrow .stepper { padding: 12px 20px; }
-
-  /* ─── Confirm ─────────────────────────────────────────────────────
-     Removing the last shift takes the task with it, and the last task
-     takes the day's timesheet — the dialog says so before it happens. */
-  .modal.confirm-modal { max-width: 416px; }
-  .confirm-modal .modal-body { flex: 0 1 auto; padding: 16px 24px 20px; }
-  .confirm-lead { margin: 0; font-size: 14px; line-height: 20px; color: var(--text-main); }
-  .consequence { margin: 12px 0 0; padding: 0; list-style: none; }
-  .consequence li {
-    position: relative; padding: 0 0 0 24px; margin-top: 8px;
-    font-size: 14px; line-height: 20px; color: var(--grey-700);
-  }
-  .consequence li::before {
-    content: ''; position: absolute; left: 7px; top: 8px;
-    width: 5px; height: 5px; border-radius: 50%; background: var(--error);
-  }
-  .consequence b { color: var(--text-main); font-weight: 500; }
-  .btn-danger {
-    display: inline-flex; align-items: center; gap: 6px;
-    height: 32px; padding: 0 16px; border-radius: 8px; border: none;
-    background: var(--error); color: var(--white); cursor: pointer;
-    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
-  }
-  .btn-danger:hover { background: #8a0a19; }
-  body.is-narrow .confirm-modal .modal-footer-actions { width: 100%; }
-  body.is-narrow .confirm-modal .modal-footer-actions .btn-ghost,
-  body.is-narrow .confirm-modal .modal-footer-actions .btn-danger { flex: 1; justify-content: center; }
-
-  /* ─── Stepper ─────────────────────────────────────────────────────
-     A band of its own under the title, so the header stays the title and
-     the close button. The three steps share the width evenly. */
-  .stepper {
-    display: flex; align-items: center; gap: 8px; flex-shrink: 0;
-    padding: 14px 24px 2px;
-  }
-  .stp {
-    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-    flex: 1 1 0; min-width: 0; padding: 0; border: none; background: none;
-    font-family: var(--fs-sans); font-size: 13px; color: var(--grey-600); cursor: default;
-  }
-  .stp .n {
-    width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 600;
-    background: var(--grey-200); color: var(--grey-600);
-  }
-  .stp.done { color: var(--primary); cursor: pointer; }
-  .stp.done .n { background: var(--bg-blue-light); color: var(--primary); }
-  .stp.now { color: var(--text-main); font-weight: 500; }
-  .stp.now .n { background: var(--primary); color: var(--white); }
-  .stp-sep { flex: 0 1 28px; height: 1px; background: var(--grey-350); min-width: 10px; }
-  .stp:disabled { cursor: default; }
-
-  /* ─── Selects: the chevron sits as far from the edge as the text ── */
-  .fld select, .add-modal select {
-    appearance: none; -webkit-appearance: none;
-    padding-right: 34px;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23757575' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center;
-  }
-
-  /* ─── Today's column, and instant row tooltips ─────────────────── */
-  .grid-card th.tdy, .grid-card td.tdy { background: rgba(0, 51, 255, 0.045); }
-  .grid-card thead th.tdy { background: #eef2ff; }
-
-  .row-tip {
-    position: fixed; z-index: 600; display: none; pointer-events: none;
-    padding: 4px 8px; border-radius: 6px; white-space: nowrap;
-    background: var(--text-main); color: var(--white);
-    font-family: var(--fs-sans); font-size: 12px; line-height: 16px;
-    box-shadow: 0 4px 12px rgba(8, 17, 21, 0.2);
-  }
-  .row-tip.on { display: block; }
-
-  .btn-ghost svg, .btn-primary svg { flex-shrink: 0; }
-
-  /* Summary line that opens each site + supervisor block in the flat layout. */
-  /* The row that was just added: findable at a glance. */
-  #grid tbody tr.just-added > td { background: var(--bg-blue-light); }
-
-  .row-summary td { background: var(--grey-100); }
-  .row-summary td.col-site, .row-summary td.col-sup { font-weight: 600; }
-  .count-pill { font-size: 13px; color: var(--grey-600); }
-
-  /* A control that is not available while a draft is open says so by
-     looking unavailable, rather than by refusing after the click. */
-  .dd-wrap.locked { pointer-events: none; }
-  .dd-wrap.locked .dd-trigger {
-    background: #fafafa; color: var(--grey-500); border-color: var(--grey-300);
-  }
-  .dd-wrap.locked .dd-caret { opacity: 0.4; }
-
-  /* View mode says where adding lives, because nothing else does. */
-  /* A note, not a banner: an outline the width of what it says, in a
-     blue quiet enough not to be mistaken for the call to action. */
-  .add-hint {
-    display: flex; align-items: center; gap: 8px;
-    padding: 9px 8px 9px 14px; border-radius: 8px;
-    background: var(--white); border: 1px solid var(--grey-350); color: var(--text-main);
-    font-size: 13px; line-height: 18px;
-  }
-  .add-hint svg { flex-shrink: 0; color: var(--grey-600); }
-  .add-hint .x {
-    width: 28px; height: 28px; flex-shrink: 0; margin-left: auto;
-    border: none; border-radius: 6px; background: none; cursor: pointer;
-    color: var(--grey-600); display: flex; align-items: center; justify-content: center;
-  }
-  .add-hint .x:hover { background: var(--grey-100); color: var(--text-main); }
-  body.editing .add-hint { display: none; }
 
   /* ─── Allowances ───────────────────────────────────────────────────
      Two displays of the same per-cell claim, switchable while the
@@ -994,28 +765,6 @@
 
 
 <!-- ── Prototype viewport switcher ──────────────────────────────── -->
-<div class="vp-switch rows-switch" id="rows-switch" role="group" aria-label="Row layout">
-  <button type="button" data-rows="nested">
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 3.5h11M5 8h8.5M7.5 12.5h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Nested
-  </button>
-  <button type="button" data-rows="flat" class="on">
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.4" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 3v10M10 3v10" stroke="currentColor" stroke-width="1.3"/></svg>
-    Flat
-  </button>
-</div>
-
-<div class="vp-switch add-switch" id="add-switch" role="group" aria-label="How a task is added">
-  <button type="button" data-add="dialog" class="on">
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3.5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 6.5h12" stroke="currentColor" stroke-width="1.3"/></svg>
-    Dialog
-  </button>
-  <button type="button" data-add="inline">
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h7M2 12h12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M12.5 6.5v3M11 8h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Inline
-  </button>
-</div>
-
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
   <button type="button" data-vp="desktop" class="on">
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 14h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -1042,15 +791,6 @@
     <div class="modal-body">
       <!-- No date is asked for: the week is already across the top of the
            grid, so the day is the cell you fill in afterwards. -->
-      <!-- Two ways to name the task, side by side in one heading rather
-           than one folded under the other, where the second was never
-           found. -->
-      <!-- Two halves of one question. The left names the task a field at
-           a time; the right shows what has been booked that still
-           matches, so an answer can be taken rather than typed. -->
-      <!-- Site and supervisor are shared context, so they sit across the
-           top; the two ways of naming the task sit under them as peers,
-           side by side, because that is what two columns say. -->
       <div class="add-one">
         <!-- Stepped variant only: two steps named, so the first screen
              says there is a second. -->
@@ -1088,36 +828,41 @@
              first and neither could be read. -->
         <div class="add-cols" id="add-cols">
           <div class="add-col">
-            <div id="pick-card">
-              <div class="pick-recent">
-                <div class="sec-head">
-                  <span class="step-title" id="sec-title">Recent tasks</span>
-                  <span class="sec-sub" id="sec-sub" hidden>Matching the fields below</span>
-                </div>
-                <div class="recent-list" id="recent-list"></div>
-              </div>
-            </div>
-
             <div class="new-task" id="new-task">
               <div class="sec-head">
                 <span class="step-title">Set up a new task</span>
               </div>
               <div id="nt-levels"></div>
-              <!-- It does not add the row: it puts one more task in the
-                   column beside it, ready for the next to be named. -->
-              <button class="btn-ghost pick-new" type="button" id="sec-switch">
+              <!-- It does not save the row: it turns what has been named
+                   into one task in the column beside it, and clears the
+                   fields for the next. -->
+              <button class="btn-ghost pick-new" type="button" id="sec-switch" disabled>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-                Add new task
+                Add task
               </button>
+            </div>
+
+            <div class="or-rule"><span>or</span></div>
+
+            <div id="pick-card">
+              <div class="pick-recent">
+                <div class="sec-head">
+                  <span class="step-title" id="sec-title">Select a recent task</span>
+                  <span class="sec-sub" id="sec-sub" hidden>Matching the fields above</span>
+                </div>
+                <div class="recent-list" id="recent-list"></div>
+              </div>
             </div>
           </div>
 
           <div class="add-col sel-col" id="basket">
+            <!-- The right-hand column is what will be saved. -->
             <div class="sec-head"><span class="step-title" id="basket-n">Selected</span></div>
             <div class="sel-list" id="basket-list"></div>
-            <p class="sel-empty" id="basket-empty">Nothing chosen yet. Tick a task on the left, or set one up underneath it.</p>
+            <p class="sel-empty" id="basket-empty">Nothing chosen yet. Set a task up on the left, or pick one you have had before.</p>
           </div>
         </div>
+      </div>
     </div>
 
     <div class="modal-footer">
@@ -1127,7 +872,7 @@
         <span class="add-need" id="add-need"></span>
         <button class="btn-ghost" type="button" data-close>Cancel</button>
         <button class="btn-primary" type="button" id="add-next" hidden disabled>Next</button>
-        <button class="btn-primary" type="button" id="add-go" disabled>Add</button>
+        <button class="btn-primary" type="button" id="add-go" disabled>Save</button>
       </div>
     </div>
   </div>
@@ -1520,39 +1265,33 @@
   var STATUS_ORDER = ['Draft', 'Draft', 'Submitted', 'Revised', 'Finalised'];
   /* Days already gone by are more likely to have moved on; the week you
      are in is mostly still yours. */
-  function sheetStatus(isoDate, site) {
-    if (!site) return 'Draft';
+  /* The worker's day is one timesheet, whatever sites it spans, so the
+     status belongs to the date and not to the cell. */
+  function sheetStatus(isoDate) {
     if (isoDate >= iso(TODAY)) return 'Draft';
-    var n = 0, str = isoDate + site;
-    for (var i = 0; i < str.length; i++) n = (n * 31 + str.charCodeAt(i)) % 9973;
+    var n = 0;
+    for (var i = 0; i < isoDate.length; i++) n = (n * 31 + isoDate.charCodeAt(i)) % 9973;
     return STATUS_ORDER[n % STATUS_ORDER.length];
   }
   function statusFor(key, isoDate) {
-    var m = taskMeta[key];
-    return STATUS_META[sheetStatus(isoDate, m && m.site)] || STATUS_META.Draft;
+    return STATUS_META[sheetStatus(isoDate)] || STATUS_META.Draft;
   }
-  function statusName(key, isoDate) {
-    var m = taskMeta[key];
-    return sheetStatus(isoDate, m && m.site);
-  }
+  function statusName(key, isoDate) { return sheetStatus(isoDate); }
 
-  /* One order everywhere, so a row of cells reads as a column: the
-     allowance when there is one, then the status, then the figure. A
-     timesheet is always in some state, so the status is always there —
-     Draft included, or the marks would jump about between rows. */
-  function stMark(key, isoDate, tip) {
-    if (!key) return '';
-    var name = statusName(key, isoDate), st = STATUS_META[name] || STATUS_META.Draft;
-    var ico = st.icon || ICO_DRAFT;
-    return '<span class="hr-st st-' + name.toLowerCase() + '"' +
-      (tip ? ' data-tip="' + Shell.esc(name) + '"' : '') + '>' + ico + '</span>';
+  /* Repeated in every cell the status was six copies of one fact and it
+     crowded out the figure. It is drawn once, at the head of the column
+     it is true of. */
+  function stMark(isoDate) {
+    var name = sheetStatus(isoDate), st = STATUS_META[name] || STATUS_META.Draft;
+    return '<span class="hr-st st-' + name.toLowerCase() + '">' +
+      (st.icon || ICO_DRAFT) + '</span>';
   }
   var ICO_DRAFT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none">' +
     '<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2.2 2"/></svg>';
 
   function dayCell(value, isoDate, key) {
     return '<td class="col-day' + todayCls(isoDate) + '">' +
-      alwDot(key, isoDate) + stMark(key, isoDate, true) +
+      alwDot(key, isoDate) +
       (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
 
@@ -1590,7 +1329,7 @@
         (overKey === dk && overCap(isoDate) ? ' over' : '') + '" type="button" ' +
         'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
         (lock ? ' disabled data-tip="' + statusName(key, isoDate) + ' — hours can no longer be changed"' : '') + '>' +
-        alwDot(key, isoDate) + stMark(key, isoDate, false) +
+        alwDot(key, isoDate) +
         (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
     }
     return dayCell(value, isoDate, key);
@@ -1607,130 +1346,6 @@
   function actHead() { return state.editing ? '<th class="col-act"></th>' : ''; }
   function actCell(inner) { return state.editing ? '<td class="col-act">' + inner + '</td>' : ''; }
 
-  /* ─── Adding in the row itself ─────────────────────────────────────
-     The other way of adding, kept beside the dialog rather than instead
-     of it: the row lands first and is named where it lands.
-
-     A task needs up to six answers and the grid has one label column, so
-     the answers are not all asked at once. Those already given have
-     settled into the breadcrumb the row will show for good; the next one
-     outstanding is the only control on screen. Site and supervisor are
-     answers too — from a group row they are already given, from the page
-     button they are the first two asked.                               */
-  var addMode = 'dialog';
-  var tmpN = 0;
-
-  function slotsFor(meta) {
-    var out = [];
-    /* Site and supervisor are shown as controls only while unanswered:
-       once settled, the group the row sits in already says them. */
-    out.push({ k: 'site', label: 'Site', value: meta.site, values: SITES, show: false });
-    out.push({ k: 'sup', label: 'Supervisor', value: meta.sup,
-               values: SUPS_BY_SITE[meta.site] || [], show: false });
-    fieldsFor(meta.site).forEach(function (f, i) {
-      out.push({ k: 'lvl' + i, label: f.name, value: meta.levels[i] || '', values: f.values, show: true });
-    });
-    return out;
-  }
-  function chainHtml(key) {
-    var meta = taskMeta[key], slots = slotsFor(meta), parts = [], open = null;
-    slots.forEach(function (sl) {
-      if (open) return;
-      if (sl.value) { if (sl.show) parts.push(sl); return; }
-      open = sl;
-    });
-    var html = '<span class="chain">';
-    parts.forEach(function (sl) {
-      html += '<span class="done">' + Shell.esc(sl.value) + '</span><span class="bar">|</span>';
-    });
-    if (open) {
-      html += '<select data-slot="' + open.k + '" data-row="' + Shell.esc(key) + '" aria-label="' + Shell.esc(open.label) + '">' +
-        '<option value="">' + Shell.esc(open.label) + '…</option>' +
-        open.values.map(function (v) { return '<option>' + Shell.esc(v) + '</option>'; }).join('') +
-        '</select>';
-    } else if (parts.length) {
-      /* Nothing left to answer: the last bar has nothing after it. */
-      html = html.replace(/<span class="bar">\|<\/span>$/, '');
-    }
-    html += '<button class="chain-x" type="button" data-drop-row="' + Shell.esc(key) + '" aria-label="Discard this row" data-tip="Discard this row">' +
-      '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>';
-    return html + '</span>';
-  }
-  function isPending(key) { return !!(taskMeta[key] && taskMeta[key].pending); }
-  /* The label a task row shows: its name, or the controls that are still
-     deciding what that name is. */
-  function taskLabel(t) {
-    if (isPending(t.key)) return chainHtml(t.key);
-    return Shell.esc(t.label);
-  }
-
-  function startInline(site, sup) {
-    if (!state.editing) enterEdit();
-    var key = 'tmp§' + (++tmpN);
-    taskMeta[key] = { site: site || '', sup: sup || '', levels: [], pending: true };
-    extraRows.push(key);
-    /* A row nobody can see is a row nobody fills in. */
-    if (site) {
-      delete collapsed['s:' + site];
-      if (sup) { delete collapsed['s:' + site + '|' + sup]; delete collapsed[flatKey(site, sup)]; }
-    }
-    justAdded = key;
-    render();
-    var sel = gridBody.querySelector('[data-row="' + key + '"]');
-    if (sel) { sel.focus(); sel.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }
-  }
-
-  /* An answer either fills a slot or, once the last one is in, turns the
-     row into the task it was describing — hours typed along the way move
-     with it, because they were always meant for this row. */
-  function answerSlot(key, slot, value) {
-    var meta = taskMeta[key];
-    if (slot === 'site') {
-      meta.site = value; meta.sup = ''; meta.levels = [];
-    } else if (slot === 'sup') {
-      meta.sup = value;
-    } else {
-      meta.levels[Number(slot.slice(3))] = value;
-    }
-    var fields = fieldsFor(meta.site);
-    var done = meta.site && meta.sup && fields.length &&
-      fields.every(function (f, i) { return !!meta.levels[i]; });
-    if (done) settleInline(key);
-    render();
-    if (!done) {
-      var sel = gridBody.querySelector('[data-row="' + key + '"]');
-      if (sel) sel.focus();
-    }
-  }
-  function settleInline(key) {
-    var meta = taskMeta[key];
-    var real = keyOf(meta.site, meta.sup, meta.levels);
-    delete taskMeta[key];
-    taskMeta[real] = { site: meta.site, sup: meta.sup, levels: meta.levels.slice() };
-    extraRows = extraRows.filter(function (x) { return x !== key; });
-    if (extraRows.indexOf(real) === -1) extraRows.push(real);
-    /* Hours typed into the row before it had a name belong to the name. */
-    if (draft) {
-      Object.keys(draft).forEach(function (dk) {
-        if (dk.indexOf(key + '|') !== 0) return;
-        var date = dk.slice(key.length + 1);
-        if (!(real + '|' + date in draft)) draft[real + '|' + date] = draft[dk];
-        delete draft[dk];
-      });
-    }
-    justAdded = real;
-  }
-  function dropInline(key) {
-    delete taskMeta[key];
-    extraRows = extraRows.filter(function (x) { return x !== key; });
-    if (draft) {
-      Object.keys(draft).forEach(function (dk) {
-        if (dk.indexOf(key + '|') === 0) delete draft[dk];
-      });
-    }
-    render();
-  }
-
   function grpAdd(site, sup) {
     if (!state.editing) return '';
     return '<button class="grp-add" type="button"' +
@@ -1742,7 +1357,7 @@
   var ICO_SITE = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V3.5l5-1.5V14M3 14h10V6.5H8M3 14H1.5M13 14h1.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
-  var rowsMode = 'flat';
+  var rowsMode = 'flat';   // the only layout now; nested was dropped
 
   /* The label columns are draggable: narrow them and the day columns get
      the space back. */
@@ -1770,11 +1385,14 @@
     return ds.map(function (d) {
       var k = iso(d), today = k === iso(TODAY);
       var shown = dayTotal(k, true), all = dayTotal(k, false), over = all > DAY_CAP;
+      var st = sheetStatus(k);
       return '<th class="col-day' + (today ? ' tdy' : '') + '"' +
-        (over ? ' data-tip="' + fmtHours(all) + ' h booked on this day — more than ' + DAY_CAP + '"' : '') + '>' +
+        ' data-tip="' + Shell.esc(st) + (STATUS_META[st] && STATUS_META[st].locked
+          ? ' — hours can no longer be changed' : '') +
+        (over ? '. ' + fmtHours(all) + ' h booked — more than ' + DAY_CAP : '') + '">' +
         '<span class="day-head' + (today ? ' is-today' : '') + '">' +
         '<span class="dow">' + DOW[d.getDay()] + '</span>' +
-        '<span class="dnum">' + fmtDay(d) + '</span>' +
+        '<span class="dnum">' + fmtDay(d) + stMark(k) + '</span>' +
         '<span class="dtot' + (over ? ' over' : '') + '">' +
           (shown > 0 ? fmtHours(shown) + ' h' : '<span class="cell-empty">&mdash;</span>') +
         '</span></span></th>';
@@ -1825,11 +1443,9 @@
         if (!open) return;
 
         sup.tasks.forEach(function (t) {
-          rows.push('<tr class="row-flat' + (t.key === justAdded ? ' just-added' : '') +
-              (isPending(t.key) ? ' row-pending' : '') + '">' +
+          rows.push('<tr class="row-flat' + (t.key === justAdded ? ' just-added' : '') + '">' +
             '<td class="col-site"></td><td class="col-sup"></td>' +
-            '<td class="col-task"' + (isPending(t.key) ? '' : ' data-tip="Task &mdash; ' + Shell.esc(t.label) + '"') + '>' +
-              taskLabel(t) + '</td>' +
+            '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell('') +
@@ -1883,10 +1499,8 @@
         if (!supOpen) return;
 
         sup.tasks.forEach(function (t) {
-          rows.push('<tr class="row-task' + (t.key === justAdded ? ' just-added' : '') +
-              (isPending(t.key) ? ' row-pending' : '') + '">' +
-            '<td class="col-label"' + (isPending(t.key) ? '' : ' data-tip="Task &mdash; ' + Shell.esc(t.label) + '"') + '>' +
-              taskLabel(t) + '</td>' +
+          rows.push('<tr class="row-task' + (t.key === justAdded ? ' just-added' : '') + '">' +
+            '<td class="col-label" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell('') + '</tr>');
@@ -2170,20 +1784,6 @@
     });
     renderWeek();
   }
-  var rowsSwitch = document.getElementById('rows-switch');
-  rowsSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-rows]');
-    if (!b) return;
-    rowsMode = b.getAttribute('data-rows');
-    rowsSwitch.querySelectorAll('[data-rows]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    /* The two layouts fold at different levels, so the button re-reads
-       the one now on screen. */
-    renderGrid();
-    syncCollapseBtn();
-    syncMobileActions();
-    syncScrollEdge();
-  });
-
   vp.addEventListener('click', function (e) {
     var b = e.target.closest('[data-vp]');
     if (!b) return;
@@ -2626,7 +2226,7 @@
     var site = addSite(), fields = fieldsFor(site), had = levelValues();
     el('nt-levels').innerHTML = fields.map(function (f, i) {
       return '<div class="fld"><label class="fld-label" for="nt-' + i + '">' + Shell.esc(f.name) +
-        (i === 0 ? '<span class="req">*</span>' : '') + '</label>' +
+        '<span class="req">*</span></label>' +
         '<select id="nt-' + i + '" data-lvl="' + i + '"><option value="">Select…</option>' +
         f.values.map(function (v) { return '<option>' + Shell.esc(v) + '</option>'; }).join('') +
         '</select></div>';
@@ -2659,6 +2259,12 @@
     });
   }
   function newLevels() { return levelValues(); }
+  /* A task is named by all of its site's fields; until they are all
+     answered there is nothing to put in the column on the right. */
+  function levelsComplete() {
+    var sels = [].slice.call(el('nt-levels').querySelectorAll('select'));
+    return sels.length > 0 && sels.every(function (x) { return !!x.value; });
+  }
 
   /* Named, not merely refused: a button that will not say what it is
      waiting for leaves the reader to audit the form by eye. */
@@ -2668,10 +2274,9 @@
     if (!addSup()) missing.push('supervisor');
     /* Either half answers it, so neither is named: "work order" would be
        wrong advice to anyone about to pick a card instead. */
-    if (addSite()) {
-      var first = el('nt-0');
-      if (!basket.length && !(first && first.value)) missing.push('task');
-    }
+    var ready = levelsComplete();
+    if (addSite() && !basket.length && !ready) missing.push('task');
+    el('sec-switch').disabled = !ready;
     el('add-go').disabled = missing.length > 0;
     el('add-next').disabled = !addSite() || !addSup();
     /* On step one only the step-one answers are outstanding. */
@@ -2733,7 +2338,7 @@
       .sort(function (a, b) { return (b.when || 0) - (a.when || 0); }).slice(0, 5);
     nameCards(recent);
 
-    el('sec-title').textContent = 'Recent tasks' + (recent.length ? ' (' + recent.length + ')' : '');
+    el('sec-title').textContent = 'Select a recent task' + (recent.length ? ' (' + recent.length + ')' : '');
     el('sec-sub').hidden = !filtered;
 
     el('recent-list').innerHTML = recent.length ? recent.map(function (r, i) {
@@ -2778,7 +2383,7 @@
         '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
         '</button></div>';
     }).join('');
-    el('add-go').textContent = basket.length > 1 ? 'Add ' + basket.length + ' tasks' : 'Add';
+    el('add-go').textContent = 'Save';
   }
   el('basket-list').addEventListener('click', function (e) {
     var b = e.target.closest('[data-drop]');
@@ -2877,8 +2482,7 @@
   /* Naming a task on the fields and pressing the button drops it in the
      same basket, so the two ways of choosing end in one place. */
   el('sec-switch').addEventListener('click', function () {
-    var first = el('nt-0');
-    if (!first || !first.value) { first && first.focus(); return; }
+    if (!levelsComplete()) return;
     var levels = newLevels(), site = addSite(), sup = addSup() || supervisorFor(site);
     var k = keyOf(site, sup, levels);
     if (!inBasket(k)) {
@@ -2896,8 +2500,7 @@
        that was never put there — nobody should lose a task because they
        did not press the second button. */
     var picks = basket.slice();
-    var first = el('nt-0');
-    if (first && first.value) {
+    if (levelsComplete()) {
       var lv = newLevels(), k0 = keyOf(site, sup, lv);
       if (!picks.some(function (x) { return x.key === k0; })) {
         taskMeta[k0] = { site: site, sup: sup, levels: lv.slice() };
@@ -3110,29 +2713,8 @@
     if (e.target === editSheet || e.target.closest('[data-close]')) editSheet.classList.remove('open');
   });
 
-  document.getElementById('btn-new-task').addEventListener('click', function () {
-    if (addMode === 'inline') startInline('', '');
-    else openAdd(null, null);
-  });
-  var addSwitch = document.getElementById('add-switch');
-  addSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-add]');
-    if (!b) return;
-    addMode = b.getAttribute('data-add');
-    addSwitch.querySelectorAll('[data-add]').forEach(function (x) { x.classList.toggle('on', x === b); });
-  });
-  /* Answering a slot, and giving up on a row that was never named. */
-  gridBody.addEventListener('change', function (e) {
-    var sel = e.target.closest('[data-slot]');
-    if (!sel) return;
-    answerSlot(sel.getAttribute('data-row'), sel.getAttribute('data-slot'), sel.value);
-  });
-  gridBody.addEventListener('click', function (e) {
-    var x = e.target.closest('[data-drop-row]');
-    if (!x) return;
-    e.stopPropagation();
-    dropInline(x.getAttribute('data-drop-row'));
-  }, true);
+  document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null, null); });
+
 
   /* Capture, and ahead of the row's own collapse handler: the click is for
      the button, not for the group it sits on. */
@@ -3141,9 +2723,7 @@
     if (!b) return;
     e.preventDefault();
     e.stopPropagation();
-    var site = b.getAttribute('data-add-site'), sup = b.getAttribute('data-add-sup') || '';
-    if (addMode === 'inline') startInline(site, sup || supervisorFor(site) || '');
-    else openAdd(null, { site: site, sup: sup });
+    openAdd(null, { site: b.getAttribute('data-add-site'), sup: b.getAttribute('data-add-sup') || '' });
   }, true);
 
   document.addEventListener('keydown', function (e) {
