@@ -1086,7 +1086,7 @@
                fields for the next one. -->
           <button class="btn-outline add-more" type="button" id="add-more">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add task
+            Add another task
           </button>
         </div>
       </div>
@@ -2490,6 +2490,11 @@
       var k = keyFor(r.meta.levels);
       if (ticks[k] && !seen[k]) { seen[k] = 1; out.push({ levels: r.meta.levels.slice() }); }
     });
+    /* A task named in the form is named whether or not the button was
+       pressed: the button adds another, it does not add this one. */
+    if (levelsDone(editing.levels) && !seen[keyFor(editing.levels)]) {
+      out.push({ levels: editing.levels.slice() });
+    }
     return out;
   }
   function metaOf(lv) { return { site: addSite(), sup: addSup(), levels: lv }; }
@@ -2562,8 +2567,6 @@
         }).join('') + '</select></div>';
     }).join('');
 
-    /* "Add another task" only once there is one to add another to. */
-    el('add-more').lastChild.textContent = cards.length ? ' Add another task' : ' Add task';
     el('add-more').disabled = !levelsDone(editing.levels);
   }
 
