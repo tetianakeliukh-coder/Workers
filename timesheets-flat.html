@@ -127,9 +127,16 @@
   /* Hours stays on screen whatever the columns do — it is the number the
      table exists to add up, same as the totals column on the Supervisor
      screen. */
+  /* Total and the row's actions are one frozen band at the right edge:
+     an action you have to scroll sideways to find is not an action. */
   th.col-hrs, td.col-hrs {
-    position: sticky; right: 0; z-index: 2; background: inherit; padding-right: 16px;
+    position: sticky; right: 52px; z-index: 2; background: inherit; padding-right: 16px;
   }
+  th.col-act, td.col-act {
+    position: sticky; right: 0; z-index: 2; background: inherit;
+    padding: 0 8px 0 4px; text-align: center; overflow: visible;
+  }
+  #grid thead th.col-act { z-index: 4; }
   #grid thead th.col-hrs { z-index: 4; }
   td.col-hrs { font-weight: 600; }
   /* An editable cell fills the column, so the column's own side padding
@@ -331,27 +338,41 @@
   #tp-done { font-weight: 500; }
   td.col-day, th.col-day { text-align: right; font-variant-numeric: tabular-nums; }
   td.col-day > .cell-empty, td.col-day { line-height: 1; }
-  th.col-day .dh { display: flex; flex-direction: column; align-items: flex-end; line-height: 15px; }
-  th.col-day .dh .dw { font-size: 12px; font-weight: 400; color: var(--grey-600); }
+  /* A day's total belongs to its date, not to a row of its own: it sits
+     in the same cell, parted from the date by a hairline only as wide as
+     the figure. The date reads as the label and the figure as the thing
+     being checked, so they are not the same size. */
+  #grid thead th { vertical-align: middle; }
+  .day-head { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 16px; }
+  .day-head .dnum { font-size: 12px; font-weight: 500; color: var(--grey-600); white-space: nowrap; }
+  .day-head .dtot {
+    display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+    margin-top: 5px; padding-top: 4px; align-self: stretch;
+    border-top: 1px solid var(--grey-300);
+    font-size: 15px; font-weight: 600; color: var(--text-main);
+    font-variant-numeric: tabular-nums;
+  }
+  .day-head .dtot.over { color: var(--error); }
+  .day-head .dtot .hr-st { margin: 0; }
+  .day-head .dtot .cell-empty { font-weight: 400; }
+  .day-head.is-today .dnum { color: var(--primary); }
+  .hr-st.st-draft { color: var(--grey-400); }
   th.col-day.tdy, td.col-day.tdy { background: var(--bg-blue-light); }
 
   /* A row being added, until it is saved. */
   tr.new-row > td { background: #f3f7ff; }
   tr.new-row:hover > td { background: #eaf1ff; }
+  /* Drawn, not hinted: a control that appears under the pointer cannot
+     be found by anyone looking for it. */
   .row-act, .row-drop {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; border: none; background: none; cursor: pointer;
-    color: var(--grey-600); border-radius: 6px;
+    width: 30px; height: 30px; cursor: pointer; border-radius: 7px;
+    border: 1px solid var(--grey-350); background: var(--white);
+    color: var(--grey-600);
   }
-  .row-act:hover { color: var(--primary); background: var(--grey-100); }
+  .row-act:hover { border-color: var(--primary); color: var(--primary); background: var(--bg-blue-light); }
   /* Throwing away is the one thing in this column that is not additive. */
-  .row-drop:hover { color: var(--error); background: var(--grey-100); }
-  /* The column is quiet until the row is under the pointer: twelve rows
-     of icons read as twelve things to do. */
-  #grid-body tr .row-act { opacity: 0; }
-  #grid-body tr:hover .row-act,
-  #grid-body tr .row-act:focus-visible { opacity: 1; }
-  td.col-act { text-align: center; }
+  .row-drop:hover { border-color: var(--error); color: var(--error); background: var(--white); }
 
 
   /* The row that was just added: findable at a glance, and it fades out
@@ -507,6 +528,8 @@
 
   /* ─── Dates ───────────────────────────────────────────────────────── */
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  /* A day holds a day. Anything over it is a mistake worth saying so. */
+  var DAY_CAP = 24;
   var DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   function startOfDay(d) { var x = new Date(d.getTime()); x.setHours(0, 0, 0, 0); return x; }
   function addDays(d, n) { var x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
@@ -889,9 +912,48 @@
       'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   /* Left of the figure: a mark that follows the number pushes it off the
      right edge, and then one column no longer lines up with the next. */
+  /* hand-coins, as the product draws it — the same mark My Timesheets
+     uses, so a claim reads the same on either structure. */
+  var ICO_ALW = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/>' +
+    '<path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/>' +
+    '<path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/></svg>';
   function alwMark(c) {
     if (!c.a || !c.a.length) return '';
-    return '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowTip(c.a)) + '">' + ICO_FLAG + '</span>';
+    return '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowTip(c.a)) + '">' + ICO_ALW + '</span>';
+  }
+
+  /* ─── A day, and what is true of it ────────────────────────────────
+     The worker's day is one timesheet whatever sites it spans, so its
+     status belongs to the date and is drawn once at the head of the
+     column — not repeated in every cell under it, where six copies of
+     one fact crowded out the figures. A day is only as far along as the
+     least far of the entries on it. */
+  var ICO_DRAFT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none">' +
+    '<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2.2 2"/></svg>';
+  var STATUS_RANK = { Draft: 0, Revised: 1, Submitted: 2, Finalised: 3 };
+  /* Only the worker's own screen has one timesheet a day; a supervisor's
+     day spans people, so there the status stays on the row. */
+  function dayHasStatus() { return state.tab === 'mine'; }
+  function dayStatus(list, isoDate) {
+    var best = null;
+    list.forEach(function (e) {
+      if (e.date !== isoDate || e.isNew) return;
+      if (best === null || STATUS_RANK[e.status] < STATUS_RANK[best]) best = e.status;
+    });
+    return best || 'Draft';
+  }
+  function stMark(name) {
+    var st = STATUS_META[name] || STATUS_META.Draft;
+    return '<span class="hr-st st-' + String(name).toLowerCase() + '">' +
+      (st.icon || ICO_DRAFT) + '</span>';
+  }
+  /* Everything booked to one day, across every task on screen. */
+  function dayTotal(list, isoDate) {
+    return list.reduce(function (n, e) {
+      return e.date === isoDate ? n + (Number(hoursOf(e, isoDate)) || 0) : n;
+    }, 0);
   }
   function hoursOf(e, isoDate) { return cellOf(e, isoDate).h; }
 
@@ -905,7 +967,8 @@
     return '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
       '" type="button" data-cell="' + k + '"' + (lock ? ' disabled data-tip="' + e.status + ' — hours can no longer be changed"' : '') + '>' +
       alwMark(c) +
-      (st.icon ? '<span class="hr-st st-' + String(e.status).toLowerCase() + '">' + st.icon + '</span>' : '') +
+      (st.icon && !(state.mode === 'period' && dayHasStatus())
+        ? '<span class="hr-st st-' + String(e.status).toLowerCase() + '">' + st.icon + '</span>' : '') +
       (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
       '</button>';
   }
@@ -914,7 +977,8 @@
   function dayValue(e, isoDate) {
     var c = cellOf(e, isoDate), st = statusOf(e);
     return alwMark(c) +
-      (st.icon ? '<span class="hr-st" data-tip="' + e.status + '">' + st.icon + '</span>' : '') +
+      (st.icon && !(state.mode === 'period' && dayHasStatus())
+        ? '<span class="hr-st" data-tip="' + e.status + '">' + st.icon + '</span>' : '') +
       (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h));
   }
   /* A field the context could not supply arrives as a cell on the row,
@@ -973,7 +1037,20 @@
      becomes the columns themselves. A leaf is a task, and its hours land
      in whichever day they were booked to — which is what lets a new row
      ask for nothing but the task. */
-  function taskKey(e) { return [e.site, e.sup, e.worker, e.task].join('\u00a7'); }
+  /* A row being added is its own row until it is saved — otherwise a
+     copy of a task would fold straight back into the row it was copied
+     from, and nothing would have happened on screen. */
+  function taskKey(e) { return e.isNew ? e.id : [e.site, e.sup, e.worker, e.task].join('\u00a7'); }
+
+  /* A row being added sits above the table only while it has nothing to
+     be grouped by. Once it knows what it is it belongs under its own
+     heading — which, for a copy, is true from the first moment. */
+  function isLoose(e) {
+    if (!e.isNew) return false;
+    var g = groups();
+    if (!g.length) return true;
+    return g.some(function (k) { return !e[k]; });
+  }
 
   function renderPeriod(list, lead, ds) {
     var cols = lead.concat([field('task')]);
@@ -982,7 +1059,7 @@
 
     el('grid-cols').innerHTML = cols.map(function (c) { return '<col style="width:' + c.w + 'px" />'; }).join('') +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />' +
-      '<col style="width:44px" />';
+      '<col style="width:52px" />';
 
     el('grid-head').innerHTML = '<tr>' +
       cols.map(function (c, i) {
@@ -991,14 +1068,26 @@
           Shell.esc(c.label) + Shell.colGrip() + '</th>';
       }).join('') +
       ds.map(function (d) {
-        var t = iso(d) === iso(TODAY);
-        return '<th class="col-day' + (t ? ' tdy' : '') + '"><span class="dh"><span class="dw">' +
-          DOW[d.getDay()] + '</span><span>' + d.getDate() + ' ' + MONTHS[d.getMonth()] + '</span></span></th>';
+        var k = iso(d), t = k === iso(TODAY);
+        var tot = dayTotal(list, k), over = tot > DAY_CAP;
+        var st = dayHasStatus() ? dayStatus(list, k) : '';
+        var tip = (st ? st + (STATUS_META[st] && STATUS_META[st].locked
+          ? ' \u2014 hours can no longer be changed' : '') : '') +
+          (over ? (st ? '. ' : '') + fmtHours(tot) + ' h booked \u2014 more than ' + DAY_CAP : '');
+        return '<th class="col-day' + (t ? ' tdy' : '') + '"' +
+          (tip ? ' data-tip="' + Shell.esc(tip) + '"' : '') + '>' +
+          '<span class="day-head' + (t ? ' is-today' : '') + '">' +
+          '<span class="dnum">' + DOW[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + '</span>' +
+          '<span class="dtot' + (over ? ' over' : '') + '">' + (st ? stMark(st) : '') +
+          (tot > 0 ? fmtHours(tot) + ' h' : '<span class="cell-empty">&mdash;</span>') +
+          '</span></span></th>';
       }).join('') +
-      '<th class="num col-hrs" data-w="hours">Total' + Shell.colGrip() + '</th>' +
+      '<th class="num col-hrs" data-w="hours"><span class="day-head">' +
+        '<span class="dnum">Total</span><span class="dtot">' + fmtHours(sumOf(list)) + ' h</span>' +
+      '</span>' + Shell.colGrip() + '</th>' +
       '<th class="col-act"></th></tr>';
 
-    el('grid').style.minWidth = (off + ds.length * 92 + 92 + 44) + 'px';
+    el('grid').style.minWidth = (off + ds.length * 92 + 92 + 52) + 'px';
 
     var out = [], shown = 0, openKeys = [];
 
@@ -1103,10 +1192,8 @@
       });
     }
 
-    /* A row being added sits above everything, on its own: it has no
-       values yet to be grouped by, and it is the thing to look at. */
-    var fresh = list.filter(function (e) { return e.isNew; });
-    var settled = list.filter(function (e) { return !e.isNew; });
+    var fresh = list.filter(isLoose);
+    var settled = list.filter(function (e) { return !isLoose(e); });
     fresh.forEach(function (e) { out.push(taskRow([e])); });
     var g = groups();
     if (!g.length) leafRows(settled).forEach(function (grp) { out.push(taskRow(grp)); });
@@ -1157,7 +1244,7 @@
 
     el('grid-cols').innerHTML = cols.map(function (c) {
       return '<col style="width:' + c.w + 'px" />';
-    }).join('') + '<col style="width:44px" />';
+    }).join('') + '<col style="width:52px" />';
 
     el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
       var isLead = i < lead.length;
@@ -1232,8 +1319,8 @@
       });
     }
 
-    var fresh = list.filter(function (e) { return e.isNew; });
-    var settled = list.filter(function (e) { return !e.isNew; });
+    var fresh = list.filter(isLoose);
+    var settled = list.filter(function (e) { return !isLoose(e); });
     fresh.forEach(function (e) { out.push(entryRow(e)); });
     if (!g.length) settled.forEach(function (e) { out.push(entryRow(e)); });
     else walk(nest(settled, g), 1, '');
@@ -1243,7 +1330,7 @@
       : '<tr><td colspan="' + (cols.length + 1) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
 
     el('grid').style.minWidth =
-      (cols.reduce(function (n, c) { return n + c.w; }, 0) + 44) + 'px';
+      (cols.reduce(function (n, c) { return n + c.w; }, 0) + 52) + 'px';
     finish(shown, list, openKeys);
   }
 
