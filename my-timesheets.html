@@ -340,8 +340,7 @@
      task's name, and one grey 12/400 for every line underneath. Sections
      are 18px apart and the things inside one are 8. */
   .modal-step {
-    font-size: 12px; font-weight: 500; line-height: 16px; color: var(--grey-600);
-    text-transform: uppercase; letter-spacing: 0.5px;
+    font-size: 12px; font-weight: 400; line-height: 16px; color: var(--grey-600);
   }
   .sect { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; min-width: 0; }
   /* Not two peers: the list is the way most weeks are filled in, so it
@@ -363,9 +362,10 @@
   .sect-form { background: var(--white); border: 1px solid var(--grey-350); }
   .form-scroll { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; }
 
+  /* A label over a short list, not a heading of its own: it sits under
+     the section title and above the rows, and is read as neither. */
   .sub-head {
-    font-size: 11px; font-weight: 600; color: var(--grey-600);
-    text-transform: uppercase; letter-spacing: 0.5px;
+    font-size: 12px; font-weight: 400; line-height: 16px; color: var(--grey-600);
   }
   #sect-new { gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--grey-300); }
   .tsearch { flex: 0 0 auto; height: 32px; }
@@ -375,14 +375,15 @@
   }
   .sect-head h4 {
     margin: 0; font-family: var(--fs-sans);
-    font-size: 13px; font-weight: 600; line-height: 18px; color: var(--text-main);
+    font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main);
   }
-  .sect-head .n { font-size: 12px; font-weight: 400; color: var(--grey-600); }
-  .sect-head .n.on { color: var(--primary); font-weight: 500; }
 
   .tlist { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 92px; overflow-y: auto; }
   /* The one above the columns is a summary, not a chooser. */
-  .tlist.short { flex: 0 0 auto; max-height: 120px; }
+  /* As tall as what is in it. The 92px floor is for the list that has
+     to look like a list before anything is in it; this one only ever
+     shows what has been made, so a floor leaves a hole under one row. */
+  .tlist.short { flex: 0 0 auto; min-height: 0; max-height: 120px; }
   .tfields { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
 
   /* One row shape for everything in the list: a tick, a name, a grey
@@ -1126,7 +1127,6 @@
           <div class="sect" id="sect-list">
             <div class="sect-head">
               <h4>Or pick a recent task</h4>
-              <span class="n" id="pick-n"></span>
             </div>
             <!-- With more than a screenful, finding one is a search, not
                  a scroll — which is also what it will be in production,
@@ -2642,10 +2642,8 @@
     el('recent-list').innerHTML = html ||
       '<div class="recent-empty">Nothing booked here before &mdash; create one on the left.</div>';
 
-    var ticked = allPicked().length - cards.length;
-    el('pick-n').textContent = ticked ? ticked + ' selected' : '';
-    el('pick-n').classList.toggle('on', ticked > 0);
-    /* Two lists, one total, said where the act of saving is. */
+    /* One count, on the button that acts on it: a second one beside the
+       list only ever disagreed with it. */
     var all = allPicked().length;
     el('add-go').textContent = all > 1 ? 'Save ' + all + ' tasks' : 'Save';
 

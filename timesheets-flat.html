@@ -338,12 +338,20 @@
   /* A row being added, until it is saved. */
   tr.new-row > td { background: #f3f7ff; }
   tr.new-row:hover > td { background: #eaf1ff; }
-  .row-drop {
+  .row-act, .row-drop {
     display: inline-flex; align-items: center; justify-content: center;
     width: 28px; height: 28px; border: none; background: none; cursor: pointer;
     color: var(--grey-600); border-radius: 6px;
   }
+  .row-act:hover { color: var(--primary); background: var(--grey-100); }
+  /* Throwing away is the one thing in this column that is not additive. */
   .row-drop:hover { color: var(--error); background: var(--grey-100); }
+  /* The column is quiet until the row is under the pointer: twelve rows
+     of icons read as twelve things to do. */
+  #grid-body tr .row-act { opacity: 0; }
+  #grid-body tr:hover .row-act,
+  #grid-body tr .row-act:focus-visible { opacity: 1; }
+  td.col-act { text-align: center; }
 
 
   /* The row that was just added: findable at a glance, and it fades out
@@ -974,7 +982,7 @@
 
     el('grid-cols').innerHTML = cols.map(function (c) { return '<col style="width:' + c.w + 'px" />'; }).join('') +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />' +
-      (state.editing ? '<col style="width:44px" />' : '');
+      '<col style="width:44px" />';
 
     el('grid-head').innerHTML = '<tr>' +
       cols.map(function (c, i) {
@@ -988,9 +996,9 @@
           DOW[d.getDay()] + '</span><span>' + d.getDate() + ' ' + MONTHS[d.getMonth()] + '</span></span></th>';
       }).join('') +
       '<th class="num col-hrs" data-w="hours">Total' + Shell.colGrip() + '</th>' +
-      (state.editing ? '<th class="col-act"></th>' : '') + '</tr>';
+      '<th class="col-act"></th></tr>';
 
-    el('grid').style.minWidth = (off + ds.length * 92 + 92 + (state.editing ? 44 : 0)) + 'px';
+    el('grid').style.minWidth = (off + ds.length * 92 + 92 + 44) + 'px';
 
     var out = [], shown = 0, openKeys = [];
 
@@ -1043,15 +1051,17 @@
         cols.map(function (c, i) {
           var html = '';
           if (i === cols.length - 1) {
-            /* With one column for the whole row, the task cell is where
-               everything the row still needs is asked. */
+            /* Whatever the view has no column for is asked in the task
+               cell; what it does have a column for is asked there. */
             html = fresh ? taskBtn(fresh) : Shell.highlight(e.task, state.q);
+          } else if (fresh && isPick(fresh, c.k)) {
+            html = pickCell(fresh, c);
           }
           return '<td class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
             '" style="left:' + offs[i] + 'px">' + html + '</td>';
         }).join('') +
         ds.map(function (d) { return dayCell(group, d); }).join('') +
-        '<td class="num col-hrs">' + fmtHours(total) + '</td>' + actCell(fresh) + '</tr>';
+        '<td class="num col-hrs">' + fmtHours(total) + '</td>' + actCell(fresh || e) + '</tr>';
     }
 
     function headRow(node, depth, key, open) {
@@ -1077,7 +1087,7 @@
           return '<td class="col-day g-tally' + (iso(d) === iso(TODAY) ? ' tdy' : '') + '">' +
             (h ? fmtHours(h) : '') + '</td>';
         }).join('') +
-        '<td class="num col-hrs">' + fmtHours(total) + '</td>' + actCell(null) + '</tr>';
+        '<td class="num col-hrs">' + fmtHours(total) + '</td>' + actCell(null, key) + '</tr>';
     }
 
     function walk(nodes, depth, path) {
@@ -1107,13 +1117,26 @@
     return { shown: shown, openKeys: openKeys };
   }
 
-  /* Only a row added in this sitting can be thrown away here. */
-  function actCell(e) {
-    if (!state.editing) return '';
-    return '<td class="col-act">' + (e && e.isNew
-      ? '<button class="row-drop" type="button" data-drop="' + e.id + '" aria-label="Remove this row" data-tip="Remove this row">' +
-        '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 4.5h11M6 4.5V3h4v1.5M4 4.5l.6 8.2a1 1 0 001 .8h4.8a1 1 0 001-.8l.6-8.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.6 7v4M9.4 7v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></button>'
-      : '') + '</td>';
+  var ICO_BIN = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2.5 4.5h11M6 4.5V3h4v1.5M4 4.5l.6 8.2a1 1 0 001 .8h4.8a1 1 0 001-.8l.6-8.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.6 7v4M9.4 7v4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  var ICO_DUP = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="5.6" y="5.6" width="7.9" height="7.9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.4 3.4H4a1.6 1.6 0 00-1.6 1.6v6.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  var ICO_PLUS = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+
+  /* One column at the end of every row, in both modes. A row that exists
+     can be copied; a row being added can be thrown away; a heading can
+     start another row under itself, already knowing what it groups by. */
+  function actCell(e, addKey) {
+    var out = '';
+    if (e && e.isNew) {
+      out = '<button class="row-act row-drop" type="button" data-drop="' + e.id +
+        '" aria-label="Remove this row" data-tip="Remove this row">' + ICO_BIN + '</button>';
+    } else if (e) {
+      out = '<button class="row-act" type="button" data-dup="' + e.id +
+        '" aria-label="Duplicate this row" data-tip="Duplicate this row">' + ICO_DUP + '</button>';
+    } else if (state.editing && addKey != null) {
+      out = '<button class="row-act" type="button" data-addhere="' + Shell.esc(addKey) +
+        '" aria-label="Add a task here" data-tip="Add a task here">' + ICO_PLUS + '</button>';
+    }
+    return '<td class="col-act">' + out + '</td>';
   }
 
   function render() {
@@ -1134,7 +1157,7 @@
 
     el('grid-cols').innerHTML = cols.map(function (c) {
       return '<col style="width:' + c.w + 'px" />';
-    }).join('') + (state.editing ? '<col style="width:44px" />' : '');
+    }).join('') + '<col style="width:44px" />';
 
     el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
       var isLead = i < lead.length;
@@ -1142,7 +1165,7 @@
         (c.num ? ' num' : '') + (c.k === 'hours' ? ' col-hrs' : '') + '" data-w="' + c.k + '"' +
         (isLead ? ' style="left:' + offsets[i] + 'px"' : '') + '>' +
         Shell.esc(c.label) + Shell.colGrip() + '</th>';
-    }).join('') + (state.editing ? '<th class="col-act"></th>' : '') + '</tr>';
+    }).join('') + '<th class="col-act"></th></tr>';
 
     var out = [], shown = 0, openKeys = [];
 
@@ -1200,7 +1223,7 @@
             /* A field grouped below this one: how many are coming. */
             return leadCell(i, '<span class="g-tally-in">' + tally(node.rows, c) + '</span>');
           }).join('') +
-          rest.map(function (c) { return rollup(c, node.rows); }).join('') +
+          rest.map(function (c) { return rollup(c, node.rows); }).join('') + actCell(null, key) +
         '</tr>');
 
         if (!open) return;
@@ -1220,7 +1243,7 @@
       : '<tr><td colspan="' + (cols.length + 1) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
 
     el('grid').style.minWidth =
-      (cols.reduce(function (n, c) { return n + c.w; }, 0) + (state.editing ? 44 : 0)) + 'px';
+      (cols.reduce(function (n, c) { return n + c.w; }, 0) + 44) + 'px';
     finish(shown, list, openKeys);
   }
 
@@ -1697,7 +1720,17 @@
   }
 
   var nSeq = 0;
-  function addInlineRow() {
+  /* What a row still has to be asked for. */
+  function rowGaps(r) {
+    var out = [];
+    ['site', 'sup', 'project'].forEach(function (k) { if (!r[k]) out.push(k); });
+    if (state.tab !== 'mine' && !r.worker) out.push('worker');
+    if (!r.task) out.push('task');
+    return out;
+  }
+  /* A seed is whatever is already settled: the group the add was started
+     from, or the row being copied. */
+  function addInlineRow(seed) {
     if (!state.editing) enterEdit();
     if (popKey) commitCell();
     closeTaskPop();
@@ -1707,6 +1740,11 @@
       project: '', task: '', levels: [], status: 'Draft',
       allowances: [], start: '', finish: '', hours: '', isNew: true
     };
+    Object.keys(seed || {}).forEach(function (k) { if (seed[k]) row[k] = seed[k]; });
+    /* A site answers for a supervisor and a project, so a seed that
+       names one does not have to name the others. */
+    if (row.site && !row.sup) row.sup = supervisorOn(row.date, row.site) || (SUPS[row.site] || [])[0] || '';
+    if (row.site && !row.project) row.project = (PROJECTS[row.site] || [])[0] || '';
     pending.unshift(row);
     justAdded = row.id;
     addedOn = row.date;
@@ -1716,15 +1754,60 @@
     setTimeout(function () {
       var tr = document.querySelector('tr.just-added');
       if (tr) tr.scrollIntoView({ block: 'center' });
+      /* A copy is already answered — it only wants its hours, so nothing
+         is opened over it. */
+      if (!rowGaps(row).length) return;
       var btn = document.querySelector('[data-task="' + row.id + '"]');
       /* Period has nowhere else to ask, so it asks at once. Entries has
-         the whole row, so it starts at the left of it. */
-      if (state.mode === 'period') { if (btn) openTaskPop(btn); return; }
-      var first = tr && tr.querySelector('.cell-input');
+         the whole row, so it starts at the first blank on it. */
+      if (state.mode === 'period' && rowGaps(row).indexOf('task') !== -1) {
+        if (btn) openTaskPop(btn);
+        return;
+      }
+      var first = tr && (tr.querySelector('.cell-input.need') || tr.querySelector('.task-pick.need'));
       if (first) first.focus();
     }, 0);
   }
-  el('btn-new-task').addEventListener('click', addInlineRow);
+  el('btn-new-task').addEventListener('click', function () { addInlineRow(null); });
+
+  /* A heading already says what it groups by, so a row started from one
+     is asked only for what is left. */
+  function seedFromKey(key) {
+    var vals = String(key || '').split('\u00a7').slice(1);
+    var g = groups(), seed = {};
+    vals.forEach(function (v, i) {
+      if (!g[i] || v === '\u2014') return;
+      seed[g[i]] = v;
+    });
+    /* The date is a value in Entries and a column in Period; either way
+       it is a date, not a field the row has to be told twice. */
+    if (seed.date) { var d = fromIso(seed.date); if (isNaN(d)) delete seed.date; }
+    return seed;
+  }
+
+  el('grid-body').addEventListener('click', function (e) {
+    var add = e.target.closest('[data-addhere]');
+    if (!add) return;
+    e.stopPropagation();
+    addInlineRow(seedFromKey(add.getAttribute('data-addhere')));
+  });
+
+  /* The same task again, on another day. Everything that said what the
+     row was for is copied; the hours are not, because those are the
+     thing being written. */
+  el('grid-body').addEventListener('click', function (e) {
+    var dup = e.target.closest('[data-dup]');
+    if (!dup) return;
+    e.stopPropagation();
+    var id = dup.getAttribute('data-dup');
+    var src = ENTRIES.concat(pending).filter(function (x) { return x.id === id; })[0];
+    if (!src) return;
+    addInlineRow({
+      date: src.date, site: src.site, sup: src.sup, worker: src.worker,
+      project: src.project, task: src.task,
+      levels: String(src.task || '').split(' | ').filter(Boolean)
+    });
+  });
 
   /* ─── The task, and whatever the view has no column for ───────────── */
   var tpop = el('task-pop'), tpId = null;
@@ -1732,12 +1815,16 @@
 
   function tpFields(r) {
     var out = [];
-    /* Period shows one column, so the rest of the row is asked here. */
+    /* Period shows one column, so the rest of the row is asked here —
+       except for what grouping has put back on screen as a column of its
+       own, which the row asks for in that column. */
     if (state.mode === 'period') {
-      out.push({ k: 'site', name: 'Site' });
-      if (state.tab !== 'mine') out.push({ k: 'worker', name: 'Worker' });
-      out.push({ k: 'sup', name: 'Supervisor' });
-      out.push({ k: 'project', name: 'Project' });
+      var g = groups();
+      var ask = function (k, name) { if (g.indexOf(k) === -1) out.push({ k: k, name: name }); };
+      ask('site', 'Site');
+      if (state.tab !== 'mine') ask('worker', 'Worker');
+      ask('sup', 'Supervisor');
+      ask('project', 'Project');
     }
     (SITE_FIELDS[r.site] || []).forEach(function (f, i) {
       out.push({ k: 'lvl' + i, name: f.name, values: f.values });
