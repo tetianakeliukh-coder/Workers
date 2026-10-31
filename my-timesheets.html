@@ -352,12 +352,16 @@
     flex: 1 1 auto; min-height: 0;
   }
   .add-cols > .sect { min-height: 0; }
-  #sect-list {
-    padding: 14px; border-radius: 10px; background: var(--grey-100);
-    border: 1px solid var(--grey-300); gap: 10px;
+  /* Both halves are cards of the same build, so the pair reads as one
+     choice with two sides. Which one leads is said by the fill, not by
+     one of them having a frame and the other floating loose. */
+  #sect-list, .sect-form {
+    padding: 14px; border-radius: 10px;
+    border: 1px solid var(--grey-350); gap: 10px;
   }
+  #sect-list { background: var(--grey-100); }
   #sect-list .recent-row, #sect-list .search-bar { background: var(--white); }
-  .sect-form { padding-left: 18px; border-left: 1px solid var(--grey-300); gap: 10px; }
+  .sect-form { background: var(--white); }
   .form-scroll { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; }
 
   .sub-head {
