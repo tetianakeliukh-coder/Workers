@@ -234,6 +234,9 @@
   .hr-cell:hover { border-color: var(--border-hover); }
   .hr-cell:focus { outline: none; border-color: var(--primary); }
   .hr-cell.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+  /* A changed cell is still the wrong cell if the day will not hold it,
+     so the error is said after the change, not under it. */
+  .hr-cell.over, .hr-cell.changed.over { border-color: var(--error); background: #fdf2f3; }
   /* Already submitted or finalised: shown, not offered. */
   .hr-cell.locked, .hr-cell.locked:hover {
     background: var(--grey-100); border-color: var(--grey-300);
@@ -298,6 +301,14 @@
     font-variant-numeric: tabular-nums;
   }
   .cp-row input:focus { outline: none; border-color: var(--primary); }
+  .cp-err {
+    display: flex; align-items: flex-start; gap: 6px;
+    margin: -2px 0 0; font-size: 12px; line-height: 16px; color: var(--error);
+  }
+  .cp-err svg { flex-shrink: 0; margin-top: 1px; }
+  /* A tooltip has to be hung on something that still reports a hover, and
+     a disabled button does not. */
+  .tip-wrap { display: inline-flex; }
   .cp-sep {
     margin: 10px 0 8px; padding-top: 10px; border-top: 1px solid var(--grey-200);
     font-size: 12px; color: var(--grey-600);
@@ -421,7 +432,7 @@
           </button>
           <div class="edit-actions" id="edit-actions">
             <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
-            <button class="btn-primary" type="button" id="btn-save">Save</button>
+            <span class="tip-wrap" id="save-wrap"><button class="btn-primary" type="button" id="btn-save">Save</button></span>
           </div>
         </div>
       </div>
@@ -499,6 +510,12 @@
   <label class="cp-row" id="cp-hrow"><span>Hours</span>
     <input id="cp-h" type="text" inputmode="decimal" autocomplete="off" /></label>
   <!-- One claim for this task on this day, named rather than ticked. -->
+  <!-- A day that will not take what was typed says so here, where the
+       typing happened, and not only in a message that slides away. -->
+  <p class="cp-err" id="cp-err" hidden>
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.3v4M8 4.8v.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <span id="cp-err-t"></span>
+  </p>
   <div class="cp-sep">allowance claimed for this day</div>
   <div class="cp-alw" id="cp-alw"></div>
   <!-- No Done: the page is in edit mode and Save at the top is the
@@ -949,12 +966,43 @@
     return '<span class="hr-st st-' + String(name).toLowerCase() + '">' +
       (st.icon || ICO_DRAFT) + '</span>';
   }
-  /* Everything booked to one day, across every task on screen. */
+  /* Everything booked to one day, across every task on screen — drafts
+     included, and drafts written against a day the row did not start on.
+     cellOf answers all three cases. */
   function dayTotal(list, isoDate) {
     return list.reduce(function (n, e) {
-      return e.date === isoDate ? n + (Number(hoursOf(e, isoDate)) || 0) : n;
+      return n + (Number(cellOf(e, isoDate).h) || 0);
     }, 0);
   }
+  /* The cap is one person's day, never a column's: a supervisor's column
+     adds up several people and is meant to be bigger than a day. It is
+     also measured over everything booked, not over what the filters are
+     letting through. */
+  function workerDayTotal(worker, isoDate) {
+    return ENTRIES.concat(pending).reduce(function (n, e) {
+      return e.worker === worker ? n + (Number(cellOf(e, isoDate).h) || 0) : n;
+    }, 0);
+  }
+  /* Every person-day on screen that holds more than a day's worth. */
+  function badDays() {
+    var all = ENTRIES.concat(pending), out = [];
+    days().forEach(function (d) {
+      var k = iso(d), by = Object.create(null), order = [];
+      all.forEach(function (e) {
+        var h = Number(cellOf(e, k).h) || 0;
+        if (!h) return;
+        if (!(e.worker in by)) { by[e.worker] = 0; order.push(e.worker); }
+        by[e.worker] += h;
+      });
+      order.forEach(function (w) {
+        if (by[w] > DAY_CAP) out.push({ date: k, worker: w, hours: by[w] });
+      });
+    });
+    return out;
+  }
+  /* The one cell whose figure put a day over. Everything else on that day
+     was already there and is not what is wrong. */
+  var overKey = null;
   function hoursOf(e, isoDate) { return cellOf(e, isoDate).h; }
 
   /* The cell is a button, not a bare input: typing a number is still the
@@ -964,7 +1012,9 @@
     var c = cellOf(e, isoDate), k = cellKey(e, isoDate);
     var changed = draft && k in draft;
     var st = statusOf(e), lock = st.locked;
+    var dayOver = overKey === k && workerDayTotal(e.worker, isoDate || e.date) > DAY_CAP;
     return '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
+      (dayOver ? ' over' : '') +
       '" type="button" data-cell="' + k + '"' + (lock ? ' disabled data-tip="' + e.status + ' — hours can no longer be changed"' : '') + '>' +
       alwMark(c) +
       (st.icon && !(state.mode === 'period' && dayHasStatus())
@@ -1061,6 +1111,7 @@
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />' +
       '<col style="width:52px" />';
 
+    var overSet = badDays();
     el('grid-head').innerHTML = '<tr>' +
       cols.map(function (c, i) {
         return '<th class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
@@ -1069,11 +1120,17 @@
       }).join('') +
       ds.map(function (d) {
         var k = iso(d), t = k === iso(TODAY);
-        var tot = dayTotal(list, k), over = tot > DAY_CAP;
+        /* The column's own figure is a column's figure — on a supervisor's
+           screen it adds up several people and is meant to be large. What
+           is marked is a person's day going over, whoever that person is. */
+        var tot = dayTotal(list, k);
+        var over = overSet.some(function (b) { return b.date === k; });
         var st = dayHasStatus() ? dayStatus(list, k) : '';
+        var hit = overSet.filter(function (b) { return b.date === k; })[0];
         var tip = (st ? st + (STATUS_META[st] && STATUS_META[st].locked
           ? ' \u2014 hours can no longer be changed' : '') : '') +
-          (over ? (st ? '. ' : '') + fmtHours(tot) + ' h booked \u2014 more than ' + DAY_CAP : '');
+          (hit ? (st ? '. ' : '') + (dayHasStatus() ? '' : hit.worker + ': ') +
+            fmtHours(hit.hours) + ' h booked \u2014 more than ' + DAY_CAP : '');
         return '<th class="col-day' + (t ? ' tdy' : '') + '"' +
           (tip ? ' data-tip="' + Shell.esc(tip) + '"' : '') + '>' +
           '<span class="day-head' + (t ? ' is-today' : '') + '">' +
@@ -1113,8 +1170,12 @@
         var seed = group[0];
         var k = seed.id + '|' + key, changed = draft && k in draft;
         var c = changed ? draft[k] : { h: '', s: '', f: '' };
+        /* A day filled in here is a day like any other, so it answers to
+           the cap like any other. */
+        var dayOver = overKey === k && workerDayTotal(seed.worker, key) > DAY_CAP;
         return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' +
-          '<button class="hr-cell' + (changed ? ' changed' : '') + '" type="button" data-cell="' + k + '">' +
+          '<button class="hr-cell' + (changed ? ' changed' : '') + (dayOver ? ' over' : '') +
+          '" type="button" data-cell="' + k + '">' +
           (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
           '</button></td>';
       }
@@ -1511,14 +1572,27 @@
   }
   function syncEditNote() {
     var n = (draft ? Object.keys(draft).length : 0) + pending.length;
-    var bad = incomplete();
-    el('edit-note').textContent = bad.length
-      ? bad.length + ' row' + (bad.length === 1 ? '' : 's') + ' still to fill in'
-      : (n ? n + ' unsaved change' + (n === 1 ? '' : 's') : 'No changes yet');
-    el('edit-note').classList.toggle('warn', bad.length > 0);
+    var bad = incomplete(), over = badDays();
+    el('edit-note').textContent = over.length
+      ? (over.length === 1
+          ? fmtDay(fromIso(over[0].date)) + ' is over ' + DAY_CAP + ' hours'
+          : over.length + ' days are over ' + DAY_CAP + ' hours')
+      : (bad.length
+          ? bad.length + ' row' + (bad.length === 1 ? '' : 's') + ' still to fill in'
+          : (n ? n + ' unsaved change' + (n === 1 ? '' : 's') : 'No changes yet'));
+    el('edit-note').classList.toggle('warn', bad.length > 0 || over.length > 0);
     /* A half-named row cannot be filed, and dropping it silently on Save
-       is the one thing worse than refusing to save. */
-    el('btn-save').disabled = !n || bad.length > 0;
+       is the one thing worse than refusing to save. A day that does not
+       add up is refused the same way, and the button says which day. */
+    el('btn-save').disabled = !n || bad.length > 0 || over.length > 0;
+    var wrap = el('save-wrap');
+    if (over.length) {
+      wrap.setAttribute('data-tip', over.length === 1
+        ? 'Resolve the error on ' + fmtDay(fromIso(over[0].date)) +
+          ' \u2014 a day holds ' + DAY_CAP + ' hours.'
+        : 'Resolve the errors on ' + over.length + ' days \u2014 a day holds ' +
+          DAY_CAP + ' hours.');
+    } else { wrap.removeAttribute('data-tip'); }
   }
   function enterEdit() {
     state.editing = true; draft = Object.create(null); pending = [];
@@ -1568,7 +1642,7 @@
      Hours, or the times they were worked. Both are recorded because
      different clients record different ones, and times had nowhere to go
      while a cell was a bare number field. */
-  var pop = el('cell-pop'), popKey = null;
+  var pop = el('cell-pop'), popKey = null, popCell = null;
 
   /* The clock here is 24-hour, so "6" can only mean 06:00 — which is what
      people type. The field fills itself in when it loses focus rather
@@ -1660,6 +1734,8 @@
     el('cp-h').value = c.h === '' ? '' : fmtHours(c.h);
     el('cp-s').value = c.s || '';
     el('cp-f').value = c.f || '';
+    popCell = btn;
+    el('cp-err').hidden = true;
 
     var r = btn.getBoundingClientRect();
     pop.classList.add('open');
@@ -1669,6 +1745,41 @@
     pop.style.left = Math.max(8, left) + 'px';
     el('cp-h').focus();
     el('cp-h').select();
+  }
+
+  /* What this person's day has left once this cell's own hours are set
+     aside — the room the figure being typed has to fit into. */
+  function popEntry() {
+    if (!popKey) return null;
+    var id = popKey.slice(0, popKey.indexOf('|'));
+    return ENTRIES.concat(pending).filter(function (x) { return x.id === id; })[0] || null;
+  }
+  function popDate() { return popKey ? popKey.slice(popKey.indexOf('|') + 1) : ''; }
+  function roomLeft() {
+    var e = popEntry();
+    if (!e) return DAY_CAP;
+    var own = Number(cellOf(e, popDate()).h) || 0;
+    return Math.max(0, Math.round((DAY_CAP - (workerDayTotal(e.worker, popDate()) - own)) * 100) / 100);
+  }
+  function typedHours() {
+    if (entryModeFor(popSite) === 'period') {
+      var v = hoursBetween(el('cp-s').value, el('cp-f').value);
+      return v == null ? 0 : v;
+    }
+    var h = el('cp-h').value.trim().replace(',', '.');
+    return h === '' ? 0 : Number(h);
+  }
+  /* Said as it is typed, beside the field it is typed in. */
+  function syncCellErr() {
+    if (!popKey) return;
+    var left = roomLeft(), v = typedHours(), over = !isNaN(v) && v > left;
+    el('cp-err').hidden = !over;
+    if (over) {
+      el('cp-err-t').textContent = fmtHours(left) + ' h left on this day, but ' +
+        fmtHours(v) + ' h was entered.';
+    }
+    /* The cell that was clicked is what is wrong, so it is what turns red. */
+    if (popCell) popCell.classList.toggle('over', over);
   }
 
   /* Two cells are the same when they say the same thing, so an editor
@@ -1696,6 +1807,14 @@
     if (isNaN(v) || v < 0) v = 0;
     var id = popKey.slice(0, popKey.indexOf('|')), date = popKey.slice(popKey.indexOf('|') + 1);
     var e = ENTRIES.concat(pending).filter(function (x) { return x.id === id; })[0];
+    /* Nobody works more than a day in a day — but silently cutting what
+       was typed back to the room left loses the thing the person meant to
+       say. The figure is kept, the cell is marked, and Save is what
+       refuses until the day adds up. */
+    if (e) {
+      var others = workerDayTotal(e.worker, date) - (Number(cellOf(e, date).h) || 0);
+      overKey = (others + v > DAY_CAP) ? popKey : null;
+    }
     var was = draft && popKey in draft ? draft[popKey]
             : (e && e.date === date
                 ? { h: e.hours, s: e.start || '', f: e.finish || '', a: (e.allowances || []).slice() }
@@ -1705,7 +1824,12 @@
     closeCell();
     render();
   }
-  function closeCell() { pop.classList.remove('open'); popKey = null; }
+  function closeCell() {
+    pop.classList.remove('open');
+    popKey = null;
+    popCell = null;
+    el('cp-err').hidden = true;
+  }
 
   /* Times win when both are given, because they are the more specific
      answer — and the figure they imply is shown as it is typed. */
@@ -1715,12 +1839,14 @@
   el('cp-h').addEventListener('input', function () {
     el('cp-s').value = '';
     el('cp-f').value = '';
+    syncCellErr();
   });
 
   ['cp-s', 'cp-f'].forEach(function (id) {
     el(id).addEventListener('input', function () {
       var v = hoursBetween(el('cp-s').value, el('cp-f').value);
       if (v != null) el('cp-h').value = fmtHours(v);
+      syncCellErr();
     });
     el(id).addEventListener('blur', function () {
       this.value = normTime(this.value);
