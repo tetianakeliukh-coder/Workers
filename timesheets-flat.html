@@ -102,7 +102,9 @@
   .gb-row .lock { margin-left: auto; font-size: 12px; color: var(--grey-500); }
 
   /* ─── Table ───────────────────────────────────────────────────────── */
-  .table-scroll { overflow: auto; max-height: calc(100vh - 290px); }
+  /* A classic scrollbar reserves its own lane rather than being drawn
+     over the frozen column at the right edge. */
+  .table-scroll { overflow: auto; max-height: calc(100vh - 290px); scrollbar-gutter: stable; }
   #grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
   #grid thead th {
     position: sticky; top: 0; z-index: 3; background: var(--white); vertical-align: bottom;
@@ -130,11 +132,13 @@
   /* Total and the row's actions are one frozen band at the right edge:
      an action you have to scroll sideways to find is not an action. */
   th.col-hrs, td.col-hrs {
-    position: sticky; right: 52px; z-index: 2; background: inherit; padding-right: 16px;
+    position: sticky; right: 64px; z-index: 2; background: inherit; padding-right: 16px;
   }
+  /* An overlay scrollbar is drawn over the content whatever the gutter
+     says, so the button keeps a lane of its own clear of the edge. */
   th.col-act, td.col-act {
     position: sticky; right: 0; z-index: 2; background: inherit;
-    padding: 0 8px 0 4px; text-align: center; overflow: visible;
+    padding: 0 20px 0 0; text-align: center; overflow: visible;
   }
   #grid thead th.col-act { z-index: 4; }
   #grid thead th.col-hrs { z-index: 4; }
@@ -381,7 +385,7 @@
     border: 1px solid var(--grey-350); background: var(--white);
     color: var(--grey-600);
   }
-  .row-act:hover { border-color: var(--primary); color: var(--primary); background: var(--bg-blue-light); }
+  .row-act:hover { border-color: var(--border-hover); color: var(--text-main); background: var(--grey-100); }
   /* Throwing away is the one thing in this column that is not additive. */
   .row-drop:hover { border-color: var(--error); color: var(--error); background: var(--white); }
 
@@ -1109,7 +1113,7 @@
 
     el('grid-cols').innerHTML = cols.map(function (c) { return '<col style="width:' + c.w + 'px" />'; }).join('') +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />' +
-      '<col style="width:52px" />';
+      '<col style="width:64px" />';
 
     var overSet = badDays();
     el('grid-head').innerHTML = '<tr>' +
@@ -1144,7 +1148,7 @@
       '</span>' + Shell.colGrip() + '</th>' +
       '<th class="col-act"></th></tr>';
 
-    el('grid').style.minWidth = (off + ds.length * 92 + 92 + 52) + 'px';
+    el('grid').style.minWidth = (off + ds.length * 92 + 92 + 64) + 'px';
 
     var out = [], shown = 0, openKeys = [];
 
@@ -1305,7 +1309,7 @@
 
     el('grid-cols').innerHTML = cols.map(function (c) {
       return '<col style="width:' + c.w + 'px" />';
-    }).join('') + '<col style="width:52px" />';
+    }).join('') + '<col style="width:64px" />';
 
     el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
       var isLead = i < lead.length;
@@ -1391,7 +1395,7 @@
       : '<tr><td colspan="' + (cols.length + 1) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
 
     el('grid').style.minWidth =
-      (cols.reduce(function (n, c) { return n + c.w; }, 0) + 52) + 'px';
+      (cols.reduce(function (n, c) { return n + c.w; }, 0) + 64) + 'px';
     finish(shown, list, openKeys);
   }
 
@@ -1570,29 +1574,76 @@
         (state.tab !== 'mine' && !r.worker);
     });
   }
+  /* The dates this row will actually write to. A row that writes nothing
+     is not a change, whatever the counter says. */
+  function datesOn(r) {
+    var out = [];
+    Object.keys(draft || {}).forEach(function (k) {
+      if (k.indexOf(r.id + '|') !== 0) return;
+      if (Number(draft[k].h) > 0) out.push(k.slice(k.indexOf('|') + 1));
+    });
+    return out;
+  }
+  function sameAsExisting(r, d) {
+    return ENTRIES.some(function (e) {
+      return e.date === d && e.worker === r.worker && e.site === r.site &&
+        e.sup === r.sup && e.project === r.project && e.task === r.task;
+    });
+  }
+  /* A copy that has not been changed is the row it was copied from. The
+     same task cannot sit on the same day twice, so Save waits until
+     something about it is different — another day, or another task. */
+  function clashRows() {
+    return pending.filter(function (r) {
+      if (rowGaps(r).length) return false;
+      var ds = datesOn(r);
+      return ds.length > 0 && ds.every(function (d) { return sameAsExisting(r, d); });
+    });
+  }
+  /* A row with no hours on it never becomes an entry, so saving would
+     quietly throw it away. */
+  function emptyRows() {
+    return pending.filter(function (r) {
+      return !rowGaps(r).length && datesOn(r).length === 0;
+    });
+  }
+
   function syncEditNote() {
     var n = (draft ? Object.keys(draft).length : 0) + pending.length;
-    var bad = incomplete(), over = badDays();
-    el('edit-note').textContent = over.length
-      ? (over.length === 1
-          ? fmtDay(fromIso(over[0].date)) + ' is over ' + DAY_CAP + ' hours'
-          : over.length + ' days are over ' + DAY_CAP + ' hours')
-      : (bad.length
-          ? bad.length + ' row' + (bad.length === 1 ? '' : 's') + ' still to fill in'
-          : (n ? n + ' unsaved change' + (n === 1 ? '' : 's') : 'No changes yet'));
-    el('edit-note').classList.toggle('warn', bad.length > 0 || over.length > 0);
-    /* A half-named row cannot be filed, and dropping it silently on Save
-       is the one thing worse than refusing to save. A day that does not
-       add up is refused the same way, and the button says which day. */
-    el('btn-save').disabled = !n || bad.length > 0 || over.length > 0;
-    var wrap = el('save-wrap');
+    var bad = incomplete(), over = badDays(), clash = clashRows(), blank = emptyRows();
+    /* One reason at a time, the most specific first — a list of
+       everything wrong at once is a list nobody reads. */
+    var stop = '', tip = '';
     if (over.length) {
-      wrap.setAttribute('data-tip', over.length === 1
+      stop = over.length === 1
+        ? fmtDay(fromIso(over[0].date)) + ' is over ' + DAY_CAP + ' hours'
+        : over.length + ' days are over ' + DAY_CAP + ' hours';
+      tip = over.length === 1
         ? 'Resolve the error on ' + fmtDay(fromIso(over[0].date)) +
           ' \u2014 a day holds ' + DAY_CAP + ' hours.'
         : 'Resolve the errors on ' + over.length + ' days \u2014 a day holds ' +
-          DAY_CAP + ' hours.');
-    } else { wrap.removeAttribute('data-tip'); }
+          DAY_CAP + ' hours.';
+    } else if (bad.length) {
+      stop = bad.length + ' row' + (bad.length === 1 ? '' : 's') + ' still to fill in';
+      tip = 'Finish the new row' + (bad.length === 1 ? '' : 's') + ' before saving.';
+    } else if (clash.length) {
+      stop = clash.length === 1 ? 'That row is already on the timesheet'
+        : clash.length + ' rows are already on the timesheet';
+      tip = 'A copy is the row it was copied from until something on it changes ' +
+        '\u2014 book it to another day, or name another task.';
+    } else if (blank.length) {
+      stop = blank.length === 1 ? 'The new row has no hours'
+        : blank.length + ' new rows have no hours';
+      tip = 'A row with no hours on it is not saved, so there would be nothing to save.';
+    }
+    el('edit-note').textContent = stop ||
+      (n ? n + ' unsaved change' + (n === 1 ? '' : 's') : 'No changes yet');
+    el('edit-note').classList.toggle('warn', !!stop);
+    /* Refusing out loud beats filing something wrong, or dropping it
+       silently on the way through. */
+    el('btn-save').disabled = !n || !!stop;
+    var wrap = el('save-wrap');
+    if (tip) wrap.setAttribute('data-tip', tip); else wrap.removeAttribute('data-tip');
   }
   function enterEdit() {
     state.editing = true; draft = Object.create(null); pending = [];
@@ -1891,16 +1942,23 @@
     if (!sel) return;
     var row = pending.filter(function (x) { return x.id === sel.getAttribute('data-row'); })[0];
     if (!row) return;
-    var k = sel.getAttribute('data-field');
+    var k = sel.getAttribute('data-field'), was = row[k];
     row[k] = sel.value;
-    /* The site is what the other answers are drawn from, so changing it
-       lets go of the ones that came from the old one. */
-    if (k === 'site') {
-      row.levels = []; row.task = '';
-      row.sup = supervisorOn(row.date, row.site) || (SUPS[row.site] || [])[0] || '';
-      row.project = (PROJECTS[row.site] || [])[0] || '';
+    /* Hours are kept against a date, so moving the row to another day has
+       to take them with it — otherwise the figure stays booked to the day
+       it was typed on and the row saves to two days at once. */
+    if (k === 'date' && was !== row.date) {
+      Object.keys(draft || {}).forEach(function (key) {
+        if (key !== row.id + '|' + was) return;
+        draft[row.id + '|' + row.date] = draft[key];
+        delete draft[key];
+      });
     }
-    if (k === 'date') row.sup = supervisorOn(row.date, row.site) || row.sup;
+    /* The site is what the other answers are drawn from, so changing it
+       lets go of the ones that came from the old one — and does not
+       guess the new ones. A site runs several supervisors and several
+       projects, and a guess printed as an answer is read as one. */
+    if (k === 'site') { row.levels = []; row.task = ''; row.sup = ''; row.project = ''; }
     render();
   });
 
@@ -1954,10 +2012,6 @@
       allowances: [], start: '', finish: '', hours: '', isNew: true
     };
     Object.keys(seed || {}).forEach(function (k) { if (seed[k]) row[k] = seed[k]; });
-    /* A site answers for a supervisor and a project, so a seed that
-       names one does not have to name the others. */
-    if (row.site && !row.sup) row.sup = supervisorOn(row.date, row.site) || (SUPS[row.site] || [])[0] || '';
-    if (row.site && !row.project) row.project = (PROJECTS[row.site] || [])[0] || '';
     pending.unshift(row);
     justAdded = row.id;
     addedOn = row.date;
@@ -2095,11 +2149,7 @@
     if (k.indexOf('lvl') === 0) r.levels[Number(k.slice(3))] = sel.value;
     else {
       r[k] = sel.value;
-      if (k === 'site') {
-        r.levels = [];
-        r.sup = supervisorOn(r.date, r.site) || (SUPS[r.site] || [])[0] || '';
-        r.project = (PROJECTS[r.site] || [])[0] || '';
-      }
+      if (k === 'site') { r.levels = []; r.sup = ''; r.project = ''; }
     }
     /* A task is its levels, in order, as far as they have been given. */
     r.task = (r.levels || []).filter(Boolean).join(' | ');

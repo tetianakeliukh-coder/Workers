@@ -443,6 +443,17 @@
      answers come back as comments or in the call, not typed in here. */
   var QUESTIONS = [
     {
+      screen: 'My Timesheets',
+      q: 'Can we agree one icon per timesheet status?',
+      why: 'A status is shown as an icon wherever there is no room for the word \u2014 at the head ' +
+           'of a day column, and on a cell whose hours are locked. The prototype is drawing its own: ' +
+           'a dashed circle for Draft, a pencil for Revised, an upward arrow in a circle for ' +
+           'Submitted, and a padlock for Finalised. Four statuses, four marks, and they have to be ' +
+           'told apart at 13px and in one glance.',
+      now: 'The four above are in use, with the status spelled out in the tooltip. They are a ' +
+           'placeholder until the set is agreed, and changing them later changes every screen.'
+    },
+    {
       screen: 'Supervisor Timesheets',
       q: 'Should allowance lines show in the Period view?',
       why: 'Period is a day-by-day grid of hours. An allowance is claimed on a line of its own ' +
