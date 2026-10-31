@@ -348,20 +348,19 @@
      has the page and the width, and creating one sits beside it on a
      panel of its own — the way an aside reads as an aside. */
   .add-cols {
-    display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 0 18px;
+    display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 0 18px;
     flex: 1 1 auto; min-height: 0;
   }
   .add-cols > .sect { min-height: 0; }
   /* Both halves are cards of the same build, so the pair reads as one
-     choice with two sides. Which one leads is said by the fill, not by
-     one of them having a frame and the other floating loose. */
-  #sect-list, .sect-form {
-    padding: 14px; border-radius: 10px;
-    border: 1px solid var(--grey-350); gap: 10px;
-  }
+     choice with two sides. Which one leads is said by the ground each
+     stands on: the one that acts is drawn, the shortcut is only tinted —
+     a tint and a ring together made it the heavier of the two, which is
+     the wrong way round. */
+  #sect-list, .sect-form { padding: 14px; border-radius: 10px; gap: 10px; }
   #sect-list { background: var(--grey-100); }
   #sect-list .recent-row, #sect-list .search-bar { background: var(--white); }
-  .sect-form { background: var(--white); }
+  .sect-form { background: var(--white); border: 1px solid var(--grey-350); }
   .form-scroll { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; }
 
   .sub-head {
@@ -1098,28 +1097,15 @@
         </div>
 
         <!-- A list and a form are both tall, and stacking them left the
-             list three rows high. Side by side the list gets the whole
-             height of the dialog and the form costs it nothing. Which of
-             the two leads is said by width and by ground: the list is on
-             the page, the form is on a panel beside it. -->
+             list three rows high. Side by side, the form takes the width
+             its fields need and the list takes the rest, which is where
+             the long names are. -->
         <div class="add-cols">
-          <div class="sect" id="sect-list">
-            <div class="sect-head">
-              <h4>Select from recent tasks</h4>
-              <span class="n" id="pick-n"></span>
-            </div>
-            <!-- With more than a screenful, finding one is a search, not
-                 a scroll — which is also what it will be in production,
-                 where a site has hundreds. -->
-            <label class="search-bar tsearch">
-              <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-              <input class="search-input-el" id="task-q" type="text" placeholder="Search tasks" autocomplete="off" />
-            </label>
-            <div class="tlist" id="recent-list"></div>
-          </div>
-
+          <!-- Creating is the thing the dialog is for; the recent list is
+               a shortcut beside it for the weeks that repeat. Whichever
+               side a task was named on is the side it stays on. -->
           <div class="sect sect-form">
-            <div class="sect-head"><h4>Or create a task</h4></div>
+            <div class="sect-head"><h4>Create a task</h4></div>
             <div class="form-scroll">
               <!-- What creating has produced so far, at the top of the
                    half that produced it. -->
@@ -1135,6 +1121,21 @@
                 Add another task
               </button>
             </div>
+          </div>
+
+          <div class="sect" id="sect-list">
+            <div class="sect-head">
+              <h4>Or pick a recent task</h4>
+              <span class="n" id="pick-n"></span>
+            </div>
+            <!-- With more than a screenful, finding one is a search, not
+                 a scroll — which is also what it will be in production,
+                 where a site has hundreds. -->
+            <label class="search-bar tsearch">
+              <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              <input class="search-input-el" id="task-q" type="text" placeholder="Search tasks" autocomplete="off" />
+            </label>
+            <div class="tlist" id="recent-list"></div>
           </div>
         </div>
       </div>
@@ -2639,7 +2640,7 @@
         (html ? ' The tasks above are the ones you have already selected.' : '') + '</div>';
     }
     el('recent-list').innerHTML = html ||
-      '<div class="recent-empty">Nothing booked here before &mdash; create one on the right.</div>';
+      '<div class="recent-empty">Nothing booked here before &mdash; create one on the left.</div>';
 
     var ticked = allPicked().length - cards.length;
     el('pick-n').textContent = ticked ? ticked + ' selected' : '';
@@ -2789,8 +2790,8 @@
     addModal.classList.add('open');
   }
 
-  /* One pass after any answer changes: the list on the right is a view of
-     the form on the left, so it is never updated on its own. */
+  /* One pass after any answer changes: the list and the form are two
+     views of one set of picks, so neither is updated on its own. */
   function sync() {
     renderStack();
     syncDayHint();
@@ -2860,12 +2861,10 @@
   el('add-more').addEventListener('click', function () {
     if (!levelsDone(editing.levels)) return;
     var k = keyFor(editing.levels);
-    var known = recentCache.some(function (r) { return keyFor(r.meta.levels) === k; });
-    if (known) {
-      /* It is not a new task: it is one of the ones on the left. */
-      ticks[k] = 1;
-      Shell.snackbar('That task already exists — ticked it in the list instead.');
-    } else if (weekKeys().indexOf(k) !== -1) {
+    /* Naming one the list also offers does not hand it over to the list:
+       a task shows where it was named, and the recent row for it drops
+       out so it is never on screen twice. */
+    if (weekKeys().indexOf(k) !== -1) {
       Shell.snackbar('That task is already on this timesheet.');
     } else if (!cards.some(function (c) { return keyFor(c.levels) === k; })) {
       cards.unshift({ levels: editing.levels.slice() });
