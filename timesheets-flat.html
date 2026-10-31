@@ -202,6 +202,10 @@
   body.editing #btn-new-task { display: inline-flex; }
   .edit-note { display: none; font-size: 13px; color: var(--grey-600); white-space: nowrap; }
   body.editing .edit-note { display: inline; }
+  .edit-note.warn { color: var(--error); }
+  /* An edit is made against one week. Changing which week it is while
+     half of it is unsaved has no sound answer, so it is not offered. */
+  body.editing #date-dd .dd-trigger { opacity: 0.5; pointer-events: none; }
   .btn-outline {
     height: 36px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
@@ -303,6 +307,28 @@
     background-repeat: no-repeat; background-position: right 8px center; padding-right: 26px;
   }
   .cell-input:focus { outline: none; border-color: var(--primary); }
+  .cell-input:disabled { background: var(--grey-100); color: var(--grey-500); }
+  /* A cell that is still a question. A task is three fields and the
+     column is one, so the cell is a way in rather than three controls
+     crushed side by side. */
+  .task-pick {
+    display: block; width: 100%; height: 30px; line-height: 28px; padding: 0 8px;
+    cursor: pointer; text-align: left;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+    border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .task-pick:hover { border-color: var(--border-hover); }
+  .task-pick.empty { color: var(--grey-500); }
+  /* Nothing is wrong until it is left wrong: a blank on a row being
+     added is marked, because Save is held until it is filled. */
+  .task-pick.need, .cell-input.need { border-color: var(--error); }
+  /* Names, not numbers, so it is wider than the hours editor. */
+  .task-pop { width: 280px; }
+  .tp-fld { display: block; margin-bottom: 10px; }
+  .tp-fld:last-child { margin-bottom: 0; }
+  .tp-lab { display: block; margin-bottom: 4px; font-size: 12px; color: var(--grey-600); }
+  #tp-done { font-weight: 500; }
   td.col-day, th.col-day { text-align: right; font-variant-numeric: tabular-nums; }
   td.col-day > .cell-empty, td.col-day { line-height: 1; }
   th.col-day .dh { display: flex; flex-direction: column; align-items: flex-end; line-height: 15px; }
@@ -319,50 +345,6 @@
   }
   .row-drop:hover { color: var(--error); background: var(--grey-100); }
 
-  /* ─── Add a task ──────────────────────────────────────────────────
-     The same dialog language as My Timesheets: fields, an accordion with
-     one section open at a time, and recent work as selectable cards. */
-  .modal.add-modal { max-width: 440px; width: 100%; }
-  .add-modal .modal-body {
-    padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 14px;
-    flex: 0 1 auto; max-height: 62vh; overflow: auto;
-  }
-  .fld { display: flex; flex-direction: column; gap: 6px; }
-  .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
-  .fld select {
-    width: 100%; height: 36px; padding: 0 34px 0 10px;
-    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
-    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
-    appearance: none; -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23757575' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center;
-  }
-  .fld select:focus { outline: none; border-color: var(--primary); }
-
-  /* .acc-body and the field groups set display, which beats the browser's
-     own [hidden] rule — so say it louder. */
-  [hidden] { display: none !important; }
-  .sec { padding-top: 14px; border-top: 1px solid var(--grey-300); }
-  .sec-head {
-    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-    margin-bottom: 10px;
-  }
-  #new-task { display: flex; flex-direction: column; gap: 14px; }
-  #nt-levels { display: flex; flex-direction: column; gap: 14px; }
-  .step-title { font-family: var(--fs-sans); font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
-
-  .recent-list { display: flex; flex-direction: column; gap: 6px; }
-  .recent-row {
-    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
-    width: 100%; padding: 10px 12px; border-radius: 8px; cursor: pointer; text-align: left;
-    background: var(--white); border: 1px solid var(--grey-200); font-family: var(--fs-sans);
-    transition: border-color var(--t-fast), background var(--t-fast);
-  }
-  .recent-row:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
-  .recent-row.sel { border-color: var(--primary); background: var(--bg-blue-light); }
-  .rr-code { font-size: 14px; font-weight: 500; color: var(--text-main); }
-  .rr-sub { font-size: 12px; line-height: 16px; color: var(--grey-600); }
-  .recent-empty { font-size: 13px; color: var(--grey-600); }
 
   /* The row that was just added: findable at a glance, and it fades out
      once it is no longer the newest thing on screen. */
@@ -497,53 +479,15 @@
   </div>
 </div>
 
-<!-- ── Add a task ───────────────────────────────────────────────────
-     One screen, mostly a list. Recent tasks are the way in, because most
-     of what a person adds is work they have done before; setting up one
-     they have never booked is folded away behind the second section. -->
-<div class="modal-backdrop" id="add-modal" role="dialog" aria-modal="true" aria-labelledby="add-title">
-  <div class="modal modal-sm add-modal">
-    <div class="modal-header">
-      <div class="modal-heading"><span class="modal-title" id="add-title">Add a task</span></div>
-      <button class="modal-close" type="button" data-close aria-label="Close">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div class="fld" id="who-fld" hidden>
-        <label class="fld-label" for="add-worker">Worker</label>
-        <select id="add-worker"></select>
-      </div>
-
-      <div class="fld">
-        <label class="fld-label" for="add-date">Date</label>
-        <select id="add-date"></select>
-      </div>
-
-      <!-- Two ways to name the task, side by side in one heading rather
-           than one folded under the other, where the second was never
-           found. -->
-      <div class="sec">
-        <div class="sec-head">
-          <span class="step-title" id="sec-title">Recent tasks</span>
-          <button class="btn-text" type="button" id="sec-switch">Set up another task</button>
-        </div>
-        <div class="recent-list" id="recent-list"></div>
-        <div id="new-task" hidden>
-          <div class="fld">
-            <label class="fld-label" for="nt-site">Site</label>
-            <select id="nt-site"></select>
-          </div>
-          <div id="nt-levels"></div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <div class="modal-footer-actions">
-        <button class="btn-ghost" type="button" data-close>Cancel</button>
-        <button class="btn-primary" type="button" id="add-go" disabled>Add</button>
-      </div>
-    </div>
+<!-- ── What this row is for ─────────────────────────────────────────
+     Entries has a column for every answer, so this asks only for the
+     task's own fields. Period has one column — the task — so the rest of
+     the row is asked here too, beside the cell it belongs to. -->
+<div class="cell-pop task-pop" id="task-pop" role="dialog" aria-label="What this row is for">
+  <div id="tp-fields"></div>
+  <div class="cp-foot">
+    <button class="btn-text" type="button" id="tp-clear">Clear</button>
+    <button class="btn-text" type="button" id="tp-done">Done</button>
   </div>
 </div>
 
@@ -873,6 +817,9 @@
   function rows() {
     var b = bounds(), q = state.q.toLowerCase();
     return ENTRIES.concat(pending).filter(function (e) {
+      /* A row being added is on screen because it was just added, not
+         because it matched anything — half of it is still blank. */
+      if (e.isNew) return true;
       if (state.tab === 'mine' && e.worker !== ME) return false;
       if (b && (e.date < b.from || e.date > b.to)) return false;
       if (!q) return true;
@@ -965,15 +912,39 @@
   /* A field the context could not supply arrives as a cell on the row,
      prefilled with the best guess, rather than as another question in a
      dialog before the row exists. */
+  function optsFor(e, k) {
+    var plain = function (a) { return (a || []).map(function (x) { return { v: x, t: x }; }); };
+    if (k === 'date') return days().map(function (d) { return { v: iso(d), t: fmtDay(d) }; });
+    if (k === 'site') return plain(SITES);
+    if (k === 'sup') return plain(SUPS[e.site]);
+    if (k === 'worker') return plain(WORKERS);
+    if (k === 'project') return plain(PROJECTS[e.site]);
+    return [];
+  }
+  /* Which of a new row's cells are its own questions. The worker is one
+     only where there is more than one worker on screen. */
+  var PICKABLE = { date: 1, site: 1, sup: 1, worker: 1, project: 1 };
+  function isPick(e, k) {
+    if (!e.isNew) return false;
+    if (k === 'worker') return state.tab !== 'mine';
+    return !!PICKABLE[k];
+  }
   function pickCell(e, f) {
-    var opts = f.k === 'date'
-      ? days().map(function (d) { return { v: iso(d), t: fmtDay(d) }; })
-      : (f.k === 'sup' ? (SUPS[e.site] || []) : []).map(function (x) { return { v: x, t: x }; });
-    return '<select class="cell-input" data-field="' + f.k + '" data-row="' + e.id + '">' +
+    var opts = optsFor(e, f.k);
+    /* Site decides what the other answers can be, so until it is given
+       they have nothing to offer. */
+    var off = !e.site && (f.k === 'sup' || f.k === 'project');
+    return '<select class="cell-input' + (e[f.k] ? '' : ' need') + '" data-field="' + f.k +
+      '" data-row="' + e.id + '"' + (off ? ' disabled' : '') + '>' +
+      '<option value="">Select\u2026</option>' +
       opts.map(function (o) {
         return '<option value="' + Shell.esc(o.v) + '"' + (o.v === e[f.k] ? ' selected' : '') + '>' +
           Shell.esc(o.t) + '</option>';
       }).join('') + '</select>';
+  }
+  function taskBtn(e) {
+    return '<button class="task-pick' + (e.task ? '' : ' empty need') + '" type="button" data-task="' +
+      e.id + '">' + (e.task ? Shell.esc(e.task) : 'Select task\u2026') + '</button>';
   }
 
   function cellHtml(e, f) {
@@ -983,7 +954,8 @@
       return e.hours === '' ? '<span class="cell-empty">&mdash;</span>' : fmtHours(e.hours);
     }
     if (f.k === 'status') return statusChip(e.status);
-    if (e.isNew && (f.k === 'date' || f.k === 'sup')) return pickCell(e, f);
+    if (e.isNew && f.k === 'task') return taskBtn(e);
+    if (isPick(e, f.k)) return pickCell(e, f);
     var v = f.get(e);
     return v ? Shell.highlight(v, state.q) : '<span class="cell-empty">&mdash;</span>';
   }
@@ -1069,14 +1041,17 @@
       }, 0);
       return '<tr class="' + (fresh ? 'new-row' : '') + (isJust ? ' just-added' : '') + '">' +
         cols.map(function (c, i) {
-          var html = i === cols.length - 1
-            ? Shell.highlight(e.task, state.q)
-            : '';
+          var html = '';
+          if (i === cols.length - 1) {
+            /* With one column for the whole row, the task cell is where
+               everything the row still needs is asked. */
+            html = fresh ? taskBtn(fresh) : Shell.highlight(e.task, state.q);
+          }
           return '<td class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
             '" style="left:' + offs[i] + 'px">' + html + '</td>';
         }).join('') +
         ds.map(function (d) { return dayCell(group, d); }).join('') +
-        '<td class="num col-hrs">' + fmtHours(total) + '</td></tr>';
+        '<td class="num col-hrs">' + fmtHours(total) + '</td>' + actCell(fresh) + '</tr>';
     }
 
     function headRow(node, depth, key, open) {
@@ -1118,9 +1093,14 @@
       });
     }
 
+    /* A row being added sits above everything, on its own: it has no
+       values yet to be grouped by, and it is the thing to look at. */
+    var fresh = list.filter(function (e) { return e.isNew; });
+    var settled = list.filter(function (e) { return !e.isNew; });
+    fresh.forEach(function (e) { out.push(taskRow([e])); });
     var g = groups();
-    if (!g.length) leafRows(list).forEach(function (grp) { out.push(taskRow(grp)); });
-    else walk(nest(list, g), 1, '');
+    if (!g.length) leafRows(settled).forEach(function (grp) { out.push(taskRow(grp)); });
+    else walk(nest(settled, g), 1, '');
 
     el('grid-body').innerHTML = out.length ? out.join('')
       : '<tr><td colspan="' + (cols.length + ds.length + 2) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
@@ -1179,8 +1159,8 @@
           /* A row still being added shows its grouped fields as pickers
              rather than blanks: those are what decide where it lands, so
              a wrong guess has to be correctable from the row itself. */
-          if (e.isNew && (c.k === 'date' || c.k === 'sup')) return leadCell(i, pickCell(e, c));
-          if (e.isNew && c.k === 'site') return leadCell(i, '<span class="g-tally-in">' + Shell.esc(e.site) + '</span>');
+          if (e.isNew && c.k === 'task') return leadCell(i, taskBtn(e));
+          if (isPick(e, c.k)) return leadCell(i, pickCell(e, c));
           return leadCell(i, '');
         }).join('') +
         rest.map(function (c) {
@@ -1229,8 +1209,11 @@
       });
     }
 
-    if (!g.length) list.forEach(function (e) { out.push(entryRow(e)); });
-    else walk(nest(list, g), 1, '');
+    var fresh = list.filter(function (e) { return e.isNew; });
+    var settled = list.filter(function (e) { return !e.isNew; });
+    fresh.forEach(function (e) { out.push(entryRow(e)); });
+    if (!g.length) settled.forEach(function (e) { out.push(entryRow(e)); });
+    else walk(nest(settled, g), 1, '');
 
     el('grid-body').innerHTML = out.length
       ? out.join('')
@@ -1409,17 +1392,32 @@
   });
 
   /* ─── Edit mode ─────────────────────────────────────────────────── */
+  /* What a row still owes before it can be filed. */
+  function incomplete() {
+    return pending.filter(function (r) {
+      return !r.site || !r.sup || !r.project || !r.task ||
+        (state.tab !== 'mine' && !r.worker);
+    });
+  }
   function syncEditNote() {
     var n = (draft ? Object.keys(draft).length : 0) + pending.length;
-    el('edit-note').textContent = n ? n + ' unsaved change' + (n === 1 ? '' : 's') : 'No changes yet';
-    el('btn-save').disabled = !n;
+    var bad = incomplete();
+    el('edit-note').textContent = bad.length
+      ? bad.length + ' row' + (bad.length === 1 ? '' : 's') + ' still to fill in'
+      : (n ? n + ' unsaved change' + (n === 1 ? '' : 's') : 'No changes yet');
+    el('edit-note').classList.toggle('warn', bad.length > 0);
+    /* A half-named row cannot be filed, and dropping it silently on Save
+       is the one thing worse than refusing to save. */
+    el('btn-save').disabled = !n || bad.length > 0;
   }
   function enterEdit() {
     state.editing = true; draft = Object.create(null); pending = [];
+    Shell.closeAllDropdowns();
     render();
   }
   function exitEdit() {
     state.editing = false; draft = null; pending = []; justAdded = null;
+    closeTaskPop();
     render();
   }
   el('btn-edit').addEventListener('click', enterEdit);
@@ -1657,8 +1655,16 @@
     if (!sel) return;
     var row = pending.filter(function (x) { return x.id === sel.getAttribute('data-row'); })[0];
     if (!row) return;
-    row[sel.getAttribute('data-field')] = sel.value;
-    if (sel.getAttribute('data-field') === 'date') row.sup = supervisorOn(row.date, row.site) || row.sup;
+    var k = sel.getAttribute('data-field');
+    row[k] = sel.value;
+    /* The site is what the other answers are drawn from, so changing it
+       lets go of the ones that came from the old one. */
+    if (k === 'site') {
+      row.levels = []; row.task = '';
+      row.sup = supervisorOn(row.date, row.site) || (SUPS[row.site] || [])[0] || '';
+      row.project = (PROJECTS[row.site] || [])[0] || '';
+    }
+    if (k === 'date') row.sup = supervisorOn(row.date, row.site) || row.sup;
     render();
   });
 
@@ -1673,171 +1679,164 @@
   });
 
   /* ─── Add a task ────────────────────────────────────────────────────
-     The only question is which task. The site comes with it, because the
-     custom fields are configured per site; the supervisor is looked up
-     from site and date; the date is whichever day you then type into, or
-     a cell on the row when the view has no day columns. */
+     Not a dialog. Add task drops an empty row at the top of the table and
+     the row itself is the form: every answer is a cell, on the line the
+     answer will live on. Which cells those are depends on the view —
+     Entries has a column per field, Period has one, the task. */
   function supervisorOn(date, site) {
     var found = null;
     ENTRIES.forEach(function (e) { if (!found && e.date === date && e.site === site) found = e.sup; });
     return found;
   }
-  /* Recent is scoped to the person the row is for: a supervisor adding
-     on someone's behalf is shown that worker's own history, not their
-     own. Newest first, one entry per distinct task. */
-  function recentFor(worker) {
-    var seen = Object.create(null), out = [];
-    ENTRIES.filter(function (e) { return e.worker === worker && e.task; })
-      .sort(function (a, b) { return a.date < b.date ? 1 : -1; })
-      .forEach(function (e) {
-        var k = e.site + '\u00a7' + e.task;
-        if (seen[k]) return;
-        seen[k] = true;
-        out.push({ site: e.site, task: e.task, project: e.project, when: e.date });
-      });
-    return out.slice(0, 6);
+
+  /* The day the week is sitting on, so the row lands somewhere real. */
+  function defaultDate() {
+    var ds = days(), t = iso(TODAY);
+    if (ds.some(function (d) { return iso(d) === t; })) return t;
+    return ds.length ? iso(ds[0]) : t;
   }
 
-  var addModal = el('add-modal');
-  var addPick = null;          // the recent card chosen, if any
-
-  function addWorker() {
-    return state.tab === 'mine' ? ME : (el('add-worker').value || ME);
-  }
-  var addMode = 'recent';
-  function setAddMode(m) {
-    addMode = m;
-    el('recent-list').hidden = m !== 'recent';
-    el('new-task').hidden = m !== 'new';
-    el('sec-title').textContent = m === 'recent' ? recentTitle : 'Set up another task';
-    /* Each side names where it goes, not where you came from. */
-    el('sec-switch').textContent = m === 'recent' ? 'Set up another task' : 'Select recent task';
-    syncAddGo();
-  }
-  var recentTitle = 'Recent tasks';
-  function renderLevels() {
-    var site = el('nt-site').value, fields = SITE_FIELDS[site] || [];
-    el('nt-levels').innerHTML = fields.map(function (f, i) {
-      return '<div class="fld"><label class="fld-label" for="nt-' + i + '">' + Shell.esc(f.name) +
-        (i === 0 ? '<span style="color:var(--error)">*</span>' : ' <span style="color:var(--grey-600);font-weight:400">(optional)</span>') +
-        '</label><select id="nt-' + i + '" data-lvl="' + i + '"><option value="">Select…</option>' +
-        f.values.map(function (v) { return '<option>' + Shell.esc(v) + '</option>'; }).join('') +
-        '</select></div>';
-    }).join('');
-  }
-  function newTaskPath() {
-    return [].slice.call(el('nt-levels').querySelectorAll('select'))
-      .map(function (x) { return x.value; }).filter(Boolean).join(' | ');
-  }
-  function syncAddGo() {
-    el('add-go').disabled = addMode === 'new'
-      ? !el('nt-0') || !el('nt-0').value
-      : !addPick;
-  }
-
-  function renderRecent() {
-    var list = recentFor(addWorker());
-    recentTitle = 'Recent tasks' + (list.length ? ' (' + list.length + ')' : '');
-    if (addMode === 'recent') el('sec-title').textContent = recentTitle;
-    el('recent-list').innerHTML = list.length ? list.map(function (t, i) {
-      return '<button class="recent-row" type="button" data-recent="' + i + '">' +
-        '<span class="rr-code">' + Shell.esc(t.task) + '</span>' +
-        '<span class="rr-sub">' + Shell.esc(t.site) + ' · ' + Shell.esc(t.project) +
-        ' · last booked ' + fmtDay(fromIso(t.when)) + '</span></button>';
-    }).join('') : '<div class="recent-empty">Nothing booked yet. Set one up below.</div>';
-    recentCache = list;
-    addPick = null;
-    syncAddGo();
-  }
-  var recentCache = [];
-
-  el('btn-new-task').addEventListener('click', function () {
-    el('who-fld').hidden = state.tab === 'mine';
-    if (state.tab !== 'mine') {
-      el('add-worker').innerHTML = WORKERS.map(function (w) {
-        return '<option' + (w === ME ? ' selected' : '') + '>' + Shell.esc(w) + '</option>';
-      }).join('');
-    }
-    el('nt-site').innerHTML = SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
-    /* The date is a field, not a guess the person has to work out from
-       the table afterwards. */
-    var ds = days(), today = iso(TODAY);
-    var has = ds.some(function (d) { return iso(d) === today; });
-    el('add-date').innerHTML = ds.map(function (d) {
-      return '<option value="' + iso(d) + '"' +
-        ((has ? iso(d) === today : d === ds[0]) ? ' selected' : '') + '>' + fmtDay(d) + '</option>';
-    }).join('');
-    renderLevels();
-    renderRecent();
-    setAddMode('recent');
-    addModal.classList.add('open');
-  });
-
-  el('add-worker').addEventListener('change', renderRecent);
-  el('nt-site').addEventListener('change', function () { renderLevels(); syncAddGo(); });
-  el('nt-levels').addEventListener('change', syncAddGo);
-
-  el('sec-switch').addEventListener('click', function () {
-    setAddMode(addMode === 'recent' ? 'new' : 'recent');
-  });
-
-  el('recent-list').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-recent]');
-    if (!b) return;
-    addPick = recentCache[Number(b.getAttribute('data-recent'))];
-    this.querySelectorAll('.recent-row').forEach(function (x) { x.classList.toggle('sel', x === b); });
-    syncAddGo();
-  });
-
-  addModal.addEventListener('click', function (e) {
-    if (e.target === addModal || e.target.closest('[data-close]')) addModal.classList.remove('open');
-  });
-
-  el('add-go').addEventListener('click', function () {
-    var site, task, project;
-    if (addMode === 'new') {
-      site = el('nt-site').value;
-      task = newTaskPath();
-      project = (PROJECTS[site] || [])[0];
-    } else {
-      if (!addPick) return;
-      site = addPick.site; task = addPick.task; project = addPick.project;
-    }
+  var nSeq = 0;
+  function addInlineRow() {
     if (!state.editing) enterEdit();
-    var date = el('add-date').value || iso(TODAY);
+    if (popKey) commitCell();
+    closeTaskPop();
     var row = {
-      id: 'n' + Date.now(),
-      date: date, site: site, sup: supervisorOn(date, site) || (SUPS[site] || [])[0],
-      worker: addWorker(), project: project, task: task, status: 'Draft',
-      allowances: [], hours: '', isNew: true
+      id: 'n' + (++nSeq), date: defaultDate(),
+      site: '', sup: '', worker: state.tab === 'mine' ? ME : '',
+      project: '', task: '', levels: [], status: 'Draft',
+      allowances: [], start: '', finish: '', hours: '', isNew: true
     };
-    pending.push(row);
+    pending.unshift(row);
     justAdded = row.id;
-    addedOn = date;
-    /* Dropping a row inside a folded group hides the thing you just did,
-       so the group it lands in is opened. */
-    var g = groups();
-    if (g.length) delete collapsed['\u00a7' + (field(g[0]).get(row) || '—')];
-    addModal.classList.remove('open');
+    addedOn = row.date;
     render();
-    /* After this click has finished travelling: the close-on-outside-click
+    /* After this click has finished travelling: the close-on-outside
        handler is still on its way up and would shut the editor again. */
-    setTimeout(showAdded, 0);
+    setTimeout(function () {
+      var tr = document.querySelector('tr.just-added');
+      if (tr) tr.scrollIntoView({ block: 'center' });
+      var btn = document.querySelector('[data-task="' + row.id + '"]');
+      /* Period has nowhere else to ask, so it asks at once. Entries has
+         the whole row, so it starts at the left of it. */
+      if (state.mode === 'period') { if (btn) openTaskPop(btn); return; }
+      var first = tr && tr.querySelector('.cell-input');
+      if (first) first.focus();
+    }, 0);
+  }
+  el('btn-new-task').addEventListener('click', addInlineRow);
+
+  /* ─── The task, and whatever the view has no column for ───────────── */
+  var tpop = el('task-pop'), tpId = null;
+  function tpRow() { return pending.filter(function (x) { return x.id === tpId; })[0] || null; }
+
+  function tpFields(r) {
+    var out = [];
+    /* Period shows one column, so the rest of the row is asked here. */
+    if (state.mode === 'period') {
+      out.push({ k: 'site', name: 'Site' });
+      if (state.tab !== 'mine') out.push({ k: 'worker', name: 'Worker' });
+      out.push({ k: 'sup', name: 'Supervisor' });
+      out.push({ k: 'project', name: 'Project' });
+    }
+    (SITE_FIELDS[r.site] || []).forEach(function (f, i) {
+      out.push({ k: 'lvl' + i, name: f.name, values: f.values });
+    });
+    return out;
+  }
+
+  function renderTaskPop() {
+    var r = tpRow();
+    if (!r) return;
+    var html = tpFields(r).map(function (f) {
+      var lvl = f.k.indexOf('lvl') === 0;
+      var vals = lvl ? f.values : optsFor(r, f.k).map(function (o) { return o.v; });
+      var cur = lvl ? (r.levels[Number(f.k.slice(3))] || '') : (r[f.k] || '');
+      return '<label class="tp-fld"><span class="tp-lab">' + Shell.esc(f.name) + '</span>' +
+        '<select class="cell-input' + (cur ? '' : ' need') + '" data-tp="' + f.k + '">' +
+        '<option value="">Select\u2026</option>' +
+        vals.map(function (v) {
+          return '<option' + (v === cur ? ' selected' : '') + '>' + Shell.esc(v) + '</option>';
+        }).join('') + '</select></label>';
+    }).join('');
+    el('tp-fields').innerHTML = html ||
+      '<div class="alw-empty">Choose the site on the row first.</div>';
+  }
+
+  /* The editor follows the cell it belongs to, the way the hours one
+     does — and the cell is rebuilt on every answer, so it is found again
+     by the row it is for rather than held on to. */
+  function anchorTaskPop() {
+    var btn = document.querySelector('[data-task="' + tpId + '"]');
+    if (!btn) { closeTaskPop(); return; }
+    var r = btn.getBoundingClientRect();
+    var top = r.bottom + 6, left = r.left;
+    if (top + tpop.offsetHeight > window.innerHeight - 8) top = r.top - tpop.offsetHeight - 6;
+    if (left + tpop.offsetWidth > window.innerWidth - 8) left = window.innerWidth - tpop.offsetWidth - 8;
+    tpop.style.top = Math.max(8, top) + 'px';
+    tpop.style.left = Math.max(8, left) + 'px';
+  }
+  function openTaskPop(btn) {
+    tpId = btn.getAttribute('data-task');
+    if (!tpRow()) { tpId = null; return; }
+    tpop.classList.add('open');
+    renderTaskPop();
+    anchorTaskPop();
+    var first = tpop.querySelector('select:not(:disabled)');
+    if (first) first.focus();
+  }
+  function closeTaskPop() { tpop.classList.remove('open'); tpId = null; }
+
+  el('tp-fields').addEventListener('change', function (ev) {
+    var sel = ev.target.closest('[data-tp]');
+    var r = tpRow();
+    if (!sel || !r) return;
+    var k = sel.getAttribute('data-tp');
+    if (k.indexOf('lvl') === 0) r.levels[Number(k.slice(3))] = sel.value;
+    else {
+      r[k] = sel.value;
+      if (k === 'site') {
+        r.levels = [];
+        r.sup = supervisorOn(r.date, r.site) || (SUPS[r.site] || [])[0] || '';
+        r.project = (PROJECTS[r.site] || [])[0] || '';
+      }
+    }
+    /* A task is its levels, in order, as far as they have been given. */
+    r.task = (r.levels || []).filter(Boolean).join(' | ');
+    renderTaskPop();
+    render();
+    anchorTaskPop();
   });
 
-  /* Dropping a row into a long grouped table is no use if you cannot find
-     it, so it is marked and scrolled to. */
-  function showAdded() {
-    if (!justAdded) return;
-    var row = document.querySelector('tr.just-added');
-    if (!row) return;
-    row.scrollIntoView({ block: 'center' });
-    /* Land on the cell for the day it was added to, not the first of the
-       week — in Period that is the one the person is about to fill. */
-    /* Open the day it was added to, so the next thing you do is fill it. */
-    var box = row.querySelector('.hr-cell[data-cell$="|' + addedOn + '"]') || row.querySelector('.hr-cell');
-    if (box) openCell(box);
-  }
+  el('tp-clear').addEventListener('click', function () {
+    var r = tpRow();
+    if (!r) return;
+    r.levels = []; r.task = '';
+    renderTaskPop();
+    render();
+    anchorTaskPop();
+  });
+  el('tp-done').addEventListener('click', closeTaskPop);
+
+  tpop.addEventListener('click', function (e) { e.stopPropagation(); });
+  tpop.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { e.stopPropagation(); closeTaskPop(); }
+  });
+  document.addEventListener('click', function () { if (tpId) closeTaskPop(); });
+  window.addEventListener('scroll', function () { if (tpId) anchorTaskPop(); }, true);
+
+  el('grid-body').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-task]');
+    if (!btn) return;
+    e.stopPropagation();
+    if (popKey) commitCell();
+    var id = btn.getAttribute('data-task');
+    if (tpId === id) { closeTaskPop(); return; }
+    closeTaskPop();
+    /* Committing the hours editor re-renders, so the button just clicked
+       may already be detached — it is found again by the row it is for. */
+    openTaskPop(document.querySelector('[data-task="' + id + '"]') || btn);
+  });
 
   /* ─── Entries or Period ─────────────────────────────────────────── */
   el('modeswitch').addEventListener('click', function (e) {
