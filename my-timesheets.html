@@ -741,13 +741,12 @@
   .row-summary td.col-site, .row-summary td.col-sup { font-weight: 600; }
   .count-pill { font-size: 13px; color: var(--grey-600); }
 
-  /* A control that is not available while a draft is open says so by
-     looking unavailable, rather than by refusing after the click. */
-  .dd-wrap.locked { pointer-events: none; }
-  .dd-wrap.locked .dd-trigger {
-    background: #fafafa; color: var(--grey-500); border-color: var(--grey-300);
-  }
-  .dd-wrap.locked .dd-caret { opacity: 0.4; }
+  /* The week is the thing being edited, so while the edit is open it is
+     not a choice at all. A greyed control still reads as one of the
+     things on the screen, and there is nothing to be gained by leaving
+     it there — so it goes, and comes back on Cancel or Save. */
+  .dd-wrap.locked { display: none; }
+  .m-date.locked, body.is-narrow .m-date.locked { display: none; }
 
   /* View mode says where adding lives, because nothing else does. */
   /* A note, not a banner: an outline the width of what it says, in a

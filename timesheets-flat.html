@@ -215,8 +215,9 @@
   body.editing .edit-note { display: inline; }
   .edit-note.warn { color: var(--error); }
   /* An edit is made against one week. Changing which week it is while
-     half of it is unsaved has no sound answer, so it is not offered. */
-  body.editing #date-dd .dd-trigger { opacity: 0.5; pointer-events: none; }
+     half of it is unsaved has no sound answer, so it is not offered at
+     all — the control goes rather than standing there greyed. */
+  body.editing #date-dd { display: none; }
   .btn-outline {
     height: 36px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
