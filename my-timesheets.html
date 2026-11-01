@@ -409,7 +409,9 @@
   .recent-row.sel .rr-tick { background: var(--primary); border-color: var(--primary); }
   .recent-row .rr-tick svg { opacity: 0; }
   .recent-row.sel .rr-tick svg { opacity: 1; }
-  .recent-row .rr-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto; }
+  .recent-row .rr-body, .oc-item .rr-body {
+    display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1 1 auto;
+  }
   .rr-code { font-size: 14px; font-weight: 500; line-height: 19px; color: var(--text-main);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rr-sub { font-size: 12px; font-weight: 400; line-height: 16px; color: var(--grey-600);
@@ -427,12 +429,12 @@
     content: ''; position: absolute; left: 0; right: 0; top: -9px;
     height: 1px; background: var(--grey-300);
   }
-  .recent-row .ico-btn {
+  .recent-row .ico-btn, .oc-item .ico-btn {
     width: 26px; height: 26px; flex-shrink: 0;
     border: none; border-radius: 6px; background: none; cursor: pointer;
     color: var(--grey-600); display: flex; align-items: center; justify-content: center;
   }
-  .recent-row .ico-btn:hover { background: var(--grey-100); color: var(--text-main); }
+  .recent-row .ico-btn:hover, .oc-item .ico-btn:hover { background: var(--grey-100); color: var(--text-main); }
   .recent-empty { font-size: 13px; line-height: 18px; color: var(--grey-600); padding: 2px 0; }
 
   /* The rule is the heading of what comes after it, so there is one
@@ -494,44 +496,73 @@
   body.addstep-1 .add-cols { display: none; }
 
   /* ─── Variant: one column ──────────────────────────────────────────
-     Not two steps and not two halves: one screen, read top to bottom.
-     Where it goes is asked first and stays on screen; what it is waits
-     for that answer and then follows underneath. */
-  body.addlayout-one .modal.add-modal { max-width: 520px; height: auto; }
-  /* One scrollbar in the whole dialog, and it is the body's — nothing
-     inside it scrolls on its own, so there is never a question about
-     which thing a wheel is pointed at. The footer is outside the body,
-     so the buttons never leave. */
-  body.addlayout-one .add-modal .modal-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+     Not two steps and not two halves. One screen: where the row goes,
+     then the list of what is being added, then the two ways of adding
+     to it in one box. The dialog is a fixed height so nothing below it
+     ever moves, and the only thing that scrolls is the list. */
+  .one-col { display: none; }
+  body.addlayout-one .add-cols { display: none; }
+  body.addlayout-one .one-col {
+    display: flex; flex-direction: column; gap: 14px; flex: 1 1 auto; min-height: 0;
+  }
+  body.addlayout-one .modal.add-modal { max-width: 520px; height: min(640px, 88vh); }
+  body.addlayout-one .add-modal .modal-body { flex: 1 1 auto; min-height: 0; overflow: hidden; }
   body.addlayout-one:not(.from-group) #step-where { display: block; }
-  body.addlayout-one .add-cols {
-    display: flex; flex-direction: column; gap: 14px;
-    flex: 0 0 auto; overflow: visible;
+  /* Where it goes is two answers on one line: it is the smallest part
+     of the screen and it is answered once. */
+  body.addlayout-one #add-where { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* The one place that holds everything being added, whichever half it
+     came from. It is above both of them and it never moves. */
+  .oc-tray {
+    flex: 0 0 auto; padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--grey-350); background: var(--white);
   }
-  body.addlayout-one #sect-list { order: 1; }
-  body.addlayout-one .sect-form { order: 2; }
-  body.addlayout-one .tlist, body.addlayout-one .tlist.short,
-  body.addlayout-one .form-scroll {
-    max-height: none; min-height: 0; overflow: visible; flex: 0 0 auto;
+  .oc-tray-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .oc-tray-head h4 {
+    margin: 0; font-family: var(--fs-sans);
+    font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main);
   }
-  /* Until there is a site and a supervisor there is nothing to offer:
-     the half below is there, so its shape is known, but it is not yet
-     anything to do. */
-  .wait-note {
-    display: none; margin: 0; font-size: 13px; line-height: 18px; color: var(--grey-600);
+  .oc-n { font-size: 12px; font-weight: 400; color: var(--grey-600); }
+  .oc-n.on { color: var(--primary); font-weight: 500; }
+  /* Three fit without scrolling; past that the box keeps its size and
+     takes a scrollbar of its own rather than eating the list below. */
+  .oc-tray-list {
+    display: flex; flex-direction: column; gap: 6px; margin-top: 10px;
+    max-height: 136px; overflow-y: auto;
   }
-  body.addlayout-one .wait-note:not([hidden]) { display: block; }
-  body.addlayout-one.add-waiting .add-cols { opacity: 0.4; pointer-events: none; }
-  /* The heading is the control that unfolds it. */
-  body.addlayout-one #create-head { cursor: pointer; user-select: none; }
-  body.addlayout-one .ct-caret { display: block; color: var(--grey-600); }
-  body.addlayout-one.create-open .ct-caret { transform: rotate(180deg); }
-  /* Folded hides the fields, never what has already been made with
-     them: a task you created stays on screen like a task you ticked. */
-  body.addlayout-one:not(.create-open) #tfields,
-  body.addlayout-one:not(.create-open) #add-more { display: none; }
-  .ct-caret { display: none; transition: transform var(--t-fast); }
-  .sect-head { justify-content: space-between; }
+  .oc-tray-list:empty { margin-top: 0; }
+  .oc-empty { font-size: 13px; line-height: 18px; color: var(--grey-600); margin-top: 6px; }
+  /* A row in the tray is the same row, smaller: it is being read, not
+     chosen, so it carries no tick — only the way to take it back. */
+  .oc-item {
+    display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 11px;
+    border: 1px solid var(--primary); border-radius: 8px; background: var(--white);
+  }
+  /* Named in the fields but not yet put on the list. */
+  .oc-item.draft { border-style: dashed; border-color: var(--grey-400); }
+  .oc-item .rr-code { font-size: 13px; line-height: 18px; }
+  .oc-item .rr-sub { font-size: 12px; line-height: 15px; }
+
+  /* Two ways in, one box, both always in view. */
+  .oc-tabs {
+    display: flex; gap: 4px; padding: 3px; flex: 0 0 auto;
+    background: var(--grey-100); border-radius: 9px;
+  }
+  .oc-tab {
+    flex: 1 1 0; height: 32px; border: none; background: none; border-radius: 7px;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--grey-600);
+    cursor: pointer;
+  }
+  .oc-tab.on { background: var(--white); color: var(--text-main); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1); }
+  .oc-tab:disabled { color: var(--grey-400); cursor: default; }
+  .oc-panel { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+  #oc-recent { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  /* The fields scroll, the button under them does not: putting a task
+     on the list is never below a scroll. */
+  #oc-pane-new { overflow: hidden; }
+  #oc-fields { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1px; }
+  #oc-add { flex: 0 0 auto; align-self: flex-start; }
   body.addstep-2 #step-where,
   body.from-group #step-where { display: none; }
 
@@ -1140,7 +1171,33 @@
              list three rows high. Side by side, the form takes the width
              its fields need and the list takes the rest, which is where
              the long names are. -->
-        <p class="wait-note" id="wait-note" hidden>Choose a site and a supervisor first &mdash; which tasks you can book depends on them.</p>
+        <!-- ── One column ───────────────────────────────────────────
+             One screen, nothing below the fold. What the row is for is
+             at the top; what is going to be added is under it and never
+             moves; the two ways of adding to it share one box, so the
+             second one is never a scroll away. Only the list scrolls. -->
+        <div class="one-col" id="one-col">
+          <div class="oc-tray" id="oc-tray">
+            <div class="oc-tray-head"><h4>Tasks to add</h4><span class="oc-n" id="oc-n"></span></div>
+            <div class="oc-tray-list" id="oc-tray-list"></div>
+          </div>
+
+          <div class="oc-tabs" role="tablist">
+            <button class="oc-tab on" type="button" id="oc-tab-recent" role="tab">Recent tasks</button>
+            <button class="oc-tab" type="button" id="oc-tab-new" role="tab">Create a task</button>
+          </div>
+
+          <div class="oc-panel" id="oc-pane-recent">
+            <div class="tlist" id="oc-recent"></div>
+          </div>
+          <div class="oc-panel" id="oc-pane-new" hidden>
+            <div class="tfields" id="oc-fields"></div>
+            <button class="btn-outline add-more" type="button" id="oc-add">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Add to the list
+            </button>
+          </div>
+        </div>
 
         <div class="add-cols">
           <!-- Creating is the thing the dialog is for; the recent list is
@@ -1149,9 +1206,7 @@
           <div class="sect sect-form">
             <!-- In one column the heading is also the way in: the fields
                  are folded away until creating is what you came to do. -->
-            <div class="sect-head" id="create-head"><h4 id="head-create">Create a task</h4>
-              <svg class="ct-caret" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6.5L8 10.5l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
+            <div class="sect-head"><h4>Create a task</h4></div>
             <div class="form-scroll">
               <!-- What creating has produced so far, at the top of the
                    half that produced it. -->
@@ -1171,7 +1226,7 @@
 
           <div class="sect" id="sect-list">
             <div class="sect-head">
-              <h4 id="head-recent">Or pick a recent task</h4>
+              <h4>Or pick a recent task</h4>
             </div>
             <!-- Put away for now. The list is short enough to read; it
                  comes back when a site's history is hundreds long. -->
@@ -2584,14 +2639,6 @@
     el('add-next').hidden = !onStepOne;
     el('add-go').hidden = onStepOne;
 
-    /* The tasks depend on the site, so until there is one they are not
-       a choice — shown, so the shape of the screen is known, but not
-       yet anything to answer. */
-    var waiting = oneCol && !(addSite() && addSup());
-    document.body.classList.toggle('add-waiting', waiting);
-    el('wait-note').hidden = !waiting;
-    if (waiting) setCreateOpen(false);
-
     /* A line of type instead of a band of chips: the step is worth one
        line of the dialog, not a sixth of it. */
     el('add-step-label').textContent = stepped
@@ -2641,6 +2688,103 @@
   var ICO_PENCIL = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var ICO_X = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   var ICO_TICK = '<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 6.2l2.4 2.4 4.6-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* ─── One column ──────────────────────────────────────────────────
+     The same model, read a second way. Nothing below knows about it. */
+  var ocTab = 'recent';
+
+  /* Everything being added, whichever half it came from, in one list.
+     A task named in the fields but not yet put on the list is in here
+     too, marked — so the tray and the count on the button can never
+     disagree, and nothing is lost on the way out. */
+  function trayItems() {
+    var out = [];
+    cards.forEach(function (c, i) {
+      var meta = metaOf(c.levels);
+      out.push({ kind: 'card', i: i, key: keyFor(c.levels),
+        title: taskTitle(meta), sub: taskRest(meta, -1) || 'Created here' });
+    });
+    recentCache.forEach(function (r) {
+      var k = keyFor(r.meta.levels);
+      if (!ticks[k]) return;
+      out.push({ kind: 'tick', key: k, title: r.cardTitle,
+        sub: taskRest(r.meta, r.cardExtra) || 'From recent' });
+    });
+    if (levelsDone(editing.levels)) {
+      var m = metaOf(editing.levels);
+      out.push({ kind: 'draft', key: keyFor(editing.levels),
+        title: taskTitle(m), sub: 'Not on the list yet' });
+    }
+    return out;
+  }
+
+  function renderOne() {
+    var site = addSite(), sup = addSup(), ready = !!site && !!sup;
+    var recent = recentFor();
+
+    /* Creating needs a site to draw its fields from; picking does not,
+       because a task that has been booked before carries its own. */
+    var tabNew = el('oc-tab-new');
+    tabNew.disabled = !ready;
+    if (!ready) tabNew.setAttribute('data-tip', 'Choose a site and a supervisor first — the fields come from the site.');
+    else tabNew.removeAttribute('data-tip');
+    if (!ready && ocTab === 'new') ocTab = 'recent';
+    el('oc-tab-recent').classList.toggle('on', ocTab === 'recent');
+    tabNew.classList.toggle('on', ocTab === 'new');
+    el('oc-pane-recent').hidden = ocTab !== 'recent';
+    el('oc-pane-new').hidden = ocTab !== 'new';
+
+    var items = trayItems();
+    el('oc-n').textContent = items.length ? items.length + ' chosen' : 'none yet';
+    el('oc-n').classList.toggle('on', items.length > 0);
+    el('oc-tray-list').innerHTML = items.length ? items.map(function (t) {
+      return '<div class="oc-item' + (t.kind === 'draft' ? ' draft' : '') + '">' +
+        '<span class="rr-body"><span class="rr-code">' + Shell.esc(t.title) + '</span>' +
+        '<span class="rr-sub">' + Shell.esc(t.sub) + '</span></span>' +
+        (t.kind === 'draft' ? '' :
+          '<button class="ico-btn" type="button" data-untray="' + Shell.esc(t.kind + '|' + t.key) +
+          '" aria-label="Take this one back" data-tip="Remove">' + ICO_X + '</button>') +
+      '</div>';
+    }).join('') : '<div class="oc-empty">Nothing yet. Pick one below, or create one.</div>';
+
+    /* With no site chosen the list is everything booked lately, and each
+       row says where it belongs — picking it is what settles the site. */
+    var made = Object.create(null);
+    cards.forEach(function (c) { made[keyFor(c.levels)] = 1; });
+    el('oc-recent').innerHTML = recent.filter(function (r) {
+      return !made[keyFor(r.meta.levels)];
+    }).map(function (r) {
+      /* Keyed on the row's own site and supervisor, not on the dialog's:
+         with nothing chosen yet the dialog has none, and the key written
+         here has to still match after picking one settles them. */
+      var k = keyOf(r.meta.site, r.meta.sup, r.meta.levels), on = !!ticks[k];
+      var where = ready ? '' : r.meta.site + ' · ' + r.meta.sup;
+      var sub = [where, taskRest(r.meta, r.cardExtra), 'last booked ' + fmtDay(r.when)]
+        .filter(Boolean).join(' · ');
+      return '<div class="recent-row' + (on ? ' sel' : '') + '" data-pick="' + Shell.esc(k) +
+        '" data-site="' + Shell.esc(r.meta.site) + '" data-sup="' + Shell.esc(r.meta.sup) + '">' +
+        '<span class="rr-tick">' + ICO_TICK + '</span>' +
+        '<span class="rr-body"><span class="rr-code">' + Shell.esc(r.cardTitle) + '</span>' +
+        '<span class="rr-sub">' + Shell.esc(sub) + '</span></span>' +
+      '</div>';
+    }).join('') || '<div class="recent-empty">Nothing booked here before — create one instead.</div>';
+
+    var fields = fieldsFor(site);
+    el('oc-fields').innerHTML = fields.map(function (f, i) {
+      return '<div class="fld"><label class="fld-label" for="of' + i + '">' +
+        Shell.esc(f.name) + '<span class="req">*</span></label>' +
+        '<select id="of' + i + '" data-lvl="' + i + '">' +
+        '<option value="">Select&hellip;</option>' +
+        f.values.map(function (v) {
+          var why = '';
+          if (i === fields.length - 1) why = taken(keyFor(editing.levels.slice(0, i).concat([v])));
+          return '<option' + (why ? ' disabled' : '') +
+            (editing.levels[i] === v ? ' selected' : '') + '>' +
+            Shell.esc(v) + (why ? ' &mdash; ' + why : '') + '</option>';
+        }).join('') + '</select></div>';
+    }).join('');
+    el('oc-add').disabled = !levelsDone(editing.levels);
+  }
 
   function renderStack() {
     var recent = recentFor();
@@ -2821,8 +2965,7 @@
     cards = []; ticks = Object.create(null);
     editing = { levels: [] };
     el('task-q').value = '';
-    setCreateOpen(!document.body.classList.contains('addlayout-one'));
-    syncHeads();
+    ocTab = 'recent';
     addStep = 1;
     sync();
     el('add-title').textContent = 'Add a task';
@@ -2833,6 +2976,7 @@
      views of one set of picks, so neither is updated on its own. */
   function sync() {
     renderStack();
+    if (document.body.classList.contains('addlayout-one')) renderOne();
     syncDayHint();
     syncVariant();
     syncAddGo();
@@ -3138,33 +3282,70 @@
      Two readings of the same dialog, so the client can be shown both.
      The layout is a body class; nothing in the model knows about it. */
   var layoutSwitch = document.getElementById('layout-switch');
-  function setCreateOpen(on) {
-    document.body.classList.toggle('create-open', !!on);
-  }
-  /* The "Or" belongs to whichever of the two comes second, and that
-     changes with the layout. */
-  function syncHeads() {
-    var one = document.body.classList.contains('addlayout-one');
-    el('head-recent').textContent = one ? 'Pick a recent task' : 'Or pick a recent task';
-    el('head-create').textContent = one ? 'Or create a task' : 'Create a task';
-  }
   layoutSwitch.addEventListener('click', function (e) {
     var b = e.target.closest('[data-layout]');
     if (!b) return;
     var one = b.getAttribute('data-layout') === 'one';
     document.body.classList.toggle('addlayout-one', one);
     layoutSwitch.querySelectorAll('[data-layout]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    /* Two columns has nothing to fold, so the fold is only ever closed
-       on the way into one column. */
-    setCreateOpen(!one);
-    syncHeads();
+    ocTab = 'recent';
     if (addModal.classList.contains('open')) { addStep = one ? 2 : 1; sync(); }
   });
-  /* Clicking the heading is what unfolds it; in two columns the heading
-     is a heading and nothing happens. */
-  el('create-head').addEventListener('click', function () {
-    if (!document.body.classList.contains('addlayout-one')) return;
-    setCreateOpen(!document.body.classList.contains('create-open'));
+  /* ─── One column: the things you can do in it ─────────────────── */
+  el('oc-tab-recent').addEventListener('click', function () { ocTab = 'recent'; sync(); });
+  el('oc-tab-new').addEventListener('click', function () {
+    if (this.disabled) return;
+    ocTab = 'new'; sync();
+  });
+
+  /* A task booked before carries its own site and supervisor, so picking
+     one is also how the row's context gets settled. */
+  el('oc-recent').addEventListener('click', function (e) {
+    var t = e.target.closest('[data-pick]');
+    if (!t) return;
+    if (!addSite()) {
+      el('nt-site').value = t.getAttribute('data-site');
+      renderSups();
+      el('nt-sup').value = t.getAttribute('data-sup');
+      el('nt-sup').disabled = false;
+    }
+    var k = t.getAttribute('data-pick');
+    if (ticks[k]) delete ticks[k]; else ticks[k] = 1;
+    sync();
+  });
+
+  el('oc-tray-list').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-untray]');
+    if (!b) return;
+    var v = b.getAttribute('data-untray'), kind = v.slice(0, v.indexOf('|')), key = v.slice(v.indexOf('|') + 1);
+    if (kind === 'tick') delete ticks[key];
+    else cards = cards.filter(function (c) { return keyFor(c.levels) !== key; });
+    sync();
+  });
+
+  el('oc-fields').addEventListener('change', function (e) {
+    var sel = e.target.closest('[data-lvl]');
+    if (!sel) return;
+    var i = Number(sel.getAttribute('data-lvl'));
+    editing.levels = editing.levels.slice(0, i);
+    editing.levels[i] = sel.value;
+    sync();
+  });
+
+  /* The fields make one task; this puts it on the list and clears them
+     for the next, so the list above is the only place to look. */
+  el('oc-add').addEventListener('click', function () {
+    if (!levelsDone(editing.levels)) return;
+    var k = keyFor(editing.levels);
+    if (weekKeys().indexOf(k) !== -1) {
+      Shell.snackbar('That task is already on this timesheet.');
+    } else if (!cards.some(function (c) { return keyFor(c.levels) === k; })) {
+      cards.unshift({ levels: editing.levels.slice() });
+    }
+    editing = { levels: [] };
+    sync();
+    var first = el('oc-fields').querySelector('select');
+    if (first) first.focus();
   });
 
   var fieldsSwitch = document.getElementById('fields-switch');
