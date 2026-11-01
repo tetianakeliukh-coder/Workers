@@ -319,6 +319,11 @@
   .dd-chev { width: 12px; height: 12px; margin-left: auto; color: var(--grey-600); }
   .day-empty { padding: 4px 2px; font-size: 14px; color: var(--grey-600); }
 
+  /* A dialog is the only thing on screen while it is open: a wheel over
+     the page behind it moved the page and left the dialog where it was,
+     which read as the dialog refusing to scroll. */
+  body:has(.modal-backdrop.open) { overflow: hidden; }
+
   /* ─── Add task ─────────────────────────────────────────────────── */
   .modal.add-modal { max-width: 820px; width: 100%; height: min(660px, 88vh); }
   /* The shell's modal body is flex:1 with a zero basis, which collapses
@@ -489,19 +494,34 @@
   body.addstep-1 .add-cols { display: none; }
 
   /* ─── Variant: one column ──────────────────────────────────────────
-     The two halves stop being two halves. The list comes first, because
-     most weeks repeat; creating sits under it, folded away, so only one
-     thing is being asked at a time. */
-  body.addlayout-one .modal.add-modal { max-width: 520px; height: auto; max-height: 88vh; }
+     Not two steps and not two halves: one screen, read top to bottom.
+     Where it goes is asked first and stays on screen; what it is waits
+     for that answer and then follows underneath. */
+  body.addlayout-one .modal.add-modal { max-width: 520px; height: auto; }
+  /* One scrollbar in the whole dialog, and it is the body's — nothing
+     inside it scrolls on its own, so there is never a question about
+     which thing a wheel is pointed at. The footer is outside the body,
+     so the buttons never leave. */
+  body.addlayout-one .add-modal .modal-body { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+  body.addlayout-one:not(.from-group) #step-where { display: block; }
   body.addlayout-one .add-cols {
     display: flex; flex-direction: column; gap: 14px;
-    overflow-y: auto; padding: 1px;
+    flex: 0 0 auto; overflow: visible;
   }
   body.addlayout-one #sect-list { order: 1; }
   body.addlayout-one .sect-form { order: 2; }
-  /* Neither card scrolls on its own — the column does. */
-  body.addlayout-one .tlist { max-height: 268px; }
-  body.addlayout-one .form-scroll { overflow: visible; }
+  body.addlayout-one .tlist, body.addlayout-one .tlist.short,
+  body.addlayout-one .form-scroll {
+    max-height: none; min-height: 0; overflow: visible; flex: 0 0 auto;
+  }
+  /* Until there is a site and a supervisor there is nothing to offer:
+     the half below is there, so its shape is known, but it is not yet
+     anything to do. */
+  .wait-note {
+    display: none; margin: 0; font-size: 13px; line-height: 18px; color: var(--grey-600);
+  }
+  body.addlayout-one .wait-note:not([hidden]) { display: block; }
+  body.addlayout-one.add-waiting .add-cols { opacity: 0.4; pointer-events: none; }
   /* The heading is the control that unfolds it. */
   body.addlayout-one #create-head { cursor: pointer; user-select: none; }
   body.addlayout-one .ct-caret { display: block; color: var(--grey-600); }
@@ -1120,6 +1140,8 @@
              list three rows high. Side by side, the form takes the width
              its fields need and the list takes the rest, which is where
              the long names are. -->
+        <p class="wait-note" id="wait-note" hidden>Choose a site and a supervisor first &mdash; which tasks you can book depends on them.</p>
+
         <div class="add-cols">
           <!-- Creating is the thing the dialog is for; the recent list is
                a shortcut beside it for the weeks that repeat. Whichever
@@ -2549,8 +2571,11 @@
   /* A site's fields are its own, so they cannot be drawn before one is
      chosen — between 0 and 4 of them, per site. */
   function syncVariant() {
+    /* One column is one screen: there is no second step to go to, so
+       there is no step one to be on either. */
+    var oneCol = document.body.classList.contains('addlayout-one');
     /* Opened from a group row the first step is already behind you. */
-    var stepped = !addCtx;
+    var stepped = !addCtx && !oneCol;
     document.body.classList.toggle('from-group', !!addCtx);
     document.body.classList.toggle('addstep-1', stepped && addStep === 1);
     document.body.classList.toggle('addstep-2', !stepped || addStep === 2);
@@ -2558,6 +2583,14 @@
     var onStepOne = stepped && addStep === 1;
     el('add-next').hidden = !onStepOne;
     el('add-go').hidden = onStepOne;
+
+    /* The tasks depend on the site, so until there is one they are not
+       a choice — shown, so the shape of the screen is known, but not
+       yet anything to answer. */
+    var waiting = oneCol && !(addSite() && addSup());
+    document.body.classList.toggle('add-waiting', waiting);
+    el('wait-note').hidden = !waiting;
+    if (waiting) setCreateOpen(false);
 
     /* A line of type instead of a band of chips: the step is worth one
        line of the dialog, not a sixth of it. */
@@ -3125,6 +3158,7 @@
        on the way into one column. */
     setCreateOpen(!one);
     syncHeads();
+    if (addModal.classList.contains('open')) { addStep = one ? 2 : 1; sync(); }
   });
   /* Clicking the heading is what unfolds it; in two columns the heading
      is a heading and nothing happens. */
