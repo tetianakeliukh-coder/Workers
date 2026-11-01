@@ -517,15 +517,13 @@
   .oc-tray {
     display: flex; flex-direction: column; min-height: 0;
     padding: 12px 14px; border-radius: 10px;
-    border: 1px solid var(--grey-350); background: var(--grey-100);
+    border: 1px solid var(--grey-350); background: var(--bg-blue-light);
   }
   .oc-tray-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   .oc-tray-head h4 {
     margin: 0; font-family: var(--fs-sans);
     font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main);
   }
-  .oc-n { font-size: 12px; font-weight: 400; color: var(--grey-600); }
-  .oc-n.on { color: var(--primary); font-weight: 500; }
   /* Three fit without scrolling; past that the box keeps its size and
      takes a scrollbar of its own rather than eating the list below. */
   .oc-tray-list {
@@ -536,12 +534,14 @@
   .oc-empty { font-size: 13px; line-height: 18px; color: var(--grey-600); margin-top: 6px; }
   /* A row in the tray is the same row, smaller: it is being read, not
      chosen, so it carries no tick — only the way to take it back. */
+  /* No outline: on a ground of its own a row does not also need a ring
+     to be told apart from what is under it. */
   .oc-item {
-    display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 11px;
-    border: 1px solid var(--primary); border-radius: 8px; background: var(--white);
+    display: flex; align-items: center; gap: 10px; padding: 8px 9px 8px 12px;
+    border: 1px solid transparent; border-radius: 8px; background: var(--white);
   }
-  /* Named in the fields but not yet put on the list. */
-  .oc-item.draft { border-style: dashed; border-color: var(--grey-400); }
+  /* Except this one, which is the one thing here that is not settled. */
+  .oc-item.draft { border-style: dashed; border-color: var(--grey-400); background: none; }
   .oc-item .rr-code { font-size: 13px; line-height: 18px; }
   .oc-item .rr-sub { font-size: 12px; line-height: 15px; }
 
@@ -1027,7 +1027,9 @@
   .fld-hint { font-size: 12px; color: var(--grey-600); }
 </style>
 </head>
-<body data-module="mytime">
+<!-- The tray is the variant the screen is designed around; the two
+     halves stay on the switch as the thing it was compared with. -->
+<body data-module="mytime" class="addlayout-one">
 
 <div class="page">
   <aside id="shell-sidebar"></aside>
@@ -1123,8 +1125,8 @@
 
 
 <div class="vp-switch" id="layout-switch" role="group" aria-label="Prototype add-task layout">
-  <button type="button" data-layout="cols" class="on">Two halves</button>
-  <button type="button" data-layout="one">With a tray</button>
+  <button type="button" data-layout="one" class="on">With a tray</button>
+  <button type="button" data-layout="cols">Two halves</button>
 </div>
 
 <!-- ── Prototype viewport switcher ──────────────────────────────── -->
@@ -1212,7 +1214,7 @@
           </div>
 
           <div class="oc-tray" id="oc-tray">
-            <div class="oc-tray-head"><h4>Tasks to add</h4><span class="oc-n" id="oc-n"></span></div>
+            <div class="oc-tray-head"><h4>Tasks to add</h4></div>
             <div class="oc-tray-list" id="oc-tray-list"></div>
           </div>
         </div>
@@ -2747,8 +2749,6 @@
     el('oc-pane-new').hidden = ocTab !== 'new';
 
     var items = trayItems();
-    el('oc-n').textContent = items.length ? items.length + ' to add' : 'none yet';
-    el('oc-n').classList.toggle('on', items.length > 0);
     el('oc-tray-list').innerHTML = items.length ? items.map(function (t) {
       return '<div class="oc-item' + (t.kind === 'draft' ? ' draft' : '') + '">' +
         '<span class="rr-body"><span class="rr-code">' + Shell.esc(t.title) + '</span>' +
