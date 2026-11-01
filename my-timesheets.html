@@ -487,6 +487,31 @@
   /* Step one asks where, and nothing else is on screen; step two carries
      that answer as the line above and asks for the tasks. */
   body.addstep-1 .add-cols { display: none; }
+
+  /* ─── Variant: one column ──────────────────────────────────────────
+     The two halves stop being two halves. The list comes first, because
+     most weeks repeat; creating sits under it, folded away, so only one
+     thing is being asked at a time. */
+  body.addlayout-one .modal.add-modal { max-width: 520px; height: auto; max-height: 88vh; }
+  body.addlayout-one .add-cols {
+    display: flex; flex-direction: column; gap: 14px;
+    overflow-y: auto; padding: 1px;
+  }
+  body.addlayout-one #sect-list { order: 1; }
+  body.addlayout-one .sect-form { order: 2; }
+  /* Neither card scrolls on its own — the column does. */
+  body.addlayout-one .tlist { max-height: 268px; }
+  body.addlayout-one .form-scroll { overflow: visible; }
+  /* The heading is the control that unfolds it. */
+  body.addlayout-one #create-head { cursor: pointer; user-select: none; }
+  body.addlayout-one .ct-caret { display: block; color: var(--grey-600); }
+  body.addlayout-one.create-open .ct-caret { transform: rotate(180deg); }
+  /* Folded hides the fields, never what has already been made with
+     them: a task you created stays on screen like a task you ticked. */
+  body.addlayout-one:not(.create-open) #tfields,
+  body.addlayout-one:not(.create-open) #add-more { display: none; }
+  .ct-caret { display: none; transition: transform var(--t-fast); }
+  .sect-head { justify-content: space-between; }
   body.addstep-2 #step-where,
   body.from-group #step-where { display: none; }
 
@@ -1032,6 +1057,11 @@
 
 
 
+<div class="vp-switch" id="layout-switch" role="group" aria-label="Prototype add-task layout">
+  <button type="button" data-layout="cols" class="on">Two columns</button>
+  <button type="button" data-layout="one">One column</button>
+</div>
+
 <!-- ── Prototype viewport switcher ──────────────────────────────── -->
 <div class="vp-switch fields-switch" id="fields-switch" role="group" aria-label="Fields that name a task">
   <button type="button" data-fields="0" class="on">Site&rsquo;s own</button>
@@ -1095,7 +1125,11 @@
                a shortcut beside it for the weeks that repeat. Whichever
                side a task was named on is the side it stays on. -->
           <div class="sect sect-form">
-            <div class="sect-head"><h4>Create a task</h4></div>
+            <!-- In one column the heading is also the way in: the fields
+                 are folded away until creating is what you came to do. -->
+            <div class="sect-head" id="create-head"><h4 id="head-create">Create a task</h4>
+              <svg class="ct-caret" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6.5L8 10.5l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
             <div class="form-scroll">
               <!-- What creating has produced so far, at the top of the
                    half that produced it. -->
@@ -1115,7 +1149,7 @@
 
           <div class="sect" id="sect-list">
             <div class="sect-head">
-              <h4>Or pick a recent task</h4>
+              <h4 id="head-recent">Or pick a recent task</h4>
             </div>
             <!-- Put away for now. The list is short enough to read; it
                  comes back when a site's history is hundreds long. -->
@@ -2754,6 +2788,8 @@
     cards = []; ticks = Object.create(null);
     editing = { levels: [] };
     el('task-q').value = '';
+    setCreateOpen(!document.body.classList.contains('addlayout-one'));
+    syncHeads();
     addStep = 1;
     sync();
     el('add-title').textContent = 'Add a task';
@@ -3065,6 +3101,38 @@
   });
 
   document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null, null); });
+  /* ─── Variant switch: two columns, or one ─────────────────────────
+     Two readings of the same dialog, so the client can be shown both.
+     The layout is a body class; nothing in the model knows about it. */
+  var layoutSwitch = document.getElementById('layout-switch');
+  function setCreateOpen(on) {
+    document.body.classList.toggle('create-open', !!on);
+  }
+  /* The "Or" belongs to whichever of the two comes second, and that
+     changes with the layout. */
+  function syncHeads() {
+    var one = document.body.classList.contains('addlayout-one');
+    el('head-recent').textContent = one ? 'Pick a recent task' : 'Or pick a recent task';
+    el('head-create').textContent = one ? 'Or create a task' : 'Create a task';
+  }
+  layoutSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-layout]');
+    if (!b) return;
+    var one = b.getAttribute('data-layout') === 'one';
+    document.body.classList.toggle('addlayout-one', one);
+    layoutSwitch.querySelectorAll('[data-layout]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    /* Two columns has nothing to fold, so the fold is only ever closed
+       on the way into one column. */
+    setCreateOpen(!one);
+    syncHeads();
+  });
+  /* Clicking the heading is what unfolds it; in two columns the heading
+     is a heading and nothing happens. */
+  el('create-head').addEventListener('click', function () {
+    if (!document.body.classList.contains('addlayout-one')) return;
+    setCreateOpen(!document.body.classList.contains('create-open'));
+  });
+
   var fieldsSwitch = document.getElementById('fields-switch');
   fieldsSwitch.addEventListener('click', function (e) {
     var b = e.target.closest('[data-fields]');
