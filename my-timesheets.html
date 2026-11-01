@@ -734,7 +734,10 @@
     #grid tbody tr.just-added > td { animation: none; }
   }
 
-  .row-summary td { background: var(--grey-100); }
+  /* A heading row is set off by a band, but the band is a ground for
+     the row above the ones it holds — not a thing to be read. One step
+     lighter than the greys the controls are drawn in. */
+  .row-summary td { background: #fafafa; }
   .row-summary td.col-site, .row-summary td.col-sup { font-weight: 600; }
   .count-pill { font-size: 13px; color: var(--grey-600); }
 
@@ -828,31 +831,15 @@
   #grid thead th.col-act { z-index: 6; }
   /* Sticky cells paint their own background, so the ones the rest of the
      row has are repeated here rather than inherited. */
-  #grid tbody tr.row-summary td.col-act { background: var(--grey-100); }
-  #grid tbody tr.row-summary:hover td.col-act { background: var(--grey-200); }
+  #grid tbody tr.row-summary td.col-act { background: #fafafa; }
+  #grid tbody tr.row-summary:hover td.col-act { background: var(--grey-100); }
   #grid tbody tr.just-added td.col-act { background: var(--bg-blue-light); }
-  #grid tbody tr.row-summary:hover td { background: var(--grey-200); }
+  #grid tbody tr.row-summary:hover td { background: var(--grey-100); }
 
   /* Today reads as a tint, not as something clickable. */
   .grid-card td.tdy { background: var(--bg-blue-light); }
   .grid-card thead th.tdy { background: var(--bg-blue-light); }
-  .grid-card tbody tr.row-summary td.tdy { background: #dfe7f3; }
-
-  /* ─── TRIAL: heading rows without a tint ────────────────────────────
-     A heading is told apart by the weight of its value and by the count
-     beside it, the way the flat structure already does it — not by a
-     band of grey across the table. Delete this block to put the grey
-     back; nothing above it was changed. */
-  #grid tbody tr.row-summary td,
-  #grid tbody tr.row-summary td.col-act { background: var(--white); }
-  #grid tbody tr.row-summary:hover td,
-  #grid tbody tr.row-summary:hover td.col-act { background: #fafbfe; }
-  /* Today is a column, so it is tinted the whole way down — a heading
-     row is not an exception to it. The id has to be carried here or the
-     rule above, which has one, wins. */
-  #grid tbody tr.row-summary td.tdy { background: var(--bg-blue-light); }
-  #grid tbody tr.row-summary:hover td.tdy { background: #e4ecf7; }
-  /* ─── end TRIAL ─────────────────────────────────────────────────── */
+  .grid-card tbody tr.row-summary td.tdy { background: #e8eef8; }
 
 
   /* ─── Restored ──────────────────────────────────────────────────
