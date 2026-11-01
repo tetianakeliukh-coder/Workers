@@ -838,6 +838,22 @@
   .grid-card thead th.tdy { background: var(--bg-blue-light); }
   .grid-card tbody tr.row-summary td.tdy { background: #dfe7f3; }
 
+  /* ─── TRIAL: heading rows without a tint ────────────────────────────
+     A heading is told apart by the weight of its value and by the count
+     beside it, the way the flat structure already does it — not by a
+     band of grey across the table. Delete this block to put the grey
+     back; nothing above it was changed. */
+  #grid tbody tr.row-summary td,
+  #grid tbody tr.row-summary td.col-act { background: var(--white); }
+  #grid tbody tr.row-summary:hover td,
+  #grid tbody tr.row-summary:hover td.col-act { background: #fafbfe; }
+  /* Today is a column, so it is tinted the whole way down — a heading
+     row is not an exception to it. The id has to be carried here or the
+     rule above, which has one, wins. */
+  #grid tbody tr.row-summary td.tdy { background: var(--bg-blue-light); }
+  #grid tbody tr.row-summary:hover td.tdy { background: #e4ecf7; }
+  /* ─── end TRIAL ─────────────────────────────────────────────────── */
+
 
   /* ─── Restored ──────────────────────────────────────────────────
      Lost when the two-column step two was cut out by position
