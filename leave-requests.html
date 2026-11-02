@@ -168,13 +168,20 @@
   .ros-clash.free { color: #289e1a; font-weight: 500; }
   /* Two panes, one at a time. */
   .rd-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
-  .rd-rtabs { display: flex; gap: 4px; padding: 3px; background: var(--grey-100); border-radius: 9px; }
+  /* The same tabs the page itself uses. A segmented control here was a
+     second dialect for the same job. */
+  .rd-rtabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--grey-300); }
   .rd-rtab {
-    flex: 1 1 0; height: 32px; border: none; background: none; border-radius: 7px;
-    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--grey-600);
-    cursor: pointer;
+    position: relative; height: 36px; padding: 0 14px; border: none; background: none;
+    cursor: pointer; font-family: var(--fs-sans); font-size: 14px; font-weight: 500;
+    color: var(--grey-600); white-space: nowrap;
   }
-  .rd-rtab.on { background: var(--white); color: var(--text-main); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1); }
+  .rd-rtab:hover:not(:disabled) { color: var(--text-main); }
+  .rd-rtab.on { color: var(--primary); }
+  .rd-rtab.on::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: var(--primary); border-radius: 2px 2px 0 0;
+  }
   .rd-rtab:disabled { color: var(--grey-400); cursor: default; }
   .rd-doc[hidden], .rd-roster[hidden] { display: none; }
   .rd-doc {
