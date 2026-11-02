@@ -114,8 +114,17 @@
   .pick-modal .rr-tick { margin-top: 3px; }
   .pick-modal .rr-body { gap: 3px; }
   .pick-modal .rr-where { margin-top: 3px; }
-  .pick-modal .modal-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
-  #pick-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1px; }
+  /* The shell gives .modal-body no padding of its own — every dialog
+     sets the one it needs, and this one had been left without, so the
+     cards ran into all four edges. The same inset the add dialog uses. */
+  .pick-modal .modal-body {
+    flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px;
+    padding: 16px 24px 20px;
+  }
+  /* The scroller carries two pixels of its own so the cards' outlines
+     are not shaved off where they meet it. */
+  #pick-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px; margin: -2px; }
+  .pick-modal .modal-footer { padding: 16px 24px 20px; }
   /* Offered, not pressed: it is the shortcut for the week that repeats
      whole, and it sits above the list it would stand in for. */
   .pick-dup {
