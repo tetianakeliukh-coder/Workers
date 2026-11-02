@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Leave — OPMS</title>
+<link rel="stylesheet" href="assets/tokens.css" />
+<link rel="stylesheet" href="assets/shell.css" />
+<style>
+  /* ─── Tabs ────────────────────────────────────────────────────────
+     The same four the manager's screen has, because they are the same
+     four states — a worker's own request is where its status is most
+     worth saying, and this is the only screen that says it. */
+  .lv-tabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--grey-300); }
+  .lv-tab {
+    position: relative; height: 36px; padding: 0 14px; border: none; background: none;
+    cursor: pointer; font-family: var(--fs-sans); font-size: 14px; font-weight: 500;
+    color: var(--grey-600); white-space: nowrap;
+  }
+  .lv-tab:hover { color: var(--text-main); }
+  .lv-tab.on { color: var(--primary); }
+  .lv-tab.on::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: var(--primary); border-radius: 2px 2px 0 0;
+  }
+
+  /* ─── A request is a card ─────────────────────────────────────────
+     A worker has a handful of these, not a hundred, and every one of
+     them is read whole — so a row of a table would be throwing away the
+     room it has and keeping the part that scrolls sideways. */
+  .lv-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(336px, 1fr));
+    gap: 16px; margin-top: 18px; align-items: start;
+  }
+  .lv-card {
+    display: flex; flex-direction: column; gap: 12px;
+    padding: 16px 18px 18px; border-radius: 12px;
+    background: var(--white); border: 1px solid var(--grey-350);
+  }
+  .lv-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  /* The dates are the heading. What a worker looks for in their own
+     list is the week they are away, not the kind of leave it was. */
+  .lv-when { font-size: 16px; font-weight: 600; line-height: 22px; color: var(--text-main); }
+  .lv-sub { margin-top: 3px; font-size: 13px; line-height: 18px; color: var(--grey-600); }
+  .lv-rows { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 7px 14px; margin: 0; }
+  .lv-rows dt { font-size: 12px; line-height: 17px; color: var(--grey-600); }
+  .lv-rows dd {
+    margin: 0; font-size: 13px; line-height: 17px; color: var(--text-main);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .lv-note {
+    font-size: 13px; line-height: 18px; color: var(--grey-700);
+    border-top: 1px solid var(--grey-200); padding-top: 11px;
+  }
+  .cell-empty { color: var(--grey-400); }
+
+  /* ─── Where it has got to ─────────────────────────────────────── */
+  .st {
+    flex-shrink: 0; height: 22px; display: inline-flex; align-items: center;
+    padding: 0 9px; border-radius: 6px; white-space: nowrap;
+    font-size: 12px; font-weight: 600; line-height: 22px;
+  }
+  .st-pending   { background: #fff3e0; color: #9a5b12; }
+  .st-approved  { background: #e8f5e9; color: #1f7a33; }
+  .st-rejected  { background: #fdecee; color: var(--error); }
+  .st-cancelled { background: var(--grey-100); color: var(--grey-600); }
+
+  .lv-empty {
+    margin-top: 28px; padding: 44px 20px; text-align: center;
+    font-size: 14px; color: var(--grey-600);
+    border: 1px solid var(--grey-300); border-radius: 12px; background: var(--white);
+  }
+
+  /* ─── A phone gets one column and a tighter card ──────────────── */
+  body.is-narrow .lv-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 14px; }
+  body.is-narrow .lv-card { padding: 14px 15px 16px; border-radius: 10px; }
+  body.is-narrow .lv-when { font-size: 15px; }
+  body.is-narrow .lv-rows { grid-template-columns: 86px minmax(0, 1fr); }
+  body.is-narrow .lv-tabs { overflow-x: auto; }
+  body.is-narrow .page-header { margin-bottom: 6px; }
+
+  .vp-switch {
+    position: fixed; right: 20px; bottom: 20px; z-index: 400;
+    display: inline-flex; padding: 4px; gap: 2px; border-radius: 10px;
+    background: var(--white); border: 1px solid var(--grey-350); box-shadow: var(--shadow-dropdown);
+  }
+  .vp-switch button {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 12px; border: none; border-radius: 7px; cursor: pointer;
+    background: none; color: var(--grey-700);
+    font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+  }
+  .vp-switch button:hover { background: var(--grey-100); color: var(--text-main); }
+  .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
+</style>
+</head>
+<body data-module="myleave">
+
+<div class="page">
+  <aside id="shell-sidebar"></aside>
+
+  <main class="main">
+    <div class="content">
+
+      <div class="page-header">
+        <h1 class="page-title">My Leave</h1>
+      </div>
+
+      <div class="lv-tabs" id="lv-tabs"></div>
+      <div class="lv-grid" id="lv-grid"></div>
+      <div class="lv-empty" id="lv-empty" hidden></div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ── Prototype viewport switcher ──────────────────────────────── -->
+<div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
+  <button type="button" data-vp="desktop" class="on">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1.5" y="2.5" width="13" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 14h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Desktop
+  </button>
+  <button type="button" data-vp="mobile">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="4.5" y="1.5" width="7" height="13" rx="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M7 12.8h2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    Mobile
+  </button>
+</div>
+
+<script src="assets/shell.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  function el(id) { return document.getElementById(id); }
+
+  /* ─── Mock data ───────────────────────────────────────────────────
+     The signed-in worker's own requests, hardcoded as in every other
+     OPMS prototype. The field set is the agreed one: site, leave type,
+     description, from and to, hours, and the approver. Days is worked
+     out rather than stored — counting from the 29th to the 13th by hand
+     is where the mistakes are. */
+  var ME = 'Olivia Rhye';
+
+  var REQUESTS = [
+    { id: 1, site: 'GDR12 Tank Farm Shutdown', type: 'Unpaid Leave', from: '2026-11-02', to: '2026-11-06',
+      hours: null, approver: 'Grace Okafor', made: '2026-10-22', why: 'Moving house.', state: 'pending' },
+    { id: 2, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-12-21', to: '2026-12-24',
+      hours: null, approver: 'Grace Okafor', made: '2026-10-25', why: 'Christmas with family in Adelaide.', state: 'pending' },
+    { id: 3, site: 'GDR12 Tank Farm Shutdown', type: 'Sick Leave', from: '2026-11-18', to: '2026-11-18',
+      hours: 4, approver: 'Grace Okafor', made: '2026-10-28', why: 'Specialist appointment in the afternoon.', state: 'pending' },
+
+    { id: 4, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-10-12', to: '2026-10-16',
+      hours: null, approver: 'Grace Okafor', made: '2026-09-10', why: '', state: 'approved' },
+    { id: 5, site: 'GDR12 Tank Farm Shutdown', type: 'Sick Leave', from: '2026-09-29', to: '2026-09-29',
+      hours: 4, approver: 'Grace Okafor', made: '2026-09-29', why: 'Dentist — back on site after lunch.', state: 'approved' },
+    { id: 6, site: 'MMA VIGILANT – 360', type: 'Annual Leave', from: '2026-08-03', to: '2026-08-07',
+      hours: null, approver: 'Tom Halloran', made: '2026-07-02', why: 'Winter break.', state: 'approved' },
+
+    { id: 7, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-08-24', to: '2026-08-28',
+      hours: null, approver: 'Grace Okafor', made: '2026-08-18', why: 'Clashed with the shutdown — moved to October.', state: 'rejected' },
+
+    { id: 8, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-09-07', to: '2026-09-11',
+      hours: null, approver: 'Grace Okafor', made: '2026-09-01', why: 'No longer needed.', state: 'cancelled' }
+  ];
+
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmt(iso) {
+    var d = new Date(iso + 'T00:00:00');
+    return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+  }
+  /* A stretch of days reads as one thing when it is one month, and as
+     two when it crosses one. */
+  function fmtRange(a, b) {
+    if (a === b) return fmt(a);
+    var x = new Date(a + 'T00:00:00'), y = new Date(b + 'T00:00:00');
+    if (x.getMonth() === y.getMonth() && x.getFullYear() === y.getFullYear()) {
+      return x.getDate() + ' – ' + fmt(b);
+    }
+    return fmt(a) + ' – ' + fmt(b);
+  }
+  /* Working days only: a weekend inside a stretch of leave is not leave. */
+  function workingDays(a, b) {
+    var d = new Date(a + 'T00:00:00'), end = new Date(b + 'T00:00:00'), n = 0;
+    while (d <= end) {
+      var w = d.getDay();
+      if (w !== 0 && w !== 6) n++;
+      d.setDate(d.getDate() + 1);
+    }
+    return n;
+  }
+  function fmtNum(n) { return (Math.round(n * 10) / 10) + ''; }
+
+  /* ─── State ───────────────────────────────────────────────────── */
+  var TABS = [
+    { k: 'pending',   label: 'Pending' },
+    { k: 'approved',  label: 'Approved' },
+    { k: 'rejected',  label: 'Rejected' },
+    { k: 'cancelled', label: 'Cancelled' }
+  ];
+  var state = { tab: 'pending' };
+
+  function countOf(k) { return REQUESTS.filter(function (r) { return r.state === k; }).length; }
+
+  function renderTabs() {
+    el('lv-tabs').innerHTML = TABS.map(function (t) {
+      var n = countOf(t.k);
+      return '<button class="lv-tab' + (t.k === state.tab ? ' on' : '') + '" type="button" data-tab="' + t.k + '">' +
+        Shell.esc(t.label) + (n ? ' (' + n + ')' : '') + '</button>';
+    }).join('');
+  }
+
+  function card(r) {
+    var d = workingDays(r.from, r.to);
+    return '<article class="lv-card">' +
+      '<div class="lv-head">' +
+        '<div>' +
+          '<div class="lv-when">' + Shell.esc(fmtRange(r.from, r.to)) + '</div>' +
+          '<div class="lv-sub">' + d + (d === 1 ? ' day' : ' days') + ' · ' + Shell.esc(r.type) + '</div>' +
+        '</div>' +
+        '<span class="st st-' + r.state + '">' + r.state.charAt(0).toUpperCase() + r.state.slice(1) + '</span>' +
+      '</div>' +
+      '<dl class="lv-rows">' +
+        '<dt>Site</dt><dd title="' + Shell.esc(r.site) + '">' + Shell.esc(r.site) + '</dd>' +
+        /* Hours are only ever asked for on a single day; a stretch of
+           dates is whole days by definition. */
+        '<dt>Hours</dt><dd>' + (r.hours == null
+          ? '<span class="cell-empty">Whole days</span>'
+          : fmtNum(r.hours) + ' h') + '</dd>' +
+        '<dt>Approver</dt><dd>' + Shell.esc(r.approver) + '</dd>' +
+        '<dt>Requested</dt><dd>' + Shell.esc(fmt(r.made)) + '</dd>' +
+      '</dl>' +
+      (r.why ? '<p class="lv-note">' + Shell.esc(r.why) + '</p>' : '') +
+    '</article>';
+  }
+
+  function render() {
+    renderTabs();
+    var rows = REQUESTS.filter(function (r) { return r.state === state.tab; });
+    el('lv-grid').innerHTML = rows.map(card).join('');
+    el('lv-grid').hidden = !rows.length;
+    el('lv-empty').hidden = !!rows.length;
+    el('lv-empty').textContent = 'Nothing here.';
+  }
+
+  el('lv-tabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tab]');
+    if (!b) return;
+    state.tab = b.getAttribute('data-tab');
+    render();
+  });
+
+  /* ─── Prototype viewport ──────────────────────────────────────── */
+  var vp = el('vp-switch');
+  var narrowQuery = window.matchMedia('(max-width: 860px)');
+  var vpMode = 'auto';
+
+  function applyViewport() {
+    var narrow = vpMode === 'mobile' ? true : vpMode === 'desktop' ? false : narrowQuery.matches;
+    document.body.classList.toggle('is-narrow', narrow);
+    document.body.classList.toggle('force-mobile', vpMode === 'mobile');
+    if (Shell.setViewport) Shell.setViewport(vpMode === 'mobile' ? 'mobile' : vpMode === 'desktop' ? 'desktop' : 'auto');
+    vp.querySelectorAll('[data-vp]').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-vp') === (vpMode === 'auto' ? (narrow ? 'mobile' : 'desktop') : vpMode));
+    });
+  }
+  vp.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-vp]');
+    if (!b) return;
+    vpMode = b.getAttribute('data-vp');
+    applyViewport();
+  });
+  narrowQuery.addEventListener('change', function () { if (vpMode === 'auto') applyViewport(); });
+
+  render();
+  applyViewport();
+})();
+</script>
+</body>
+</html>

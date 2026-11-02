@@ -46,6 +46,7 @@
     { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html', only: 'current' },
     { id: 'tsflat',   label: 'Supervisor Timesheets', icon: 'timesheets', r4: true, href: 'timesheets-flat.html', only: 'flat' },
     { id: 'mytsflat', label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'timesheets-flat.html#mine', only: 'flat' },
+    { id: 'myleave',    label: 'My Leave',         icon: 'leave',      r4: true, href: 'my-leave.html' },
     { id: 'leave',      label: 'Leave Requests',   icon: 'leave',      r4: true, href: 'leave-requests.html' },
     { id: 'reports',    label: 'Reports',          icon: 'reports',    r4: true }
   ];

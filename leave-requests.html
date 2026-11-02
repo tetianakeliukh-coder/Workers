@@ -52,6 +52,7 @@
   }
   .view-link:hover { text-decoration: underline; }
   #lr-table td { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .lr-when { font-weight: 500; }
   .lr-empty { padding: 40px 16px; text-align: center; color: var(--grey-600); font-size: 14px; }
 
   /* ─── Details dialog ────────────────────────────────────────────────
@@ -60,7 +61,11 @@
      order: what else is waiting, what is this, and is it evidenced. */
   /* The roster needs the room: 64px a day over four weeks does not fit
      in a dialog sized for a form. */
-  .rd-modal { max-width: 96vw; width: 96vw; height: 90vh; }
+  /* Sized to what is in it. The old 96vw × 90vh was cut for a roster
+     that ran the width of the screen; a calendar is a compact thing and
+     the rest was empty dialog. */
+  .rd-modal { width: min(96vw, 1340px); max-width: 96vw; height: auto; max-height: 90vh; }
+  .rd-queue-list { max-height: none; }
   .rd-body { display: grid; grid-template-columns: 260px 1fr; min-height: 0; }
   .rd-queue { border-right: 1px solid var(--grey-300); display: flex; flex-direction: column; min-height: 0; }
   .rd-queue-head {
@@ -95,7 +100,7 @@
      room. */
   /* start, not stretch: the details card is as tall as what it says. */
   .rd-split {
-    display: grid; grid-template-columns: 320px 1fr; gap: 20px;
+    display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px;
     padding: 20px 24px; min-height: 0; overflow: auto; align-items: start;
   }
   .rd-card { border: 1px solid var(--grey-350); border-radius: 10px; padding: 16px; }
@@ -116,96 +121,76 @@
      Copied rather than approximated, because a board a manager already
      reads daily should not be a second dialect of itself. */
   .rd-roster {
+    position: relative;
     display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0;
     border: 1px solid var(--grey-350); border-radius: 10px; padding: 16px;
   }
   .rd-roster-head { display: flex; align-items: center; gap: 12px; }
   .ros-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-  .ros-month { font-size: 13px; color: var(--grey-700); min-width: 118px; text-align: center; }
+  .ros-month { font-size: 13px; color: var(--grey-700); min-width: 150px; text-align: center; }
 
   .ros-clash { font-size: 13px; line-height: 18px; }
   .ros-clash.hit { color: var(--error); font-weight: 500; }
   .ros-clash.free { color: #289e1a; font-weight: 500; }
+  .ros-clash .ros-off {
+    display: block; margin-top: 2px; font-weight: 400; color: var(--grey-600);
+  }
 
-  .ros-scroll {
-    overflow: auto; min-width: 0; min-height: 0; flex: 1;
-    border: 1px solid var(--grey-300); border-radius: 2px;
+  /* ─── Two months, side by side ──────────────────────────────────
+     Never one, never three: a request near a month boundary needs the
+     next month whatever its length, and a length-dependent view is one
+     more thing to understand before you can read it. Scrolls freely
+     both ways, because a manager checking a clash often wants the week
+     before it as much as the week of it. */
+  .ros-cal { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; min-width: 0; }
+  .cal-m-head {
+    font-size: 13px; font-weight: 600; color: var(--text-main);
+    height: 22px; display: flex; align-items: center;
   }
-  .ros-stack { position: relative; width: max-content; }
-  table.ros-board { border-collapse: separate; border-spacing: 0; width: max-content; }
-  /* The shell sets a row height for every table on the page — 52px for a
-     body row, 44 for a head — which is right for a list of records and
-     wrong for a board. The board's rows are its own. */
-  .ros-board thead tr { height: 32px; }
-  .ros-board tbody tr { height: auto; }
-  .ros-board th, .ros-board td {
-    padding: 0; margin: 0; box-sizing: border-box;
-    border-right: 1px solid var(--grey-300); border-bottom: 1px solid var(--grey-300);
-    background: var(--white); font-size: 12px; color: #212121;
-    text-align: center; vertical-align: middle;
-    --sh-row: 0 0 0 0 transparent; --sh-cell: 0 0 0 0 transparent;
-    box-shadow: var(--sh-row), var(--sh-cell);
+  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+  .cal-dow {
+    height: 20px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 500; color: var(--grey-600);
   }
-  .ros-board th:last-child, .ros-board td:last-child { border-right: none; }
-  .ros-board tbody tr:last-child > td { border-bottom: none; }
-  .ros-board thead th { position: sticky; top: 0; z-index: 9; height: 32px; font-weight: 400; }
-  /* The days being asked for, said in the headings as well as by the box. */
-  .ros-board thead th.day.req { background: #e9eeff; color: var(--primary); font-weight: 600; }
-  .ros-board thead th.day { width: 64px; min-width: 64px; }
-  .ros-board thead th.label { z-index: 10; }
-  .ros-board .label {
-    position: sticky; left: 0; z-index: 2;
-    width: 285px; min-width: 285px; max-width: 285px; text-align: left; padding: 0 12px;
-  }
-  .ros-board tr.project > td { height: 28px; background: var(--grey-100); position: sticky; top: 32px; z-index: 7; }
-  .ros-board tr.position > td { height: 32px; background: var(--white); }
-  /* Every sticky label sits above the band and above the day cells, or
-     a block slides over the names as the board scrolls. */
-  .ros-board td.label, .ros-board tr.project > td.label, .ros-board tr.position > td.label { z-index: 10; }
-  .ros-board thead th.label { z-index: 12; }
-  .ros-board .row-label { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .ros-board .row-label.l1 { padding-left: 16px; }
-  .ros-board .row-label.l2 { padding-left: 40px; }
-  .ros-board .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ros-board tr.project .name, .ros-board tr.position .name { font-weight: 500; }
-  .ros-board .av {
-    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
-    background: var(--grey-100); color: #909090;
+  /* Every day is a cell of the same size whether or not anything is on
+     it, so the shape of a month is the shape of the month. */
+  .cal-day {
+    position: relative; height: 34px; border-radius: 6px; border: none; padding: 0;
     display: flex; align-items: center; justify-content: center;
+    font-family: var(--fs-sans); font-size: 12.5px; color: var(--text-main);
+    background: none; cursor: default;
   }
-  .ros-board .block {
-    display: inline-block; width: 56px; height: 24px; border-radius: 4px;
-    box-shadow: inset 0 0 0 1px rgba(5, 23, 95, 0.07);
-    transition: transform .08s, box-shadow .08s;
+  .cal-day.out { color: var(--grey-400); }
+  .cal-day.on { cursor: pointer; }
+  .cal-day.on:hover, .cal-day.open { box-shadow: 0 0 0 1px var(--primary); }
+  /* The days being asked for, drawn over whatever is under them: the
+     question is what the leave lands on, so both have to be legible. */
+  .cal-day.req { box-shadow: inset 0 0 0 1.5px var(--primary); font-weight: 600; color: var(--primary); }
+  .cal-day.req.on:hover, .cal-day.req.open { box-shadow: inset 0 0 0 1.5px var(--primary), 0 0 0 1px var(--primary); }
+  .cal-day.today::after {
+    content: ''; position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
+    width: 12px; height: 2px; border-radius: 1px; background: var(--grey-600);
   }
-  .ros-board .block.day    { background: #cfe0f7; }
-  .ros-board .block.night  { background: #f6cff6; }
-  .ros-board .block.travel { background: #b9e3e6; }
-  .ros-board .block.other  { background: #d7cff6; }
-  .ros-board .block.off    { background: #cfcfcf; }
-  .ros-board td:hover > .block {
-    transform: scale(1.07);
-    box-shadow: inset 0 0 0 1px rgba(5, 23, 95, 0.14), 0 2px 7px rgba(5, 23, 95, 0.22);
-  }
-  .ros-board tbody tr:hover > td {
-    --sh-row: inset 0 1px 0 0 rgba(0, 51, 255, 0.28), inset 0 -1px 0 0 rgba(0, 51, 255, 0.28);
-  }
-  .ros-board tbody tr > td:not(.label):hover { --sh-cell: inset 0 0 0 1px rgba(0, 51, 255, 0.55); }
 
-  /* The requested stretch, laid over every row at once — an overlay, not
-     a cell, so it cannot push the board about. */
-  .ros-band {
-    position: absolute; top: 0; bottom: 0; border-radius: 6px; pointer-events: none; z-index: 8;
-    background: rgba(0, 51, 255, 0.06); box-shadow: inset 0 0 0 2px var(--primary);
+  /* Hover says it on a desktop, a tap says it on a tablet — the same
+     three lines either way. */
+  /* Placed against the window, not against the card: a calendar is only
+     six rows tall, and a panel kept inside it had nowhere to go but over
+     the month it was explaining. */
+  .cal-pop {
+    position: fixed; z-index: 340; width: 232px; padding: 10px 12px;
+    border-radius: 8px; background: var(--white);
+    border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
   }
-  /* Under the box rather than over its top edge, where the sticky day
-     headings are painted above it. */
-  .ros-band .tag {
-    position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%);
-    height: 18px; padding: 0 8px; border-radius: 6px 6px 0 0;
-    background: var(--primary); color: var(--white);
-    font-size: 11px; font-weight: 600; line-height: 18px; white-space: nowrap;
-  }
+  .cal-pop[hidden] { display: none; }
+  .cal-pop .cp-when { font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
+  .cal-pop .cp-when .req { color: var(--primary); font-weight: 600; }
+  .cal-pop dl { display: grid; grid-template-columns: 74px 1fr; gap: 3px 10px; margin: 0; }
+  .cal-pop dt { font-size: 11px; color: var(--grey-600); }
+  .cal-pop dd { font-size: 12px; line-height: 16px; color: var(--text-main); margin: 0; }
+  .cal-pop .cp-sep { height: 1px; background: var(--grey-300); margin: 8px 0; }
+  .cal-pop .cp-none { font-size: 12px; color: var(--grey-600); }
+
   .ros-key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: var(--grey-600); }
   .ros-key span { display: inline-flex; align-items: center; gap: 6px; }
   .ros-key .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
@@ -240,6 +225,8 @@
   body.is-narrow .rd-body { grid-template-columns: 1fr; }
   body.is-narrow .rd-queue { display: none; }
   body.is-narrow .rd-split { grid-template-columns: 1fr; }
+  /* One month at a time once there is no room for two side by side. */
+  body.is-narrow .ros-cal { grid-template-columns: 1fr; }
   body.is-narrow .lr-tabs { overflow-x: auto; }
 </style>
 </head>
@@ -272,15 +259,19 @@
         <div class="table-scroll">
           <table id="lr-table">
             <colgroup>
-              <col style="width:200px" /><col style="width:190px" /><col style="width:190px" />
-              <col style="width:80px" /><col style="width:215px" /><col style="width:130px" />
-              <col /><col style="width:90px" />
+              <col style="width:215px" /><col style="width:180px" /><col style="width:200px" />
+              <col style="width:150px" /><col style="width:72px" /><col style="width:78px" />
+              <col /><col style="width:150px" /><col style="width:130px" /><col style="width:90px" />
             </colgroup>
             <thead>
+              <!-- A manager's question is when someone is away, so that is
+                   the heading of the row rather than the kind of leave. -->
               <tr>
-                <th>Title</th><th>Worker</th><th>Leave Type</th>
-                <th class="num">Days</th><th>Dates</th><th>Created Date</th>
-                <th>Reason</th><th class="col-view"></th>
+                <th>Dates</th><th>Worker</th><th>Site</th>
+                <th>Leave Type</th>
+                <th class="num" data-tip="Working days &mdash; weekends are not counted">Days</th>
+                <th class="num" data-tip="Hours are only given for a single day">Hours</th>
+                <th>Description</th><th>Approver</th><th>Created</th><th class="col-view"></th>
               </tr>
             </thead>
             <tbody id="lr-body"></tbody>
@@ -347,16 +338,16 @@
               </span>
             </div>
             <div class="ros-clash" id="ros-clash"></div>
-            <div class="ros-scroll"><div class="ros-stack">
-              <table class="ros-board" id="ros-board"></table>
-              <div class="ros-band" id="ros-band" hidden></div>
-            </div></div>
+            <div class="ros-cal" id="ros-cal"></div>
             <div class="ros-key">
               <span><i class="sw sw-day"></i>Day shift</span>
               <span><i class="sw sw-night"></i>Night shift</span>
               <span><i class="sw sw-travel"></i>Travel</span>
               <span><i class="sw sw-leave"></i>Requested leave</span>
             </div>
+            <!-- Hover on a desktop, tap on a tablet: the same three
+                 lines either way, next to the day they are about. -->
+            <div class="cal-pop" id="cal-pop" hidden></div>
           </div>
 
           <div class="rd-doc" hidden>
@@ -400,7 +391,12 @@
 
   /* ─── Mock data ───────────────────────────────────────────────────
      Hardcoded, as in every other OPMS prototype — there is no backend. */
-  var TYPES = ['Annual Leave', 'Sick Leave', 'Unpaid Leave', 'Parental Leave', 'Compassionate Leave'];
+  var TYPES = ['Annual Leave', 'Sick Leave', 'Parental Leave', 'Unpaid Leave'];
+  /* A request belongs to a site, and is approved by a person — both are
+     part of what is being decided, so both travel on the request. */
+  var SITES = ['MMA VIGILANT \u2013 360', 'MMA VIGILANT ROV', 'SA BHP OLYMPIC DAM',
+    'GDR09 Factory Shutdown', 'GDR12 Tank Farm Shutdown'];
+  var APPROVERS = ['Grace Okafor', 'Tom Halloran', 'Priya Nair', 'Marcus Webb', 'Olivia Rhye'];
 
   var WORKERS = [
     { name: 'John Sith',    colour: '#3b7dd8' },
@@ -441,45 +437,32 @@
     return n;
   }
 
+  /* Hours are only ever asked for on a single day. A stretch of dates
+     is whole days by definition, and someone wanting two half-days
+     raises two requests — which is how the client's own payroll works. */
   var REQUESTS = [
-    { id: 1,  title: 'Family holiday',     who: 'John Sith',    type: 'Annual Leave',  from: '2026-12-21', to: '2026-12-31', made: '2026-10-14', why: 'Booked flights to Perth over Christmas.', doc: null, state: 'pending' },
-    { id: 2,  title: 'Title',              who: 'Emma Stone',   type: 'Sick Leave',    from: '2026-10-27', to: '2026-10-29', made: '2026-10-26', why: 'Flu — certificate attached.', doc: 'Medical Certificate', state: 'pending' },
-    { id: 3,  title: 'Title',              who: 'Sophia Adams', type: 'Annual Leave',  from: '2026-11-09', to: '2026-11-13', made: '2026-10-20', why: '', doc: null, state: 'pending' },
-    { id: 4,  title: 'Title',              who: 'Olivia Brown', type: 'Parental Leave',from: '2027-01-11', to: '2027-04-02', made: '2026-10-02', why: 'First child, due early January.', doc: 'Birth Certificate', state: 'pending' },
-    { id: 5,  title: 'Title',              who: 'Olivia Rhye',  type: 'Unpaid Leave',  from: '2026-11-02', to: '2026-11-06', made: '2026-10-22', why: 'Moving house.', doc: null, state: 'pending' },
-    { id: 6,  title: 'Title',              who: 'Liam Baker',   type: 'Annual Leave',  from: '2026-11-23', to: '2026-11-27', made: '2026-10-25', why: '', doc: null, state: 'pending' },
-    { id: 7,  title: 'Funeral — interstate', who: 'Noah Davis', type: 'Compassionate Leave', from: '2026-10-29', to: '2026-10-30', made: '2026-10-26', why: 'Grandfather passed away on Saturday.', doc: null, state: 'pending' },
-    { id: 8,  title: 'Title',              who: 'Ava Miller',   type: 'Sick Leave',    from: '2026-10-26', to: '2026-10-26', made: '2026-10-26', why: 'Migraine.', doc: null, state: 'pending' },
-    { id: 9,  title: 'Title',              who: 'John Sith',    type: 'Annual Leave',  from: '2026-11-16', to: '2026-11-20', made: '2026-10-19', why: '', doc: null, state: 'pending' },
-    { id: 10, title: 'Title',              who: 'Emma Stone',   type: 'Annual Leave',  from: '2027-02-01', to: '2027-02-12', made: '2026-10-23', why: 'Wedding and honeymoon.', doc: null, state: 'pending' },
+    { id: 1,  who: 'John Sith',    site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-12-21', to: '2026-12-31', hours: null, approver: 'Grace Okafor', made: '2026-10-14', why: 'Booked flights to Perth over Christmas.', doc: null, state: 'pending' },
+    { id: 2,  who: 'Emma Stone',   site: 'MMA VIGILANT ROV',         type: 'Sick Leave',     from: '2026-10-27', to: '2026-10-29', hours: null, approver: 'Priya Nair',   made: '2026-10-26', why: 'Flu \u2014 certificate attached.', doc: 'Medical Certificate', state: 'pending' },
+    { id: 3,  who: 'Sophia Adams', site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-11-09', to: '2026-11-13', hours: null, approver: 'Tom Halloran', made: '2026-10-20', why: '', doc: null, state: 'pending' },
+    { id: 4,  who: 'Olivia Brown', site: 'SA BHP OLYMPIC DAM',       type: 'Parental Leave', from: '2027-01-11', to: '2027-04-02', hours: null, approver: 'Marcus Webb',  made: '2026-10-02', why: 'First child, due early January.', doc: 'Birth Certificate', state: 'pending' },
+    { id: 5,  who: 'Olivia Rhye',  site: 'GDR12 Tank Farm Shutdown', type: 'Unpaid Leave',   from: '2026-11-02', to: '2026-11-06', hours: null, approver: 'Grace Okafor', made: '2026-10-22', why: 'Moving house.', doc: null, state: 'pending' },
+    { id: 6,  who: 'Liam Baker',   site: 'MMA VIGILANT \u2013 360',    type: 'Annual Leave',   from: '2026-11-23', to: '2026-11-27', hours: null, approver: 'Grace Okafor', made: '2026-10-25', why: '', doc: null, state: 'pending' },
+    { id: 7,  who: 'Noah Davis',   site: 'SA BHP OLYMPIC DAM',       type: 'Unpaid Leave',   from: '2026-10-29', to: '2026-10-30', hours: null, approver: 'Marcus Webb',  made: '2026-10-26', why: 'Family funeral interstate.', doc: null, state: 'pending' },
+    { id: 8,  who: 'Ava Miller',   site: 'GDR09 Factory Shutdown',   type: 'Sick Leave',     from: '2026-10-26', to: '2026-10-26', hours: 4,    approver: 'Tom Halloran', made: '2026-10-26', why: 'Migraine \u2014 went home after the crib break.', doc: null, state: 'pending' },
+    { id: 9,  who: 'John Sith',    site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-11-16', to: '2026-11-20', hours: null, approver: 'Grace Okafor', made: '2026-10-19', why: '', doc: null, state: 'pending' },
+    { id: 10, who: 'Emma Stone',   site: 'MMA VIGILANT ROV',         type: 'Annual Leave',   from: '2027-02-01', to: '2027-02-12', hours: null, approver: 'Priya Nair',   made: '2026-10-23', why: 'Wedding and honeymoon.', doc: null, state: 'pending' },
 
-    { id: 11, title: 'Title',              who: 'Olivia Brown', type: 'Annual Leave',  from: '2026-10-05', to: '2026-10-09', made: '2026-09-11', why: '', doc: null, state: 'approved' },
-    { id: 12, title: 'Title',              who: 'Liam Baker',   type: 'Sick Leave',    from: '2026-09-28', to: '2026-09-29', made: '2026-09-28', why: 'Dental surgery.', doc: 'Medical Certificate', state: 'approved' },
-    { id: 13, title: 'Title',              who: 'Ava Miller',   type: 'Annual Leave',  from: '2026-10-12', to: '2026-10-16', made: '2026-09-02', why: '', doc: null, state: 'approved' },
-    { id: 14, title: 'Title',              who: 'Noah Davis',   type: 'Unpaid Leave',  from: '2026-09-21', to: '2026-09-25', made: '2026-09-01', why: 'Studying for exams.', doc: null, state: 'approved' },
+    { id: 11, who: 'Olivia Brown', site: 'SA BHP OLYMPIC DAM',       type: 'Annual Leave',   from: '2026-10-05', to: '2026-10-09', hours: null, approver: 'Marcus Webb',  made: '2026-09-11', why: '', doc: null, state: 'approved' },
+    { id: 12, who: 'Liam Baker',   site: 'MMA VIGILANT \u2013 360',    type: 'Sick Leave',     from: '2026-09-28', to: '2026-09-29', hours: null, approver: 'Grace Okafor', made: '2026-09-28', why: 'Dental surgery.', doc: 'Medical Certificate', state: 'approved' },
+    { id: 13, who: 'Ava Miller',   site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-10-12', to: '2026-10-16', hours: null, approver: 'Tom Halloran', made: '2026-09-02', why: '', doc: null, state: 'approved' },
+    { id: 14, who: 'Noah Davis',   site: 'SA BHP OLYMPIC DAM',       type: 'Unpaid Leave',   from: '2026-09-21', to: '2026-09-25', hours: null, approver: 'Marcus Webb',  made: '2026-09-01', why: 'Studying for exams.', doc: null, state: 'approved' },
+    { id: 18, who: 'Liam Baker',   site: 'MMA VIGILANT \u2013 360',    type: 'Sick Leave',     from: '2026-10-20', to: '2026-10-20', hours: 3,    approver: 'Grace Okafor', made: '2026-10-20', why: 'Specialist appointment.', doc: null, state: 'approved' },
 
-    { id: 15, title: 'Title',              who: 'Sophia Adams', type: 'Annual Leave',  from: '2026-10-05', to: '2026-10-23', made: '2026-09-15', why: 'Three weeks over the shutdown.', doc: null, state: 'rejected' },
-    { id: 16, title: 'Title',              who: 'John Sith',    type: 'Unpaid Leave',  from: '2026-09-14', to: '2026-09-18', made: '2026-09-10', why: '', doc: null, state: 'rejected' },
+    { id: 15, who: 'Sophia Adams', site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-10-05', to: '2026-10-23', hours: null, approver: 'Tom Halloran', made: '2026-09-15', why: 'Three weeks over the shutdown.', doc: null, state: 'rejected' },
+    { id: 16, who: 'John Sith',    site: 'GDR09 Factory Shutdown',   type: 'Unpaid Leave',   from: '2026-09-14', to: '2026-09-18', hours: null, approver: 'Grace Okafor', made: '2026-09-10', why: '', doc: null, state: 'rejected' },
 
-    { id: 17, title: 'Title',              who: 'Emma Stone',   type: 'Annual Leave',  from: '2026-10-19', to: '2026-10-23', made: '2026-09-20', why: 'No longer needed.', doc: null, state: 'cancelled' }
+    { id: 17, who: 'Emma Stone',   site: 'MMA VIGILANT ROV',         type: 'Annual Leave',   from: '2026-10-19', to: '2026-10-23', hours: null, approver: 'Priya Nair',   made: '2026-09-20', why: 'No longer needed.', doc: null, state: 'cancelled' }
   ];
-
-  /* Leave comes out of a balance, which is the one thing a manager needs
-     that the request itself does not carry. */
-  var BALANCE = {
-    'John Sith':    { 'Annual Leave': 14.5, 'Sick Leave': 6, 'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
-    'Emma Stone':   { 'Annual Leave': 9,    'Sick Leave': 8, 'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
-    'Sophia Adams': { 'Annual Leave': 2,    'Sick Leave': 10, 'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
-    'Olivia Brown': { 'Annual Leave': 21,   'Sick Leave': 10, 'Unpaid Leave': null, 'Parental Leave': 90, 'Compassionate Leave': 3 },
-    'Olivia Rhye':  { 'Annual Leave': 11,   'Sick Leave': 4,  'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
-    'Liam Baker':   { 'Annual Leave': 18,   'Sick Leave': 7,  'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
-    'Noah Davis':   { 'Annual Leave': 5,    'Sick Leave': 9,  'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 },
-    'Ava Miller':   { 'Annual Leave': 16,   'Sick Leave': 2,  'Unpaid Leave': null, 'Parental Leave': null, 'Compassionate Leave': 3 }
-  };
-  function balance(who, type) {
-    var b = BALANCE[who];
-    return b && b[type] != null ? b[type] : null;
-  }
 
   /* ─── What each worker is rostered on ──────────────────────────────
      A worker is often on more than one thing at once, so this is a list
@@ -487,43 +470,43 @@
      it, and the pattern of days it runs. */
   var ROSTER = {
     'John Sith': [
-      { project: 'GDR09 Factory Shutdown', shift: 'Boilermaker – Day Shift', kind: 'day',
+      { project: 'GDR09 Factory Shutdown', work: 'Boilermaker', shift: 'Day Shift', kind: 'day',
         from: '2026-11-30', to: '2027-01-15', pattern: 'weekdays' },
-      { project: 'GDR12 Tank Farm Shutdown', shift: 'Mechanical Fitter – Day Shift', kind: 'day',
+      { project: 'GDR12 Tank Farm Shutdown', work: 'Mechanical Fitter', shift: 'Day Shift', kind: 'day',
         from: '2026-12-14', to: '2026-12-24', pattern: 'mwf' }
     ],
     'Emma Stone': [
-      { project: 'MMA VIGILANT ROV', shift: 'Deck Crew – Day Shift', kind: 'day',
+      { project: 'MMA VIGILANT ROV', work: 'Deck Crew', shift: 'Day Shift', kind: 'day',
         from: '2026-10-19', to: '2026-11-13', pattern: 'weekdays' }
     ],
     'Sophia Adams': [
-      { project: 'GDR09 Factory Shutdown', shift: 'Welder – Night Shift', kind: 'night',
+      { project: 'GDR09 Factory Shutdown', work: 'Welder', shift: 'Night Shift', kind: 'night',
         from: '2026-10-26', to: '2026-12-04', pattern: 'weekdays' },
-      { project: 'Site transfer', shift: 'Travel day', kind: 'travel',
+      { project: 'Site transfer', work: 'Travel', shift: 'Travel day', kind: 'travel',
         from: '2026-11-09', to: '2026-11-09', pattern: 'all' }
     ],
     'Olivia Brown': [
-      { project: 'SA BHP OLYMPIC DAM', shift: 'Scaffolder – Day Shift', kind: 'day',
+      { project: 'SA BHP OLYMPIC DAM', work: 'Scaffolder', shift: 'Day Shift', kind: 'day',
         from: '2026-10-05', to: '2026-12-18', pattern: 'weekdays' }
     ],
     'Olivia Rhye': [
-      { project: 'GDR12 Tank Farm Shutdown', shift: 'Supervisor – Day Shift', kind: 'day',
+      { project: 'GDR12 Tank Farm Shutdown', work: 'Supervisor', shift: 'Day Shift', kind: 'day',
         from: '2026-10-12', to: '2026-12-11', pattern: 'weekdays' }
     ],
     'Liam Baker': [
-      { project: 'MMA VIGILANT – 360', shift: 'Electrician – Day Shift', kind: 'day',
+      { project: 'MMA VIGILANT – 360', work: 'Electrician', shift: 'Day Shift', kind: 'day',
         from: '2026-10-05', to: '2026-11-20', pattern: 'weekdays' },
-      { project: 'MMA VIGILANT ROV', shift: 'Electrician – Night Shift', kind: 'night',
+      { project: 'MMA VIGILANT ROV', work: 'Electrician', shift: 'Night Shift', kind: 'night',
         from: '2026-11-23', to: '2026-12-18', pattern: 'weekdays' }
     ],
     'Noah Davis': [
-      { project: 'SA BHP OLYMPIC DAM', shift: 'Rigger – Day Shift', kind: 'day',
+      { project: 'SA BHP OLYMPIC DAM', work: 'Rigger', shift: 'Day Shift', kind: 'day',
         from: '2026-10-19', to: '2026-11-27', pattern: 'weekdays' }
     ],
     'Ava Miller': [
-      { project: 'GDR09 Factory Shutdown', shift: 'Boilermaker – Night Shift', kind: 'night',
+      { project: 'GDR09 Factory Shutdown', work: 'Boilermaker', shift: 'Night Shift', kind: 'night',
         from: '2026-10-12', to: '2026-11-06', pattern: 'weekdays' },
-      { project: 'Site transfer', shift: 'Travel day', kind: 'travel',
+      { project: 'Site transfer', work: 'Travel', shift: 'Travel day', kind: 'travel',
         from: '2026-10-26', to: '2026-10-26', pattern: 'all' }
     ]
   };
@@ -560,8 +543,15 @@
   function countOf(k) { return REQUESTS.filter(function (r) { return r.state === k; }).length; }
   function matches(r, q) {
     if (!q) return true;
-    return [r.title, r.who, r.type, r.why, fmtRange(r.from, r.to)]
+    return [r.who, r.site, r.type, r.why, r.approver, fmtRange(r.from, r.to)]
       .join(' ').toLowerCase().indexOf(q) !== -1;
+  }
+  /* Whole days carry no hours, and a dash with nothing behind it reads
+     as missing rather than as not applicable. */
+  function hoursCell(r) {
+    return r.hours == null
+      ? '<span class="cell-empty" data-tip="Whole days">&mdash;</span>'
+      : fmtNum(r.hours) + ' h';
   }
   function rowsFor(tab, q) {
     return REQUESTS.filter(function (r) { return r.state === tab && matches(r, q); });
@@ -585,16 +575,19 @@
 
     el('lr-body').innerHTML = rows.map(function (r) {
       var w = worker(r.who);
+      var when = fmtRange(r.from, r.to);
       return '<tr data-id="' + r.id + '">' +
-        '<td data-tip="' + Shell.esc(r.title) + '">' + Shell.highlight(r.title, state.q) + '</td>' +
+        '<td class="lr-when" data-tip="' + Shell.esc(when) + '">' + Shell.highlight(when, state.q) + '</td>' +
         '<td><span class="who"><span class="av" style="background:' + w.colour + '">' + initials(r.who) + '</span>' +
           '<span class="nm">' + Shell.highlight(r.who, state.q) + '</span></span></td>' +
+        '<td data-tip="' + Shell.esc(r.site) + '">' + Shell.highlight(r.site, state.q) + '</td>' +
         '<td>' + Shell.highlight(r.type, state.q) + '</td>' +
         '<td class="num">' + workingDays(r.from, r.to) + '</td>' +
-        '<td>' + Shell.esc(fmtRange(r.from, r.to)) + '</td>' +
-        '<td>' + Shell.esc(fmt(r.made)) + '</td>' +
+        '<td class="num">' + hoursCell(r) + '</td>' +
         '<td data-tip="' + Shell.esc(r.why || '') + '">' +
           (r.why ? Shell.highlight(r.why, state.q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
+        '<td>' + Shell.highlight(r.approver, state.q) + '</td>' +
+        '<td>' + Shell.esc(fmt(r.made)) + '</td>' +
         '<td class="col-view"><button class="view-link" type="button" data-view="' + r.id + '">View</button></td>' +
       '</tr>';
     }).join('');
@@ -639,26 +632,30 @@
     var list = rowsFor(r.state, state.q.toLowerCase());
     el('rd-queue-list').innerHTML = list.map(function (x) {
       return '<button class="rd-q-item' + (x.id === openId ? ' on' : '') + '" type="button" data-q="' + x.id + '">' +
-        '<span class="t">' + Shell.esc(x.title) + '</span>' +
-        '<span class="s">' + Shell.esc(x.who + ' · ' + fmtRange(x.from, x.to)) + '</span></button>';
+        '<span class="t">' + Shell.esc(fmtRange(x.from, x.to)) + '</span>' +
+        '<span class="s">' + Shell.esc(x.who + ' · ' + x.type) + '</span></button>';
     }).join('');
   }
 
   function renderDetails() {
-    var r = byId(openId), d = workingDays(r.from, r.to), bal = balance(r.who, r.type);
-    el('rd-main-title').textContent = r.title;
+    var r = byId(openId), d = workingDays(r.from, r.to);
+    el('rd-main-title').textContent = fmtRange(r.from, r.to);
+    /* Days is worked out rather than asked for: counting from the 29th
+       to the 13th by hand is where the mistakes are. */
     el('rd-rows').innerHTML =
       row('Worker', Shell.esc(r.who)) +
+      row('Site', Shell.esc(r.site)) +
       row('Leave Type', Shell.esc(r.type)) +
       row('Dates', Shell.esc(fmtRange(r.from, r.to))) +
-      row('Working days', d + (d === 1 ? ' day' : ' days')) +
-      row('Balance', bal == null
-        ? '<span class="cell-empty">Not deducted</span>'
-        : fmtNum(bal) + ' left, ' + fmtNum(bal - d) + ' after this') +
-      row('Requested', Shell.esc(fmt(r.made))) +
-      row('Reason', r.why
+      row('Days', d + (d === 1 ? ' day' : ' days')) +
+      row('Hours', r.hours == null
+        ? '<span class="cell-empty">Whole days</span>'
+        : fmtNum(r.hours) + ' h') +
+      row('Description', r.why
         ? '<span class="rd-note">' + Shell.esc(r.why) + '</span>'
-        : '<span class="cell-empty">&mdash;</span>');
+        : '<span class="cell-empty">&mdash;</span>') +
+      row('Approver', Shell.esc(r.approver)) +
+      row('Requested', Shell.esc(fmt(r.made)));
 
     /* A request is either approved and rejected from here, or it is
        already settled and there is nothing to do but read it. */
@@ -668,78 +665,80 @@
   function row(k, v) { return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
   function fmtNum(n) { return (Math.round(n * 10) / 10) + ''; }
 
-  /* ─── Roster ──────────────────────────────────────────────────────
-     A window of days around the request, moved a fortnight at a time.
-     It opens on the request because that is what is being decided. */
-  var rosFrom = null;
-  var ROS_DAYS = 28;
+  /* ─── The worker's roster, two months at a time ────────────────────
+     Always two, never one and never three. A request that ends near a
+     month boundary needs the next month whatever its own length, and a
+     view that changes shape with the length of the request is one more
+     thing to work out before it can be read. It opens on the month the
+     request starts in, and scrolls freely either way. */
+  var rosAnchor = null;              // the first of the left-hand month
+  var MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+  var DOW_SHORT = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  var TODAY_ISO = isoOf(new Date());
 
-  var ICO_PERSON = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
-    '<circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/>' +
-    '<path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  function monthStart(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function addMonths(d, n) { return new Date(d.getFullYear(), d.getMonth() + n, 1); }
+
+  /* The colours the rostering board already uses, so the same shift is
+     the same colour wherever a manager meets it. */
+  var KIND_FILL = { day: '#cfe0f7', night: '#f6cff6', travel: '#b9e3e6', other: '#d7cff6' };
+  function onThat(list, d) {
+    return list.filter(function (a) { return onDay(a, d); });
+  }
+  /* Two things on one day is a real thing — a travel day laid over a
+     shift — so the cell is split rather than picking a winner. */
+  function fillOf(as) {
+    if (!as.length) return '';
+    var c = as.map(function (a) { return KIND_FILL[a.kind] || KIND_FILL.other; });
+    return c.length === 1
+      ? 'background:' + c[0] + ';'
+      : 'background:linear-gradient(135deg,' + c[0] + ' 50%,' + c[1] + ' 50%);';
+  }
+
+  function monthHtml(anchor, r, list) {
+    var y = anchor.getFullYear(), m = anchor.getMonth();
+    var first = new Date(y, m, 1);
+    /* Monday first, as the rest of the product counts a week. Six rows
+       always, so the two months beside each other are the same height
+       whatever shape their weeks happen to be. */
+    var start = addDays(first, -((first.getDay() + 6) % 7));
+    var cells = '';
+    for (var i = 0; i < 42; i++) {
+      var d = addDays(start, i), k = isoOf(d);
+      var out = d.getMonth() !== m;
+      var as = out ? [] : onThat(list, d);
+      var req = !out && k >= r.from && k <= r.to;
+      var cls = 'cal-day' + (out ? ' out' : '') + (req ? ' req' : '') +
+        (as.length ? ' on' : '') + (k === TODAY_ISO ? ' today' : '');
+      cells += as.length
+        ? '<button type="button" class="' + cls + '" data-day="' + k + '" style="' +
+            fillOf(as) + '">' + d.getDate() + '</button>'
+        : '<div class="' + cls + '">' + d.getDate() + '</div>';
+    }
+    return '<div class="cal-month">' +
+      '<div class="cal-m-head">' + MONTHS_LONG[m] + ' ' + y + '</div>' +
+      '<div class="cal-grid">' +
+        DOW_SHORT.map(function (x) { return '<div class="cal-dow">' + x + '</div>'; }).join('') +
+        cells +
+      '</div></div>';
+  }
 
   function renderRoster() {
-    var r = byId(openId);
-    var list = rosterFor(r.who);
-    el('ros-title').textContent = 'Roster — ' + r.who;
+    hidePop();
+    var r = byId(openId), list = rosterFor(r.who);
+    el('ros-title').textContent = 'Roster \u2014 ' + r.who;
 
-    var days = [], d = new Date(rosFrom.getTime());
-    for (var i = 0; i < ROS_DAYS; i++) { days.push(new Date(d.getTime())); d.setDate(d.getDate() + 1); }
-    el('ros-month').textContent = fmt(isoOf(days[0])) + ' – ' + fmt(isoOf(days[days.length - 1]));
+    var right = addMonths(rosAnchor, 1);
+    el('ros-month').textContent = rosAnchor.getFullYear() === right.getFullYear()
+      ? MONTHS_LONG[rosAnchor.getMonth()] + ' \u2013 ' + MONTHS_LONG[right.getMonth()] + ' ' + right.getFullYear()
+      : MONTHS_LONG[rosAnchor.getMonth()] + ' ' + rosAnchor.getFullYear() + ' \u2013 ' +
+        MONTHS_LONG[right.getMonth()] + ' ' + right.getFullYear();
 
-    /* Day headings read dd.mm, as they do on the rostering board. */
-    var head = '<thead><tr><th class="label"><div class="row-label"><span class="name">Roster</span></div></th>' +
-      days.map(function (x) {
-        var k = isoOf(x), inReq = k >= r.from && k <= r.to;
-        return '<th class="day' + (inReq ? ' req' : '') + '">' +
-          pad2(x.getDate()) + '.' + pad2(x.getMonth() + 1) + '</th>';
-      }).join('') + '</tr></thead>';
+    el('ros-cal').innerHTML = monthHtml(rosAnchor, r, list) + monthHtml(right, r, list);
 
-    var body = '';
-    if (!list.length) {
-      body = '<tr class="worker"><td class="label"><div class="row-label l2">' +
-        '<span class="name">Not rostered on anything</span></div></td>' +
-        days.map(function () { return '<td></td>'; }).join('') + '</tr>';
-    }
-    list.forEach(function (a) {
-      /* Project, then the position — and the blocks sit on the position
-         row rather than on a row of their own. Whose roster this is was
-         settled by the heading above it; repeating the name on every
-         line only pushed the board taller. */
-      body += '<tr class="project"><td class="label"><div class="row-label">' +
-        '<span class="name">' + Shell.esc(a.project) + '</span></div></td>' +
-        days.map(function () { return '<td></td>'; }).join('') + '</tr>';
-      body += '<tr class="position"><td class="label"><div class="row-label l1">' +
-        '<span class="name">' + Shell.esc(a.shift) + '</span></div></td>' +
-        days.map(function (x) {
-          if (!onDay(a, x)) return '<td></td>';
-          return '<td data-tip="' + Shell.esc(r.who + ' — ' + a.shift + ' · ' + fmt(isoOf(x))) + '">' +
-            '<span class="block ' + a.kind + '"></span></td>';
-        }).join('') + '</tr>';
-    });
-
-    el('ros-board').innerHTML = head + '<tbody>' + body + '</tbody>';
-
-    /* The requested stretch is laid over the lot, its edges read off the
-       day headings themselves rather than recomputed from track sizes. */
-    var keys = days.map(isoOf);
-    var band = el('ros-band');
-    var inView = (r.from <= keys[keys.length - 1] && r.to >= keys[0]);
-    band.hidden = !inView;
-    if (inView) {
-      var a0 = keys.indexOf(r.from), a1 = keys.indexOf(r.to);
-      var ths = el('ros-board').querySelectorAll('thead th.day');
-      var c0 = ths[a0 === -1 ? 0 : a0], c1 = ths[a1 === -1 ? ROS_DAYS - 1 : a1];
-      var base = el('ros-board').parentNode.getBoundingClientRect();
-      var x0 = c0.getBoundingClientRect().left - base.left;
-      var x1 = c1.getBoundingClientRect().right - base.left;
-      band.style.left = x0 + 'px';
-      band.style.width = (x1 - x0) + 'px';
-      band.innerHTML = '<span class="tag">Requested &middot; ' +
-        Shell.esc(fmtRange(r.from, r.to)) + '</span>';
-    }
-
-    /* The one sentence a manager is after. */
+    /* The one sentence a manager is after, whatever is on screen: it is
+       about the request, not about the months being looked at. */
     var clash = 0, dd = new Date(r.from + 'T00:00:00'), end = new Date(r.to + 'T00:00:00');
     while (dd <= end) {
       if (list.some(function (a) { return onDay(a, dd); })) clash++;
@@ -748,12 +747,84 @@
     var need = workingDays(r.from, r.to);
     var box = el('ros-clash');
     box.className = 'ros-clash ' + (clash ? 'hit' : 'free');
-    box.textContent = clash
+    var lastShown = isoOf(addDays(addMonths(right, 1), -1));
+    var off = r.from < isoOf(rosAnchor) || r.to > lastShown;
+    box.innerHTML = (clash
       ? 'Rostered on ' + clash + ' of the ' + need + ' day' + (need === 1 ? '' : 's') + ' requested.'
-      : 'Not rostered on any of the days requested.';
+      : 'Not rostered on any of the days requested.') +
+      (off ? '<span class="ros-off">Part of this request falls outside the two months shown.</span>' : '');
   }
-  el('ros-prev').addEventListener('click', function () { rosFrom = addDays(rosFrom, -14); renderRoster(); });
-  el('ros-next').addEventListener('click', function () { rosFrom = addDays(rosFrom, 14); renderRoster(); });
+  el('ros-prev').addEventListener('click', function () { rosAnchor = addMonths(rosAnchor, -1); renderRoster(); });
+  el('ros-next').addEventListener('click', function () { rosAnchor = addMonths(rosAnchor, 1); renderRoster(); });
+
+  /* ─── What is on a day ─────────────────────────────────────────────
+     A pointer asks by hovering and a finger asks by tapping, so it does
+     both: hover shows it while the pointer is there, a tap pins it until
+     something else is tapped. */
+  var calPop = el('cal-pop'), calOn = null, calPinned = false;
+
+  function hidePop() {
+    if (!calPop) return;
+    calPop.hidden = true;
+    if (calOn) calOn.classList.remove('open');
+    calOn = null; calPinned = false;
+  }
+
+  function showPop(btn, pin) {
+    hidePop();
+    var r = byId(openId), list = rosterFor(r.who);
+    var k = btn.getAttribute('data-day');
+    var as = onThat(list, new Date(k + 'T00:00:00'));
+    var req = k >= r.from && k <= r.to;
+
+    calPop.innerHTML = '<div class="cp-when">' + Shell.esc(fmt(k)) +
+      (req ? ' <span class="req">\u00b7 requested</span>' : '') + '</div>' +
+      (as.length ? as.map(function (a, i) {
+        return (i ? '<div class="cp-sep"></div>' : '') +
+          '<dl><dt>Project</dt><dd>' + Shell.esc(a.project) + '</dd>' +
+          '<dt>Work type</dt><dd>' + Shell.esc(a.work) + '</dd>' +
+          '<dt>Shift</dt><dd>' + Shell.esc(a.shift) + '</dd></dl>';
+      }).join('') : '<div class="cp-none">Nothing rostered on this day.</div>');
+
+    calPop.hidden = false;
+    var b = btn.getBoundingClientRect();
+    var left = b.left + b.width / 2 - calPop.offsetWidth / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - calPop.offsetWidth - 8));
+    var top = b.bottom + 8;
+    if (top + calPop.offsetHeight > window.innerHeight - 8) {
+      top = b.top - calPop.offsetHeight - 8;
+    }
+    calPop.style.left = Math.round(left) + 'px';
+    calPop.style.top = Math.round(Math.max(8, top)) + 'px';
+
+    calOn = btn; btn.classList.add('open');
+    calPinned = !!pin;
+  }
+
+  el('ros-cal').addEventListener('mouseover', function (e) {
+    if (calPinned) return;
+    var b = e.target.closest('[data-day]');
+    if (b && b !== calOn) showPop(b, false);
+  });
+  el('ros-cal').addEventListener('mouseout', function (e) {
+    if (calPinned) return;
+    var b = e.target.closest('[data-day]');
+    if (!b) return;
+    if (e.relatedTarget && b.contains(e.relatedTarget)) return;
+    hidePop();
+  });
+  el('ros-cal').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-day]');
+    if (!b) return;
+    e.stopPropagation();
+    if (calPinned && calOn === b) { hidePop(); return; }
+    showPop(b, true);
+  });
+  calPop.addEventListener('click', function (e) { e.stopPropagation(); });
+  document.addEventListener('click', function () { if (calPinned) hidePop(); });
+  /* Fixed to the window, so a scroll would leave it behind the day it
+     belongs to. */
+  window.addEventListener('scroll', hidePop, true);
 
   function renderDoc(r) {
     page = 1; zoom = 1;
@@ -790,7 +861,7 @@
     var r = byId(id);
     /* Open a few days before the request, so what leads up to it is on
        screen as well as the request itself. */
-    rosFrom = addDays(new Date(r.from + 'T00:00:00'), -4);
+    rosAnchor = monthStart(new Date(r.from + 'T00:00:00'));
     renderQueue();
     renderDetails();
     /* Shown first: the band's edges are measured off the day headings,
@@ -798,7 +869,7 @@
     modal.classList.add('open');
     renderRoster();
   }
-  function closeModal() { modal.classList.remove('open'); openId = null; }
+  function closeModal() { hidePop(); modal.classList.remove('open'); openId = null; }
 
   el('lr-body').addEventListener('click', function (e) {
     var b = e.target.closest('[data-view]');
