@@ -74,19 +74,6 @@
   .add-menu button:hover { background: var(--grey-100); }
   .add-menu button svg { color: var(--grey-600); flex-shrink: 0; }
 
-  /* ─── The status a timesheet carries ───────────────────────────────
-     A site under a supervisor is one timesheet, so the mark sits on the
-     row that stands for it and says its name beside it. */
-  .st-chip {
-    display: inline-flex; align-items: center; gap: 5px; margin-right: 10px;
-    font-size: 13px; font-weight: 500; color: var(--grey-600);
-  }
-  .st-chip svg { flex-shrink: 0; }
-  .st-chip.st-draft     { color: var(--grey-600); }
-  .st-chip.st-revised   { color: #78b818; }
-  .st-chip.st-submitted { color: #1a85cd; }
-  .st-chip.st-finalised { color: #289e1a; }
-
   /* ─── Naming a task in the row itself ──────────────────────────── */
   .task-pick {
     display: flex; align-items: center; gap: 8px; width: 100%; height: 34px;
@@ -203,7 +190,6 @@
     font-variant-numeric: tabular-nums; text-align: right;
   }
   .day-head .dtot.over { color: var(--error); }
-  .day-head .dtot .hr-st { margin: 0; }
   .day-head .dtot .cell-empty { font-weight: 400; }
   .day-head.is-today .dow, .day-head.is-today .dnum { color: var(--primary); }
   /* The day's own total, under its date: the figure being checked. */
@@ -281,23 +267,14 @@
     color: var(--grey-600); cursor: default;
   }
   .hr-cell { gap: 6px; }
-  /* A status and an allowance were two grey marks in the same corner of
-     the same cell, and nothing told them apart. The status carries the
-     colour its chip carries elsewhere; the allowance stays grey. */
-  /* Allowance first, then status, then the figure. Only the first of
-     them claims the gap, or the number is shunted twice. */
-  .hr-st { display: inline-flex; align-items: center; flex-shrink: 0; margin-right: auto; }
-  .hr-st.st-draft { color: var(--grey-400); }
-  .alw-mark + .hr-st { margin-right: auto; margin-left: 4px; }
-  .hr-st.st-revised   { color: #78b818; }
-  .hr-st.st-submitted { color: #1a85cd; }
-  .hr-st.st-finalised { color: #289e1a; }
-  td.col-day .hr-st { margin-right: 4px; vertical-align: -2px; }
+  /* The padlock and the allowance are two grey marks in the same corner
+     of the same cell. The padlock is a condition of the day, so it is
+     drawn lighter than the claim, which is something the worker put
+     there. Allowance first, then the lock, then the figure. */
+  .hr-lock { display: inline-flex; align-items: center; flex-shrink: 0; color: var(--grey-400); }
+  td.col-day .hr-lock { margin-right: 4px; vertical-align: -2px; }
   /* Outside the editable cell there is no flex row to push against. */
   td.col-day .alw-mark { margin-right: 4px; }
-  /* Status and allowance both sit left; only the first of them claims
-     the gap, or the figure is shunted a second time. */
-  .hr-cell .alw-mark + .hr-st { margin-left: 2px; }
 
   .cell-pop {
     display: none; position: fixed; z-index: 500; width: 248px; padding: 12px;
@@ -1929,13 +1906,12 @@
   /* A timesheet is a day on a site, and it carries a status. Once the
      supervisor has submitted it, or it has been finalised, the hours on
      it are no longer the worker's to change. */
-  var STATUS_META = {
-    Draft:     { locked: false, icon: '' },
-    Revised:   { locked: false, icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>' },
-    Submitted: { locked: true,  icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.2" stroke="currentColor" stroke-width="1.3"/><path d="M8 11V5M5.5 7.5L8 5l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' },
-    Finalised: { locked: true,  icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="6.5" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7V5.2a2.5 2.5 0 015 0V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' }
-  };
-  var STATUS_ORDER = ['Draft', 'Draft', 'Submitted', 'Revised', 'Finalised'];
+  /* Draft, Submitted, Revised, Finalised are the supervisor's words for
+     what they are doing to a timesheet. The worker is not the one doing
+     it, and on their own week the only thing any of it changes is
+     whether a day will still take hours — so that is the only thing this
+     screen draws. Which status shut a day is not named anywhere on it. */
+  var LOCKED_ON = [false, false, true, false, true];
   /* One site under one supervisor is one timesheet, and the status is
      the timesheet's. So it is said once, on the row that stands for it,
      rather than in every column that timesheet happens to span. */
@@ -1970,43 +1946,36 @@
     (SUPS_BY_SITE[st] || []).forEach(function (sp) { ALL_SHEETS.push(st + '\u00a7' + sp); });
   });
   /* A day on a site under a supervisor is the thing that gets handed in
-     and approved — not the week, and not the worker's whole day. So the
-     status is read from all three, and '' means there is no timesheet
-     there at all. */
-  function sheetStatus(site, sup, isoDate) {
-    if (!groupHours(site, sup, isoDate)) return '';
-    if (!groupSavedOn(site, sup, isoDate)) return 'Draft';
+     — not the week, and not the worker's whole day. A day with nothing
+     booked on it, and a day holding only this edit's draft, are both
+     still the worker's. */
+  function dayLocked(site, sup, isoDate) {
+    if (!groupHours(site, sup, isoDate)) return false;
+    if (!groupSavedOn(site, sup, isoDate)) return false;
     var i = ALL_SHEETS.indexOf(site + '\u00a7' + sup);
     var d = fromIso(isoDate).getDay();
-    return STATUS_ORDER[((i < 0 ? 0 : i) + d) % STATUS_ORDER.length];
+    return LOCKED_ON[((i < 0 ? 0 : i) + d) % LOCKED_ON.length];
   }
-  function statusOf(key, isoDate) {
+  function cellLocked(key, isoDate) {
     var m = taskMeta[key];
-    return m ? sheetStatus(m.site, m.sup, isoDate) : '';
+    return !!m && dayLocked(m.site, m.sup, isoDate);
   }
-  function statusFor(key, isoDate) {
-    return STATUS_META[statusOf(key, isoDate)] || STATUS_META.Draft;
-  }
-  function statusName(key, isoDate) { return statusOf(key, isoDate); }
 
   /* The group's summary row crosses every day, so each of its day cells
-     is one timesheet — and that is where the mark belongs. */
-  function stMark(name) {
-    var st = STATUS_META[name] || STATUS_META.Draft;
-    return '<span class="hr-st st-' + name.toLowerCase() + '">' + (st.icon || ICO_DRAFT) + '</span>';
-  }
+     is one timesheet — and one padlock on it says the whole of what the
+     worker needs from it. An open day is drawn as nothing at all: there
+     is no second mark for "yes, you may". */
+  var ICO_LOCK = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<rect x="3" y="7" width="10" height="6.5" rx="1.3" stroke="currentColor" stroke-width="1.3"/>' +
+    '<path d="M5.5 7V5.2a2.5 2.5 0 015 0V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+  var TIP_LOCKED = 'This day has been handed in &mdash; its hours can no longer be changed';
   function dayCellGroup(value, isoDate, site, sup) {
-    var name = sheetStatus(site, sup, isoDate);
-    var st = name ? (STATUS_META[name] || STATUS_META.Draft) : null;
+    var shut = dayLocked(site, sup, isoDate);
     return '<td class="col-day' + todayCls(isoDate) + '"' +
-      (name ? ' data-tip="' + Shell.esc(name + (st.locked
-        ? ' \u2014 hours can no longer be changed' : '')) + '"' : '') + '>' +
-      (name ? stMark(name) : '') +
+      (shut ? ' data-tip="' + TIP_LOCKED + '"' : '') + '>' +
+      (shut ? '<span class="hr-lock">' + ICO_LOCK + '</span>' : '') +
       (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
-  var ICO_DRAFT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none">' +
-    '<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2.2 2"/></svg>';
-
   function dayCell(value, isoDate, key) {
     return '<td class="col-day' + todayCls(isoDate) + '">' +
       alwDot(key, isoDate) +
@@ -2041,12 +2010,12 @@
   function cellHtml(value, key, isoDate) {
     if (state.editing && key) {
       var dk = key + '|' + isoDate, changed = draft && dk in draft;
-      var st = statusFor(key, isoDate), lock = st.locked;
+      var lock = cellLocked(key, isoDate);
       return '<td class="col-day' + todayCls(isoDate) + '">' +
         '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
         (overKey === dk && overCap(isoDate) ? ' over' : '') + '" type="button" ' +
         'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
-        (lock ? ' disabled data-tip="' + statusName(key, isoDate) + ' — hours can no longer be changed"' : '') + '>' +
+        (lock ? ' disabled data-tip="' + TIP_LOCKED + '"' : '') + '>' +
         alwDot(key, isoDate) +
         (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
     }
@@ -3978,7 +3947,7 @@
         if (on[k]) return;
         var m = taskMeta[k];
         /* A day already handed in keeps what it says. */
-        if ((STATUS_META[sheetStatus(m.site, m.sup, dst)] || {}).locked) return;
+        if (dayLocked(m.site, m.sup, dst)) return;
         var c = cellOf(k, src);
         if (!(c.h > 0)) return;
         if (!seen[k]) {

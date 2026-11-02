@@ -38,7 +38,7 @@
     { id: 'search',     label: 'Search',           icon: 'search',     action: 'global-search' },
     { id: 'home',       label: 'Home',             icon: 'home' },
     { id: 'documents',  label: 'Documents',        icon: 'documents' },
-    { id: 'workers',    label: 'Workers',          icon: 'workers',    href: 'workers/index.html' },
+    { id: 'workers',    label: 'Workers',          icon: 'workers',    href: 'index.html' },
     { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
     { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
@@ -444,14 +444,14 @@
   var QUESTIONS = [
     {
       screen: 'My Timesheets',
-      q: 'Can we agree one icon per timesheet status?',
-      why: 'A status is shown as an icon wherever there is no room for the word \u2014 at the head ' +
-           'of a day column, and on a cell whose hours are locked. The prototype is drawing its own: ' +
-           'a dashed circle for Draft, a pencil for Revised, an upward arrow in a circle for ' +
-           'Submitted, and a padlock for Finalised. Four statuses, four marks, and they have to be ' +
-           'told apart at 13px and in one glance.',
-      now: 'The four above are in use, with the status spelled out in the tooltip. They are a ' +
-           'placeholder until the set is agreed, and changing them later changes every screen.'
+      q: 'A worker sees whether a day is locked, not which status locked it \u2014 is that right?',
+      why: 'Draft, Submitted, Revised and Finalised are the supervisor\u2019s words for what they ' +
+           'are doing to a timesheet. The worker is not the one doing it, and on their own week the ' +
+           'only thing any of it changes is whether a day will still take hours. Four marks to tell ' +
+           'apart at 13px, to say one thing the worker can act on.',
+      now: 'A padlock on the day, and the cells under it are read-only, worded as handed in. Which ' +
+           'status shut it is not named anywhere on this screen. The statuses themselves are still ' +
+           'on Supervisor Timesheets, where someone is acting on them.'
     },
     {
       screen: 'Supervisor Timesheets',
