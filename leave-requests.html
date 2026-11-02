@@ -164,12 +164,18 @@
   .cal-day.on { cursor: pointer; }
   .cal-day.on:hover, .cal-day.open { box-shadow: 0 0 0 1px var(--primary); }
   /* The days being asked for, drawn over whatever is under them: the
-     question is what the leave lands on, so both have to be legible. */
-  .cal-day.req { box-shadow: inset 0 0 0 1.5px var(--primary); font-weight: 600; color: var(--primary); }
-  .cal-day.req.on:hover, .cal-day.req.open { box-shadow: inset 0 0 0 1.5px var(--primary), 0 0 0 1px var(--primary); }
+     question is what the leave lands on, so both have to be legible.
+     A bar under the day rather than a ring around it — a ring is the
+     shape of something you can press, and these are not. */
+  .cal-day.req { font-weight: 600; color: #8a5200; }
+  .cal-day.req::before {
+    content: ''; position: absolute; left: 5px; right: 5px; bottom: 3px;
+    height: 3px; border-radius: 2px; background: #d4820c;
+  }
+  /* Today moves to a corner, so it is not a second bar under a number. */
   .cal-day.today::after {
-    content: ''; position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
-    width: 12px; height: 2px; border-radius: 1px; background: var(--grey-600);
+    content: ''; position: absolute; top: 4px; right: 4px;
+    width: 4px; height: 4px; border-radius: 50%; background: var(--grey-400);
   }
 
   /* Hover says it on a desktop, a tap says it on a tablet — the same
@@ -184,7 +190,7 @@
   }
   .cal-pop[hidden] { display: none; }
   .cal-pop .cp-when { font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
-  .cal-pop .cp-when .req { color: var(--primary); font-weight: 600; }
+  .cal-pop .cp-when .req { color: #8a5200; font-weight: 600; }
   .cal-pop dl { display: grid; grid-template-columns: 74px 1fr; gap: 3px 10px; margin: 0; }
   .cal-pop dt { font-size: 11px; color: var(--grey-600); }
   .cal-pop dd { font-size: 12px; line-height: 16px; color: var(--text-main); margin: 0; }
@@ -194,9 +200,14 @@
   .ros-key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: var(--grey-600); }
   .ros-key span { display: inline-flex; align-items: center; gap: 6px; }
   .ros-key .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
-  .sw-day { background: #cfe0f7; } .sw-night { background: #f6cff6; }
+  .sw-day { background: #ddd3f7; } .sw-night { background: #f8c0e4; }
   .sw-travel { background: #b9e3e6; }
-  .sw-leave { background: rgba(0,51,255,0.07); box-shadow: inset 0 0 0 1px rgba(0,51,255,0.4); }
+  /* The requested days are marked by the bar under them, so the key
+     shows the bar rather than a fill they do not have. */
+  .ros-key .sw-leave {
+    background: none; border-radius: 0; height: 3px; width: 14px;
+    align-self: center; background-color: #d4820c;
+  }
   .rd-doc-bar { display: flex; align-items: center; gap: 6px; }
   .doc-btn {
     width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
@@ -546,6 +557,10 @@
     return [r.who, r.site, r.type, r.why, r.approver, fmtRange(r.from, r.to)]
       .join(' ').toLowerCase().indexOf(q) !== -1;
   }
+  /* What a request is called wherever it is referred to as one thing:
+     who is away and when. The kind of leave goes under it — it matters
+     once you are reading the request, not while you are finding it. */
+  function reqName(r) { return r.who + ', ' + fmtRange(r.from, r.to); }
   /* Whole days carry no hours, and a dash with nothing behind it reads
      as missing rather than as not applicable. */
   function hoursCell(r) {
@@ -632,14 +647,14 @@
     var list = rowsFor(r.state, state.q.toLowerCase());
     el('rd-queue-list').innerHTML = list.map(function (x) {
       return '<button class="rd-q-item' + (x.id === openId ? ' on' : '') + '" type="button" data-q="' + x.id + '">' +
-        '<span class="t">' + Shell.esc(fmtRange(x.from, x.to)) + '</span>' +
-        '<span class="s">' + Shell.esc(x.who + ' · ' + x.type) + '</span></button>';
+        '<span class="t">' + Shell.esc(reqName(x)) + '</span>' +
+        '<span class="s">' + Shell.esc(x.type) + '</span></button>';
     }).join('');
   }
 
   function renderDetails() {
     var r = byId(openId), d = workingDays(r.from, r.to);
-    el('rd-main-title').textContent = fmtRange(r.from, r.to);
+    el('rd-main-title').textContent = reqName(r);
     /* Days is worked out rather than asked for: counting from the 29th
        to the 13th by hand is where the mistakes are. */
     el('rd-rows').innerHTML =
@@ -682,7 +697,10 @@
 
   /* The colours the rostering board already uses, so the same shift is
      the same colour wherever a manager meets it. */
-  var KIND_FILL = { day: '#cfe0f7', night: '#f6cff6', travel: '#b9e3e6', other: '#d7cff6' };
+  /* No blue among them: blue is what the reader can act on, and a day
+     cell is a fact. Violet, pink and teal are far enough apart to tell
+     at 34 pixels. */
+  var KIND_FILL = { day: '#ddd3f7', night: '#f8c0e4', travel: '#b9e3e6', other: '#e6dcc6' };
   function onThat(list, d) {
     return list.filter(function (a) { return onDay(a, d); });
   }
