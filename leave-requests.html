@@ -156,6 +156,40 @@
   .ros-clash { font-size: 13px; line-height: 18px; }
   .ros-clash.hit { color: var(--error); font-weight: 500; }
   .ros-clash.free { color: #289e1a; font-weight: 500; }
+  /* Two panes, one at a time. */
+  .rd-right { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+  .rd-rtabs { display: flex; gap: 4px; padding: 3px; background: var(--grey-100); border-radius: 9px; }
+  .rd-rtab {
+    flex: 1 1 0; height: 32px; border: none; background: none; border-radius: 7px;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--grey-600);
+    cursor: pointer;
+  }
+  .rd-rtab.on { background: var(--white); color: var(--text-main); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1); }
+  .rd-rtab:disabled { color: var(--grey-400); cursor: default; }
+  .rd-doc[hidden], .rd-roster[hidden] { display: none; }
+  .rd-doc {
+    border: 1px solid var(--grey-350); border-radius: 10px; padding: 16px;
+  }
+
+  /* ─── Rejecting says why ───────────────────────────────────────── */
+  .modal.rj-modal { max-width: 520px; }
+  .rj-modal .modal-body { padding: 18px 24px 8px; }
+  .rj-lead { margin: 0 0 10px; font-size: 14px; color: var(--text-main); }
+  #rj-note {
+    width: 100%; resize: vertical; min-height: 96px; padding: 10px 12px;
+    border-radius: 8px; border: 1px solid var(--grey-350); background: var(--white);
+    font-family: var(--fs-sans); font-size: 14px; line-height: 20px; color: var(--text-main);
+  }
+  #rj-note:focus { outline: none; border-color: var(--primary); }
+  .rj-count { margin-top: 6px; text-align: right; font-size: 12px; color: var(--grey-600); }
+  .rj-modal .modal-footer { padding: 12px 24px 20px; }
+  /* Why it was turned down, where the request is read. */
+  .rd-why {
+    margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+    background: #fdecee; font-size: 13px; line-height: 18px; color: var(--text-main);
+  }
+  .rd-why b { display: block; margin-bottom: 2px; color: var(--error); }
+
   .ros-clash .ros-off {
     display: block; margin-top: 2px; font-weight: 400; color: var(--grey-600);
   }
@@ -275,6 +309,18 @@
 
       <div class="page-header">
         <h1 class="page-title">Leave Requests</h1>
+        <div class="header-actions">
+          <!-- One site at a time: an approver works a site, and the rules
+               a request is read against — whether a weekend counts, for
+               one — are the site's own. -->
+          <div class="dd-wrap" id="site-dd">
+            <button class="dd-trigger" type="button">
+              <span>Site: <span id="site-dd-value"></span></span>
+              <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <div class="dd-panel" id="site-dd-panel"></div>
+          </div>
+        </div>
       </div>
 
       <div class="search-wrap">
@@ -321,7 +367,7 @@
                 <th class="col-pick"><input class="lr-check" type="checkbox" id="lr-all" aria-label="Select every request in this tab" /></th>
                 <th>Dates</th><th>Worker</th><th>Site</th>
                 <th>Leave Type</th>
-                <th class="num" data-tip="Working days &mdash; weekends are not counted">Days</th>
+                <th class="num" id="th-days">Days</th>
                 <th class="num" data-tip="Hours are only given for a single day">Hours</th>
                 <th>Description</th><th>Approver</th><th>Created</th><th class="col-view"></th>
               </tr>
@@ -370,13 +416,20 @@
           <div class="rd-card">
             <div class="rd-card-title">Details</div>
             <dl class="rd-rows" id="rd-rows"></dl>
+            <!-- Why it was turned down, where the request is read. -->
+            <div class="rd-why" id="rd-why" hidden></div>
           </div>
 
-          <!-- The roster is the evidence for a leave request the way a
-               receipt is for a claim: the question a manager actually has
-               is whether this person is already standing on a shift in
-               those days, and nothing else on the screen answers it. -->
-          <div class="rd-roster">
+          <!-- Two kinds of evidence, one place. The roster answers "is
+               this person on shift those days"; the attachment answers
+               "is this request backed by anything". They are read one at
+               a time, so they take turns rather than space. -->
+          <div class="rd-right">
+          <div class="rd-rtabs" id="rd-rtabs">
+            <button class="rd-rtab on" type="button" data-rt="roster">Roster</button>
+            <button class="rd-rtab" type="button" data-rt="doc" id="rt-doc">Attachment</button>
+          </div>
+          <div class="rd-roster" id="pane-roster">
             <div class="rd-roster-head">
               <span class="rd-card-title" id="ros-title">Roster</span>
               <span class="ros-nav">
@@ -402,7 +455,7 @@
             <div class="cal-pop" id="cal-pop" hidden></div>
           </div>
 
-          <div class="rd-doc" hidden>
+          <div class="rd-doc" id="pane-doc" hidden>
             <div class="rd-doc-bar">
               <button class="doc-btn" type="button" id="doc-out" aria-label="Zoom out">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7h4M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -428,7 +481,36 @@
             </div>
             <div class="rd-doc-stage" id="doc-stage"></div>
           </div>
+          </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rejecting says why ───────────────────────────────────────────
+     The same dialog the expense screen uses to reject a claim: one
+     comment, capped, and nothing is rejected without it. -->
+<div class="modal-backdrop" id="rj-modal" role="dialog" aria-modal="true" aria-labelledby="rj-title">
+  <div class="modal rj-modal">
+    <div class="modal-header">
+      <div class="modal-heading">
+        <span class="modal-title" id="rj-title">Reject Request</span>
+      </div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="rj-lead">Please, add your comment:</p>
+      <textarea id="rj-note" maxlength="120" rows="4"
+        placeholder="Type here why the request is rejected&hellip;"></textarea>
+      <div class="rj-count"><span id="rj-n">0</span>/120</div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-actions">
+        <button class="btn-outline" type="button" data-close>Cancel</button>
+        <button class="btn-primary" type="button" id="rj-save" disabled>Save</button>
       </div>
     </div>
   </div>
@@ -478,7 +560,35 @@
     }
     return fmt(a) + ' – ' + fmt(b);
   }
-  /* Working days only: a weekend inside a stretch of leave is not leave. */
+  /* Whether a weekend counts is a property of the site, not of leave.
+     A vessel on a two-and-one swing works Saturdays, so a Saturday in
+     the middle of a stretch is a day off that has to be given; a
+     Monday-to-Friday site does not. Set in Site Settings. */
+  var SITE_SETTINGS = {
+    'MMA VIGILANT \u2013 360':      { weekends: true },
+    'MMA VIGILANT ROV':          { weekends: true },
+    'SA BHP OLYMPIC DAM':        { weekends: false },
+    'GDR09 Factory Shutdown':    { weekends: true },
+    'GDR12 Tank Farm Shutdown':  { weekends: false }
+  };
+  function weekendsCount(site) {
+    var c = SITE_SETTINGS[site];
+    return !!(c && c.weekends);
+  }
+  function spanDays(a, b) {
+    var d = new Date(a + 'T00:00:00'), end = new Date(b + 'T00:00:00'), n = 0;
+    while (d <= end) { n++; d.setDate(d.getDate() + 1); }
+    return n;
+  }
+  /* The number on the request, by the rule of the site it belongs to. */
+  function daysOf(r) {
+    return weekendsCount(r.site) ? spanDays(r.from, r.to) : workingDays(r.from, r.to);
+  }
+  function daysRule(site) {
+    return weekendsCount(site)
+      ? 'This site counts every day, weekends included'
+      : 'This site counts weekdays only \u2014 weekends are not leave';
+  }
   function workingDays(a, b) {
     var d = new Date(a + 'T00:00:00'), end = new Date(b + 'T00:00:00'), n = 0;
     while (d <= end) {
@@ -589,7 +699,7 @@
     { k: 'rejected',  label: 'Rejected',  caption: 'All Rejected Requests:' },
     { k: 'cancelled', label: 'Cancelled', caption: 'All Cancelled Requests:' }
   ];
-  var state = { tab: 'pending', q: '' };
+  var state = { tab: 'pending', q: '', site: SITES[3] };
   var openId = null;
   /* Only a pending request can be settled, so only that tab is pickable
      — a checkbox on a request that was decided in September offers
@@ -601,7 +711,10 @@
   }
   function clearPicked() { picked = Object.create(null); }
 
-  function countOf(k) { return REQUESTS.filter(function (r) { return r.state === k; }).length; }
+  function onSite(r) { return r.site === state.site; }
+  function countOf(k) {
+    return REQUESTS.filter(function (r) { return r.state === k && onSite(r); }).length;
+  }
   function matches(r, q) {
     if (!q) return true;
     return [r.who, r.site, r.type, r.why, r.approver, fmtRange(r.from, r.to)]
@@ -619,8 +732,27 @@
       : fmtNum(r.hours) + ' h';
   }
   function rowsFor(tab, q) {
-    return REQUESTS.filter(function (r) { return r.state === tab && matches(r, q); });
+    return REQUESTS.filter(function (r) { return r.state === tab && onSite(r) && matches(r, q); });
   }
+
+  /* ─── The site being looked at ─────────────────────────────────── */
+  var CHECK = '<svg class="dd-check" viewBox="0 0 14 14" fill="none"><path d="M2.5 7.5l3 3 6-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  function renderSiteDD() {
+    el('site-dd-value').textContent = state.site;
+    el('site-dd-panel').innerHTML = SITES.map(function (x) {
+      return '<button class="dd-item' + (x === state.site ? ' active' : '') +
+        '" type="button" data-site="' + Shell.esc(x) + '">' + CHECK + Shell.esc(x) + '</button>';
+    }).join('');
+    el('th-days').setAttribute('data-tip', daysRule(state.site));
+  }
+  el('site-dd-panel').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-site]');
+    if (!b) return;
+    state.site = b.getAttribute('data-site');
+    clearPicked();
+    Shell.closeAllDropdowns();
+    render();
+  });
 
   /* ─── Table ───────────────────────────────────────────────────── */
   function renderTabs() {
@@ -634,6 +766,7 @@
   }
 
   function render() {
+    renderSiteDD();
     renderTabs();
     var q = state.q.toLowerCase();
     var rows = rowsFor(state.tab, q);
@@ -651,7 +784,7 @@
           '<span class="nm">' + Shell.highlight(r.who, state.q) + '</span></span></td>' +
         '<td data-tip="' + Shell.esc(r.site) + '">' + Shell.highlight(r.site, state.q) + '</td>' +
         '<td>' + Shell.highlight(r.type, state.q) + '</td>' +
-        '<td class="num">' + workingDays(r.from, r.to) + '</td>' +
+        '<td class="num">' + daysOf(r) + '</td>' +
         '<td class="num">' + hoursCell(r) + '</td>' +
         '<td data-tip="' + Shell.esc(r.why || '') + '">' +
           (r.why ? Shell.highlight(r.why, state.q) : '<span class="cell-empty">&mdash;</span>') + '</td>' +
@@ -729,7 +862,7 @@
     Shell.snackbar(verb + ' ' + ids.length + ' request' + (ids.length === 1 ? '' : 's') + '.');
   }
   el('lr-bulk-approve').addEventListener('click', function () { settleMany('approved', 'Approved'); });
-  el('lr-bulk-reject').addEventListener('click', function () { settleMany('rejected', 'Rejected'); });
+  el('lr-bulk-reject').addEventListener('click', function () { askReject(pickedIds(), false); });
 
   var searchEl = el('search'), clearBtn = el('search-clear');
   searchEl.addEventListener('input', function () {
@@ -763,7 +896,7 @@
   }
 
   function renderDetails() {
-    var r = byId(openId), d = workingDays(r.from, r.to);
+    var r = byId(openId), d = daysOf(r);
     el('rd-main-title').textContent = reqName(r);
     /* Days is worked out rather than asked for: counting from the 29th
        to the 13th by hand is where the mistakes are. */
@@ -784,8 +917,15 @@
 
     /* A request is either approved and rejected from here, or it is
        already settled and there is nothing to do but read it. */
+    var why = el('rd-why');
+    why.hidden = !(r.state === 'rejected' && r.rejectNote);
+    if (!why.hidden) {
+      why.innerHTML = '<b>Rejected</b>' + Shell.esc(r.rejectNote);
+    }
+
     el('rd-actions').hidden = r.state !== 'pending';
     renderDoc(r);
+    syncRight();
   }
   function row(k, v) { return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
   function fmtNum(n) { return (Math.round(n * 10) / 10) + ''; }
@@ -872,7 +1012,7 @@
       if (list.some(function (a) { return onDay(a, dd); })) clash++;
       dd = addDays(dd, 1);
     }
-    var need = workingDays(r.from, r.to);
+    var need = daysOf(r);
     var box = el('ros-clash');
     box.className = 'ros-clash ' + (clash ? 'hit' : 'free');
     var lastShown = isoOf(addDays(addMonths(right, 1), -1));
@@ -954,6 +1094,30 @@
      belongs to. */
   window.addEventListener('scroll', hidePop, true);
 
+  /* ─── Roster or attachment ─────────────────────────────────────
+     Two kinds of evidence read one at a time. A request with nothing
+     attached says so on the tab rather than offering an empty pane. */
+  var rtab = 'roster';
+  function syncRight() {
+    var r = byId(openId);
+    var t = el('rt-doc');
+    t.disabled = !r.doc;
+    t.textContent = r.doc ? 'Attachment' : 'No attachment';
+    if (!r.doc && rtab === 'doc') rtab = 'roster';
+    [].forEach.call(el('rd-rtabs').children, function (b) {
+      b.classList.toggle('on', b.getAttribute('data-rt') === rtab);
+    });
+    el('pane-roster').hidden = rtab !== 'roster';
+    el('pane-doc').hidden = rtab !== 'doc';
+  }
+  el('rd-rtabs').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-rt]');
+    if (!b || b.disabled) return;
+    rtab = b.getAttribute('data-rt');
+    hidePop();
+    syncRight();
+  });
+
   function renderDoc(r) {
     page = 1; zoom = 1;
     var pages = r.doc ? 2 : 0;
@@ -990,6 +1154,7 @@
     /* Open a few days before the request, so what leads up to it is on
        screen as well as the request itself. */
     rosAnchor = monthStart(new Date(r.from + 'T00:00:00'));
+    rtab = 'roster';
     renderQueue();
     renderDetails();
     /* Shown first: the band's edges are measured off the day headings,
@@ -1013,7 +1178,9 @@
     if (e.target === modal || e.target.closest('[data-close]')) closeModal();
   });
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && modal.classList.contains('open')) closeModal();
+    if (e.key !== 'Escape') return;
+    if (rjModal.classList.contains('open')) { rjModal.classList.remove('open'); return; }
+    if (modal.classList.contains('open')) closeModal();
   });
 
   /* Settling a request moves it to another tab, so the queue it was in
@@ -1031,7 +1198,43 @@
     else closeModal();
   }
   el('rd-approve').addEventListener('click', function () { settle('approved', 'Approved'); });
-  el('rd-reject').addEventListener('click', function () { settle('rejected', 'Rejected'); });
+
+  /* ─── Rejecting says why ───────────────────────────────────────
+     The same dialog the expense screen uses, and the same rule: a
+     request turned down without a reason is a phone call tomorrow. */
+  var rjModal = el('rj-modal'), rjIds = [], rjFromModal = false;
+
+  function askReject(ids, fromModal) {
+    if (!ids.length) return;
+    rjIds = ids.slice();
+    rjFromModal = !!fromModal;
+    el('rj-title').textContent = ids.length > 1
+      ? 'Reject ' + ids.length + ' Requests' : 'Reject Request';
+    el('rj-note').value = '';
+    el('rj-n').textContent = '0';
+    el('rj-save').disabled = true;
+    rjModal.classList.add('open');
+    el('rj-note').focus();
+  }
+  el('rj-note').addEventListener('input', function () {
+    el('rj-n').textContent = this.value.length;
+    el('rj-save').disabled = !this.value.trim();
+  });
+  rjModal.addEventListener('click', function (e) {
+    if (e.target === rjModal || e.target.closest('[data-close]')) rjModal.classList.remove('open');
+  });
+  el('rj-save').addEventListener('click', function () {
+    var note = el('rj-note').value.trim();
+    if (!note) return;
+    rjModal.classList.remove('open');
+    REQUESTS.forEach(function (r) {
+      if (rjIds.indexOf(r.id) !== -1) r.rejectNote = note;
+    });
+    if (rjFromModal) settle('rejected', 'Rejected');
+    else settleMany('rejected', 'Rejected');
+  });
+
+  el('rd-reject').addEventListener('click', function () { askReject([openId], true); });
 
   render();
 })();

@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="assets/shell.css" />
 <style>
   /* ─── Tabs ────────────────────────────────────────────────────────
-     The same four the manager's screen has, because they are the same
-     four states — a worker's own request is where its status is most
-     worth saying, and this is the only screen that says it. */
+     The tab is where the status is said. A chip on the card as well
+     would be the same fact twice — which is how My Expense Claims
+     does it, and this is the same screen for a different thing. */
   .lv-tabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--grey-300); }
   .lv-tab {
     position: relative; height: 36px; padding: 0 14px; border: none; background: none;
@@ -25,59 +25,105 @@
   }
 
   /* ─── A request is a card ─────────────────────────────────────────
-     A worker has a handful of these, not a hundred, and every one of
-     them is read whole — so a row of a table would be throwing away the
-     room it has and keeping the part that scrolls sideways. */
-  .lv-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(336px, 1fr));
-    gap: 16px; margin-top: 18px; align-items: start;
-  }
+     The shape My Expense Claims already uses: the name of the thing on
+     the left, what can be done with it on the right, and the fields
+     under both as a plain list of label and value. */
+  .lv-list { display: flex; flex-direction: column; gap: 16px; margin-top: 18px; max-width: 780px; }
   .lv-card {
-    display: flex; flex-direction: column; gap: 12px;
-    padding: 16px 18px 18px; border-radius: 12px;
+    padding: 16px 18px 18px; border-radius: 10px;
     background: var(--white); border: 1px solid var(--grey-350);
   }
   .lv-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-  /* The dates are the heading. What a worker looks for in their own
-     list is the week they are away, not the kind of leave it was. */
+  /* The dates are the name of the request. */
   .lv-when { font-size: 16px; font-weight: 600; line-height: 22px; color: var(--text-main); }
-  .lv-sub { margin-top: 3px; font-size: 13px; line-height: 18px; color: var(--grey-600); }
-  .lv-rows { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 7px 14px; margin: 0; }
-  .lv-rows dt { font-size: 12px; line-height: 17px; color: var(--grey-600); }
-  .lv-rows dd {
-    margin: 0; font-size: 13px; line-height: 17px; color: var(--text-main);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .lv-note {
-    font-size: 13px; line-height: 18px; color: var(--grey-700);
-    border-top: 1px solid var(--grey-200); padding-top: 11px;
-  }
+  .lv-acts { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .lv-more .dd-trigger { width: 34px; height: 34px; padding: 0; justify-content: center; min-width: 0; }
+  .lv-more .dd-panel { min-width: 170px; }
+
+  .lv-rows { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 10px 16px; margin: 16px 0 0; }
+  .lv-rows dt { font-size: 14px; line-height: 19px; color: var(--grey-600); }
+  .lv-rows dd { margin: 0; font-size: 14px; line-height: 19px; color: var(--text-main); }
   .cell-empty { color: var(--grey-400); }
 
-  /* ─── Where it has got to ─────────────────────────────────────── */
-  .st {
-    flex-shrink: 0; height: 22px; display: inline-flex; align-items: center;
-    padding: 0 9px; border-radius: 6px; white-space: nowrap;
-    font-size: 12px; font-weight: 600; line-height: 22px;
+  /* Why it was turned down, in the worker's own copy of the request. */
+  .lv-why {
+    margin-top: 14px; padding: 10px 12px; border-radius: 8px; background: #fdecee;
+    font-size: 13px; line-height: 18px; color: var(--text-main);
   }
-  .st-pending   { background: #fff3e0; color: #9a5b12; }
-  .st-approved  { background: #e8f5e9; color: #1f7a33; }
-  .st-rejected  { background: #fdecee; color: var(--error); }
-  .st-cancelled { background: var(--grey-100); color: var(--grey-600); }
+  .lv-why b { display: block; margin-bottom: 2px; color: var(--error); }
 
   .lv-empty {
-    margin-top: 28px; padding: 44px 20px; text-align: center;
+    margin-top: 24px; padding: 44px 20px; text-align: center; max-width: 780px;
     font-size: 14px; color: var(--grey-600);
-    border: 1px solid var(--grey-300); border-radius: 12px; background: var(--white);
+    border: 1px solid var(--grey-300); border-radius: 10px; background: var(--white);
   }
 
+  /* ─── Making one ──────────────────────────────────────────────────
+     A page of its own, not a dialog — the same shape as Submit New
+     Claim, down to the breadcrumb and the two buttons at the top. */
+  .crumb { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--grey-600); margin-bottom: 6px; }
+  .crumb button {
+    border: none; background: none; padding: 0; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--grey-600);
+  }
+  .crumb button:hover { color: var(--text-main); }
+  .crumb svg { color: var(--grey-400); }
+  .crumb .here { color: var(--text-main); }
+
+  .form-card {
+    max-width: 640px; margin-top: 18px; padding: 20px 22px 22px;
+    border: 1px solid var(--grey-350); border-radius: 10px; background: var(--white);
+  }
+  .fld { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .fld-label { font-size: 14px; font-weight: 500; line-height: 18px; color: var(--text-main); }
+  .req { color: var(--error); }
+  .fld select, .fld input[type="date"], .fld input[type="text"], .fld textarea {
+    width: 100%; padding: 0 10px; height: 40px; border-radius: 8px;
+    border: 1px solid var(--grey-350); background: var(--white);
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+  }
+  .fld textarea { height: auto; min-height: 88px; padding: 10px; resize: vertical; line-height: 20px; }
+  .fld select:focus, .fld input:focus, .fld textarea:focus { outline: none; border-color: var(--primary); }
+  .fld input:disabled, .fld select:disabled {
+    background: var(--grey-100); color: var(--grey-600); cursor: default;
+  }
+  .fld-hint { font-size: 12px; line-height: 16px; color: var(--grey-600); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  /* Days is worked out, not asked for. */
+  .fld-static {
+    display: flex; align-items: center; height: 40px; padding: 0 10px;
+    border-radius: 8px; background: var(--grey-100);
+    font-size: 14px; color: var(--grey-700);
+  }
+  .need-doc { font-size: 14px; font-weight: 500; color: var(--text-main); margin: -4px 0 8px; }
+  .drop {
+    border: 1px dashed var(--grey-400); border-radius: 10px; padding: 22px 16px;
+    text-align: center; background: var(--white);
+  }
+  .drop p { margin: 0; font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .drop .fmt { margin-top: 4px; font-size: 12px; color: var(--grey-600); }
+  .drop .pick {
+    margin-top: 10px; border: none; background: none; cursor: pointer; padding: 0;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--primary);
+  }
+  .drop.has { border-style: solid; border-color: var(--primary); background: var(--bg-blue-light); }
+  .drop .got { margin-top: 6px; font-size: 13px; color: var(--grey-700); }
+
+  body.creating .lv-list, body.creating .lv-tabs, body.creating .lv-empty,
+  body.creating .search-wrap, body.creating #lv-new { display: none; }
+  body:not(.creating) .crumb, body:not(.creating) .form-card, body:not(.creating) #lv-form-acts { display: none; }
+
   /* ─── A phone gets one column and a tighter card ──────────────── */
-  body.is-narrow .lv-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 14px; }
-  body.is-narrow .lv-card { padding: 14px 15px 16px; border-radius: 10px; }
+  body.is-narrow .lv-list { gap: 12px; margin-top: 14px; }
+  body.is-narrow .lv-card { padding: 14px 15px 16px; }
   body.is-narrow .lv-when { font-size: 15px; }
-  body.is-narrow .lv-rows { grid-template-columns: 86px minmax(0, 1fr); }
+  body.is-narrow .lv-rows { grid-template-columns: 104px minmax(0, 1fr); gap: 8px 12px; }
+  body.is-narrow .lv-rows dt, body.is-narrow .lv-rows dd { font-size: 13px; }
   body.is-narrow .lv-tabs { overflow-x: auto; }
-  body.is-narrow .page-header { margin-bottom: 6px; }
+  body.is-narrow .two { grid-template-columns: 1fr; }
+  body.is-narrow .page-header { display: block; }
+  body.is-narrow .page-header .header-actions { margin-top: 12px; }
+  body.is-narrow .header-actions .btn-primary { width: 100%; justify-content: center; }
 
   .vp-switch {
     position: fixed; right: 20px; bottom: 20px; z-index: 400;
@@ -102,13 +148,91 @@
   <main class="main">
     <div class="content">
 
+      <div class="crumb">
+        <button type="button" id="crumb-back">My Leave</button>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="here">Submit New Request</span>
+      </div>
+
       <div class="page-header">
-        <h1 class="page-title">My Leave</h1>
+        <h1 class="page-title" id="lv-title">My Leave</h1>
+        <div class="header-actions">
+          <button class="btn-primary" type="button" id="lv-new">Submit New Request</button>
+          <span id="lv-form-acts" class="header-actions">
+            <button class="btn-outline" type="button" id="f-cancel">Cancel</button>
+            <button class="btn-primary" type="button" id="f-submit" disabled>Submit</button>
+          </span>
+        </div>
+      </div>
+
+      <div class="search-wrap">
+        <label class="search-bar">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M10.5 10.5l3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          <input class="search-input-el" id="search" type="text" placeholder="Search" autocomplete="off" />
+          <button class="search-clear" id="search-clear" type="button" aria-label="Clear search">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </button>
+        </label>
       </div>
 
       <div class="lv-tabs" id="lv-tabs"></div>
-      <div class="lv-grid" id="lv-grid"></div>
+      <div class="lv-list" id="lv-list"></div>
       <div class="lv-empty" id="lv-empty" hidden></div>
+
+      <!-- ── Submit a new request ───────────────────────────────── -->
+      <div class="form-card">
+        <div class="fld">
+          <label class="fld-label" for="f-type">Leave Type<span class="req">*</span></label>
+          <select id="f-type"></select>
+        </div>
+
+        <div id="f-doc-block" hidden>
+          <p class="need-doc">This leave type requires attachment.</p>
+          <div class="drop" id="f-drop">
+            <p>Upload attachment and we will auto-fill details</p>
+            <div class="fmt">Upload File Formats &ndash; DOCX, PDF</div>
+            <button class="pick" type="button" id="f-pick">Choose File</button>
+            <div class="got" id="f-got" hidden></div>
+          </div>
+          <input type="file" id="f-file" accept=".pdf,.docx" hidden />
+        </div>
+
+        <div class="fld" style="margin-top:16px">
+          <label class="fld-label" for="f-site">Site<span class="req">*</span></label>
+          <select id="f-site"></select>
+        </div>
+
+        <div class="two">
+          <div class="fld">
+            <label class="fld-label" for="f-from">From<span class="req">*</span></label>
+            <input type="date" id="f-from" />
+          </div>
+          <div class="fld">
+            <label class="fld-label" for="f-to">To<span class="req">*</span></label>
+            <input type="date" id="f-to" />
+          </div>
+        </div>
+
+        <div class="two">
+          <div class="fld">
+            <label class="fld-label" for="f-hours">Hours</label>
+            <input type="text" id="f-hours" inputmode="decimal" disabled />
+            <!-- Hours are only asked for on a single day; a stretch of
+                 dates is whole days, and two half-days are two requests. -->
+            <span class="fld-hint" id="f-hours-hint">Only for a single day.</span>
+          </div>
+          <div class="fld">
+            <span class="fld-label">Days</span>
+            <div class="fld-static" id="f-days">&mdash;</div>
+            <span class="fld-hint" id="f-days-hint"></span>
+          </div>
+        </div>
+
+        <div class="fld" style="margin-bottom:0">
+          <label class="fld-label" for="f-why">Description</label>
+          <textarea id="f-why" rows="4" placeholder="Anything the approver should know"></textarea>
+        </div>
+      </div>
 
     </div>
   </main>
@@ -135,35 +259,57 @@
 
   /* ─── Mock data ───────────────────────────────────────────────────
      The signed-in worker's own requests, hardcoded as in every other
-     OPMS prototype. The field set is the agreed one: site, leave type,
-     description, from and to, hours, and the approver. Days is worked
-     out rather than stored — counting from the 29th to the 13th by hand
-     is where the mistakes are. */
-  var ME = 'Olivia Rhye';
+     OPMS prototype. The field set is the agreed one, minus the
+     approver: who approves is a rule the system is configured with,
+     not something the worker picks. */
+  var TYPES = ['Annual Leave', 'Sick Leave', 'Parental Leave', 'Unpaid Leave'];
+  var NEEDS_DOC = { 'Sick Leave': 1, 'Parental Leave': 1 };
+  var SITES = ['MMA VIGILANT – 360', 'MMA VIGILANT ROV', 'SA BHP OLYMPIC DAM',
+    'GDR09 Factory Shutdown', 'GDR12 Tank Farm Shutdown'];
 
+  /* Whether a weekend counts is the site's own setting, not a property
+     of leave: a vessel on a two-and-one swing works Saturdays. */
+  var SITE_SETTINGS = {
+    'MMA VIGILANT – 360':     { weekends: true },
+    'MMA VIGILANT ROV':         { weekends: true },
+    'SA BHP OLYMPIC DAM':       { weekends: false },
+    'GDR09 Factory Shutdown':   { weekends: true },
+    'GDR12 Tank Farm Shutdown': { weekends: false }
+  };
+  function weekendsCount(site) {
+    var c = SITE_SETTINGS[site];
+    return !!(c && c.weekends);
+  }
+
+  var seq = 100;
   var REQUESTS = [
     { id: 1, site: 'GDR12 Tank Farm Shutdown', type: 'Unpaid Leave', from: '2026-11-02', to: '2026-11-06',
-      hours: null, approver: 'Grace Okafor', made: '2026-10-22', why: 'Moving house.', state: 'pending' },
+      hours: null, approver: 'Grace Okafor', made: '2026-10-22', why: 'Moving house.', doc: null, state: 'pending' },
     { id: 2, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-12-21', to: '2026-12-24',
-      hours: null, approver: 'Grace Okafor', made: '2026-10-25', why: 'Christmas with family in Adelaide.', state: 'pending' },
+      hours: null, approver: 'Grace Okafor', made: '2026-10-25', why: 'Christmas with family in Adelaide.', doc: null, state: 'pending' },
     { id: 3, site: 'GDR12 Tank Farm Shutdown', type: 'Sick Leave', from: '2026-11-18', to: '2026-11-18',
-      hours: 4, approver: 'Grace Okafor', made: '2026-10-28', why: 'Specialist appointment in the afternoon.', state: 'pending' },
+      hours: 4, approver: 'Grace Okafor', made: '2026-10-28', why: 'Specialist appointment in the afternoon.',
+      doc: 'Medical Certificate', state: 'pending' },
 
     { id: 4, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-10-12', to: '2026-10-16',
-      hours: null, approver: 'Grace Okafor', made: '2026-09-10', why: '', state: 'approved' },
+      hours: null, approver: 'Grace Okafor', made: '2026-09-10', why: '', doc: null, state: 'approved' },
     { id: 5, site: 'GDR12 Tank Farm Shutdown', type: 'Sick Leave', from: '2026-09-29', to: '2026-09-29',
-      hours: 4, approver: 'Grace Okafor', made: '2026-09-29', why: 'Dentist — back on site after lunch.', state: 'approved' },
+      hours: 4, approver: 'Grace Okafor', made: '2026-09-29', why: 'Dentist — back on site after lunch.',
+      doc: 'Medical Certificate', state: 'approved' },
     { id: 6, site: 'MMA VIGILANT – 360', type: 'Annual Leave', from: '2026-08-03', to: '2026-08-07',
-      hours: null, approver: 'Tom Halloran', made: '2026-07-02', why: 'Winter break.', state: 'approved' },
+      hours: null, approver: 'Tom Halloran', made: '2026-07-02', why: 'Winter break.', doc: null, state: 'approved' },
 
     { id: 7, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-08-24', to: '2026-08-28',
-      hours: null, approver: 'Grace Okafor', made: '2026-08-18', why: 'Clashed with the shutdown — moved to October.', state: 'rejected' },
+      hours: null, approver: 'Grace Okafor', made: '2026-08-18', why: 'Visiting family.', doc: null,
+      rejectNote: 'Crew is short that week — try the following swing.', state: 'rejected' },
 
     { id: 8, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-09-07', to: '2026-09-11',
-      hours: null, approver: 'Grace Okafor', made: '2026-09-01', why: 'No longer needed.', state: 'cancelled' }
+      hours: null, approver: 'Grace Okafor', made: '2026-09-01', why: 'No longer needed.', doc: null, state: 'cancelled' }
   ];
 
   var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function isoOf(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
   function fmt(iso) {
     var d = new Date(iso + 'T00:00:00');
     return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear();
@@ -178,7 +324,6 @@
     }
     return fmt(a) + ' – ' + fmt(b);
   }
-  /* Working days only: a weekend inside a stretch of leave is not leave. */
   function workingDays(a, b) {
     var d = new Date(a + 'T00:00:00'), end = new Date(b + 'T00:00:00'), n = 0;
     while (d <= end) {
@@ -188,6 +333,16 @@
     }
     return n;
   }
+  function spanDays(a, b) {
+    var d = new Date(a + 'T00:00:00'), end = new Date(b + 'T00:00:00'), n = 0;
+    while (d <= end) { n++; d.setDate(d.getDate() + 1); }
+    return n;
+  }
+  function daysBetween(site, a, b) {
+    if (!a || !b || b < a) return null;
+    return weekendsCount(site) ? spanDays(a, b) : workingDays(a, b);
+  }
+  function daysOf(r) { return daysBetween(r.site, r.from, r.to); }
   function fmtNum(n) { return (Math.round(n * 10) / 10) + ''; }
 
   /* ─── State ───────────────────────────────────────────────────── */
@@ -197,9 +352,17 @@
     { k: 'rejected',  label: 'Rejected' },
     { k: 'cancelled', label: 'Cancelled' }
   ];
-  var state = { tab: 'pending' };
+  var state = { tab: 'pending', q: '' };
 
   function countOf(k) { return REQUESTS.filter(function (r) { return r.state === k; }).length; }
+  function matches(r, q) {
+    if (!q) return true;
+    return [r.site, r.type, r.why, fmtRange(r.from, r.to)].join(' ').toLowerCase().indexOf(q) !== -1;
+  }
+  function rowsFor() {
+    var q = state.q.toLowerCase();
+    return REQUESTS.filter(function (r) { return r.state === state.tab && matches(r, q); });
+  }
 
   function renderTabs() {
     el('lv-tabs').innerHTML = TABS.map(function (t) {
@@ -209,37 +372,56 @@
     }).join('');
   }
 
+  var ICO_DOTS = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">' +
+    '<circle cx="3.2" cy="8" r="1.3"/><circle cx="8" cy="8" r="1.3"/><circle cx="12.8" cy="8" r="1.3"/></svg>';
+
+  function row(k, v) { return '<dt>' + k + '</dt><dd>' + v + '</dd>'; }
+
   function card(r) {
-    var d = workingDays(r.from, r.to);
-    return '<article class="lv-card">' +
+    var d = daysOf(r);
+    /* A request that has been settled one way or the other is a record,
+       not something still to be withdrawn. */
+    var canCancel = r.state === 'pending' || r.state === 'approved';
+    return '<article class="lv-card" data-card="' + r.id + '">' +
       '<div class="lv-head">' +
-        '<div>' +
-          '<div class="lv-when">' + Shell.esc(fmtRange(r.from, r.to)) + '</div>' +
-          '<div class="lv-sub">' + d + (d === 1 ? ' day' : ' days') + ' · ' + Shell.esc(r.type) + '</div>' +
+        '<div class="lv-when">' + Shell.esc(fmtRange(r.from, r.to)) + '</div>' +
+        '<div class="lv-acts">' +
+          (r.doc ? '<button class="btn-outline" type="button" data-doc="' + r.id + '">View Attachment</button>' : '') +
+          (canCancel
+            ? '<span class="dd-wrap lv-more">' +
+                '<button class="dd-trigger" type="button" aria-label="More">' + ICO_DOTS + '</button>' +
+                '<span class="dd-panel">' +
+                  '<button class="dd-item" type="button" data-cancel="' + r.id + '">Cancel request</button>' +
+                '</span>' +
+              '</span>'
+            : '') +
         '</div>' +
-        '<span class="st st-' + r.state + '">' + r.state.charAt(0).toUpperCase() + r.state.slice(1) + '</span>' +
       '</div>' +
       '<dl class="lv-rows">' +
-        '<dt>Site</dt><dd title="' + Shell.esc(r.site) + '">' + Shell.esc(r.site) + '</dd>' +
-        /* Hours are only ever asked for on a single day; a stretch of
-           dates is whole days by definition. */
-        '<dt>Hours</dt><dd>' + (r.hours == null
+        row('Leave Type', Shell.esc(r.type)) +
+        row('Site', Shell.esc(r.site)) +
+        row('Days', d + (d === 1 ? ' day' : ' days')) +
+        row('Hours', r.hours == null
           ? '<span class="cell-empty">Whole days</span>'
-          : fmtNum(r.hours) + ' h') + '</dd>' +
-        '<dt>Approver</dt><dd>' + Shell.esc(r.approver) + '</dd>' +
-        '<dt>Requested</dt><dd>' + Shell.esc(fmt(r.made)) + '</dd>' +
+          : fmtNum(r.hours) + ' h') +
+        row('Approver', Shell.esc(r.approver)) +
+        row('Submitted', Shell.esc(fmt(r.made))) +
+        row('Description', r.why ? Shell.esc(r.why) : '<span class="cell-empty">&mdash;</span>') +
       '</dl>' +
-      (r.why ? '<p class="lv-note">' + Shell.esc(r.why) + '</p>' : '') +
+      (r.state === 'rejected' && r.rejectNote
+        ? '<div class="lv-why"><b>Rejected</b>' + Shell.esc(r.rejectNote) + '</div>' : '') +
     '</article>';
   }
 
   function render() {
     renderTabs();
-    var rows = REQUESTS.filter(function (r) { return r.state === state.tab; });
-    el('lv-grid').innerHTML = rows.map(card).join('');
-    el('lv-grid').hidden = !rows.length;
+    var rows = rowsFor();
+    el('lv-list').innerHTML = rows.map(card).join('');
+    el('lv-list').hidden = !rows.length;
     el('lv-empty').hidden = !!rows.length;
-    el('lv-empty').textContent = 'Nothing here.';
+    el('lv-empty').textContent = state.q
+      ? 'Nothing matches “' + state.q + '” in this tab.'
+      : 'Nothing here.';
   }
 
   el('lv-tabs').addEventListener('click', function (e) {
@@ -247,6 +429,147 @@
     if (!b) return;
     state.tab = b.getAttribute('data-tab');
     render();
+  });
+
+  var searchEl = el('search'), clearBtn = el('search-clear');
+  searchEl.addEventListener('input', function () {
+    state.q = this.value.trim();
+    clearBtn.classList.toggle('visible', this.value.length > 0);
+    render();
+  });
+  clearBtn.addEventListener('click', function () {
+    searchEl.value = ''; state.q = '';
+    clearBtn.classList.remove('visible');
+    render(); searchEl.focus();
+  });
+
+  /* The cards are redrawn on every change, so the menus on them are
+     wired once here rather than one at a time as they appear. */
+  el('lv-list').addEventListener('click', function (e) {
+    var t = e.target.closest('.lv-more .dd-trigger');
+    if (t) {
+      e.stopPropagation();
+      var panel = t.parentNode.querySelector('.dd-panel');
+      var wasOpen = panel.classList.contains('open');
+      Shell.closeAllDropdowns();
+      if (!wasOpen) { panel.classList.add('open'); t.classList.add('open'); }
+      return;
+    }
+    var c = e.target.closest('[data-cancel]');
+    if (c) {
+      var r = REQUESTS.filter(function (x) { return x.id === Number(c.getAttribute('data-cancel')); })[0];
+      if (!r) return;
+      r.state = 'cancelled';
+      Shell.closeAllDropdowns();
+      render();
+      /* There is no editing: a request that is wrong is cancelled and a
+         new one submitted, the way an expense claim is. */
+      Shell.snackbar('Request cancelled. Submit a new one if the dates have changed.');
+      return;
+    }
+    var d = e.target.closest('[data-doc]');
+    if (d) Shell.snackbar('The attachment opens in the viewer.');
+  });
+
+  /* ─── Submitting a new one ────────────────────────────────────── */
+  var TODAY_ISO = isoOf(new Date());
+  var draft = { type: '', site: '', from: '', to: '', hours: '', why: '', doc: null };
+
+  function openForm() {
+    draft = { type: '', site: '', from: '', to: '', hours: '', why: '', doc: null };
+    el('f-type').value = ''; el('f-site').value = '';
+    el('f-from').value = ''; el('f-to').value = '';
+    el('f-hours').value = ''; el('f-why').value = '';
+    el('f-got').hidden = true; el('f-drop').classList.remove('has');
+    el('f-file').value = '';
+    document.body.classList.add('creating');
+    el('lv-title').textContent = 'Submit New Request';
+    syncForm();
+  }
+  function closeForm() {
+    document.body.classList.remove('creating');
+    el('lv-title').textContent = 'My Leave';
+  }
+
+  el('f-type').innerHTML = '<option value="">Select&hellip;</option>' +
+    TYPES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+  el('f-site').innerHTML = '<option value="">Select&hellip;</option>' +
+    SITES.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+  /* Leave is not booked backwards for now, so yesterday is not offered. */
+  el('f-from').min = TODAY_ISO;
+  el('f-to').min = TODAY_ISO;
+
+  function syncForm() {
+    draft.type = el('f-type').value;
+    draft.site = el('f-site').value;
+    draft.from = el('f-from').value;
+    draft.to = el('f-to').value;
+    draft.why = el('f-why').value;
+
+    var needs = !!NEEDS_DOC[draft.type];
+    el('f-doc-block').hidden = !needs;
+
+    /* To never runs before From. */
+    el('f-to').min = draft.from || TODAY_ISO;
+    if (draft.to && draft.from && draft.to < draft.from) {
+      el('f-to').value = draft.from;
+      draft.to = draft.from;
+    }
+
+    var oneDay = !!draft.from && draft.from === draft.to;
+    el('f-hours').disabled = !oneDay;
+    if (!oneDay) { el('f-hours').value = ''; draft.hours = ''; }
+    else draft.hours = el('f-hours').value;
+    el('f-hours-hint').textContent = oneDay
+      ? 'Leave it empty for the whole day.'
+      : 'Only for a single day.';
+
+    var d = daysBetween(draft.site, draft.from, draft.to);
+    el('f-days').innerHTML = d == null ? '&mdash;' : d + (d === 1 ? ' day' : ' days');
+    el('f-days-hint').textContent = draft.site
+      ? (weekendsCount(draft.site)
+          ? 'This site counts every day.'
+          : 'This site counts weekdays only.')
+      : '';
+
+    el('f-submit').disabled = !(draft.type && draft.site && draft.from && draft.to &&
+      (!needs || draft.doc));
+  }
+
+  ['f-type', 'f-site', 'f-from', 'f-to', 'f-hours', 'f-why'].forEach(function (id) {
+    el(id).addEventListener('change', syncForm);
+    el(id).addEventListener('input', syncForm);
+  });
+
+  el('f-pick').addEventListener('click', function () { el('f-file').click(); });
+  el('f-file').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    draft.doc = f ? f.name : null;
+    el('f-got').hidden = !f;
+    el('f-got').textContent = f ? f.name : '';
+    el('f-drop').classList.toggle('has', !!f);
+    syncForm();
+  });
+
+  el('lv-new').addEventListener('click', openForm);
+  el('crumb-back').addEventListener('click', closeForm);
+  el('f-cancel').addEventListener('click', closeForm);
+  el('f-submit').addEventListener('click', function () {
+    if (this.disabled) return;
+    var h = parseFloat(String(draft.hours).replace(',', '.'));
+    REQUESTS.unshift({
+      id: ++seq, site: draft.site, type: draft.type,
+      from: draft.from, to: draft.to,
+      hours: isNaN(h) || h <= 0 ? null : h,
+      /* Who approves is a rule the system carries, not a choice made
+         here — the worker submits and it finds its approver. */
+      approver: 'Grace Okafor',
+      made: TODAY_ISO, why: draft.why.trim(), doc: draft.doc, state: 'pending'
+    });
+    closeForm();
+    state.tab = 'pending';
+    render();
+    Shell.snackbar('Request submitted.');
   });
 
   /* ─── Prototype viewport ──────────────────────────────────────── */

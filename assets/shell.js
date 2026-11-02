@@ -456,6 +456,24 @@
     },
     {
       screen: 'Leave Requests',
+      q: 'What happens to the shift when leave is approved?',
+      why: 'The calendar says the person is rostered on every day they are asking off, and then ' +
+           'approving does nothing to the roster. Deputy asks at this point: release the shift so ' +
+           'someone else can pick it up, or approve and leave it flagged. Doing neither means the ' +
+           'roster still says they are coming.',
+      now: 'Approving settles the request and leaves the roster untouched. The clash is stated and ' +
+           'nothing is offered about it.'
+    },
+    {
+      screen: 'Leave Requests',
+      q: 'Should a part-day request say which part of the day?',
+      why: 'Hours are only asked for on a single day, and four hours is as far as it goes \u2014 not ' +
+           'whether it is the morning or the afternoon. For covering a shift that is the whole ' +
+           'question. Adding it means one more field on the agreed set.',
+      now: 'The request carries the number of hours and nothing about when in the day they fall.'
+    },
+    {
+      screen: 'Leave Requests',
       q: 'Can several requests be approved at once, without opening each one?',
       why: 'Settling a Monday pile one at a time is most of the job, so the list carries ' +
            'checkboxes and an Approve and a Reject for whatever is ticked. But an expense claim ' +
