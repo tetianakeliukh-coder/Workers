@@ -52,9 +52,101 @@
      makes sense once there is a draft to add to. */
   body.editing #btn-edit { display: none; }
   body.editing .edit-actions { display: flex; }
-  #btn-new-task { display: none; color: var(--primary); }
+  body.week-empty .add-hint { display: none; }
+  #add-menu-wrap { display: none; position: relative; }
+  body.editing #add-menu-wrap { display: inline-flex; }
+  #btn-new-task { color: var(--primary); }
   #btn-new-task svg { color: var(--primary); }
-  body.editing #btn-new-task { display: inline-flex; }
+  /* Only the variant that opens a menu says there is one. */
+  #btn-new-task .tp-caret { display: none; }
+  body.addlayout-inline #btn-new-task .tp-caret { display: inline-flex; color: var(--primary); }
+  .add-menu {
+    display: none; position: absolute; z-index: 420; top: calc(100% + 6px); right: 0;
+    min-width: 232px; padding: 4px; border-radius: 10px; background: var(--white);
+    border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
+  }
+  .add-menu.open { display: block; }
+  .add-menu button {
+    display: flex; align-items: center; gap: 10px; width: 100%; height: 38px;
+    padding: 0 10px; border: none; border-radius: 7px; background: none; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main); text-align: left;
+  }
+  .add-menu button:hover { background: var(--grey-100); }
+  .add-menu button svg { color: var(--grey-600); flex-shrink: 0; }
+
+  /* ─── The status a timesheet carries ───────────────────────────────
+     A site under a supervisor is one timesheet, so the mark sits on the
+     row that stands for it and says its name beside it. */
+  .st-chip {
+    display: inline-flex; align-items: center; gap: 5px; margin-right: 10px;
+    font-size: 13px; font-weight: 500; color: var(--grey-600);
+  }
+  .st-chip svg { flex-shrink: 0; }
+  .st-chip.st-draft     { color: var(--grey-600); }
+  .st-chip.st-revised   { color: #78b818; }
+  .st-chip.st-submitted { color: #1a85cd; }
+  .st-chip.st-finalised { color: #289e1a; }
+
+  /* ─── Naming a task in the row itself ──────────────────────────── */
+  .task-pick {
+    display: flex; align-items: center; gap: 8px; width: 100%; height: 34px;
+    padding: 0 8px 0 10px; border-radius: 8px; cursor: pointer;
+    background: var(--white); border: 1px solid var(--grey-350);
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main); text-align: left;
+  }
+  .task-pick:hover { border-color: var(--primary); }
+  .task-pick.empty { color: var(--grey-600); border-style: dashed; border-color: var(--grey-400); }
+  .task-pick .tp-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-pick .tp-caret { flex-shrink: 0; color: var(--grey-600); }
+  .task-sel {
+    width: 100%; height: 34px; padding: 0 8px; border-radius: 8px;
+    border: 1px solid var(--grey-350); background: var(--white);
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+  }
+  /* The row is there but it is not yet a task, so its hours are not
+     asked for either — there is nothing to book them against. */
+  #grid tbody tr.row-pend td.col-day,
+  #grid tbody tr.row-pend td.col-total { color: var(--grey-400); }
+
+  /* ─── Nothing on the week yet ──────────────────────────────────── */
+  #grid tbody tr.row-empty td { padding: 0; background: var(--white); }
+  .ts-empty { display: flex; flex-direction: column; align-items: center; text-align: center;
+    gap: 6px; padding: 54px 20px 58px; }
+  .ts-empty-ico { color: var(--grey-400); margin-bottom: 2px; }
+  .ts-empty h3 { margin: 0; font-family: var(--fs-sans); font-size: 16px; font-weight: 600;
+    line-height: 22px; color: var(--text-main); }
+  .ts-empty p { margin: 0; font-size: 14px; line-height: 20px; color: var(--grey-600); max-width: 380px; }
+  .ts-empty-acts { display: flex; gap: 10px; margin-top: 12px; }
+
+  /* ─── Picking from what has been booked before ─────────────────── */
+  .modal-sub { font-size: 13px; line-height: 18px; color: var(--grey-600); }
+  .pick-modal { max-width: 560px; height: min(620px, 88vh); }
+  .pick-modal .modal-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+  #pick-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1px; }
+  /* Offered, not pressed: it is the shortcut for the week that repeats
+     whole, and it sits above the list it would stand in for. */
+  .pick-dup {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 10px 12px; border-radius: 10px; background: var(--bg-blue-light);
+    font-size: 13px; line-height: 18px; color: var(--text-main);
+  }
+  .pick-dup button { flex-shrink: 0; }
+  .rr-where { font-size: 12px; line-height: 16px; color: var(--grey-600);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rr-where b { font-weight: 500; color: var(--grey-700); }
+
+  /* ─── Two small panels: where a row goes, and what it is ───────── */
+  /* .cell-pop sets a width of its own further down, so these have to
+     outrank it rather than merely come after it. */
+  .cell-pop.task-pop, .cell-pop.where-pop { width: 288px; }
+  .task-pop .fld, .where-pop .fld { margin-bottom: 10px; }
+  .task-pop select, .where-pop select {
+    width: 100%; height: 36px; padding: 0 8px; border-radius: 8px;
+    border: 1px solid var(--grey-350); background: var(--white);
+    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main);
+  }
+  .tp-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+  .tp-fields { max-height: 320px; overflow-y: auto; padding: 1px; }
   .edit-actions .btn-outline {
     height: 36px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
@@ -1031,7 +1123,7 @@
 </head>
 <!-- The tray is the variant the screen is designed around; the two
      halves stay on the switch as the thing it was compared with. -->
-<body data-module="mytime" class="addlayout-one">
+<body data-module="mytime" class="addlayout-inline">
 
 <div class="page">
   <aside id="shell-sidebar"></aside>
@@ -1081,10 +1173,26 @@
         </div>
         <div class="period-actions">
           <button class="btn-ghost" type="button" id="btn-collapse"></button>
-          <button class="btn-ghost" type="button" id="btn-new-task">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add task
-          </button>
+          <div id="add-menu-wrap">
+            <button class="btn-ghost" type="button" id="btn-new-task" aria-haspopup="true" aria-expanded="false">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              Add task
+              <svg class="tp-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <!-- Two ways to put a task on the week, named as what they
+                 are: one looks back at work already booked, the other
+                 sets up work that has not been booked before. -->
+            <div class="add-menu" id="add-menu" role="menu">
+              <button type="button" role="menuitem" data-addmode="recent">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 4.2v4l2.6 1.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.2 8a5.8 5.8 0 105.8-5.8c-2 0-3.8 1-4.9 2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 2.6v2.6h2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Select a recent task
+              </button>
+              <button type="button" role="menuitem" data-addmode="new">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                Create a new task
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1127,7 +1235,8 @@
 
 
 <div class="vp-switch" id="layout-switch" role="group" aria-label="Prototype add-task layout">
-  <button type="button" data-layout="one" class="on">With a tray</button>
+  <button type="button" data-layout="inline" class="on">In the row</button>
+  <button type="button" data-layout="one">With a tray</button>
   <button type="button" data-layout="cols">Two halves</button>
 </div>
 
@@ -1334,6 +1443,62 @@
        because emptying the day at a stroke is its own thing. -->
   <div class="cp-foot">
     <button class="btn-text" type="button" id="cp-clear">Clear</button>
+  </div>
+</div>
+
+<!-- ── Where a new row goes: the two answers that make a timesheet ── -->
+<div class="cell-pop where-pop" id="where-pop" role="dialog" aria-label="Where this task goes">
+  <div class="fld">
+    <label class="fld-label" for="wp-site">Site<span class="req">*</span></label>
+    <select id="wp-site"></select>
+  </div>
+  <div class="fld">
+    <label class="fld-label" for="wp-sup">Supervisor<span class="req">*</span></label>
+    <select id="wp-sup"></select>
+  </div>
+  <div class="tp-foot">
+    <button class="btn-ghost" type="button" data-wpclose>Cancel</button>
+    <button class="btn-primary" type="button" id="wp-go" disabled>Add row</button>
+  </div>
+</div>
+
+<!-- ── What the row is: between one and four fields, the site's own ── -->
+<div class="cell-pop task-pop" id="task-pop" role="dialog" aria-label="Name this task">
+  <div class="tp-fields" id="tp-fields"></div>
+  <div class="tp-foot">
+    <button class="btn-ghost" type="button" data-tpclose>Cancel</button>
+    <button class="btn-primary" type="button" id="tp-done" disabled>Done</button>
+  </div>
+</div>
+
+<!-- ── Recent tasks, each carrying the timesheet it belongs to ────── -->
+<div class="modal-backdrop" id="recent-modal" role="dialog" aria-modal="true" aria-labelledby="pick-title">
+  <div class="modal pick-modal">
+    <div class="modal-header">
+      <div class="modal-heading">
+        <span class="modal-title" id="pick-title">Select a recent task</span>
+        <!-- The site and the supervisor are on every card, because the
+             worker has not been asked for them: one pick can reach
+             across two timesheets and that has to be visible. -->
+        <span class="modal-sub">Work you have booked before. Each one comes with the timesheet it belongs to.</span>
+      </div>
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="pick-dup" id="pick-dup" hidden>
+        <span>Worked the same week again?</span>
+        <button class="btn-outline" type="button" id="pick-dup-go">Duplicate last week</button>
+      </div>
+      <div class="tlist" id="pick-list"></div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-footer-actions">
+        <button class="btn-ghost" type="button" data-close>Cancel</button>
+        <button class="btn-primary" type="button" id="pick-go" disabled>Add</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1583,16 +1748,33 @@
     add(addDays(THIS_MON, -(16 + h3 * 4)), 'SA BHP OLYMPIC DAM', 'Marcus Webb',
       [pick(WO), pick(CC), pick(['Labour', 'Waiting for materials']), pick(SHIFT)], 8);
   }
+  /* A worker who moves between sites, so the list of recent tasks has
+     more than one timesheet on it — which is the whole reason each card
+     carries the site and the supervisor it belongs to. */
+  for (var h4 = 0; h4 < 8; h4++) {
+    add(addDays(THIS_MON, -(9 + h4 * 5)), 'SA BHP OLYMPIC DAM', 'Grace Okafor',
+      [pick(WO), pick(CC), pick(['Labour', 'Waiting for materials']), pick(SHIFT)], 6);
+  }
 
   /* ─── State ───────────────────────────────────────────────────── */
   var state = { range: 'week', from: null, to: null, query: '', editing: false, selDay: iso(TODAY) };
   var collapsed = Object.create(null);
   var draft = null;          // 'key|date' -> hours, while editing
   var extraRows = [];        // keys added during this edit
+  /* A row put on the week before it has a task on it. It has no key —
+     a key is what the task makes — so it is held by an id of its own
+     until it is named, and then it becomes an ordinary row. */
+  var pending = [];          // [{ id, site, sup, levels, from }]
+  var pendSeq = 0;
   var justAdded = null;      // the task added last, so it can be found
   var justAddedSet = [];     // every task from the last Add, so they all flash
   function isJustAdded(k) {
-    return k === justAdded || justAddedSet.indexOf(k) !== -1;
+    return !!k && (k === justAdded || justAddedSet.indexOf(k) !== -1);
+  }
+  function pendById(id) {
+    var out = null;
+    pending.forEach(function (x) { if (String(x.id) === String(id)) out = x; });
+    return out;
   }
 
   /* One column per day in the active range. With no date filter the range
@@ -1648,12 +1830,22 @@
   }
   function weekTree() {
     var sites = [], bySite = Object.create(null);
+    function slot(siteName, supName) {
+      if (!bySite[siteName]) { bySite[siteName] = { name: siteName, sups: [], by: Object.create(null) }; sites.push(bySite[siteName]); }
+      var S = bySite[siteName];
+      if (!S.by[supName]) { S.by[supName] = { name: supName, tasks: [] }; S.sups.push(S.by[supName]); }
+      return S.by[supName];
+    }
     weekKeys().forEach(function (k) {
       var m = taskMeta[k];
-      if (!bySite[m.site]) { bySite[m.site] = { name: m.site, sups: [], by: Object.create(null) }; sites.push(bySite[m.site]); }
-      var S = bySite[m.site];
-      if (!S.by[m.sup]) { S.by[m.sup] = { name: m.sup, tasks: [] }; S.sups.push(S.by[m.sup]); }
-      S.by[m.sup].tasks.push({ key: k, label: pathOf(m.levels) || 'No task', meta: m });
+      slot(m.site, m.sup).tasks.push({ key: k, label: pathOf(m.levels) || 'No task', meta: m });
+    });
+    /* An unnamed row belongs to the timesheet it was added in — which is
+       the whole of what the first step asked for — so it sits under that
+       group from the moment it appears, even when the group is new. */
+    pending.forEach(function (x) {
+      slot(x.site, x.sup).tasks.push({ key: null, pend: x, label: '',
+        meta: { site: x.site, sup: x.sup, levels: x.levels } });
     });
     return sites;
   }
@@ -1710,28 +1902,50 @@
     Finalised: { locked: true,  icon: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="6.5" rx="1.3" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7V5.2a2.5 2.5 0 015 0V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' }
   };
   var STATUS_ORDER = ['Draft', 'Draft', 'Submitted', 'Revised', 'Finalised'];
-  /* Days already gone by are more likely to have moved on; the week you
-     are in is mostly still yours. */
-  /* The worker's day is one timesheet, whatever sites it spans, so the
-     status belongs to the date and not to the cell. */
-  function sheetStatus(isoDate) {
-    if (isoDate >= iso(TODAY)) return 'Draft';
-    var n = 0;
-    for (var i = 0; i < isoDate.length; i++) n = (n * 31 + isoDate.charCodeAt(i)) % 9973;
-    return STATUS_ORDER[n % STATUS_ORDER.length];
+  /* One site under one supervisor is one timesheet, and the status is
+     the timesheet's. So it is said once, on the row that stands for it,
+     rather than in every column that timesheet happens to span. */
+  function groupHasSaved(site, sup) {
+    var ds = days().map(iso), found = false;
+    entries.forEach(function (e) {
+      if (found || ds.indexOf(e.date) === -1) return;
+      var m = taskMeta[e.key];
+      if (m && m.site === site && m.sup === sup) found = true;
+    });
+    return found;
   }
-  function statusFor(key, isoDate) {
-    return STATUS_META[sheetStatus(isoDate)] || STATUS_META.Draft;
+  /* A timesheet that has not been handed in yet has nothing to have
+     moved on from, so a week with no saved hours on it is a draft. */
+  /* Every timesheet a worker can have, in a fixed order, so the
+     prototype shows one of each status rather than whatever a hash
+     happens to land on. */
+  var ALL_SHEETS = [];
+  Object.keys(SUPS_BY_SITE).forEach(function (st) {
+    (SUPS_BY_SITE[st] || []).forEach(function (sp) { ALL_SHEETS.push(st + '\u00a7' + sp); });
+  });
+  function sheetStatus(site, sup) {
+    if (!groupHasSaved(site, sup)) return 'Draft';
+    var i = ALL_SHEETS.indexOf(site + '\u00a7' + sup);
+    return STATUS_ORDER[(i < 0 ? 0 : i) % STATUS_ORDER.length];
   }
-  function statusName(key, isoDate) { return sheetStatus(isoDate); }
+  function groupLocked(site, sup) {
+    return !!(STATUS_META[sheetStatus(site, sup)] || {}).locked;
+  }
+  function statusOf(key) {
+    var m = taskMeta[key];
+    return m ? sheetStatus(m.site, m.sup) : 'Draft';
+  }
+  function statusFor(key) { return STATUS_META[statusOf(key)] || STATUS_META.Draft; }
+  function statusName(key) { return statusOf(key); }
 
-  /* Repeated in every cell the status was six copies of one fact and it
-     crowded out the figure. It is drawn once, at the head of the column
-     it is true of. */
-  function stMark(isoDate) {
-    var name = sheetStatus(isoDate), st = STATUS_META[name] || STATUS_META.Draft;
-    return '<span class="hr-st st-' + name.toLowerCase() + '">' +
-      (st.icon || ICO_DRAFT) + '</span>';
+  /* The mark the timesheet carries, with its name beside it: on a row
+     there is room to say which status it is, and the colour alone was
+     being asked to carry that. */
+  function stChip(site, sup) {
+    var name = sheetStatus(site, sup), st = STATUS_META[name] || STATUS_META.Draft;
+    return '<span class="st-chip st-' + name.toLowerCase() + '" data-tip="' +
+      Shell.esc(name + (st.locked ? ' \u2014 hours can no longer be changed' : '')) + '">' +
+      (st.icon || ICO_DRAFT) + name + '</span>';
   }
   var ICO_DRAFT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none">' +
     '<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2.2 2"/></svg>';
@@ -1770,12 +1984,12 @@
   function cellHtml(value, key, isoDate) {
     if (state.editing && key) {
       var dk = key + '|' + isoDate, changed = draft && dk in draft;
-      var st = statusFor(key, isoDate), lock = st.locked;
+      var st = statusFor(key), lock = st.locked;
       return '<td class="col-day' + todayCls(isoDate) + '">' +
         '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
         (overKey === dk && overCap(isoDate) ? ' over' : '') + '" type="button" ' +
         'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
-        (lock ? ' disabled data-tip="' + statusName(key, isoDate) + ' — hours can no longer be changed"' : '') + '>' +
+        (lock ? ' disabled data-tip="' + statusName(key) + ' — hours can no longer be changed"' : '') + '>' +
         alwDot(key, isoDate) +
         (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
     }
@@ -1803,12 +2017,70 @@
 
   function grpAdd(site, sup) {
     if (!state.editing) return '';
+    /* Submitted or finalised, the timesheet is closed to new work as
+       much as it is closed to changed hours. */
+    if (groupLocked(site, sup)) return '';
     return '<button class="grp-add" type="button"' +
       ' data-add-site="' + Shell.esc(site) + '"' +
       (sup ? ' data-add-sup="' + Shell.esc(sup) + '"' : '') + '>' +
       '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
       'Add task</button>';
   }
+
+  var DD_CARET = '<svg class="tp-caret" width="12" height="12" viewBox="0 0 12 12" fill="none">' +
+    '<path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* Why this combination cannot be used — '' when it can. */
+  function takenIn(site, sup, levels) {
+    return weekKeys().indexOf(keyOf(site, sup, levels)) !== -1 ? 'already on this timesheet' : '';
+  }
+  function pendDone(x) {
+    var fields = fieldsFor(x.site);
+    return fields.length > 0 && fields.every(function (f, i) { return !!x.levels[i]; });
+  }
+  /* One field names the task on its own, so there is nothing for a panel
+     to hold: the cell is the select. More than one and the cell opens a
+     panel, the same way a cell opens its hours. */
+  function taskPickCell(x) {
+    var fields = fieldsFor(x.site);
+    if (fields.length === 1) {
+      return '<select class="task-sel" data-pendsel="' + x.id + '">' +
+        '<option value="">Select a task&hellip;</option>' +
+        fields[0].values.map(function (v) {
+          var why = takenIn(x.site, x.sup, [v]);
+          return '<option' + (why ? ' disabled' : '') + (x.levels[0] === v ? ' selected' : '') + '>' +
+            Shell.esc(v) + (why ? ' &mdash; ' + why : '') + '</option>';
+        }).join('') + '</select>';
+    }
+    var said = pathOf(x.levels);
+    return '<button class="task-pick' + (said ? '' : ' empty') + '" type="button" data-pendpick="' + x.id + '">' +
+      '<span class="tp-text">' + (said ? Shell.esc(said) : 'Select a task') + '</span>' + DD_CARET + '</button>';
+  }
+  /* A row added in this edit and not yet saved is still open to being
+     named differently — clicking it hands it back to the picker. */
+  function taskPickBtn(key, label) {
+    return '<button class="task-pick" type="button" data-reopen="' + Shell.esc(key) + '">' +
+      '<span class="tp-text">' + Shell.esc(label) + '</span>' + DD_CARET + '</button>';
+  }
+  function pendDrop(id) {
+    return '<button class="row-drop" type="button" data-pdrop="' + id + '"' +
+      ' aria-label="Remove this row" data-tip="Remove this row">' +
+      '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.4 4.5l.6 8.3h6l.6-8.3M6.8 7v3.6M9.2 7v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '</button>';
+  }
+  function pendRow(x, ds) {
+    return '<tr class="row-flat row-pend" data-pendrow="' + x.id + '">' +
+      '<td class="col-site"></td><td class="col-sup"></td>' +
+      '<td class="col-task">' + taskPickCell(x) + '</td>' +
+      ds.map(function (d) {
+        return '<td class="col-day' + todayCls(iso(d)) + '"><span class="cell-empty">&mdash;</span></td>';
+      }).join('') +
+      '<td class="col-total"><span class="cell-empty">&mdash;</span></td>' +
+      actCell(pendDrop(x.id)) +
+    '</tr>';
+  }
+
+
   var ICO_SITE = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 14V3.5l5-1.5V14M3 14h10V6.5H8M3 14H1.5M13 14h1.5" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   var ICO_SUP  = '<svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M2 13.2c0-2.2 2-4 4.5-4s4.5 1.8 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M11.5 4.5h3M13 3v3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
 
@@ -1840,14 +2112,11 @@
     return ds.map(function (d) {
       var k = iso(d), today = k === iso(TODAY);
       var shown = dayTotal(k, true), all = dayTotal(k, false), over = all > DAY_CAP;
-      var st = sheetStatus(k);
       return '<th class="col-day' + (today ? ' tdy' : '') + '"' +
-        ' data-tip="' + Shell.esc(st) + (STATUS_META[st] && STATUS_META[st].locked
-          ? ' — hours can no longer be changed' : '') +
-        (over ? '. ' + fmtHours(all) + ' h booked — more than ' + DAY_CAP : '') + '">' +
+        (over ? ' data-tip="' + fmtHours(all) + ' h booked &mdash; more than ' + DAY_CAP + '"' : '') + '>' +
         '<span class="day-head' + (today ? ' is-today' : '') + '">' +
         '<span class="dnum">' + DOW[d.getDay()] + ', ' + fmtDay(d) + '</span>' +
-        '<span class="dtot' + (over ? ' over' : '') + '">' + stMark(k) +
+        '<span class="dtot' + (over ? ' over' : '') + '">' +
           (shown > 0 ? fmtHours(shown) + ' h' : '<span class="cell-empty">&mdash;</span>') +
         '</span></span></th>';
     }).join('');
@@ -1881,14 +2150,17 @@
     var rows = [], count = 0, first = true;
     weekTree().forEach(function (site) {
       site.sups.forEach(function (sup) {
-        var n = sup.tasks.length;
+        /* A row still waiting for a name is not yet a task, so it is
+           not counted as one. */
+        var n = sup.tasks.filter(function (t) { return !t.pend; }).length;
         var fk = flatKey(site.name, sup.name), open = collapsed[fk] !== true;
         rows.push('<tr class="row-flat row-summary' + (open ? '' : ' collapsed') + (first ? '' : ' group-top') +
             '" data-key="' + Shell.esc(fk) + '">' +
           '<td class="col-site" data-tip="Site &mdash; ' + Shell.esc(site.name) + '">' +
             '<span class="tree">' + caret() + '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
           '<td class="col-sup" data-tip="Supervisor &mdash; ' + Shell.esc(sup.name) + '">' + Shell.esc(sup.name) + '</td>' +
-          '<td class="col-task"><span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
+          '<td class="col-task">' + stChip(site.name, sup.name) +
+            '<span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
           ds.map(function (d) { return dayCellPlain(sumRow(sup.tasks, iso(d)), iso(d)); }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
           actCell(grpAdd(site.name, sup.name)) +
@@ -1897,9 +2169,15 @@
         if (!open) return;
 
         sup.tasks.forEach(function (t) {
+          if (t.pend) { rows.push(pendRow(t.pend, ds)); count++; return; }
+          /* Only the variant that adds in the row lets a row be renamed
+             there; the other two are kept as they were drawn. */
+          var fresh = state.editing && isInline() && extraRows.indexOf(t.key) !== -1;
           rows.push('<tr class="row-flat' + (isJustAdded(t.key) ? ' just-added' : '') + '">' +
             '<td class="col-site"></td><td class="col-sup"></td>' +
-            '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
+            (fresh
+              ? '<td class="col-task">' + taskPickBtn(t.key, t.label) + '</td>'
+              : '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>') +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell(rowDrop(t.key)) +
@@ -1909,8 +2187,12 @@
       });
     });
 
+    /* The empty state offers both ways in itself, so the line telling
+       the reader where to find them would be contradicting it. */
+    document.body.classList.toggle('week-empty', !rows.length);
     if (!rows.length) {
-      rows.push('<tr><td colspan="' + (ds.length + 4 + (state.editing ? 1 : 0)) + '" style="color:var(--grey-600)">No hours recorded this week.</td></tr>');
+      rows.push('<tr class="row-empty"><td colspan="' + (ds.length + 4 + (state.editing ? 1 : 0)) + '">' +
+        emptyState() + '</td></tr>');
     }
     gridBody.innerHTML = rows.join('');
 
@@ -2046,7 +2328,10 @@
      weeks — anything else is a custom range. */
   var QUICK = [
     { k: 'week',     label: 'Current week' },
-    { k: 'lastweek', label: 'Last week' }
+    { k: 'lastweek', label: 'Last week' },
+    /* Nothing is booked on it yet, which is the point: it is how the
+       empty timesheet is reached without inventing a switch for it. */
+    { k: 'nextweek', label: 'Next week' }
   ];
 
   function daysAgoIso(n) { return iso(addDays(TODAY, -n)); }
@@ -2057,6 +2342,7 @@
   function rangeBounds() {
     if (state.range === 'week')     return { from: weekStartIso(0), to: weekEndIso(0) };
     if (state.range === 'lastweek') return { from: weekStartIso(1), to: weekEndIso(1) };
+    if (state.range === 'nextweek') return { from: weekStartIso(-1), to: weekEndIso(-1) };
     if (state.range === 'custom') return { from: state.from, to: state.to };
     return null;
   }
@@ -2329,7 +2615,7 @@
     }
   }
   function enterEdit() {
-    state.editing = true; draft = Object.create(null); extraRows = [];
+    state.editing = true; draft = Object.create(null); extraRows = []; pending = [];
     document.body.classList.add('editing');
     /* The week is the thing being edited; changing it underneath a draft
        would leave the draft pointing at days no longer on screen. */
@@ -2343,7 +2629,8 @@
     if (m) m.classList.toggle('locked', state.editing);
   }
   function exitEdit() {
-    state.editing = false; draft = null; extraRows = []; justAdded = null;
+    state.editing = false; draft = null; extraRows = []; pending = []; justAdded = null;
+    closeTaskPop(); closeWherePop(); closeAddMenu();
     document.body.classList.remove('editing');
     syncDateLock();
     render();
@@ -3296,19 +3583,400 @@
     if (e.target === editSheet || e.target.closest('[data-close]')) editSheet.classList.remove('open');
   });
 
-  document.getElementById('btn-new-task').addEventListener('click', function () { openAdd(null, null); });
-  /* ─── Variant switch: two columns, or one ─────────────────────────
+
+  /* ─── Adding a task, in the table ─────────────────────────────────
+     Two ways in, named on one menu. One looks back at work already
+     booked and is a list to tick; the other is a row that lands on the
+     week and is filled in where it will live. Nothing is asked for in a
+     dialog that the row itself can ask for. */
+  function isInline() { return document.body.classList.contains('addlayout-inline'); }
+
+  var addMenu = el('add-menu'), wherePop = el('where-pop'), taskPop = el('task-pop');
+  var pickModal = el('recent-modal');
+
+  function placePop(node, anchor, toRight) {
+    node.classList.add('open');
+    var r = anchor.getBoundingClientRect();
+    var top = r.bottom + 6, left = toRight ? r.right - node.offsetWidth : r.left;
+    if (top + node.offsetHeight > window.innerHeight - 8) top = r.top - node.offsetHeight - 6;
+    if (left + node.offsetWidth > window.innerWidth - 8) left = window.innerWidth - node.offsetWidth - 8;
+    node.style.top = Math.max(8, top) + 'px';
+    node.style.left = Math.max(8, left) + 'px';
+  }
+  function closeAddMenu() {
+    if (!addMenu) return;
+    addMenu.classList.remove('open');
+    el('btn-new-task').setAttribute('aria-expanded', 'false');
+  }
+  function closeWherePop() { if (wherePop) wherePop.classList.remove('open'); }
+  function closeTaskPop() { if (taskPop) taskPop.classList.remove('open'); tpId = null; }
+
+  /* ── Where the row goes ──────────────────────────────────────────
+     A timesheet is a site and a supervisor, so that is what is asked
+     before a row exists to ask it on. */
+  var whereAnchor = null;
+  function openWherePop(anchor) {
+    whereAnchor = anchor;
+    el('wp-site').innerHTML = '<option value="">Select&hellip;</option>' +
+      SITES.filter(function (x) { return (SUPS_BY_SITE[x] || []).length; })
+        .map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
+    el('wp-site').value = '';
+    renderWhereSups();
+    placePop(wherePop, anchor, true);
+    el('wp-site').focus();
+  }
+  function renderWhereSups() {
+    var site = el('wp-site').value, list = SUPS_BY_SITE[site] || [];
+    /* A timesheet already handed in is not somewhere a new row can go,
+       so that supervisor is shown with the reason rather than missing. */
+    el('wp-sup').innerHTML = '<option value="">Select&hellip;</option>' +
+      list.map(function (x) {
+        var shut = groupLocked(site, x);
+        return '<option' + (shut ? ' disabled' : '') + '>' + Shell.esc(x) +
+          (shut ? ' &mdash; ' + sheetStatus(site, x).toLowerCase() : '') + '</option>';
+      }).join('');
+    el('wp-sup').disabled = !site;
+    el('wp-go').disabled = !site || !el('wp-sup').value;
+  }
+  el('wp-site').addEventListener('change', renderWhereSups);
+  el('wp-sup').addEventListener('change', function () {
+    el('wp-go').disabled = !el('wp-site').value || !this.value;
+  });
+  el('wp-go').addEventListener('click', function () {
+    var site = el('wp-site').value, sup = el('wp-sup').value;
+    if (!site || !sup) return;
+    closeWherePop();
+    newRow(site, sup);
+  });
+  wherePop.addEventListener('click', function (e) {
+    if (e.target.closest('[data-wpclose]')) closeWherePop();
+    e.stopPropagation();
+  });
+
+  /* A row with nowhere left to hide: it is on the week, in its group,
+     and the only thing still open about it is what it is. */
+  function newRow(site, sup) {
+    if (!state.editing) enterEdit();
+    var x = { id: ++pendSeq, site: site, sup: sup, levels: [], from: null };
+    pending.push(x);
+    delete collapsed[flatKey(site, sup)];
+    render();
+    var row = document.querySelector('[data-pendrow="' + x.id + '"]');
+    if (row) row.scrollIntoView({ block: 'center' });
+    var btn = row && row.querySelector('[data-pendpick], [data-pendsel]');
+    if (btn && btn.hasAttribute('data-pendpick')) openTaskPop(btn, x.id);
+    else if (btn) btn.focus();
+  }
+
+  /* ── What the row is ─────────────────────────────────────────────
+     Between one and four fields, whichever the site runs. One of them
+     is a select in the cell; more than one and the cell opens a panel. */
+  var tpId = null;
+  function openTaskPop(anchor, id) {
+    tpId = id;
+    renderTaskPop();
+    placePop(taskPop, anchor, false);
+    var f = el('tp-fields').querySelector('select');
+    if (f) f.focus();
+  }
+  function renderTaskPop() {
+    var x = pendById(tpId);
+    if (!x) return;
+    var fields = fieldsFor(x.site);
+    el('tp-fields').innerHTML = fields.map(function (f, i) {
+      return '<div class="fld"><label class="fld-label" for="tp' + i + '">' +
+        Shell.esc(f.name) + '<span class="req">*</span></label>' +
+        '<select id="tp' + i + '" data-tlvl="' + i + '">' +
+        '<option value="">Select&hellip;</option>' +
+        f.values.map(function (v) {
+          /* Only the last field can finish a task, so it is the only one
+             that can name one that is already here. */
+          var why = (i === fields.length - 1)
+            ? takenIn(x.site, x.sup, x.levels.slice(0, i).concat([v])) : '';
+          return '<option' + (why ? ' disabled' : '') +
+            (x.levels[i] === v ? ' selected' : '') + '>' +
+            Shell.esc(v) + (why ? ' &mdash; ' + why : '') + '</option>';
+        }).join('') + '</select></div>';
+    }).join('');
+    el('tp-done').disabled = !pendDone(x);
+  }
+  el('tp-fields').addEventListener('change', function (e) {
+    var sel = e.target.closest('[data-tlvl]');
+    if (!sel) return;
+    var x = pendById(tpId);
+    if (!x) return;
+    var i = Number(sel.getAttribute('data-tlvl'));
+    /* Answering a field again unsettles everything under it. */
+    x.levels = x.levels.slice(0, i);
+    x.levels[i] = sel.value;
+    renderTaskPop();
+    renderGrid();
+    var next = el('tp-fields').querySelector('#tp' + (i + 1));
+    if (next) next.focus();
+  });
+  el('tp-done').addEventListener('click', function () {
+    var x = pendById(tpId);
+    if (x) nameRow(x);
+  });
+  taskPop.addEventListener('click', function (e) {
+    if (e.target.closest('[data-tpclose]')) { closeTaskPop(); renderGrid(); }
+    e.stopPropagation();
+  });
+  taskPop.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    e.stopPropagation();
+    closeTaskPop();
+    renderGrid();
+  });
+
+  /* Named, the row stops being a row waiting for a name and becomes an
+     ordinary one — and whatever hours were already on it move with it. */
+  function nameRow(x) {
+    var k = keyOf(x.site, x.sup, x.levels);
+    if (weekKeys().indexOf(k) !== -1) {
+      Shell.snackbar('That task is already on this timesheet.');
+      return;
+    }
+    taskMeta[k] = { site: x.site, sup: x.sup, levels: x.levels.slice() };
+    if (extraRows.indexOf(k) === -1) extraRows.push(k);
+    if (x.from && draft) {
+      Object.keys(draft).forEach(function (dk) {
+        if (dk.indexOf(x.from + '|') !== 0) return;
+        draft[k + '|' + dk.slice(dk.lastIndexOf('|') + 1)] = draft[dk];
+        delete draft[dk];
+      });
+    }
+    pending = pending.filter(function (y) { return y !== x; });
+    justAdded = k; justAddedSet = [k];
+    closeTaskPop();
+    delete collapsed[flatKey(x.site, x.sup)];
+    render(); syncEditBar();
+    var row = document.querySelector('tr.just-added');
+    if (!row) return;
+    row.scrollIntoView({ block: 'center' });
+    var cell = row.querySelector('.hr-cell:not([disabled])');
+    if (cell) openCell(cell);
+  }
+
+  /* One field, so the cell is the whole of the question. */
+  gridBody.addEventListener('change', function (e) {
+    var sel = e.target.closest('[data-pendsel]');
+    if (!sel) return;
+    var x = pendById(sel.getAttribute('data-pendsel'));
+    if (!x) return;
+    x.levels = sel.value ? [sel.value] : [];
+    if (pendDone(x)) nameRow(x); else renderGrid();
+  });
+
+  gridBody.addEventListener('click', function (e) {
+    var pick = e.target.closest('[data-pendpick]');
+    if (pick) { openTaskPop(pick, pick.getAttribute('data-pendpick')); return; }
+
+    /* A row added in this edit, back to the picker it came from. Its
+       hours ride along: they were entered against the row, not against
+       the name it happened to have. */
+    var again = e.target.closest('[data-reopen]');
+    if (again) {
+      var key = again.getAttribute('data-reopen'), m = taskMeta[key];
+      if (!m) return;
+      var x = { id: ++pendSeq, site: m.site, sup: m.sup, levels: m.levels.slice(), from: key };
+      pending.push(x);
+      extraRows = extraRows.filter(function (k) { return k !== key; });
+      if (!entries.some(function (en) { return en.key === key; })) delete taskMeta[key];
+      if (justAdded === key) justAdded = null;
+      justAddedSet = justAddedSet.filter(function (k) { return k !== key; });
+      render();
+      var btn = document.querySelector('[data-pendrow="' + x.id + '"] [data-pendpick]');
+      if (btn) openTaskPop(btn, x.id);
+      return;
+    }
+
+    var drop = e.target.closest('[data-pdrop]');
+    if (drop) {
+      var id = drop.getAttribute('data-pdrop'), y = pendById(id);
+      if (y && y.from && draft) {
+        Object.keys(draft).forEach(function (dk) {
+          if (dk.indexOf(y.from + '|') === 0) delete draft[dk];
+        });
+      }
+      pending = pending.filter(function (z) { return String(z.id) !== String(id); });
+      if (tpId && String(tpId) === String(id)) closeTaskPop();
+      render(); syncEditBar();
+    }
+  });
+
+  /* ── The list of what has been booked before ─────────────────────
+     Tasks, not timesheets: each card carries the site and the
+     supervisor it belongs to, because one pass down this list can
+     reach across several of them. */
+  var picked = Object.create(null);
+  function recentPool() {
+    var on = Object.create(null);
+    weekKeys().forEach(function (k) { on[k] = 1; });
+    var list = Object.keys(taskMeta).map(function (k) {
+      return { key: k, meta: taskMeta[k], when: lastUsed(k) };
+    }).filter(function (r) {
+      return r.when && !on[r.key] && !groupLocked(r.meta.site, r.meta.sup);
+    }).sort(function (a, b) { return b.when - a.when; }).slice(0, 12);
+    nameCards(list);
+    return list;
+  }
+  function renderPick() {
+    var list = recentPool();
+    el('pick-list').innerHTML = list.length ? list.map(function (r) {
+      var sub = [taskRest(r.meta, r.cardExtra), 'last booked ' + fmtDay(r.when)]
+        .filter(Boolean).join(' · ');
+      return '<div class="recent-row' + (picked[r.key] ? ' sel' : '') +
+        '" data-pickkey="' + Shell.esc(r.key) + '">' +
+        '<span class="rr-tick">' + ICO_TICK + '</span>' +
+        '<span class="rr-body">' +
+          '<span class="rr-code">' + Shell.esc(r.cardTitle) + '</span>' +
+          '<span class="rr-sub">' + Shell.esc(sub) + '</span>' +
+          '<span class="rr-where"><b>' + Shell.esc(r.meta.site) + '</b> · ' + Shell.esc(r.meta.sup) + '</span>' +
+        '</span></div>';
+    }).join('') : '<div class="recent-empty">Everything you have booked before is already on this week.</div>';
+
+    var n = Object.keys(picked).filter(function (k) { return picked[k]; }).length;
+    el('pick-go').disabled = !n;
+    el('pick-go').textContent = n > 1 ? 'Add ' + n + ' tasks' : 'Add';
+  }
+  function openPick(fromEmpty) {
+    picked = Object.create(null);
+    el('pick-dup').hidden = !fromEmpty;
+    renderPick();
+    pickModal.classList.add('open');
+  }
+  el('pick-list').addEventListener('click', function (e) {
+    var row = e.target.closest('[data-pickkey]');
+    if (!row) return;
+    var k = row.getAttribute('data-pickkey');
+    if (picked[k]) delete picked[k]; else picked[k] = 1;
+    renderPick();
+  });
+  pickModal.addEventListener('click', function (e) {
+    if (e.target === pickModal || e.target.closest('[data-close]')) pickModal.classList.remove('open');
+  });
+  el('pick-go').addEventListener('click', function () {
+    var keys = Object.keys(picked).filter(function (k) { return picked[k]; });
+    if (!keys.length) return;
+    if (!state.editing) enterEdit();
+    keys.forEach(function (k) {
+      if (extraRows.indexOf(k) === -1) extraRows.push(k);
+      var m = taskMeta[k];
+      delete collapsed[flatKey(m.site, m.sup)];
+    });
+    justAdded = keys[keys.length - 1];
+    justAddedSet = keys.slice();
+    pickModal.classList.remove('open');
+    render(); syncEditBar();
+    if (keys.length > 1) Shell.snackbar(keys.length + ' tasks added to this week.');
+    var landed = document.querySelectorAll('tr.just-added');
+    if (!landed.length) return;
+    landed[0].scrollIntoView({ block: 'center' });
+    var cell = landed[0].querySelector('.hr-cell:not([disabled])');
+    if (cell) openCell(cell);
+  });
+
+  /* A week that repeats whole is one press, not twelve: every task on
+     the week before, with its hours, on the same weekdays. */
+  el('pick-dup-go').addEventListener('click', function () {
+    if (!state.editing) enterEdit();
+    var ds = days(), on = Object.create(null), seen = Object.create(null), n = 0;
+    weekKeys().forEach(function (k) { on[k] = 1; });
+    ds.forEach(function (d) {
+      var src = iso(addDays(d, -7)), dst = iso(d);
+      Object.keys(taskMeta).forEach(function (k) {
+        if (on[k]) return;
+        var m = taskMeta[k];
+        if (groupLocked(m.site, m.sup)) return;
+        var c = cellOf(k, src);
+        if (!(c.h > 0)) return;
+        if (!seen[k]) {
+          seen[k] = 1; n++;
+          if (extraRows.indexOf(k) === -1) extraRows.push(k);
+          delete collapsed[flatKey(m.site, m.sup)];
+        }
+        draft[k + '|' + dst] = { h: c.h, s: c.s, f: c.f, a: (c.a || []).slice() };
+      });
+    });
+    pickModal.classList.remove('open');
+    if (!n) { Shell.snackbar('Nothing was booked the week before.'); return; }
+    justAdded = null; justAddedSet = Object.keys(seen);
+    render(); syncEditBar();
+    Shell.snackbar(n + ' task' + (n === 1 ? '' : 's') + ' copied from last week — check the hours before saving.');
+  });
+
+  /* ── Nothing booked yet ──────────────────────────────────────── */
+  var ICO_EMPTY = '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.8v3.4M16 2.8v3.4"/>' +
+    '<path d="M8.5 14.5h7"/></svg>';
+  function emptyState() {
+    return '<div class="ts-empty">' +
+      '<div class="ts-empty-ico">' + ICO_EMPTY + '</div>' +
+      '<h3>No timesheet for this week yet</h3>' +
+      '<p>Add the tasks you have worked on and the hours go in beside them.</p>' +
+      '<div class="ts-empty-acts">' +
+        '<button class="btn-primary" type="button" data-empty="recent">Select a recent task</button>' +
+        '<button class="btn-outline" type="button" data-empty="new">Create a new task</button>' +
+      '</div></div>';
+  }
+  gridBody.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-empty]');
+    if (!b) return;
+    if (!state.editing) enterEdit();
+    if (b.getAttribute('data-empty') === 'recent') openPick(true);
+    else openWherePop(b);
+  });
+
+  /* ── The menu the two ways hang off ──────────────────────────── */
+  el('btn-new-task').addEventListener('click', function (e) {
+    if (!isInline()) { openAdd(null, null); return; }
+    e.stopPropagation();
+    var open = addMenu.classList.toggle('open');
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  addMenu.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-addmode]');
+    if (!b) return;
+    e.stopPropagation();
+    closeAddMenu();
+    if (b.getAttribute('data-addmode') === 'recent') openPick(false);
+    else openWherePop(el('btn-new-task'));
+  });
+  document.addEventListener('click', function (e) {
+    if (!addMenu.contains(e.target) && !el('btn-new-task').contains(e.target)) closeAddMenu();
+    if (!wherePop.contains(e.target)) closeWherePop();
+    if (!taskPop.contains(e.target) && !e.target.closest('[data-pendpick]') &&
+        !e.target.closest('[data-reopen]')) {
+      if (taskPop.classList.contains('open')) { closeTaskPop(); renderGrid(); }
+    }
+  });
+  window.addEventListener('scroll', function () {
+    closeAddMenu(); closeWherePop();
+    if (taskPop.classList.contains('open')) { closeTaskPop(); renderGrid(); }
+  }, true);
+
+  /* ─── Variant switch: in the row, with a tray, or two columns ────
      Two readings of the same dialog, so the client can be shown both.
      The layout is a body class; nothing in the model knows about it. */
   var layoutSwitch = document.getElementById('layout-switch');
   layoutSwitch.addEventListener('click', function (e) {
     var b = e.target.closest('[data-layout]');
     if (!b) return;
-    var one = b.getAttribute('data-layout') === 'one';
-    document.body.classList.toggle('addlayout-one', one);
+    var v = b.getAttribute('data-layout');
+    document.body.classList.toggle('addlayout-inline', v === 'inline');
+    document.body.classList.toggle('addlayout-one', v === 'one');
     layoutSwitch.querySelectorAll('[data-layout]').forEach(function (x) { x.classList.toggle('on', x === b); });
     ocTab = 'recent';
-    if (addModal.classList.contains('open')) { addStep = one ? 2 : 1; sync(); }
+    /* The variants do not share a half-finished add: whatever one of
+       them had open goes when the other takes over. */
+    closeAddMenu(); closeWherePop(); closeTaskPop();
+    pickModal.classList.remove('open');
+    addModal.classList.remove('open');
+    pending = [];
+    addStep = 1;
+    render();
   });
   /* ─── One column: the things you can do in it ─────────────────── */
   el('oc-tab-recent').addEventListener('click', function () { ocTab = 'recent'; sync(); });
@@ -3417,11 +4085,19 @@
     if (!b) return;
     e.preventDefault();
     e.stopPropagation();
-    openAdd(null, { site: b.getAttribute('data-add-site'), sup: b.getAttribute('data-add-sup') || '' });
+    var site = b.getAttribute('data-add-site'), sup = b.getAttribute('data-add-sup') || '';
+    /* The group already answers both of the first step's questions, so
+       the row goes straight in and only its name is still open. */
+    if (isInline()) { newRow(site, sup || supervisorFor(site)); return; }
+    openAdd(null, { site: site, sup: sup });
   }, true);
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
+    if (addMenu.classList.contains('open')) { closeAddMenu(); return; }
+    if (wherePop.classList.contains('open')) { closeWherePop(); return; }
+    if (taskPop.classList.contains('open')) { closeTaskPop(); renderGrid(); return; }
+    if (pickModal.classList.contains('open')) { pickModal.classList.remove('open'); return; }
     if (editSheet.classList.contains('open')) { editSheet.classList.remove('open'); return; }
     if (addModal.classList.contains('open')) { addModal.classList.remove('open'); return; }
     if (state.editing) exitEdit();
