@@ -45,7 +45,15 @@
   }
   .who .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-  td.col-view, th.col-view { text-align: right; }
+  /* The table is wider than most screens, and the one control on the
+     row was the first thing to scroll off it. It stays put, with a rule
+     down its left so it reads as its own column. */
+  td.col-view, th.col-view {
+    position: sticky; right: 0; z-index: 2; text-align: right;
+    background: var(--white); box-shadow: inset 1px 0 0 var(--grey-350);
+  }
+  #lr-table thead th.col-view { z-index: 6; }
+  #lr-body tr:hover td.col-view { background: #fafbfe; }
   .view-link {
     background: none; border: none; cursor: pointer; padding: 0;
     font-family: var(--fs-sans); font-size: 14px; font-weight: 500; color: var(--primary);
@@ -63,10 +71,12 @@
   /* The bar stands in for the caption rather than appearing under it:
      one line in that place, saying either what the tab is or what has
      been picked out of it. */
+  /* A line of controls, not a panel. A tinted box here only drew the
+     eye to the fact that something was ticked, which the ticks already
+     say, and the blue is the product's acting colour. */
   .lr-bulk {
     display: flex; align-items: center; gap: 12px;
-    margin: 12px 0 2px; padding: 10px 14px; border-radius: 10px;
-    background: var(--bg-blue-light); border: 1px solid #ccd8f7;
+    margin: 10px 0 2px; min-height: 36px;
   }
   .lr-bulk[hidden] { display: none; }
   .lr-bulk .n { font-size: 14px; font-weight: 600; color: var(--text-main); }
@@ -223,13 +233,19 @@
   .cal-day.on:hover, .cal-day.open { box-shadow: 0 0 0 1px var(--primary); }
   /* The days being asked for, drawn over whatever is under them: the
      question is what the leave lands on, so both have to be legible.
-     A bar under the day rather than a ring around it — a ring is the
-     shape of something you can press, and these are not. */
-  .cal-day.req { font-weight: 600; color: #8a5200; }
+     Stripes rather than a colour. Asking for a day is not a fault, and
+     amber or red says it is; hatching is what Outlook and the leave
+     tools use for "proposed, not settled yet", it carries no hue of its
+     own, and it leaves the shift colour underneath readable. */
+  .cal-day.req { font-weight: 600; }
   .cal-day.req::before {
-    content: ''; position: absolute; left: 5px; right: 5px; bottom: 3px;
-    height: 3px; border-radius: 2px; background: #d4820c;
+    content: ''; position: absolute; inset: 0; border-radius: 6px; pointer-events: none;
+    background: repeating-linear-gradient(45deg,
+      rgba(16, 24, 40, 0) 0 3px, rgba(16, 24, 40, 0.26) 3px 6px);
   }
+  /* The number sits above the hatching; an absolutely positioned
+     ::before would otherwise paint over the text of its own parent. */
+  .cal-day .n { position: relative; z-index: 1; }
   /* Today moves to a corner, so it is not a second bar under a number. */
   .cal-day.today::after {
     content: ''; position: absolute; top: 4px; right: 4px;
@@ -248,7 +264,7 @@
   }
   .cal-pop[hidden] { display: none; }
   .cal-pop .cp-when { font-size: 12px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
-  .cal-pop .cp-when .req { color: #8a5200; font-weight: 600; }
+  .cal-pop .cp-when .req { color: var(--grey-600); font-weight: 500; }
   .cal-pop dl { display: grid; grid-template-columns: 74px 1fr; gap: 3px 10px; margin: 0; }
   .cal-pop dt { font-size: 11px; color: var(--grey-600); }
   .cal-pop dd { font-size: 12px; line-height: 16px; color: var(--text-main); margin: 0; }
@@ -260,11 +276,11 @@
   .ros-key .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .sw-day { background: #ddd3f7; } .sw-night { background: #f8c0e4; }
   .sw-travel { background: #b9e3e6; }
-  /* The requested days are marked by the bar under them, so the key
-     shows the bar rather than a fill they do not have. */
+  /* The key shows the hatching, which is what the day carries. */
   .ros-key .sw-leave {
-    background: none; border-radius: 0; height: 3px; width: 14px;
-    align-self: center; background-color: #d4820c;
+    background: repeating-linear-gradient(45deg,
+      rgba(16, 24, 40, 0) 0 2px, rgba(16, 24, 40, 0.3) 2px 4px);
+    box-shadow: inset 0 0 0 1px var(--grey-300);
   }
   .rd-doc-bar { display: flex; align-items: center; gap: 6px; }
   .doc-btn {
@@ -605,12 +621,12 @@
   var REQUESTS = [
     { id: 1,  who: 'John Sith',    site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-12-21', to: '2026-12-31', hours: null, approver: 'Grace Okafor', made: '2026-10-14', why: 'Booked flights to Perth over Christmas.', doc: null, state: 'pending' },
     { id: 2,  who: 'Emma Stone',   site: 'MMA VIGILANT ROV',         type: 'Sick Leave',     from: '2026-10-27', to: '2026-10-29', hours: null, approver: 'Priya Nair',   made: '2026-10-26', why: 'Flu \u2014 certificate attached.', doc: 'Medical Certificate', state: 'pending' },
-    { id: 3,  who: 'Sophia Adams', site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-11-09', to: '2026-11-13', hours: null, approver: 'Tom Halloran', made: '2026-10-20', why: '', doc: null, state: 'pending' },
+    { id: 3,  who: 'Sophia Adams', site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-11-09', to: '2026-11-13', hours: null, approver: 'Tom Halloran', made: '2026-10-20', why: 'Wedding \u2014 invitation attached.', doc: 'Invitation', state: 'pending' },
     { id: 4,  who: 'Olivia Brown', site: 'SA BHP OLYMPIC DAM',       type: 'Parental Leave', from: '2027-01-11', to: '2027-04-02', hours: null, approver: 'Marcus Webb',  made: '2026-10-02', why: 'First child, due early January.', doc: 'Birth Certificate', state: 'pending' },
     { id: 5,  who: 'Olivia Rhye',  site: 'GDR12 Tank Farm Shutdown', type: 'Unpaid Leave',   from: '2026-11-02', to: '2026-11-06', hours: null, approver: 'Grace Okafor', made: '2026-10-22', why: 'Moving house.', doc: null, state: 'pending' },
     { id: 6,  who: 'Liam Baker',   site: 'MMA VIGILANT \u2013 360',    type: 'Annual Leave',   from: '2026-11-23', to: '2026-11-27', hours: null, approver: 'Grace Okafor', made: '2026-10-25', why: '', doc: null, state: 'pending' },
     { id: 7,  who: 'Noah Davis',   site: 'SA BHP OLYMPIC DAM',       type: 'Unpaid Leave',   from: '2026-10-29', to: '2026-10-30', hours: null, approver: 'Marcus Webb',  made: '2026-10-26', why: 'Family funeral interstate.', doc: null, state: 'pending' },
-    { id: 8,  who: 'Ava Miller',   site: 'GDR09 Factory Shutdown',   type: 'Sick Leave',     from: '2026-10-26', to: '2026-10-26', hours: 4,    approver: 'Tom Halloran', made: '2026-10-26', why: 'Migraine \u2014 went home after the crib break.', doc: null, state: 'pending' },
+    { id: 8,  who: 'Ava Miller',   site: 'GDR09 Factory Shutdown',   type: 'Sick Leave',     from: '2026-10-26', to: '2026-10-26', hours: 4,    approver: 'Tom Halloran', made: '2026-10-26', why: 'Migraine \u2014 went home after the crib break.', doc: 'Medical Certificate', state: 'pending' },
     { id: 9,  who: 'John Sith',    site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-11-16', to: '2026-11-20', hours: null, approver: 'Grace Okafor', made: '2026-10-19', why: '', doc: null, state: 'pending' },
     { id: 10, who: 'Emma Stone',   site: 'MMA VIGILANT ROV',         type: 'Annual Leave',   from: '2027-02-01', to: '2027-02-12', hours: null, approver: 'Priya Nair',   made: '2026-10-23', why: 'Wedding and honeymoon.', doc: null, state: 'pending' },
 
@@ -979,10 +995,11 @@
       var req = !out && k >= r.from && k <= r.to;
       var cls = 'cal-day' + (out ? ' out' : '') + (req ? ' req' : '') +
         (as.length ? ' on' : '') + (k === TODAY_ISO ? ' today' : '');
+      var num = '<span class="n">' + d.getDate() + '</span>';
       cells += as.length
         ? '<button type="button" class="' + cls + '" data-day="' + k + '" style="' +
-            fillOf(as) + '">' + d.getDate() + '</button>'
-        : '<div class="' + cls + '">' + d.getDate() + '</div>';
+            fillOf(as) + '">' + num + '</button>'
+        : '<div class="' + cls + '">' + num + '</div>';
     }
     return '<div class="cal-month">' +
       '<div class="cal-m-head">' + MONTHS_LONG[m] + ' ' + y + '</div>' +
