@@ -455,6 +455,27 @@
            'on Supervisor Timesheets, where someone is acting on them.'
     },
     {
+      screen: 'Leave Requests',
+      q: 'Can several requests be approved at once, without opening each one?',
+      why: 'Settling a Monday pile one at a time is most of the job, so the list carries ' +
+           'checkboxes and an Approve and a Reject for whatever is ticked. But an expense claim ' +
+           'cannot be approved until the claim and its attachment have been opened, and the same ' +
+           'rule may well apply here \u2014 the roster calendar that says whether the person is on ' +
+           'shift those days is only in the request itself.',
+      now: 'Bulk approve and reject are live on the Pending tab and ask nothing first. If the ' +
+           'rule applies, the buttons become \u201creviewed only\u201d \u2014 a request stays ticked but ' +
+           'unapprovable until it has been opened once.'
+    },
+    {
+      screen: 'Leave Requests',
+      q: 'Does the approver need to see who else from the crew is off those days?',
+      why: 'Every HR tool shows one \u2014 BambooHR calls it Who\u2019s Out, HiBob and Deputy have the ' +
+           'same thing. On a crew the risk is usually not that this person is rostered, but that ' +
+           'they are the third scaffolder asking for the same week. It has not been asked for, ' +
+           'and it is a second calendar on a dialog that already has one.',
+      now: 'Not shown. The roster in the request answers only what this one worker is on.'
+    },
+    {
       screen: 'Supervisor Timesheets',
       q: 'Should allowance lines show in the Period view?',
       why: 'Period is a day-by-day grid of hours. An allowance is claimed on a line of its own ' +

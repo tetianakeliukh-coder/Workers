@@ -53,6 +53,30 @@
   .view-link:hover { text-decoration: underline; }
   #lr-table td { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .lr-when { font-weight: 500; }
+  /* Picking several at once. Only the pending tab has anything to act
+     on, so only it carries the column. */
+  td.col-pick, th.col-pick { padding-right: 0; }
+  .lr-check {
+    width: 16px; height: 16px; margin: 0; cursor: pointer;
+    accent-color: var(--primary);
+  }
+  /* The bar stands in for the caption rather than appearing under it:
+     one line in that place, saying either what the tab is or what has
+     been picked out of it. */
+  .lr-bulk {
+    display: flex; align-items: center; gap: 12px;
+    margin: 12px 0 2px; padding: 10px 14px; border-radius: 10px;
+    background: var(--bg-blue-light); border: 1px solid #ccd8f7;
+  }
+  .lr-bulk[hidden] { display: none; }
+  .lr-bulk .n { font-size: 14px; font-weight: 600; color: var(--text-main); }
+  .lr-bulk .sp { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .lr-bulk .btn-text {
+    border: none; background: none; cursor: pointer; padding: 0 4px;
+    font-family: var(--fs-sans); font-size: 13px; color: var(--grey-700);
+  }
+  .lr-bulk .btn-text:hover { color: var(--text-main); }
+  body.has-picked .lr-caption { display: none; }
   .lr-empty { padding: 40px 16px; text-align: center; color: var(--grey-600); font-size: 14px; }
 
   /* ─── Details dialog ────────────────────────────────────────────────
@@ -265,19 +289,36 @@
 
       <div class="lr-tabs" id="lr-tabs"></div>
       <div class="lr-caption" id="lr-caption"></div>
+      <!-- Settling a pile one at a time is the whole job on a Monday, so
+           the pile can be settled at once. Whether the client will allow
+           it without opening each one is a question on this screen. -->
+      <div class="lr-bulk" id="lr-bulk" hidden>
+        <span class="n" id="lr-bulk-n"></span>
+        <button class="btn-text" type="button" id="lr-bulk-clear">Clear</button>
+        <span class="sp">
+          <button class="btn-reject" type="button" id="lr-bulk-reject">Reject</button>
+          <button class="btn-primary" type="button" id="lr-bulk-approve">Approve</button>
+        </span>
+      </div>
 
       <div class="table-card">
         <div class="table-scroll">
           <table id="lr-table">
             <colgroup>
-              <col style="width:215px" /><col style="width:180px" /><col style="width:200px" />
-              <col style="width:150px" /><col style="width:72px" /><col style="width:78px" />
-              <col /><col style="width:150px" /><col style="width:130px" /><col style="width:90px" />
+              <!-- Every column is measured. The table lays out fixed, so a
+                   column left to take what is spare takes nothing once the
+                   rest add up past the width — and its heading sits on top
+                   of its neighbour's. -->
+              <col class="c-pick" style="width:44px" />
+              <col style="width:180px" /><col style="width:165px" /><col style="width:180px" />
+              <col style="width:135px" /><col style="width:62px" /><col style="width:66px" />
+              <col style="width:230px" /><col style="width:140px" /><col style="width:112px" /><col style="width:80px" />
             </colgroup>
             <thead>
               <!-- A manager's question is when someone is away, so that is
                    the heading of the row rather than the kind of leave. -->
               <tr>
+                <th class="col-pick"><input class="lr-check" type="checkbox" id="lr-all" aria-label="Select every request in this tab" /></th>
                 <th>Dates</th><th>Worker</th><th>Site</th>
                 <th>Leave Type</th>
                 <th class="num" data-tip="Working days &mdash; weekends are not counted">Days</th>
@@ -550,6 +591,15 @@
   ];
   var state = { tab: 'pending', q: '' };
   var openId = null;
+  /* Only a pending request can be settled, so only that tab is pickable
+     — a checkbox on a request that was decided in September offers
+     something that does not exist. */
+  var picked = Object.create(null);
+  function canPick() { return state.tab === 'pending'; }
+  function pickedIds() {
+    return Object.keys(picked).filter(function (k) { return picked[k]; }).map(Number);
+  }
+  function clearPicked() { picked = Object.create(null); }
 
   function countOf(k) { return REQUESTS.filter(function (r) { return r.state === k; }).length; }
   function matches(r, q) {
@@ -592,6 +642,10 @@
       var w = worker(r.who);
       var when = fmtRange(r.from, r.to);
       return '<tr data-id="' + r.id + '">' +
+        '<td class="col-pick">' + (canPick()
+          ? '<input class="lr-check" type="checkbox" data-pick="' + r.id + '"' +
+            (picked[r.id] ? ' checked' : '') + ' aria-label="Select this request" />'
+          : '') + '</td>' +
         '<td class="lr-when" data-tip="' + Shell.esc(when) + '">' + Shell.highlight(when, state.q) + '</td>' +
         '<td><span class="who"><span class="av" style="background:' + w.colour + '">' + initials(r.who) + '</span>' +
           '<span class="nm">' + Shell.highlight(r.who, state.q) + '</span></span></td>' +
@@ -607,6 +661,13 @@
       '</tr>';
     }).join('');
 
+    /* A pick only survives while the row it is on is still on screen:
+       searching or changing tab is choosing a different pile. */
+    var here = Object.create(null);
+    rows.forEach(function (r) { here[r.id] = 1; });
+    Object.keys(picked).forEach(function (k) { if (!here[k]) delete picked[k]; });
+    syncBulk();
+
     var none = !rows.length;
     el('lr-empty').hidden = !none;
     el('lr-empty').textContent = state.q
@@ -619,12 +680,61 @@
     var b = e.target.closest('[data-tab]');
     if (!b) return;
     state.tab = b.getAttribute('data-tab');
+    clearPicked();
     render();
   });
+
+  /* ─── Settling several at once ─────────────────────────────────── */
+  function syncBulk() {
+    var n = pickedIds().length;
+    el('lr-bulk').hidden = !n;
+    document.body.classList.toggle('has-picked', !!n);
+    el('lr-bulk-n').textContent = n + ' request' + (n === 1 ? '' : 's') + ' selected';
+
+    var all = el('lr-all');
+    if (!all) return;
+    var rows = rowsFor(state.tab, state.q.toLowerCase());
+    all.disabled = !canPick() || !rows.length;
+    all.checked = canPick() && rows.length > 0 && n === rows.length;
+    all.indeterminate = n > 0 && n < rows.length;
+  }
+
+  el('lr-body').addEventListener('change', function (e) {
+    var c = e.target.closest('[data-pick]');
+    if (!c) return;
+    var id = c.getAttribute('data-pick');
+    if (c.checked) picked[id] = 1; else delete picked[id];
+    syncBulk();
+  });
+  /* The row opens the request; the box in it does not. */
+  el('lr-body').addEventListener('click', function (e) {
+    if (e.target.closest('.col-pick')) e.stopPropagation();
+  }, true);
+
+  el('lr-all').addEventListener('change', function () {
+    clearPicked();
+    if (this.checked) {
+      rowsFor(state.tab, state.q.toLowerCase()).forEach(function (r) { picked[r.id] = 1; });
+    }
+    render();
+  });
+  el('lr-bulk-clear').addEventListener('click', function () { clearPicked(); render(); });
+
+  function settleMany(to, verb) {
+    var ids = pickedIds();
+    if (!ids.length) return;
+    REQUESTS.forEach(function (r) { if (ids.indexOf(r.id) !== -1) r.state = to; });
+    clearPicked();
+    render();
+    Shell.snackbar(verb + ' ' + ids.length + ' request' + (ids.length === 1 ? '' : 's') + '.');
+  }
+  el('lr-bulk-approve').addEventListener('click', function () { settleMany('approved', 'Approved'); });
+  el('lr-bulk-reject').addEventListener('click', function () { settleMany('rejected', 'Rejected'); });
 
   var searchEl = el('search'), clearBtn = el('search-clear');
   searchEl.addEventListener('input', function () {
     state.q = this.value.trim();
+    clearPicked();
     clearBtn.classList.toggle('visible', this.value.length > 0);
     render();
   });
