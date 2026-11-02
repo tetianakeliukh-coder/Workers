@@ -7,6 +7,9 @@
 <link rel="stylesheet" href="assets/tokens.css" />
 <link rel="stylesheet" href="assets/shell.css" />
 <style>
+  /* Graphite: not a status, not a brand colour, readable over every
+     fill a day cell can take. */
+  :root { --mark: #3d4659; }
   /* ─── Leave Requests ────────────────────────────────────────────────
      Built to the shape of the Expense Claims manager screen: a tab per
      state, one row per request, and a details dialog with the queue down
@@ -237,15 +240,49 @@
   }
   .cal-day.out { color: var(--grey-400); }
   .cal-day.on { cursor: pointer; }
-  .cal-day.on:hover, .cal-day.open { box-shadow: 0 0 0 1px var(--primary); }
-  /* The days being asked for, drawn over whatever is under them: the
-     question is what the leave lands on, so both have to be legible.
-     Stripes rather than a colour. Asking for a day is not a fault, and
-     amber or red says it is; hatching is what Outlook and the leave
-     tools use for "proposed, not settled yet", it carries no hue of its
-     own, and it leaves the shift colour underneath readable. */
+  /* ─── The days being asked for ─────────────────────────────────
+     Drawn over whatever is under them: the question is what the leave
+     lands on, so both have to stay legible. Not red or amber — asking
+     for a day is not a fault — and not blue, which is the colour of
+     something to press. What is left is a neutral graphite and three
+     shapes to carry it, switchable at the foot of the screen because
+     the old desktop app already spends patterns on work types.
+
+       run   a bracket round the whole stretch, joined across the days
+       bar   a rule under the stretch, joined the same way
+       hatch diagonal stripes, which is what Outlook and the leave
+             tools use for "proposed" — and what may well collide */
   .cal-day.req { font-weight: 600; }
-  .cal-day.req::before {
+  /* Hover is an outline rather than a shadow, so it does not fight the
+     shadows the bracket and the bar are drawn with. */
+  .cal-day.on:hover, .cal-day.open { box-shadow: none; outline: 1px solid var(--primary); outline-offset: -1px; }
+
+  /* ── Bracket ── */
+  body.mark-run .cal-day.req {
+    border-radius: 0;
+    box-shadow: inset 0 2px 0 var(--mark), inset 0 -2px 0 var(--mark);
+  }
+  body.mark-run .cal-day.req.rs {
+    border-radius: 6px 0 0 6px;
+    box-shadow: inset 0 2px 0 var(--mark), inset 0 -2px 0 var(--mark), inset 2px 0 0 var(--mark);
+  }
+  body.mark-run .cal-day.req.re {
+    border-radius: 0 6px 6px 0;
+    box-shadow: inset 0 2px 0 var(--mark), inset 0 -2px 0 var(--mark), inset -2px 0 0 var(--mark);
+  }
+  body.mark-run .cal-day.req.rs.re { border-radius: 6px; box-shadow: inset 0 0 0 2px var(--mark); }
+
+  /* ── Bar ── */
+  body.mark-bar .cal-day.req::before {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 2px;
+    height: 3px; background: var(--mark); pointer-events: none;
+  }
+  body.mark-bar .cal-day.req.rs::before { left: 4px; border-radius: 2px 0 0 2px; }
+  body.mark-bar .cal-day.req.re::before { right: 4px; border-radius: 0 2px 2px 0; }
+  body.mark-bar .cal-day.req.rs.re::before { border-radius: 2px; }
+
+  /* ── Hatch ── */
+  body.mark-hatch .cal-day.req::before {
     content: ''; position: absolute; inset: 0; border-radius: 6px; pointer-events: none;
     background: repeating-linear-gradient(45deg,
       rgba(16, 24, 40, 0) 0 3px, rgba(16, 24, 40, 0.26) 3px 6px);
@@ -278,13 +315,33 @@
   .cal-pop .cp-sep { height: 1px; background: var(--grey-300); margin: 8px 0; }
   .cal-pop .cp-none { font-size: 12px; color: var(--grey-600); }
 
+  .vp-switch {
+    position: fixed; right: 20px; bottom: 20px; z-index: 400;
+    display: inline-flex; align-items: center; padding: 4px; gap: 2px; border-radius: 10px;
+    background: var(--white); border: 1px solid var(--grey-350); box-shadow: var(--shadow-dropdown);
+  }
+  .vp-switch .vp-label { font-size: 13px; color: var(--grey-600); padding: 0 8px 0 6px; }
+  .vp-switch button {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 34px; padding: 0 12px; border: none; border-radius: 7px; cursor: pointer;
+    background: none; color: var(--grey-700);
+    font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+  }
+  .vp-switch button:hover { background: var(--grey-100); color: var(--text-main); }
+  .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
+
   .ros-key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 11px; color: var(--grey-600); }
   .ros-key span { display: inline-flex; align-items: center; gap: 6px; }
   .ros-key .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .sw-day { background: #ddd3f7; } .sw-night { background: #f8c0e4; }
   .sw-travel { background: #b9e3e6; }
-  /* The key shows the hatching, which is what the day carries. */
-  .ros-key .sw-leave {
+  /* The key shows whichever mark the days are carrying. */
+  body.mark-run .ros-key .sw-leave { background: none; box-shadow: inset 0 0 0 2px var(--mark); }
+  body.mark-bar .ros-key .sw-leave {
+    background: none; border-radius: 0; height: 3px; width: 14px;
+    align-self: center; background-color: var(--mark);
+  }
+  body.mark-hatch .ros-key .sw-leave {
     background: repeating-linear-gradient(45deg,
       rgba(16, 24, 40, 0) 0 2px, rgba(16, 24, 40, 0.3) 2px 4px);
     box-shadow: inset 0 0 0 1px var(--grey-300);
@@ -322,7 +379,7 @@
   body.is-narrow .lr-tabs { overflow-x: auto; }
 </style>
 </head>
-<body data-module="leave">
+<body data-module="leave" class="mark-run">
 
 <div class="page">
   <aside id="shell-sidebar"></aside>
@@ -537,6 +594,17 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ── Prototype switcher ───────────────────────────────────────────
+     Three ways to mark a requested day, kept side by side: the old
+     desktop app shows work types as patterns, so the hatched one may
+     be a word already spoken. -->
+<div class="vp-switch" id="mark-switch" role="group" aria-label="How requested days are marked">
+  <span class="vp-label">Requested days:</span>
+  <button type="button" data-mark="run" class="on">Bracket</button>
+  <button type="button" data-mark="bar">Bar</button>
+  <button type="button" data-mark="hatch">Hatch</button>
 </div>
 
 <script src="assets/shell.js"></script>
@@ -994,20 +1062,35 @@
        always, so the two months beside each other are the same height
        whatever shape their weeks happen to be. */
     var start = addDays(first, -((first.getDay() + 6) % 7));
-    var cells = '';
+
+    /* Worked out in one pass, drawn in the next: a day has to know
+       whether the days either side of it are being asked for too, so a
+       stretch can be bracketed as one thing rather than five. A week
+       break ends a run, because a run cannot turn a corner. */
+    var grid = [];
     for (var i = 0; i < 42; i++) {
       var d = addDays(start, i), k = isoOf(d);
       var out = d.getMonth() !== m;
-      var as = out ? [] : onThat(list, d);
-      var req = !out && k >= r.from && k <= r.to;
-      var cls = 'cal-day' + (out ? ' out' : '') + (req ? ' req' : '') +
-        (as.length ? ' on' : '') + (k === TODAY_ISO ? ' today' : '');
-      var num = '<span class="n">' + d.getDate() + '</span>';
-      cells += as.length
-        ? '<button type="button" class="' + cls + '" data-day="' + k + '" style="' +
-            fillOf(as) + '">' + num + '</button>'
-        : '<div class="' + cls + '">' + num + '</div>';
+      grid.push({
+        d: d, k: k, out: out,
+        as: out ? [] : onThat(list, d),
+        req: !out && k >= r.from && k <= r.to
+      });
     }
+
+    var cells = '';
+    grid.forEach(function (c, i) {
+      var rs = c.req && (i % 7 === 0 || !grid[i - 1].req);
+      var re = c.req && (i % 7 === 6 || !grid[i + 1] || !grid[i + 1].req);
+      var cls = 'cal-day' + (c.out ? ' out' : '') + (c.req ? ' req' : '') +
+        (rs ? ' rs' : '') + (re ? ' re' : '') +
+        (c.as.length ? ' on' : '') + (c.k === TODAY_ISO ? ' today' : '');
+      var num = '<span class="n">' + c.d.getDate() + '</span>';
+      cells += c.as.length
+        ? '<button type="button" class="' + cls + '" data-day="' + c.k + '" style="' +
+            fillOf(c.as) + '">' + num + '</button>'
+        : '<div class="' + cls + '">' + num + '</div>';
+    });
     return '<div class="cal-month">' +
       '<div class="cal-m-head">' + MONTHS_LONG[m] + ' ' + y + '</div>' +
       '<div class="cal-grid">' +
@@ -1048,6 +1131,21 @@
   }
   el('ros-prev').addEventListener('click', function () { rosAnchor = addMonths(rosAnchor, -1); renderRoster(); });
   el('ros-next').addEventListener('click', function () { rosAnchor = addMonths(rosAnchor, 1); renderRoster(); });
+
+  /* Three ways to say the same thing, so the one that does not collide
+     with the desktop app can be chosen by looking at them. */
+  var markSwitch = el('mark-switch');
+  markSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-mark]');
+    if (!b) return;
+    var k = b.getAttribute('data-mark');
+    ['run', 'bar', 'hatch'].forEach(function (x) {
+      document.body.classList.toggle('mark-' + x, x === k);
+    });
+    markSwitch.querySelectorAll('[data-mark]').forEach(function (x) {
+      x.classList.toggle('on', x === b);
+    });
+  });
 
   /* ─── What is on a day ─────────────────────────────────────────────
      A pointer asks by hovering and a finger asks by tapping, so it does
