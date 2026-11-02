@@ -95,7 +95,7 @@
     font-family: var(--fs-sans); font-size: 14px; color: var(--text-main); text-align: left;
   }
   .task-pick:hover { border-color: var(--primary); }
-  .task-pick.empty { color: var(--grey-600); border-style: dashed; border-color: var(--grey-400); }
+  .task-pick.empty .tp-text { color: var(--grey-600); }
   .task-pick .tp-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .task-pick .tp-caret { flex-shrink: 0; color: var(--grey-600); }
   .task-sel {
@@ -119,8 +119,14 @@
   .ts-empty-acts { display: flex; gap: 10px; margin-top: 12px; }
 
   /* ─── Picking from what has been booked before ─────────────────── */
-  .modal-sub { font-size: 13px; line-height: 18px; color: var(--grey-600); }
   .pick-modal { max-width: 560px; height: min(620px, 88vh); }
+  /* Three lines of different weight need the room to be three lines:
+     what the task is, what else names it, and which timesheet it is on. */
+  .pick-modal .tlist { gap: 8px; }
+  .pick-modal .recent-row { align-items: flex-start; gap: 11px; padding: 11px 13px; }
+  .pick-modal .rr-tick { margin-top: 3px; }
+  .pick-modal .rr-body { gap: 3px; }
+  .pick-modal .rr-where { margin-top: 3px; }
   .pick-modal .modal-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
   #pick-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 1px; }
   /* Offered, not pressed: it is the shortcut for the week that repeats
@@ -139,6 +145,7 @@
   /* .cell-pop sets a width of its own further down, so these have to
      outrank it rather than merely come after it. */
   .cell-pop.task-pop, .cell-pop.where-pop { width: 288px; }
+  body.pop-room .content { padding-bottom: 360px; }
   .task-pop .fld, .where-pop .fld { margin-bottom: 10px; }
   .task-pop select, .where-pop select {
     width: 100%; height: 36px; padding: 0 8px; border-radius: 8px;
@@ -1019,6 +1026,13 @@
   .grid-card td.tdy { background: var(--bg-blue-light); }
   .grid-card thead th.tdy { background: var(--bg-blue-light); }
   .grid-card tbody tr.row-summary td.tdy { background: #e8eef8; }
+  /* A row being written, or one just added: lit until the reader clicks
+     away from it. An id here so it outranks today's own tint. */
+  #grid tbody tr.row-focus > td,
+  #grid tbody tr.row-focus td.col-act { background: var(--bg-blue-light); }
+  #grid tbody tr.row-focus > td.tdy { background: #dbe4fb; }
+  #grid tbody tr.row-focus > td:first-child { box-shadow: inset 2px 0 0 var(--primary); }
+  #grid tbody tr.row-focus:hover > td { background: #e4ebfb; }
 
 
   /* ─── Restored ──────────────────────────────────────────────────
@@ -1480,7 +1494,6 @@
         <!-- The site and the supervisor are on every card, because the
              worker has not been asked for them: one pick can reach
              across two timesheets and that has to be visible. -->
-        <span class="modal-sub">Work you have booked before. Each one comes with the timesheet it belongs to.</span>
       </div>
       <button class="modal-close" type="button" data-close aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -1766,10 +1779,19 @@
      until it is named, and then it becomes an ordinary row. */
   var pending = [];          // [{ id, site, sup, levels, from }]
   var pendSeq = 0;
+  /* What this edit has just put on the week. A flash that fades leaves
+     nothing behind to find, so the rows stay lit until the reader
+     clicks away from them. */
   var justAdded = null;      // the task added last, so it can be found
-  var justAddedSet = [];     // every task from the last Add, so they all flash
+  var justAddedSet = [];     // every task from the last Add
+  var focusPend = null;      // an unnamed row being written
   function isJustAdded(k) {
     return !!k && (k === justAdded || justAddedSet.indexOf(k) !== -1);
+  }
+  function clearFocus() {
+    if (!justAdded && !justAddedSet.length && focusPend == null) return;
+    justAdded = null; justAddedSet = []; focusPend = null;
+    renderGrid();
   }
   function pendById(id) {
     var out = null;
@@ -1840,11 +1862,23 @@
       var m = taskMeta[k];
       slot(m.site, m.sup).tasks.push({ key: k, label: pathOf(m.levels) || 'No task', meta: m });
     });
-    /* An unnamed row belongs to the timesheet it was added in — which is
-       the whole of what the first step asked for — so it sits under that
-       group from the moment it appears, even when the group is new. */
+    /* What this edit added goes to the top of its group, newest first:
+       a row that appears below the fold of a long group is a row the
+       person has to go looking for. */
+    sites.forEach(function (S) {
+      S.sups.forEach(function (g) {
+        var fresh = [], rest = [];
+        g.tasks.forEach(function (t) {
+          (extraRows.indexOf(t.key) !== -1 ? fresh : rest).push(t);
+        });
+        fresh.sort(function (a, b) { return extraRows.indexOf(b.key) - extraRows.indexOf(a.key); });
+        g.tasks = fresh.concat(rest);
+      });
+    });
+    /* An unnamed row belongs to the timesheet it was added in, and goes
+       above even those — it is the one still being written. */
     pending.forEach(function (x) {
-      slot(x.site, x.sup).tasks.push({ key: null, pend: x, label: '',
+      slot(x.site, x.sup).tasks.unshift({ key: null, pend: x, label: '',
         meta: { site: x.site, sup: x.sup, levels: x.levels } });
     });
     return sites;
@@ -1905,10 +1939,22 @@
   /* One site under one supervisor is one timesheet, and the status is
      the timesheet's. So it is said once, on the row that stands for it,
      rather than in every column that timesheet happens to span. */
-  function groupHasSaved(site, sup) {
-    var ds = days().map(iso), found = false;
+  /* Hours booked by this group on this day, draft ones included: where
+     there are none there is no timesheet, so there is no status either. */
+  function groupHours(site, sup, isoDate) {
+    var n = 0;
+    Object.keys(taskMeta).forEach(function (k) {
+      var m = taskMeta[k];
+      if (m.site === site && m.sup === sup) n += hoursFor(k, isoDate);
+    });
+    return n;
+  }
+  /* Hours already saved against it — a day that only holds this edit's
+     draft has not been handed in to anyone yet. */
+  function groupSavedOn(site, sup, isoDate) {
+    var found = false;
     entries.forEach(function (e) {
-      if (found || ds.indexOf(e.date) === -1) return;
+      if (found || e.date !== isoDate) return;
       var m = taskMeta[e.key];
       if (m && m.site === site && m.sup === sup) found = true;
     });
@@ -1923,29 +1969,40 @@
   Object.keys(SUPS_BY_SITE).forEach(function (st) {
     (SUPS_BY_SITE[st] || []).forEach(function (sp) { ALL_SHEETS.push(st + '\u00a7' + sp); });
   });
-  function sheetStatus(site, sup) {
-    if (!groupHasSaved(site, sup)) return 'Draft';
+  /* A day on a site under a supervisor is the thing that gets handed in
+     and approved — not the week, and not the worker's whole day. So the
+     status is read from all three, and '' means there is no timesheet
+     there at all. */
+  function sheetStatus(site, sup, isoDate) {
+    if (!groupHours(site, sup, isoDate)) return '';
+    if (!groupSavedOn(site, sup, isoDate)) return 'Draft';
     var i = ALL_SHEETS.indexOf(site + '\u00a7' + sup);
-    return STATUS_ORDER[(i < 0 ? 0 : i) % STATUS_ORDER.length];
+    var d = fromIso(isoDate).getDay();
+    return STATUS_ORDER[((i < 0 ? 0 : i) + d) % STATUS_ORDER.length];
   }
-  function groupLocked(site, sup) {
-    return !!(STATUS_META[sheetStatus(site, sup)] || {}).locked;
-  }
-  function statusOf(key) {
+  function statusOf(key, isoDate) {
     var m = taskMeta[key];
-    return m ? sheetStatus(m.site, m.sup) : 'Draft';
+    return m ? sheetStatus(m.site, m.sup, isoDate) : '';
   }
-  function statusFor(key) { return STATUS_META[statusOf(key)] || STATUS_META.Draft; }
-  function statusName(key) { return statusOf(key); }
+  function statusFor(key, isoDate) {
+    return STATUS_META[statusOf(key, isoDate)] || STATUS_META.Draft;
+  }
+  function statusName(key, isoDate) { return statusOf(key, isoDate); }
 
-  /* The mark the timesheet carries, with its name beside it: on a row
-     there is room to say which status it is, and the colour alone was
-     being asked to carry that. */
-  function stChip(site, sup) {
-    var name = sheetStatus(site, sup), st = STATUS_META[name] || STATUS_META.Draft;
-    return '<span class="st-chip st-' + name.toLowerCase() + '" data-tip="' +
-      Shell.esc(name + (st.locked ? ' \u2014 hours can no longer be changed' : '')) + '">' +
-      (st.icon || ICO_DRAFT) + name + '</span>';
+  /* The group's summary row crosses every day, so each of its day cells
+     is one timesheet — and that is where the mark belongs. */
+  function stMark(name) {
+    var st = STATUS_META[name] || STATUS_META.Draft;
+    return '<span class="hr-st st-' + name.toLowerCase() + '">' + (st.icon || ICO_DRAFT) + '</span>';
+  }
+  function dayCellGroup(value, isoDate, site, sup) {
+    var name = sheetStatus(site, sup, isoDate);
+    var st = name ? (STATUS_META[name] || STATUS_META.Draft) : null;
+    return '<td class="col-day' + todayCls(isoDate) + '"' +
+      (name ? ' data-tip="' + Shell.esc(name + (st.locked
+        ? ' \u2014 hours can no longer be changed' : '')) + '"' : '') + '>' +
+      (name ? stMark(name) : '') +
+      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</td>';
   }
   var ICO_DRAFT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none">' +
     '<circle cx="8" cy="8" r="5.6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2.2 2"/></svg>';
@@ -1984,12 +2041,12 @@
   function cellHtml(value, key, isoDate) {
     if (state.editing && key) {
       var dk = key + '|' + isoDate, changed = draft && dk in draft;
-      var st = statusFor(key), lock = st.locked;
+      var st = statusFor(key, isoDate), lock = st.locked;
       return '<td class="col-day' + todayCls(isoDate) + '">' +
         '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
         (overKey === dk && overCap(isoDate) ? ' over' : '') + '" type="button" ' +
         'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
-        (lock ? ' disabled data-tip="' + statusName(key) + ' — hours can no longer be changed"' : '') + '>' +
+        (lock ? ' disabled data-tip="' + statusName(key, isoDate) + ' — hours can no longer be changed"' : '') + '>' +
         alwDot(key, isoDate) +
         (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
     }
@@ -2017,9 +2074,6 @@
 
   function grpAdd(site, sup) {
     if (!state.editing) return '';
-    /* Submitted or finalised, the timesheet is closed to new work as
-       much as it is closed to changed hours. */
-    if (groupLocked(site, sup)) return '';
     return '<button class="grp-add" type="button"' +
       ' data-add-site="' + Shell.esc(site) + '"' +
       (sup ? ' data-add-sup="' + Shell.esc(sup) + '"' : '') + '>' +
@@ -2069,7 +2123,8 @@
       '</button>';
   }
   function pendRow(x, ds) {
-    return '<tr class="row-flat row-pend" data-pendrow="' + x.id + '">' +
+    return '<tr class="row-flat row-pend' + (String(focusPend) === String(x.id) ? ' row-focus' : '') +
+      '" data-pendrow="' + x.id + '">' +
       '<td class="col-site"></td><td class="col-sup"></td>' +
       '<td class="col-task">' + taskPickCell(x) + '</td>' +
       ds.map(function (d) {
@@ -2159,9 +2214,10 @@
           '<td class="col-site" data-tip="Site &mdash; ' + Shell.esc(site.name) + '">' +
             '<span class="tree">' + caret() + '<span class="name">' + Shell.esc(site.name) + '</span></span></td>' +
           '<td class="col-sup" data-tip="Supervisor &mdash; ' + Shell.esc(sup.name) + '">' + Shell.esc(sup.name) + '</td>' +
-          '<td class="col-task">' + stChip(site.name, sup.name) +
-            '<span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
-          ds.map(function (d) { return dayCellPlain(sumRow(sup.tasks, iso(d)), iso(d)); }).join('') +
+          '<td class="col-task"><span class="count-pill">' + n + ' task' + (n === 1 ? '' : 's') + '</span></td>' +
+          ds.map(function (d) {
+            return dayCellGroup(sumRow(sup.tasks, iso(d)), iso(d), site.name, sup.name);
+          }).join('') +
           '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + sumRow(sup.tasks, iso(d)); }, 0)) + '</td>' +
           actCell(grpAdd(site.name, sup.name)) +
         '</tr>');
@@ -2173,7 +2229,7 @@
           /* Only the variant that adds in the row lets a row be renamed
              there; the other two are kept as they were drawn. */
           var fresh = state.editing && isInline() && extraRows.indexOf(t.key) !== -1;
-          rows.push('<tr class="row-flat' + (isJustAdded(t.key) ? ' just-added' : '') + '">' +
+          rows.push('<tr class="row-flat' + (isJustAdded(t.key) ? ' row-focus' : '') + '">' +
             '<td class="col-site"></td><td class="col-sup"></td>' +
             (fresh
               ? '<td class="col-task">' + taskPickBtn(t.key, t.label) + '</td>'
@@ -3400,7 +3456,7 @@
     if (picks.length > 1) Shell.snackbar(picks.length + ' tasks added to this week.');
 
     /* Scroll to the first of them, not the last: the batch reads downwards. */
-    var landed = document.querySelectorAll('tr.just-added');
+    var landed = document.querySelectorAll('tr.row-focus');
     var row = landed[landed.length - 1];
     if (landed.length) {
       landed[0].scrollIntoView({ block: 'center' });
@@ -3594,6 +3650,16 @@
   var addMenu = el('add-menu'), wherePop = el('where-pop'), taskPop = el('task-pop');
   var pickModal = el('recent-modal');
 
+  /* A scroll this code performs is not the reader scrolling away, so
+     the panels are not closed by their own arrival. */
+  var scrollQuietUntil = 0;
+  function ensureVisible(node, room) {
+    var r = node.getBoundingClientRect();
+    var fits = r.top >= 88 && r.bottom + (room || 0) <= window.innerHeight - 8;
+    if (fits) return;
+    scrollQuietUntil = Date.now() + 500;
+    node.scrollIntoView({ block: 'center' });
+  }
   function placePop(node, anchor, toRight) {
     node.classList.add('open');
     var r = anchor.getBoundingClientRect();
@@ -3609,7 +3675,11 @@
     el('btn-new-task').setAttribute('aria-expanded', 'false');
   }
   function closeWherePop() { if (wherePop) wherePop.classList.remove('open'); }
-  function closeTaskPop() { if (taskPop) taskPop.classList.remove('open'); tpId = null; }
+  function closeTaskPop() {
+    if (taskPop) taskPop.classList.remove('open');
+    document.body.classList.remove('pop-room');
+    tpId = null;
+  }
 
   /* ── Where the row goes ──────────────────────────────────────────
      A timesheet is a site and a supervisor, so that is what is asked
@@ -3627,14 +3697,10 @@
   }
   function renderWhereSups() {
     var site = el('wp-site').value, list = SUPS_BY_SITE[site] || [];
-    /* A timesheet already handed in is not somewhere a new row can go,
-       so that supervisor is shown with the reason rather than missing. */
+    /* A timesheet is a day, so no supervisor is closed for a whole
+       week — whether a day is still open is a question for its cell. */
     el('wp-sup').innerHTML = '<option value="">Select&hellip;</option>' +
-      list.map(function (x) {
-        var shut = groupLocked(site, x);
-        return '<option' + (shut ? ' disabled' : '') + '>' + Shell.esc(x) +
-          (shut ? ' &mdash; ' + sheetStatus(site, x).toLowerCase() : '') + '</option>';
-      }).join('');
+      list.map(function (x) { return '<option>' + Shell.esc(x) + '</option>'; }).join('');
     el('wp-sup').disabled = !site;
     el('wp-go').disabled = !site || !el('wp-sup').value;
   }
@@ -3659,13 +3725,19 @@
     if (!state.editing) enterEdit();
     var x = { id: ++pendSeq, site: site, sup: sup, levels: [], from: null };
     pending.push(x);
+    /* Lit from the moment it lands, and it stays lit: a row dropped into
+       a long group with nothing marking it is a row that has to be
+       hunted for. */
+    justAdded = null; justAddedSet = [];
+    focusPend = x.id;
     delete collapsed[flatKey(site, sup)];
     render();
     var row = document.querySelector('[data-pendrow="' + x.id + '"]');
-    if (row) row.scrollIntoView({ block: 'center' });
-    var btn = row && row.querySelector('[data-pendpick], [data-pendsel]');
-    if (btn && btn.hasAttribute('data-pendpick')) openTaskPop(btn, x.id);
-    else if (btn) btn.focus();
+    if (!row) return;
+    var btn = row.querySelector('[data-pendpick], [data-pendsel]');
+    if (btn && btn.hasAttribute('data-pendpick')) { openTaskPop(btn, x.id); return; }
+    ensureVisible(row);
+    if (btn) btn.focus();
   }
 
   /* ── What the row is ─────────────────────────────────────────────
@@ -3675,7 +3747,19 @@
   function openTaskPop(anchor, id) {
     tpId = id;
     renderTaskPop();
+    /* Measured before it is placed, so the row it belongs to can be
+       scrolled clear of it first: the point of the panel is to say what
+       the row is, and a panel over the row says nothing. */
+    /* At the foot of the table there is nothing left to scroll into, so
+       the panel had nowhere to go but upwards, over the group heading
+       that says where the row is going. The page is given the room for
+       the length of the panel's stay. */
+    document.body.classList.add('pop-room');
+    taskPop.style.visibility = 'hidden';
+    taskPop.classList.add('open');
+    ensureVisible(anchor.closest('tr') || anchor, taskPop.offsetHeight + 12);
     placePop(taskPop, anchor, false);
+    taskPop.style.visibility = '';
     var f = el('tp-fields').querySelector('select');
     if (f) f.focus();
   }
@@ -3747,13 +3831,14 @@
       });
     }
     pending = pending.filter(function (y) { return y !== x; });
+    focusPend = null;
     justAdded = k; justAddedSet = [k];
     closeTaskPop();
     delete collapsed[flatKey(x.site, x.sup)];
     render(); syncEditBar();
-    var row = document.querySelector('tr.just-added');
+    var row = document.querySelector('tr.row-focus');
     if (!row) return;
-    row.scrollIntoView({ block: 'center' });
+    ensureVisible(row);
     var cell = row.querySelector('.hr-cell:not([disabled])');
     if (cell) openCell(cell);
   }
@@ -3816,7 +3901,7 @@
     var list = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) {
-      return r.when && !on[r.key] && !groupLocked(r.meta.site, r.meta.sup);
+      return r.when && !on[r.key];
     }).sort(function (a, b) { return b.when - a.when; }).slice(0, 12);
     nameCards(list);
     return list;
@@ -3824,15 +3909,19 @@
   function renderPick() {
     var list = recentPool();
     el('pick-list').innerHTML = list.length ? list.map(function (r) {
-      var sub = [taskRest(r.meta, r.cardExtra), 'last booked ' + fmtDay(r.when)]
-        .filter(Boolean).join(' · ');
+      /* What it is on one line, what else names it on the next, and
+         where and when it was worked on the last — rather than one grey
+         line carrying all three at once. */
+      var where = [Shell.esc(r.meta.site), Shell.esc(r.meta.sup),
+        'last booked ' + fmtDay(r.when)].join(' · ');
       return '<div class="recent-row' + (picked[r.key] ? ' sel' : '') +
         '" data-pickkey="' + Shell.esc(r.key) + '">' +
         '<span class="rr-tick">' + ICO_TICK + '</span>' +
         '<span class="rr-body">' +
           '<span class="rr-code">' + Shell.esc(r.cardTitle) + '</span>' +
-          '<span class="rr-sub">' + Shell.esc(sub) + '</span>' +
-          '<span class="rr-where"><b>' + Shell.esc(r.meta.site) + '</b> · ' + Shell.esc(r.meta.sup) + '</span>' +
+          (taskRest(r.meta, r.cardExtra)
+            ? '<span class="rr-sub">' + Shell.esc(taskRest(r.meta, r.cardExtra)) + '</span>' : '') +
+          '<span class="rr-where">' + where + '</span>' +
         '</span></div>';
     }).join('') : '<div class="recent-empty">Everything you have booked before is already on this week.</div>';
 
@@ -3870,9 +3959,9 @@
     pickModal.classList.remove('open');
     render(); syncEditBar();
     if (keys.length > 1) Shell.snackbar(keys.length + ' tasks added to this week.');
-    var landed = document.querySelectorAll('tr.just-added');
+    var landed = document.querySelectorAll('tr.row-focus');
     if (!landed.length) return;
-    landed[0].scrollIntoView({ block: 'center' });
+    ensureVisible(landed[0]);
     var cell = landed[0].querySelector('.hr-cell:not([disabled])');
     if (cell) openCell(cell);
   });
@@ -3888,7 +3977,8 @@
       Object.keys(taskMeta).forEach(function (k) {
         if (on[k]) return;
         var m = taskMeta[k];
-        if (groupLocked(m.site, m.sup)) return;
+        /* A day already handed in keeps what it says. */
+        if ((STATUS_META[sheetStatus(m.site, m.sup, dst)] || {}).locked) return;
         var c = cellOf(k, src);
         if (!(c.h > 0)) return;
         if (!seen[k]) {
@@ -3944,6 +4034,15 @@
     if (b.getAttribute('data-addmode') === 'recent') openPick(false);
     else openWherePop(el('btn-new-task'));
   });
+  /* The light goes out when the reader looks somewhere else — not on a
+     timer, and not on the click that lit it. A target no longer in the
+     document is the re-render that put the row there, not a look away. */
+  document.addEventListener('click', function (e) {
+    if (!document.contains(e.target)) return;
+    if (e.target.closest('#task-pop, #cell-pop, #where-pop, #add-menu, .modal-backdrop')) return;
+    if (e.target.closest('tr.row-focus')) return;
+    clearFocus();
+  });
   document.addEventListener('click', function (e) {
     if (!addMenu.contains(e.target) && !el('btn-new-task').contains(e.target)) closeAddMenu();
     if (!wherePop.contains(e.target)) closeWherePop();
@@ -3953,6 +4052,7 @@
     }
   });
   window.addEventListener('scroll', function () {
+    if (Date.now() < scrollQuietUntil) return;
     closeAddMenu(); closeWherePop();
     if (taskPop.classList.contains('open')) { closeTaskPop(); renderGrid(); }
   }, true);
