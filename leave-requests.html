@@ -213,6 +213,13 @@
   .ros-clash .ros-off {
     display: block; margin-top: 2px; font-weight: 400; color: var(--grey-600);
   }
+  /* What else this worker has on in the months being looked at. Only
+     what is agreed or still asked for — a refused request is not a
+     thing anyone has to work around. */
+  .ros-also { font-size: 13px; line-height: 18px; color: var(--grey-700); margin-top: -4px; }
+  .ros-also b { font-weight: 500; color: var(--text-main); }
+  .cal-pop .cp-also { margin-top: 8px; font-size: 12px; line-height: 16px; color: var(--grey-700); }
+  .cal-pop .cp-also b { display: block; font-weight: 600; color: var(--text-main); margin-bottom: 2px; }
 
   /* ─── Two months, side by side ──────────────────────────────────
      Never one, never three: a request near a month boundary needs the
@@ -287,9 +294,18 @@
     background: repeating-linear-gradient(45deg,
       rgba(16, 24, 40, 0) 0 3px, rgba(16, 24, 40, 0.26) 3px 6px);
   }
-  /* The number sits above the hatching; an absolutely positioned
-     ::before would otherwise paint over the text of its own parent. */
-  .cal-day .n { position: relative; z-index: 1; }
+  /* Three things can land on one cell, so they are given an order:
+     the wash of other leave underneath, the mark of this request over
+     it, the number on top of both. */
+  .cal-day .w {
+    position: absolute; inset: 0; border-radius: 6px; z-index: 0; pointer-events: none;
+    background: rgba(61, 70, 89, 0.16);
+  }
+  .cal-day.oth-p .w { background: rgba(61, 70, 89, 0.08); }
+  .cal-day.req::before { z-index: 1; }
+  .cal-day .n { position: relative; z-index: 2; }
+  /* Already off, so the day is not theirs to be asked for again. */
+  .cal-day.oth .n { color: var(--grey-600); }
   /* Today moves to a corner, so it is not a second bar under a number. */
   .cal-day.today::after {
     content: ''; position: absolute; top: 4px; right: 4px;
@@ -335,6 +351,7 @@
   .ros-key .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
   .sw-day { background: #ddd3f7; } .sw-night { background: #f8c0e4; }
   .sw-travel { background: #b9e3e6; }
+  .sw-oth { background: rgba(61, 70, 89, 0.16); }
   /* The key shows whichever mark the days are carrying. */
   body.mark-run .ros-key .sw-leave { background: none; box-shadow: inset 0 0 0 2px var(--mark); }
   body.mark-bar .ros-key .sw-leave {
@@ -523,12 +540,14 @@
               </span>
             </div>
             <div class="ros-clash" id="ros-clash"></div>
+            <div class="ros-also" id="ros-also" hidden></div>
             <div class="ros-cal" id="ros-cal"></div>
             <div class="ros-key">
               <span><i class="sw sw-day"></i>Day shift</span>
               <span><i class="sw sw-night"></i>Night shift</span>
               <span><i class="sw sw-travel"></i>Travel</span>
               <span><i class="sw sw-leave"></i>Requested leave</span>
+              <span><i class="sw sw-oth"></i>Their other leave</span>
             </div>
             <!-- Hover on a desktop, tap on a tablet: the same three
                  lines either way, next to the day they are about. -->
@@ -1045,6 +1064,21 @@
   function onThat(list, d) {
     return list.filter(function (a) { return onDay(a, d); });
   }
+
+  /* Everything else this worker has on, whichever site it is against —
+     leave is the person's, not the site's. Only what is agreed or
+     still being asked for: a refused or withdrawn request is not
+     something anyone has to work around, and the tools that show this
+     leave those two out for the same reason. */
+  function otherLeave(r) {
+    return REQUESTS.filter(function (x) {
+      return x.who === r.who && x.id !== r.id &&
+        (x.state === 'pending' || x.state === 'approved');
+    });
+  }
+  function otherOn(list, k) {
+    return list.filter(function (x) { return k >= x.from && k <= x.to; });
+  }
   /* Two things on one day is a real thing — a travel day laid over a
      shift — so the cell is split rather than picking a winner. */
   function fillOf(as) {
@@ -1055,7 +1089,7 @@
       : 'background:linear-gradient(135deg,' + c[0] + ' 50%,' + c[1] + ' 50%);';
   }
 
-  function monthHtml(anchor, r, list) {
+  function monthHtml(anchor, r, list, others) {
     var y = anchor.getFullYear(), m = anchor.getMonth();
     var first = new Date(y, m, 1);
     /* Monday first, as the rest of the product counts a week. Six rows
@@ -1071,10 +1105,12 @@
     for (var i = 0; i < 42; i++) {
       var d = addDays(start, i), k = isoOf(d);
       var out = d.getMonth() !== m;
+      var oth = out ? [] : otherOn(others, k);
       grid.push({
         d: d, k: k, out: out,
         as: out ? [] : onThat(list, d),
-        req: !out && k >= r.from && k <= r.to
+        req: !out && k >= r.from && k <= r.to,
+        oth: oth
       });
     }
 
@@ -1082,14 +1118,19 @@
     grid.forEach(function (c, i) {
       var rs = c.req && (i % 7 === 0 || !grid[i - 1].req);
       var re = c.req && (i % 7 === 6 || !grid[i + 1] || !grid[i + 1].req);
+      /* Agreed outranks asked-for when both fall on a day: the wash is
+         stronger for leave that is already settled. */
+      var anyApproved = c.oth.some(function (x) { return x.state === 'approved'; });
       var cls = 'cal-day' + (c.out ? ' out' : '') + (c.req ? ' req' : '') +
         (rs ? ' rs' : '') + (re ? ' re' : '') +
-        (c.as.length ? ' on' : '') + (c.k === TODAY_ISO ? ' today' : '');
-      var num = '<span class="n">' + c.d.getDate() + '</span>';
-      cells += c.as.length
+        (c.oth.length ? (anyApproved ? ' oth' : ' oth oth-p') : '') +
+        (c.as.length || c.oth.length ? ' on' : '') + (c.k === TODAY_ISO ? ' today' : '');
+      var inner = (c.oth.length ? '<i class="w"></i>' : '') +
+        '<span class="n">' + c.d.getDate() + '</span>';
+      cells += (c.as.length || c.oth.length)
         ? '<button type="button" class="' + cls + '" data-day="' + c.k + '" style="' +
-            fillOf(c.as) + '">' + num + '</button>'
-        : '<div class="' + cls + '">' + num + '</div>';
+            fillOf(c.as) + '">' + inner + '</button>'
+        : '<div class="' + cls + '">' + inner + '</div>';
     });
     return '<div class="cal-month">' +
       '<div class="cal-m-head">' + MONTHS_LONG[m] + ' ' + y + '</div>' +
@@ -1110,7 +1151,9 @@
       : MONTHS_LONG[rosAnchor.getMonth()] + ' ' + rosAnchor.getFullYear() + ' \u2013 ' +
         MONTHS_LONG[right.getMonth()] + ' ' + right.getFullYear();
 
-    el('ros-cal').innerHTML = monthHtml(rosAnchor, r, list) + monthHtml(right, r, list);
+    var others = otherLeave(r);
+    el('ros-cal').innerHTML = monthHtml(rosAnchor, r, list, others) +
+      monthHtml(right, r, list, others);
 
     /* The one sentence a manager is after, whatever is on screen: it is
        about the request, not about the months being looked at. */
@@ -1128,6 +1171,22 @@
       ? 'Rostered on ' + clash + ' of the ' + need + ' day' + (need === 1 ? '' : 's') + ' requested.'
       : 'Not rostered on any of the days requested.') +
       (off ? '<span class="ros-off">Part of this request falls outside the two months shown.</span>' : '');
+
+    /* Named rather than only shaded: three weeks off in one month is
+       the thing an approver wants to notice before the third one is
+       agreed to, and a wash on a calendar is easy to read past. */
+    var firstShown = isoOf(rosAnchor);
+    var near = others.filter(function (x) { return x.from <= lastShown && x.to >= firstShown; })
+      .sort(function (a, b) { return a.from < b.from ? -1 : 1; });
+    var also = el('ros-also');
+    also.hidden = !near.length;
+    if (near.length) {
+      var shown = near.slice(0, 3).map(function (x) {
+        return '<b>' + Shell.esc(fmtRange(x.from, x.to)) + '</b> (' + x.state + ')';
+      }).join(', ');
+      also.innerHTML = 'Also off in these months: ' + shown +
+        (near.length > 3 ? ' and ' + (near.length - 3) + ' more' : '') + '.';
+    }
   }
   el('ros-prev').addEventListener('click', function () { rosAnchor = addMonths(rosAnchor, -1); renderRoster(); });
   el('ros-next').addEventListener('click', function () { rosAnchor = addMonths(rosAnchor, 1); renderRoster(); });
@@ -1166,6 +1225,7 @@
     var k = btn.getAttribute('data-day');
     var as = onThat(list, new Date(k + 'T00:00:00'));
     var req = k >= r.from && k <= r.to;
+    var oth = otherOn(otherLeave(r), k);
 
     calPop.innerHTML = '<div class="cp-when">' + Shell.esc(fmt(k)) +
       (req ? ' <span class="req">\u00b7 requested</span>' : '') + '</div>' +
@@ -1174,7 +1234,13 @@
           '<dl><dt>Project</dt><dd>' + Shell.esc(a.project) + '</dd>' +
           '<dt>Work type</dt><dd>' + Shell.esc(a.work) + '</dd>' +
           '<dt>Shift</dt><dd>' + Shell.esc(a.shift) + '</dd></dl>';
-      }).join('') : '<div class="cp-none">Nothing rostered on this day.</div>');
+      }).join('') : '<div class="cp-none">Nothing rostered on this day.</div>') +
+      (oth.length ? '<div class="cp-also"><b>Also off this day</b>' +
+        oth.map(function (x) {
+          /* The type and the state, never the reason — which is what the
+             tools that show other people's leave are careful about. */
+          return Shell.esc(x.type) + ' \u00b7 ' + x.state;
+        }).join('<br />') + '</div>' : '');
 
     calPop.hidden = false;
     var b = btn.getBoundingClientRect();
