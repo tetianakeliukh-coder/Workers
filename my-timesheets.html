@@ -1486,9 +1486,11 @@
       </button>
     </div>
     <div class="modal-body">
+      <!-- Only the tasks come over. The hours are what the week is a
+           record of, and a week nobody has worked yet has none. -->
       <div class="pick-dup" id="pick-dup" hidden>
-        <span>Worked the same week again?</span>
-        <button class="btn-outline" type="button" id="pick-dup-go">Duplicate last week</button>
+        <span>Same work as last week?</span>
+        <button class="btn-outline" type="button" id="pick-dup-go">Copy last week&rsquo;s tasks</button>
       </div>
       <div class="tlist" id="pick-list"></div>
     </div>
@@ -3944,34 +3946,30 @@
     if (cell) openCell(cell);
   });
 
-  /* A week that repeats whole is one press, not twelve: every task on
-     the week before, with its hours, on the same weekdays. */
+  /* The same work again is one press, not twelve — but only the work.
+     Hours are what the week is a record of, and copying them forward
+     would be filling in a week nobody has worked yet; a sheet that
+     arrives pre-filled is a sheet that gets saved without being read. */
   el('pick-dup-go').addEventListener('click', function () {
     if (!state.editing) enterEdit();
     var ds = days(), on = Object.create(null), seen = Object.create(null), n = 0;
     weekKeys().forEach(function (k) { on[k] = 1; });
     ds.forEach(function (d) {
-      var src = iso(addDays(d, -7)), dst = iso(d);
+      var src = iso(addDays(d, -7));
       Object.keys(taskMeta).forEach(function (k) {
-        if (on[k]) return;
+        if (on[k] || seen[k]) return;
+        if (!(cellOf(k, src).h > 0)) return;
         var m = taskMeta[k];
-        /* A day already handed in keeps what it says. */
-        if (dayLocked(m.site, m.sup, dst)) return;
-        var c = cellOf(k, src);
-        if (!(c.h > 0)) return;
-        if (!seen[k]) {
-          seen[k] = 1; n++;
-          if (extraRows.indexOf(k) === -1) extraRows.push(k);
-          delete collapsed[flatKey(m.site, m.sup)];
-        }
-        draft[k + '|' + dst] = { h: c.h, s: c.s, f: c.f, a: (c.a || []).slice() };
+        seen[k] = 1; n++;
+        if (extraRows.indexOf(k) === -1) extraRows.push(k);
+        delete collapsed[flatKey(m.site, m.sup)];
       });
     });
     pickModal.classList.remove('open');
     if (!n) { Shell.snackbar('Nothing was booked the week before.'); return; }
     justAdded = null; justAddedSet = Object.keys(seen);
     render(); syncEditBar();
-    Shell.snackbar(n + ' task' + (n === 1 ? '' : 's') + ' copied from last week — check the hours before saving.');
+    Shell.snackbar(n + ' task' + (n === 1 ? '' : 's') + ' brought over from last week — the hours are yours to enter.');
   });
 
   /* ── Nothing booked yet ──────────────────────────────────────── */
@@ -3992,9 +3990,14 @@
   gridBody.addEventListener('click', function (e) {
     var b = e.target.closest('[data-empty]');
     if (!b) return;
+    var mode = b.getAttribute('data-empty');
+    /* Entering edit redraws the table, so the button that was clicked is
+       a detached node by the time the panel would be hung on it — and a
+       panel hung on nothing is placed in the corner of the screen. It is
+       hung on the button that took its place instead. */
     if (!state.editing) enterEdit();
-    if (b.getAttribute('data-empty') === 'recent') openPick(true);
-    else openWherePop(b);
+    if (mode === 'recent') { openPick(true); return; }
+    openWherePop(document.querySelector('[data-empty="new"]') || el('btn-new-task'));
   });
 
   /* ── The menu the two ways hang off ──────────────────────────── */
@@ -4022,6 +4025,10 @@
     clearFocus();
   });
   document.addEventListener('click', function (e) {
+    /* A target no longer in the document is the re-render that the click
+       itself caused, not the reader clicking somewhere else — and it
+       contains nothing, so every one of these would read as "outside". */
+    if (!document.contains(e.target)) return;
     if (!addMenu.contains(e.target) && !el('btn-new-task').contains(e.target)) closeAddMenu();
     if (!wherePop.contains(e.target)) closeWherePop();
     if (!taskPop.contains(e.target) && !e.target.closest('[data-pendpick]') &&
