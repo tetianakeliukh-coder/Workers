@@ -558,7 +558,13 @@
   function iso(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function fromIso(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function fmtDay(d) { return DOW[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; }
-  function fmtHours(n) { return n % 1 === 0 ? String(n) : n.toFixed(1); }
+  /* Rounded to a tenth before the test: a sum that drifts by a
+     billionth of an hour is not a whole number, and would print the
+     decimal it is meant to drop. */
+  function fmtHours(n) {
+    var v = Math.round(n * 10) / 10;
+    return v % 1 === 0 ? String(v) : v.toFixed(1);
+  }
 
   var TODAY = startOfDay(new Date());
   function mondayOf(d) { var x = startOfDay(d); return addDays(x, -((x.getDay() + 6) % 7)); }

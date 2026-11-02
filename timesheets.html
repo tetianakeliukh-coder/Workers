@@ -2757,8 +2757,14 @@
     return out;
   }
 
+  /* A whole number of hours is written as a whole number: 36, not 36.0 —
+     the same rule My Timesheets has always used. Rounded to a tenth
+     first, because a sum that drifts by a billionth of an hour is not a
+     whole number and would print the decimal it is meant to drop. */
   function fmtHours(h) {
-    return (h === '' || h == null) ? '' : Number(h).toFixed(1);
+    if (h === '' || h == null) return '';
+    var v = Math.round(Number(h) * 10) / 10;
+    return v % 1 === 0 ? String(v) : v.toFixed(1);
   }
   render();
 })();

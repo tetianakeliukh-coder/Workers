@@ -1546,7 +1546,13 @@
   function fmtDay(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()]; }
   /* "26 October" — the column heading has the room for the month in full. */
   function fmtLong(d) { return d.getDate() + ' ' + MONTHS_LONG[d.getMonth()]; }
-  function fmtHours(n) { return n % 1 === 0 ? String(n) : n.toFixed(1); }
+  /* Rounded to a tenth before the test: a sum that drifts by a
+     billionth of an hour is not a whole number, and would print the
+     decimal it is meant to drop. */
+  function fmtHours(n) {
+    var v = Math.round(n * 10) / 10;
+    return v % 1 === 0 ? String(v) : v.toFixed(1);
+  }
 
   var TODAY = startOfDay(new Date());
   var THIS_MON = mondayOf(TODAY);
