@@ -265,12 +265,34 @@
     border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
     font-variant-numeric: tabular-nums;
   }
+  /* While the panel that names a task is open it is the only thing on
+     the page that answers: a click anywhere else would shut it, and a
+     half-named row is the one thing the table cannot hold. Nothing is
+     greyed — the page is not disabled, it is busy. */
+  body.task-open #grid .hr-cell,
+  body.task-open #grid .task-sel,
+  body.task-open #grid .task-pick,
+  body.task-open #grid .row-drop,
+  body.task-open #grid .grp-add,
+  body.task-open #grid .caret,
+  body.task-open .header-actions,
+  body.task-open .edit-actions,
+  body.task-open .search-bar { pointer-events: none; }
+
+  /* Typed into rather than opened: no flex row to lay a mark out in,
+     and the figure sits where the button's figure sat. */
+  input.hr-cell { display: block; width: 100%; text-align: right; }
+  input.hr-cell::placeholder { color: var(--grey-400); }
+  input.hr-cell:disabled, input.hr-cell:disabled:hover {
+    background: var(--grey-100); border-color: var(--grey-300);
+    color: var(--grey-600); cursor: default;
+  }
   .hr-cell:hover { border-color: var(--border-hover); }
   .hr-cell:focus { outline: none; border-color: var(--primary); }
-  /* Typed in this edit and not yet saved. Amber rather than blue: blue
-     is the focus ring on the cell next to it, and the two read as the
-     same thing. */
-  .hr-cell.changed { border-color: var(--sec-amber); background: #fdf4e8; }
+  /* Typed in this edit and not yet saved. A darker rule and a heavier
+     figure, with no fill: blue is the focus ring on the cell next to
+     it, and anything coloured reads as something being wrong. */
+  .hr-cell.changed { border-color: var(--grey-700); font-weight: 500; }
   /* Changed and over-booked at once: over-booked is the one to say. */
   .hr-cell.over, .hr-cell.changed.over { border-color: var(--error); background: #fdf2f3; }
   /* Already submitted or finalised: shown, not offered. */
@@ -710,10 +732,10 @@
   }
   .vp-switch button:hover { background: var(--grey-100); color: var(--text-main); }
   .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
-  /* With allowances off there is nothing to claim, so the line the claim
+  /* With no allowances there is nothing to claim, so the line the claim
      would sit on goes with it rather than saying the site has none. */
-  body.no-allowances #cp-alw-sep,
-  body.no-allowances #cp-alw { display: none; }
+  body.iter-first #cp-alw-sep,
+  body.iter-first #cp-alw { display: none; }
 
   /* ─── Week dropdown ────────────────────────────────────────────── */
   .period-dd .dd-trigger { min-width: 232px; }
@@ -760,6 +782,9 @@
   #date-cal .cal-day.today { border: 1px solid var(--grey-400); }
   #date-cal .cal-cell.sel .cal-day { background: var(--primary); color: var(--white); font-weight: 500; }
   #date-cal .cal-cell.sel .cal-day.today { border-color: var(--primary); }
+  /* Further from the start than a timesheet is allowed to run. */
+  #date-cal .cal-day:disabled { color: var(--grey-400); cursor: default; }
+  #date-cal .cal-day:disabled:hover { background: none; }
 
   #date-cal .cal-foot {
     margin-top: 8px; padding: 10px 16px; border-top: 1px solid var(--grey-300);
@@ -1006,6 +1031,20 @@
     box-shadow: inset 1px 0 0 var(--grey-350);
   }
   #grid thead th.col-act { z-index: 6; }
+  /* The week's figure is the one being checked against the days, so it
+     stays in view while a month of them scrolls past. It sits beside the
+     actions column when there is one, and on the edge when there is not. */
+  th.col-total, td.col-total {
+    position: sticky; right: 0; z-index: 2;
+    background: var(--white);
+    box-shadow: inset 1px 0 0 var(--grey-350);
+  }
+  body.editing th.col-total, body.editing td.col-total { right: 126px; }
+  #grid thead th.col-total { z-index: 6; }
+  #grid tbody tr.row-summary td.col-total { background: #fafafa; }
+  #grid tbody tr.row-summary:hover td.col-total { background: var(--grey-100); }
+  #grid tbody tr.just-added td.col-total { background: var(--bg-blue-light); }
+  #grid tfoot td.col-total { background: var(--white); z-index: 4; }
   /* Sticky cells paint their own background, so the ones the rest of the
      row has are repeated here rather than inherited. */
   #grid tbody tr.row-summary td.col-act { background: #fafafa; }
@@ -1128,7 +1167,7 @@
 </head>
 <!-- The tray is the variant the screen is designed around; the two
      halves stay on the switch as the thing it was compared with. -->
-<body data-module="mytime" class="addlayout-inline">
+<body data-module="mytime" class="addlayout-inline iter-first">
 
 <div class="page">
   <aside id="shell-sidebar"></aside>
@@ -1241,30 +1280,12 @@
 
 <!-- ── Prototype switchers: the shell gathers every .vp-switch into one
      dock in the corner, so each one only has to name itself. ────── -->
-<div class="vp-switch" id="layout-switch" role="group" aria-label="Add a task">
-  <button type="button" data-layout="inline" class="on">In the row</button>
-  <button type="button" data-layout="one">With a tray</button>
-  <button type="button" data-layout="cols">Two halves</button>
-</div>
-
-<div class="vp-switch" id="fields-switch" role="group" aria-label="Fields that name a task">
-  <button type="button" data-fields="0" class="on">Site&rsquo;s own</button>
-  <button type="button" data-fields="1">1 field</button>
-  <button type="button" data-fields="2">2</button>
-  <button type="button" data-fields="3">3</button>
-  <button type="button" data-fields="4">4</button>
-</div>
-
-<!-- Iteration one books hours and nothing else, and carries no
-     allowances; the mixed setting is what the sites run today. -->
-<div class="vp-switch" id="entry-switch" role="group" aria-label="Time entry">
-  <button type="button" data-entry="site" class="on">Site&rsquo;s own</button>
-  <button type="button" data-entry="hours">Hours only</button>
-</div>
-
-<div class="vp-switch" id="allow-switch" role="group" aria-label="Allowances">
-  <button type="button" data-allow="1" class="on">On</button>
-  <button type="button" data-allow="0">Off</button>
+<!-- What ships first: hours typed straight into the cell, one field
+     naming a task, and no allowances anywhere. Off, the screen is the
+     whole thing the sites run today. -->
+<div class="vp-switch" id="iter-switch" role="group" aria-label="First iteration">
+  <button type="button" data-iter="1" class="on">On</button>
+  <button type="button" data-iter="0">Off</button>
 </div>
 
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
@@ -1650,12 +1671,12 @@
     ]
   };
   function allowancesFor(site) {
-    return PROTO.allowances ? (ALLOWANCES_BY_SITE[site] || []) : [];
+    return PROTO.first ? [] : (ALLOWANCES_BY_SITE[site] || []);
   }
 
   /* Prototype-only settings. The first iteration books hours alone and
      carries no allowances, so both have to be switchable to be shown. */
-  var PROTO = { entry: 'site', allowances: true };
+  var PROTO = { first: true };
 
   /* How a site records time, set in its own settings and not up for
      argument on a timesheet: 'period' sites are worked in start and
@@ -1667,7 +1688,7 @@
     'SA BHP OLYMPIC DAM': 'hours'
   };
   function entryModeFor(site) {
-    if (PROTO.entry === 'hours') return 'hours';
+    if (PROTO.first) return 'hours';
     return ENTRY_BY_SITE[site] === 'hours' ? 'hours' : 'period';
   }
   function entryModeOf(key) { var m = taskMeta[key]; return entryModeFor(m && m.site); }
@@ -1679,10 +1700,12 @@
   };
   /* 0 means the site's own list; anything else is the prototype being
      asked what the dialog looks like with that many. */
-  var FIELD_CAP = 0;
+  /* One field names a task in the first iteration, however many the
+     site really runs — which is also what takes the panel away and
+     leaves a plain select in the cell. */
   function fieldsFor(site) {
     var list = SITE_FIELDS[site] || [];
-    return FIELD_CAP ? list.slice(0, FIELD_CAP) : list;
+    return PROTO.first ? list.slice(0, 1) : list;
   }
   function pathOf(levels) { return levels.filter(Boolean).join(' | '); }
   function keyOf(site, sup, levels) { return site + '§' + sup + '§' + pathOf(levels); }
@@ -1943,13 +1966,24 @@
   }
   function overCap(isoDate) { return dayTotal(isoDate, false) > DAY_CAP; }
   /* Which cell pushed each day over, so the mark survives the editor
-     closing and the grid being drawn again. A day that arrived over the
-     cap has no such cell — nobody in this edit put it there — so every
-     cell on it that holds hours is marked instead. */
+     closing and the grid being drawn again. A day never arrives over the
+     cap — neither a worker nor a supervisor can save one — so it is
+     always a cell from this edit, and it is the one last typed into. If
+     that one is emptied, the mark moves to another the edit filled. */
   var overAt = Object.create(null);
-  function cellOver(dk, isoDate, value) {
-    if (!(value > 0) || !overCap(isoDate)) return false;
-    return !overAt[isoDate] || overAt[isoDate] === dk;
+  function cellOver(key, isoDate, value) {
+    return value > 0 && overCap(isoDate) && overAt[isoDate] === key;
+  }
+  function markOver(isoDate, key) {
+    if (!overCap(isoDate)) { delete overAt[isoDate]; return; }
+    if (key && hoursFor(key, isoDate) > 0) { overAt[isoDate] = key; return; }
+    if (overAt[isoDate] && hoursFor(overAt[isoDate], isoDate) > 0) return;
+    var hit = null;
+    Object.keys(draft || {}).forEach(function (dk) {
+      var i = dk.lastIndexOf('|');
+      if (dk.slice(i + 1) === isoDate && draft[dk].h > 0) hit = dk.slice(0, i);
+    });
+    overAt[isoDate] = hit;
   }
 
   /* ─── Desktop grid ────────────────────────────────────────────── */
@@ -2058,7 +2092,7 @@
   }
   /* A cell that carries a claim flags itself. */
   function alwDot(key, isoDate) {
-    if (!key || !PROTO.allowances) return '';
+    if (!key || PROTO.first) return '';
     var a = allowOf(key, isoDate);
     if (!a.length) return '';
     return '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowTip(a)) + '">' + ICO_ALW + '</span>';
@@ -2068,11 +2102,19 @@
     if (state.editing && key) {
       var dk = key + '|' + isoDate, changed = draft && dk in draft;
       var lock = cellLocked(key, isoDate);
+      var cls = 'hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
+        (cellOver(key, isoDate, value) ? ' over' : '');
+      var what = 'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
+        (lock ? ' disabled data-tip="' + TIP_LOCKED + '"' : '');
+      /* Hours alone, and no claim to carry, leaves nothing for a panel
+         to hold: the cell is the field. */
+      if (PROTO.first) {
+        return '<td class="col-day' + todayCls(isoDate) + '">' +
+          '<input class="' + cls + '" type="text" inputmode="decimal" autocomplete="off" ' +
+          'placeholder="&ndash;" ' + what + ' value="' + (value > 0 ? fmtHours(value) : '') + '" /></td>';
+      }
       return '<td class="col-day' + todayCls(isoDate) + '">' +
-        '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
-        (cellOver(dk, isoDate, value) ? ' over' : '') + '" type="button" ' +
-        'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
-        (lock ? ' disabled data-tip="' + TIP_LOCKED + '"' : '') + '>' +
+        '<button class="' + cls + '" type="button" ' + what + '>' +
         alwDot(key, isoDate) +
         (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
     }
@@ -2457,6 +2499,19 @@
   /* ─── Custom range calendar ───────────────────────────────────── */
   var CAL_DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   var calAnchor = null, pick = { from: null, to: null }, hoverIso = null;
+  /* A timesheet runs a month at the outside: a week, a fortnight or a
+     month are the periods people book in, and past that the table is
+     unreadable and the mobile view has nowhere to put it. Counted
+     inclusively, so a start date and the thirty days after it. */
+  var MAX_SPAN = 31;
+  function lastAllowed(fromIso_) {
+    return iso(addDays(fromIso(fromIso_), MAX_SPAN - 1));
+  }
+  /* Only closes in on an end date: a day before the start is not out of
+     reach, it is a new start. */
+  function outOfSpan(key) {
+    return !!pick.from && !pick.to && key > pick.from && key > lastAllowed(pick.from);
+  }
   var ARROW = '<svg viewBox="0 0 16 16" fill="none" width="16" height="16"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function openCalendar() {
@@ -2479,7 +2534,8 @@
       var cls = 'cal-cell' + (lo && hi && key >= lo && key <= hi ? ' in' : '') +
         (isStart ? ' start' : '') + (isEnd ? ' end' : '') + (isStart || isEnd ? ' sel' : '');
       cells += '<div class="' + cls + '"><button class="cal-day' + (key === iso(TODAY) ? ' today' : '') +
-        '" type="button" data-iso="' + key + '">' + d + '</button></div>';
+        '" type="button"' + (outOfSpan(key) ? ' disabled' : '') +
+        ' data-iso="' + key + '">' + d + '</button></div>';
     }
     return '<div class="cal-month">' +
       '<div class="cal-dow">' + CAL_DOW.map(function (w) { return '<span>' + w + '</span>'; }).join('') + '</div>' +
@@ -2489,7 +2545,10 @@
   function renderCal() {
     var y = calAnchor.getFullYear(), m = calAnchor.getMonth();
     var right = new Date(y, m + 1, 1);
-    var hint = !pick.from ? 'Select start date' : !pick.to ? 'Select end date' : fmtRange(pick.from, pick.to);
+    var hint = !pick.from ? 'Select start date'
+      : !pick.to ? 'Select end date — up to ' + fmtDay(fromIso(lastAllowed(pick.from))) +
+                   ', ' + MAX_SPAN + ' days at the most'
+      : fmtRange(pick.from, pick.to);
     document.getElementById('date-cal').innerHTML =
       '<div class="cal-head">' +
         '<button class="cal-nav" type="button" data-nav="-1" aria-label="Previous month">' + ARROW + '</button>' +
@@ -2504,6 +2563,7 @@
   function pickDay(key) {
     if (!pick.from || pick.to) { pick = { from: key, to: null }; hoverIso = null; renderCal(); return; }
     if (key < pick.from) { pick.from = key; renderCal(); return; }
+    if (outOfSpan(key)) return;
     pick.to = key;
     state.range = 'custom'; state.from = pick.from; state.to = pick.to;
     markRange('custom');
@@ -2538,7 +2598,7 @@
     var day = e.target.closest('.cal-day');
     if (!day || !pick.from || pick.to) return;
     var key = day.getAttribute('data-iso');
-    if (key === hoverIso) return;
+    if (key === hoverIso || outOfSpan(key)) return;
     hoverIso = key;
     renderCal();
   });
@@ -2629,6 +2689,40 @@
   }
 
   /* ─── Collapse ────────────────────────────────────────────────── */
+  /* ─── Hours typed into the cell ────────────────────────
+     With no editor to commit from, the draft follows the typing and the
+     table is drawn again so the totals and Save keep up. The cell being
+     typed into is found again afterwards and handed the caret back, so
+     the figure can be finished. */
+  function redrawKeeping(key, isoDate) {
+    var a = document.activeElement, pos = null;
+    if (a && a.tagName === 'INPUT') { try { pos = a.selectionStart; } catch (err) {} }
+    renderGrid(); renderWeek(); syncEditBar();
+    var again = [].slice.call(gridBody.querySelectorAll('input.hr-cell')).filter(function (x) {
+      return x.getAttribute('data-key') === key && x.getAttribute('data-date') === isoDate;
+    })[0];
+    if (!again) return;
+    again.focus();
+    if (pos != null) { try { again.setSelectionRange(pos, pos); } catch (err) {} }
+  }
+
+  gridBody.addEventListener('input', function (e) {
+    var inp = e.target.closest ? e.target.closest('input.hr-cell') : null;
+    if (!inp || !draft) return;
+    var key = inp.getAttribute('data-key'), date = inp.getAttribute('data-date');
+    var raw = inp.value.trim().replace(',', '.');
+    /* Half-typed nonsense is left on screen rather than written as a
+       zero: the figure is taken when it is a figure. */
+    if (raw !== '' && (isNaN(Number(raw)) || Number(raw) < 0)) return;
+    var v = raw === '' ? 0 : Number(raw);
+    var sv = savedCell(key, date);
+    var next = { h: v, s: '', f: '', a: sv.a };
+    if (v === sv.h) { next.s = sv.s; next.f = sv.f; }
+    putCell(key, date, next);
+    markOver(date, key);
+    redrawKeeping(key, date);
+  });
+
   /* The chevron folds the group, not the whole row: a row that is also
      a button means every stray click on a name makes the table jump. */
   gridBody.addEventListener('click', function (e) {
@@ -2914,9 +3008,9 @@
       if (fromTimes == null) { sT = ''; fT = ''; v = 0; } else { v = fromTimes; }
     } else {
       /* An hours site has no times to keep, so none are written. The
-         prototype can also put an hours-only face on a site that does
-         book times: those are kept while the figure is still the one
-         they add up to, so a cell typed into and put back reads as
+         first iteration also puts an hours-only face on a site that
+         does book times: those are kept while the figure is still the
+         one they add up to, so a cell typed into and put back reads as
          untouched, and dropped the moment it is not. */
       var h = el('cp-h').value.trim().replace(',', '.');
       v = h === '' ? 0 : Number(h);
@@ -2928,10 +3022,8 @@
        what was typed back to the room left loses the thing the person meant
        to say. The figure is kept as entered, the day it lands on is marked,
        and Save is what refuses until the day adds up. */
-    var others = dayTotal(popDate, false) - cellOf(popKey, popDate).h;
-    if (others + v > DAY_CAP) overAt[popDate] = popKey + '|' + popDate;
-    else delete overAt[popDate];
     putCell(popKey, popDate, { h: v, s: sT, f: fT, a: cellAllowances() });
+    markOver(popDate, popKey);
     closeCell();
     renderGrid(); renderWeek(); syncEditBar();
   }
@@ -2950,10 +3042,7 @@
     });
   });
   el('cp-clear').addEventListener('click', function () {
-    if (popKey) putCell(popKey, popDate, { h: 0, s: '', f: '', a: [] });
-    /* Emptying a cell cannot be what pushed the day over, so if the day
-       is still over it is no longer known which cell did. */
-    delete overAt[popDate];
+    if (popKey) { putCell(popKey, popDate, { h: 0, s: '', f: '', a: [] }); markOver(popDate, popKey); }
     closeCell();
     renderGrid(); renderWeek(); syncEditBar();
   });
@@ -2975,6 +3064,9 @@
        it — and the hours would never land. */
     if (pop.contains(e.target)) return;
     var cell = e.target.closest('.hr-cell');
+    /* In the first iteration the cell is the field, so a click on it is
+       a click into a text box and there is nothing to open. */
+    if (cell && cell.tagName === 'INPUT') { if (popKey) commitCell(); return; }
     if (cell) {
       e.stopPropagation();
       var k = cell.getAttribute('data-key'), d = cell.getAttribute('data-date');
@@ -3725,6 +3817,7 @@
   function closeTaskPop() {
     if (taskPop) taskPop.classList.remove('open');
     document.body.classList.remove('pop-room');
+    document.body.classList.remove('task-open');
     tpId = null;
   }
 
@@ -3802,6 +3895,7 @@
        that says where the row is going. The page is given the room for
        the length of the panel's stay. */
     document.body.classList.add('pop-room');
+    document.body.classList.add('task-open');
     taskPop.style.visibility = 'hidden';
     taskPop.classList.add('open');
     ensureVisible(anchor.closest('tr') || anchor, taskPop.offsetHeight + 12);
@@ -4109,27 +4203,6 @@
     if (taskPop.classList.contains('open')) { closeTaskPop(); renderGrid(); }
   }, true);
 
-  /* ─── Variant switch: in the row, with a tray, or two columns ────
-     Two readings of the same dialog, so the client can be shown both.
-     The layout is a body class; nothing in the model knows about it. */
-  var layoutSwitch = document.getElementById('layout-switch');
-  layoutSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-layout]');
-    if (!b) return;
-    var v = b.getAttribute('data-layout');
-    document.body.classList.toggle('addlayout-inline', v === 'inline');
-    document.body.classList.toggle('addlayout-one', v === 'one');
-    layoutSwitch.querySelectorAll('[data-layout]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    ocTab = 'recent';
-    /* The variants do not share a half-finished add: whatever one of
-       them had open goes when the other takes over. */
-    closeAddMenu(); closeWherePop(); closeTaskPop();
-    pickModal.classList.remove('open');
-    addModal.classList.remove('open');
-    pending = [];
-    addStep = 1;
-    render();
-  });
   /* ─── One column: the things you can do in it ─────────────────── */
   el('oc-tab-recent').addEventListener('click', function () { ocTab = 'recent'; sync(); });
   el('oc-tab-new').addEventListener('click', function () {
@@ -4181,43 +4254,23 @@
     if (first) first.focus();
   });
 
-  /* How a site records time, and whether allowances exist at all. Both
-     rewrite every cell, so the cell editor is closed rather than left
-     showing the fields of a mode that is no longer on. */
-  var entrySwitch = el('entry-switch');
-  entrySwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-entry]');
+  /* The first iteration rewrites every cell and every task, so a
+     half-finished add is dropped and the editor is closed rather than
+     left showing the fields of a mode that is no longer on. */
+  var iterSwitch = el('iter-switch');
+  iterSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-iter]');
     if (!b) return;
-    PROTO.entry = b.getAttribute('data-entry');
-    entrySwitch.querySelectorAll('[data-entry]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    closeCell();
-    render();
-  });
-
-  var allowSwitch = el('allow-switch');
-  allowSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-allow]');
-    if (!b) return;
-    PROTO.allowances = b.getAttribute('data-allow') === '1';
-    allowSwitch.querySelectorAll('[data-allow]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    document.body.classList.toggle('no-allowances', !PROTO.allowances);
-    closeCell();
-    render();
-  });
-
-  var fieldsSwitch = document.getElementById('fields-switch');
-  fieldsSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-fields]');
-    if (!b) return;
-    FIELD_CAP = Number(b.getAttribute('data-fields'));
-    fieldsSwitch.querySelectorAll('[data-fields]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    /* Fewer fields is a different set of answers, so what was part-named
-       with the old set is dropped rather than half-kept. */
+    PROTO.first = b.getAttribute('data-iter') === '1';
+    iterSwitch.querySelectorAll('[data-iter]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    document.body.classList.toggle('iter-first', PROTO.first);
+    closeCell(); closeTaskPop(); closeWherePop(); closeAddMenu();
     if (addModal.classList.contains('open')) {
       cards = []; ticks = Object.create(null);
       editing = { levels: [] };
       sync();
     }
+    render();
   });
 
 
