@@ -476,7 +476,9 @@ tbody td {
   background: var(--text-main); color: var(--white);
   font-family: var(--fs-sans); font-size: 12px; line-height: 16px;
   box-shadow: 0 4px 12px rgba(8, 17, 21, 0.2);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* A tip that is cut off is worse than no tip: a long one wraps rather
+     than ending in an ellipsis the pointer cannot open. */
+  white-space: normal; overflow-wrap: break-word;
 }
 .row-tip.on { display: block; }
 
