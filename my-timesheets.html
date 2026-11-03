@@ -282,6 +282,23 @@
     border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
     font-variant-numeric: tabular-nums;
   }
+  /* Five columns of options, as wide as they need and no wider. */
+  body.iter-first .cell-pop.task-pop { width: auto; max-width: min(92vw, 880px); }
+  .tp-cols { display: flex; gap: 4px; }
+  .tp-col { flex: 1 1 0; min-width: 136px; }
+  .tp-ttl {
+    padding: 2px 8px 8px; font-size: 13px; line-height: 17px; color: var(--grey-600);
+  }
+  .tp-opt {
+    display: block; width: 100%; padding: 7px 8px; border: none; border-radius: 6px;
+    background: none; cursor: pointer; text-align: left;
+    font-family: var(--fs-sans); font-size: 14px; line-height: 18px; color: var(--text-main);
+  }
+  .tp-opt:hover { background: var(--grey-100); }
+  .tp-opt.on { background: var(--bg-blue-light); color: var(--primary); font-weight: 500; }
+  .tp-opt:disabled { color: var(--grey-400); cursor: default; }
+  .tp-opt:disabled:hover { background: none; }
+
   /* While the panel that names a task is open it is the only thing on
      the page that answers: a click anywhere else would shut it, and a
      half-named row is the one thing the table cannot hold. Nothing is
@@ -1702,16 +1719,10 @@
   }
   /* Which level ends up as the title — the naming field when it is
      filled in, otherwise the reference. */
-  /* Only as many levels as the site is asked for. A task stored with
-     four of them is still shown with one when one is all that names it,
-     rather than carrying the other three around unasked. */
-  function levelsOf(meta) {
-    var n = fieldsFor(meta.site).length;
-    return n ? meta.levels.slice(0, n) : meta.levels.slice();
-  }
+  function levelsOf(meta) { return meta.levels.slice(); }
   function titleAt(meta) {
-    var i = titleIdx(meta.site), levels = levelsOf(meta);
-    return levels[i] ? i : 0;
+    var i = titleIdx(meta.site);
+    return meta.levels[i] ? i : 0;
   }
   /* "Repair the machine" — what the worker calls the job. */
   function taskTitle(meta) { return levelsOf(meta)[titleAt(meta)] || 'No task'; }
@@ -1776,13 +1787,10 @@
   };
   /* 0 means the site's own list; anything else is the prototype being
      asked what the dialog looks like with that many. */
-  /* One field names a task in the first iteration, however many the
-     site really runs — which is also what takes the panel away and
-     leaves a plain select in the cell. */
-  function fieldsFor(site) {
-    var list = SITE_FIELDS[site] || [];
-    return PROTO.first ? list.slice(0, 1) : list;
-  }
+  /* The first iteration is one level, not one field: a task is named by
+     up to five details at once, and the panel shows them side by side
+     rather than one opening out of another. */
+  function fieldsFor(site) { return SITE_FIELDS[site] || []; }
   function pathOf(levels) { return levels.filter(Boolean).join(' | '); }
   function keyOf(site, sup, levels) { return site + '§' + sup + '§' + pathOf(levels); }
 
@@ -3745,9 +3753,6 @@
       r.cardExtra = -1;
       (byTitle[r.cardTitle] = byTitle[r.cardTitle] || []).push(r);
     });
-    /* One field is all there is to say, so there is nothing to tell two
-       apart with — and by now there are no two to tell apart. */
-    if (PROTO.first) return;
     Object.keys(byTitle).forEach(function (t) {
       var group = byTitle[t];
       if (group.length < 2) return;
@@ -4269,10 +4274,39 @@
     var f = el('tp-fields').querySelector('select');
     if (f) f.focus();
   }
+  /* The first iteration asks for every detail at once: five columns of
+     options rather than five fields opening out of one another. The
+     panel is wider than the cell it hangs off — which is the whole
+     point of showing it beside the row and not over it. */
+  function renderTaskCols(x, fields) {
+    el('tp-fields').innerHTML = '<div class="tp-cols">' + fields.map(function (f, i) {
+      var rest = fields.length - 1;
+      return '<div class="tp-col"><div class="tp-ttl">' + Shell.esc(f.name) + '</div>' +
+        f.values.map(function (v) {
+          /* A combination already on the week can only be spotted once
+             everything else has been answered. */
+          var why = '';
+          if (i === rest) {
+            var full = x.levels.slice();
+            full[i] = v;
+            if (full.filter(Boolean).length === fields.length) {
+              why = takenIn(x.site, x.sup, full);
+            }
+          }
+          return '<button class="tp-opt' + (x.levels[i] === v ? ' on' : '') + '" type="button"' +
+            (why ? ' disabled data-tip="' + Shell.esc(why) + '"' : '') +
+            ' data-tcol="' + i + '" data-tval="' + Shell.esc(v) + '">' +
+            Shell.esc(v) + '</button>';
+        }).join('') + '</div>';
+    }).join('') + '</div>';
+    el('tp-done').disabled = !pendDone(x);
+  }
+
   function renderTaskPop() {
     var x = pendById(tpId);
     if (!x) return;
     var fields = fieldsFor(x.site);
+    if (PROTO.first) { renderTaskCols(x, fields); return; }
     el('tp-fields').innerHTML = fields.map(function (f, i) {
       return '<div class="fld"><label class="fld-label" for="tp' + i + '">' +
         Shell.esc(f.name) + '<span class="req">*</span></label>' +
@@ -4290,6 +4324,19 @@
     }).join('');
     el('tp-done').disabled = !pendDone(x);
   }
+  /* The fields are parallel, not nested, so answering one leaves the
+     rest alone. */
+  el('tp-fields').addEventListener('click', function (e) {
+    var opt = e.target.closest ? e.target.closest('[data-tcol]') : null;
+    if (!opt || opt.disabled) return;
+    var x = pendById(tpId);
+    if (!x) return;
+    var i = Number(opt.getAttribute('data-tcol')), v = opt.getAttribute('data-tval');
+    x.levels[i] = x.levels[i] === v ? '' : v;
+    renderTaskPop();
+    renderGrid();
+  });
+
   el('tp-fields').addEventListener('change', function (e) {
     var sel = e.target.closest('[data-tlvl]');
     if (!sel) return;
@@ -4401,29 +4448,14 @@
      supervisor it belongs to, because one pass down this list can
      reach across several of them. */
   var picked = Object.create(null);
-  /* What a task is called on screen, which is what tells two of them
-     apart. On one field, two tasks that share it are one task. */
-  function shownName(meta) {
-    return meta.site + '\u00a7' + meta.sup + '\u00a7' + pathOf(levelsOf(meta));
-  }
   function recentPool() {
     var on = Object.create(null);
-    weekKeys().forEach(function (k) {
-      on[k] = 1;
-      if (PROTO.first && taskMeta[k]) on[shownName(taskMeta[k])] = 1;
-    });
-    var seen = Object.create(null);
+    weekKeys().forEach(function (k) { on[k] = 1; });
     var list = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) {
       return r.when && !on[r.key];
-    }).sort(function (a, b) { return b.when - a.when; }).filter(function (r) {
-      if (!PROTO.first) return true;
-      var n = shownName(r.meta);
-      if (on[n] || seen[n]) return false;
-      seen[n] = 1;
-      return true;
-    }).slice(0, 12);
+    }).sort(function (a, b) { return b.when - a.when; }).slice(0, 12);
     nameCards(list);
     return list;
   }
