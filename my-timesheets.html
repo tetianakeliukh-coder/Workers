@@ -1038,6 +1038,11 @@
     color: var(--grey-600); transition: background var(--t-fast), color var(--t-fast);
   }
   .row-drop:hover { background: rgba(166, 13, 31, 0.08); color: var(--error); }
+  /* A disabled button fires no pointer events, so the reason travels on
+     the wrapper around it instead — the same thing Save does. */
+  .row-drop:disabled { color: var(--grey-400); cursor: default; }
+  .row-drop:disabled:hover { background: none; color: var(--grey-400); }
+  .drop-wrap { display: inline-flex; }
   /* Row actions live at the right-hand end of the table, the way they do
      on every other OPMS grid — not among the day columns, which is where
      the eye is reading numbers. It stays put while the days scroll. */
@@ -1697,17 +1702,24 @@
   }
   /* Which level ends up as the title — the naming field when it is
      filled in, otherwise the reference. */
+  /* Only as many levels as the site is asked for. A task stored with
+     four of them is still shown with one when one is all that names it,
+     rather than carrying the other three around unasked. */
+  function levelsOf(meta) {
+    var n = fieldsFor(meta.site).length;
+    return n ? meta.levels.slice(0, n) : meta.levels.slice();
+  }
   function titleAt(meta) {
-    var i = titleIdx(meta.site);
-    return meta.levels[i] ? i : 0;
+    var i = titleIdx(meta.site), levels = levelsOf(meta);
+    return levels[i] ? i : 0;
   }
   /* "Repair the machine" — what the worker calls the job. */
-  function taskTitle(meta) { return meta.levels[titleAt(meta)] || 'No task'; }
+  function taskTitle(meta) { return levelsOf(meta)[titleAt(meta)] || 'No task'; }
   /* "WORK-00123 · Labour" — everything else, in field order, never
      repeating the title. */
   function taskRest(meta, alsoSkip) {
     var i = titleAt(meta);
-    return meta.levels.filter(function (v, n) {
+    return levelsOf(meta).filter(function (v, n) {
       return v && n !== i && n !== alsoSkip;
     }).join(' · ');
   }
@@ -1997,7 +2009,7 @@
     }
     weekKeys().forEach(function (k) {
       var m = taskMeta[k];
-      slot(m.site, m.sup).tasks.push({ key: k, label: pathOf(m.levels) || 'No task', meta: m });
+      slot(m.site, m.sup).tasks.push({ key: k, label: pathOf(levelsOf(m)) || 'No task', meta: m });
     });
     /* What this edit added goes to the top of its group, newest first:
        a row that appears below the fold of a long group is a row the
@@ -2243,11 +2255,11 @@
   function rowDrop(key) {
     if (!state.editing || !key) return '';
     if (rowLocked(key)) {
-      return '<button class="row-drop" type="button" disabled' +
-        ' aria-label="This task cannot be removed"' +
-        ' data-tip="One of these days has been handed in, so the task has to stay">' +
+      return '<span class="drop-wrap" data-tip="One of these days has been handed in, ' +
+        'so the task has to stay">' +
+        '<button class="row-drop" type="button" disabled aria-label="This task cannot be removed">' +
         '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.4 4.5l.6 8.3h6l.6-8.3M6.8 7v3.6M9.2 7v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-        '</button>';
+        '</button></span>';
     }
     return '<button class="row-drop" type="button" data-drop-key="' + Shell.esc(key) + '"' +
       ' aria-label="Remove this task" data-tip="Remove this task from the week">' +
@@ -3733,6 +3745,9 @@
       r.cardExtra = -1;
       (byTitle[r.cardTitle] = byTitle[r.cardTitle] || []).push(r);
     });
+    /* One field is all there is to say, so there is nothing to tell two
+       apart with — and by now there are no two to tell apart. */
+    if (PROTO.first) return;
     Object.keys(byTitle).forEach(function (t) {
       var group = byTitle[t];
       if (group.length < 2) return;
@@ -4386,14 +4401,29 @@
      supervisor it belongs to, because one pass down this list can
      reach across several of them. */
   var picked = Object.create(null);
+  /* What a task is called on screen, which is what tells two of them
+     apart. On one field, two tasks that share it are one task. */
+  function shownName(meta) {
+    return meta.site + '\u00a7' + meta.sup + '\u00a7' + pathOf(levelsOf(meta));
+  }
   function recentPool() {
     var on = Object.create(null);
-    weekKeys().forEach(function (k) { on[k] = 1; });
+    weekKeys().forEach(function (k) {
+      on[k] = 1;
+      if (PROTO.first && taskMeta[k]) on[shownName(taskMeta[k])] = 1;
+    });
+    var seen = Object.create(null);
     var list = Object.keys(taskMeta).map(function (k) {
       return { key: k, meta: taskMeta[k], when: lastUsed(k) };
     }).filter(function (r) {
       return r.when && !on[r.key];
-    }).sort(function (a, b) { return b.when - a.when; }).slice(0, 12);
+    }).sort(function (a, b) { return b.when - a.when; }).filter(function (r) {
+      if (!PROTO.first) return true;
+      var n = shownName(r.meta);
+      if (on[n] || seen[n]) return false;
+      seen[n] = 1;
+      return true;
+    }).slice(0, 12);
     nameCards(list);
     return list;
   }
