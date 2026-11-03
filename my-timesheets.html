@@ -282,22 +282,24 @@
     border: 1px solid var(--grey-350); border-radius: 6px; background: var(--white);
     font-variant-numeric: tabular-nums;
   }
-  /* Five columns of options, as wide as they need and no wider. */
-  body.iter-first .cell-pop.task-pop { width: auto; max-width: min(92vw, 880px); }
-  .tp-cols { display: flex; gap: 4px; }
-  .tp-col { flex: 1 1 0; min-width: 136px; }
-  .tp-ttl {
-    padding: 2px 8px 8px; font-size: 13px; line-height: 17px; color: var(--grey-600);
+  /* The list of tasks, as wide as its columns need and no wider. One
+     row is one answer, so there is nothing to confirm and no footer. */
+  body.iter-first .cell-pop.task-pop { width: auto; max-width: min(92vw, 900px); padding: 8px; }
+  body.iter-first .tp-foot { display: none; }
+  .tp-table { max-height: 340px; overflow-y: auto; }
+  .tp-head, .tp-row { display: grid; gap: 14px; align-items: baseline; padding: 8px 10px; }
+  .tp-head {
+    padding-bottom: 6px; font-size: 12px; line-height: 16px; color: var(--grey-600);
   }
-  .tp-opt {
-    display: block; width: 100%; padding: 7px 8px; border: none; border-radius: 6px;
-    background: none; cursor: pointer; text-align: left;
-    font-family: var(--fs-sans); font-size: 14px; line-height: 18px; color: var(--text-main);
+  .tp-row {
+    width: 100%; border: none; border-radius: 8px; background: none; cursor: pointer; text-align: left;
+    font-family: var(--fs-sans); font-size: 14px; line-height: 19px; color: var(--grey-700);
   }
-  .tp-opt:hover { background: var(--grey-100); }
-  .tp-opt.on { background: var(--bg-blue-light); color: var(--primary); font-weight: 500; }
-  .tp-opt:disabled { color: var(--grey-400); cursor: default; }
-  .tp-opt:disabled:hover { background: none; }
+  .tp-row:hover { background: var(--grey-100); }
+  .tp-row .tp-main { color: var(--text-main); font-weight: 500; }
+  .tp-row:disabled { color: var(--grey-400); cursor: default; }
+  .tp-row:disabled .tp-main { color: var(--grey-400); font-weight: 400; }
+  .tp-row:disabled:hover { background: none; }
 
   /* While the panel that names a task is open it is the only thing on
      the page that answers: a click anywhere else would shut it, and a
@@ -1787,10 +1789,35 @@
   };
   /* 0 means the site's own list; anything else is the prototype being
      asked what the dialog looks like with that many. */
-  /* The first iteration is one level, not one field: a task is named by
-     up to five details at once, and the panel shows them side by side
-     rather than one opening out of another. */
+  /* The first iteration is one level, not one field: a task is one row
+     carrying up to five details, and the panel is the list of them. */
   function fieldsFor(site) { return SITE_FIELDS[site] || []; }
+
+  /* What a site has to offer. Work booked against it before comes
+     first, so a task already on the week can be recognised in the list
+     and kept out of it; the rest is made up from the site's own values
+     so the prototype has a catalogue without one written out by hand. */
+  function tasksForSite(site) {
+    var fields = SITE_FIELDS[site] || [];
+    if (!fields.length) return [];
+    var seen = Object.create(null), rows = [];
+    function add(levels) {
+      var k = levels.join('\u00a7');
+      if (seen[k]) return;
+      seen[k] = 1;
+      rows.push(levels);
+    }
+    Object.keys(taskMeta).forEach(function (k) {
+      var m = taskMeta[k];
+      if (m.site === site && m.levels.length === fields.length) add(m.levels.slice());
+    });
+    for (var i = 0; rows.length < 8 && i < 40; i++) {
+      add(fields.map(function (f, j) { return f.values[(i + j) % f.values.length]; }));
+    }
+    /* A real site runs hundreds; the panel scrolls, but a prototype
+       that scrolls for a minute says nothing the first dozen do not. */
+    return rows.slice(0, 12);
+  }
   function pathOf(levels) { return levels.filter(Boolean).join(' | '); }
   function keyOf(site, sup, levels) { return site + '§' + sup + '§' + pathOf(levels); }
 
@@ -4274,39 +4301,35 @@
     var f = el('tp-fields').querySelector('select');
     if (f) f.focus();
   }
-  /* The first iteration asks for every detail at once: five columns of
-     options rather than five fields opening out of one another. The
-     panel is wider than the cell it hangs off — which is the whole
-     point of showing it beside the row and not over it. */
-  function renderTaskCols(x, fields) {
-    el('tp-fields').innerHTML = '<div class="tp-cols">' + fields.map(function (f, i) {
-      var rest = fields.length - 1;
-      return '<div class="tp-col"><div class="tp-ttl">' + Shell.esc(f.name) + '</div>' +
-        f.values.map(function (v) {
-          /* A combination already on the week can only be spotted once
-             everything else has been answered. */
-          var why = '';
-          if (i === rest) {
-            var full = x.levels.slice();
-            full[i] = v;
-            if (full.filter(Boolean).length === fields.length) {
-              why = takenIn(x.site, x.sup, full);
-            }
-          }
-          return '<button class="tp-opt' + (x.levels[i] === v ? ' on' : '') + '" type="button"' +
+  /* The list of tasks the site has, one to a row, with the columns
+     saying which one it is: the first is the name and the rest are what
+     tell it from the row under it. One row is one answer, so picking is
+     the click — there is nothing left to confirm. */
+  function renderTaskTable(x, fields) {
+    var rows = tasksForSite(x.site);
+    var grid = 'grid-template-columns: repeat(' + fields.length + ', minmax(128px, 1fr));';
+    el('tp-fields').innerHTML =
+      '<div class="tp-table">' +
+        '<div class="tp-head" style="' + grid + '">' +
+          fields.map(function (f) { return '<span>' + Shell.esc(f.name) + '</span>'; }).join('') +
+        '</div>' +
+        rows.map(function (lv, i) {
+          var why = takenIn(x.site, x.sup, lv);
+          return '<button class="tp-row" type="button" style="' + grid + '"' +
             (why ? ' disabled data-tip="' + Shell.esc(why) + '"' : '') +
-            ' data-tcol="' + i + '" data-tval="' + Shell.esc(v) + '">' +
-            Shell.esc(v) + '</button>';
-        }).join('') + '</div>';
-    }).join('') + '</div>';
-    el('tp-done').disabled = !pendDone(x);
+            ' data-trow="' + i + '">' +
+            lv.map(function (v, j) {
+              return '<span' + (j === 0 ? ' class="tp-main"' : '') + '>' + Shell.esc(v) + '</span>';
+            }).join('') + '</button>';
+        }).join('') +
+      '</div>';
   }
 
   function renderTaskPop() {
     var x = pendById(tpId);
     if (!x) return;
     var fields = fieldsFor(x.site);
-    if (PROTO.first) { renderTaskCols(x, fields); return; }
+    if (PROTO.first) { renderTaskTable(x, fields); return; }
     el('tp-fields').innerHTML = fields.map(function (f, i) {
       return '<div class="fld"><label class="fld-label" for="tp' + i + '">' +
         Shell.esc(f.name) + '<span class="req">*</span></label>' +
@@ -4324,17 +4347,15 @@
     }).join('');
     el('tp-done').disabled = !pendDone(x);
   }
-  /* The fields are parallel, not nested, so answering one leaves the
-     rest alone. */
   el('tp-fields').addEventListener('click', function (e) {
-    var opt = e.target.closest ? e.target.closest('[data-tcol]') : null;
-    if (!opt || opt.disabled) return;
+    var row = e.target.closest ? e.target.closest('[data-trow]') : null;
+    if (!row || row.disabled) return;
     var x = pendById(tpId);
     if (!x) return;
-    var i = Number(opt.getAttribute('data-tcol')), v = opt.getAttribute('data-tval');
-    x.levels[i] = x.levels[i] === v ? '' : v;
-    renderTaskPop();
-    renderGrid();
+    var pick = tasksForSite(x.site)[Number(row.getAttribute('data-trow'))];
+    if (!pick) return;
+    x.levels = pick.slice();
+    nameRow(x);
   });
 
   el('tp-fields').addEventListener('change', function (e) {
