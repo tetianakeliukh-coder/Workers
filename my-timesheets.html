@@ -75,16 +75,24 @@
   .add-menu button svg { color: var(--grey-600); flex-shrink: 0; }
 
   /* ─── Naming a task in the row itself ──────────────────────────── */
+  /* The button grows with the name rather than cutting it: four levels
+     deep is the whole point of the field, and a reader who cannot see
+     the last one cannot check it. Three lines is the deepest any site
+     goes; past that it is the name that is wrong. */
   .task-pick {
-    display: flex; align-items: center; gap: 8px; width: 100%; height: 34px;
-    padding: 0 8px 0 10px; border-radius: 8px; cursor: pointer;
+    display: flex; align-items: flex-start; gap: 8px; width: 100%; min-height: 34px;
+    padding: 6px 8px 6px 10px; border-radius: 8px; cursor: pointer;
     background: var(--white); border: 1px solid var(--grey-350);
-    font-family: var(--fs-sans); font-size: 14px; color: var(--text-main); text-align: left;
+    font-family: var(--fs-sans); font-size: 14px; line-height: 20px;
+    color: var(--text-main); text-align: left;
   }
   .task-pick:hover { border-color: var(--primary); }
   .task-pick.empty .tp-text { color: var(--grey-600); }
-  .task-pick .tp-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .task-pick .tp-caret { flex-shrink: 0; color: var(--grey-600); }
+  .task-pick .tp-text {
+    flex: 1 1 auto; min-width: 0; white-space: normal;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden;
+  }
+  .task-pick .tp-caret { flex-shrink: 0; margin-top: 2px; color: var(--grey-600); }
   .task-sel {
     width: 100%; height: 34px; padding: 0 8px; border-radius: 8px;
     border: 1px solid var(--grey-350); background: var(--white);
@@ -227,6 +235,15 @@
   .row-site .name { font-weight: 600; }
   .row-sup .name { font-weight: 500; }
   .row-task td.col-label { padding-left: 62px; }
+  /* A name four levels deep does not fit on one line, and a name cut
+     short is a name nobody can check. It wraps to three lines — the
+     deepest set of fields any site runs — rather than ellipsising. The
+     clamp is on the span and not on the cell: a table cell told to be a
+     box stops being a column. */
+  .tname {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+    overflow: hidden; white-space: normal; line-height: 18px;
+  }
   .row-task .code { font-weight: 500; }
   .row-task .what { color: var(--grey-600); }
   td.col-day, td.col-total { font-variant-numeric: tabular-nums; }
@@ -915,6 +932,7 @@
 
   /* A figure that arrived from the supervisor rather than from here. */
   .grid-card td.col-day.theirs { background: var(--grey-100); font-weight: 500; }
+  .grid-card td.col-day.theirs .hr-cell { background: transparent; }
 
   .btn-ghost svg, .btn-primary svg { flex-shrink: 0; }
 
@@ -1284,6 +1302,13 @@
 <div class="vp-switch" id="iter-switch" role="group" aria-label="First iteration">
   <button type="button" data-iter="1" class="on">On</button>
   <button type="button" data-iter="0">Off</button>
+</div>
+
+<!-- The page is refreshed on the way into edit mode. Whether anything
+     came back changed is the back end's answer, not ours. -->
+<div class="vp-switch" id="edit-switch" role="group" aria-label="On edit">
+  <button type="button" data-edit="same" class="on">Nothing changed</button>
+  <button type="button" data-edit="changed">A day changed</button>
 </div>
 
 <!-- What the back end says when Save is pressed. The week is edited the
@@ -1926,12 +1951,34 @@
     var m = taskMeta[k];
     return [m.site, m.sup, pathOf(m.levels)].join(' ').toLowerCase().indexOf(state.query.toLowerCase()) !== -1;
   }
+  /* Two things are remembered per period rather than per edit: rows
+     that were saved with no hours on them, which would otherwise
+     disappear the moment the edit ended, and the order rows were put in,
+     so that saving does not re-sort the table under the reader. Both are
+     tied to the period on screen and both go when it changes — which is
+     the reload Stijn asked the alphabetical order to come back on. */
+  var weekState = Object.create(null), lastTag = null;
+  function weekTag() { var ds = days(); return ds.length ? iso(ds[0]) : iso(TODAY); }
+  function weekNow() {
+    var t = weekTag();
+    if (!weekState[t]) weekState[t] = { empty: Object.create(null), pinned: [] };
+    /* Stepping off the period and back on is the reload the alphabetical
+       order returns on — the rows that were held at the top let go. */
+    if (lastTag !== null && lastTag !== t) weekState[t].pinned = [];
+    lastTag = t;
+    return weekState[t];
+  }
+
+  /* Rows this edit has taken off the week. They are only really gone
+     once it is saved, so Cancel brings them back with everything else. */
+  var removedRows = [];
   function weekKeys() {
-    var ds = days().map(iso), out = [];
+    var ds = days().map(iso), out = [], kept = weekNow().empty;
     Object.keys(taskMeta).forEach(function (k) {
       if (!matchesQuery(k)) return;
+      if (removedRows.indexOf(k) !== -1) return;
       var any = ds.some(function (d) { return hoursFor(k, d) > 0; });
-      if (any || extraRows.indexOf(k) !== -1) out.push(k);
+      if (any || extraRows.indexOf(k) !== -1 || kept[k]) out.push(k);
     });
     return out;
   }
@@ -1950,13 +1997,14 @@
     /* What this edit added goes to the top of its group, newest first:
        a row that appears below the fold of a long group is a row the
        person has to go looking for. */
+    var order = weekNow().pinned.concat(extraRows);
     sites.forEach(function (S) {
       S.sups.forEach(function (g) {
         var fresh = [], rest = [];
         g.tasks.forEach(function (t) {
-          (extraRows.indexOf(t.key) !== -1 ? fresh : rest).push(t);
+          (order.indexOf(t.key) !== -1 ? fresh : rest).push(t);
         });
-        fresh.sort(function (a, b) { return extraRows.indexOf(b.key) - extraRows.indexOf(a.key); });
+        fresh.sort(function (a, b) { return order.indexOf(b.key) - order.indexOf(a.key); });
         g.tasks = fresh.concat(rest);
       });
     });
@@ -2087,8 +2135,12 @@
     if (!groupHours(site, sup, isoDate)) return false;
     if (!groupSavedOn(site, sup, isoDate)) return false;
     var i = ALL_SHEETS.indexOf(site + '\u00a7' + sup);
+    if (i < 0) i = 0;
+    /* Not every timesheet has had a day taken yet — a row on one that
+       has cannot be removed, and the week needs to show both. */
+    if (i % 2 === 1) return false;
     var d = fromIso(isoDate).getDay();
-    return LOCKED_ON[((i < 0 ? 0 : i) + d) % LOCKED_ON.length];
+    return LOCKED_ON[(i + d) % LOCKED_ON.length];
   }
   function cellLocked(key, isoDate) {
     var m = taskMeta[key];
@@ -2151,14 +2203,15 @@
         (cellOver(key, isoDate, value) ? ' over' : '');
       var what = 'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
         (lock ? ' disabled data-tip="' + TIP_LOCKED + '"' : '');
+      var td = 'col-day' + todayCls(isoDate) + (lastWord[dk] ? ' theirs' : '');
       /* Hours alone, and no claim to carry, leaves nothing for a panel
          to hold: the cell is the field. */
       if (PROTO.first) {
-        return '<td class="col-day' + todayCls(isoDate) + '">' +
+        return '<td class="' + td + '">' +
           '<input class="' + cls + '" type="text" inputmode="decimal" autocomplete="off" ' +
           'placeholder="&ndash;" ' + what + ' value="' + (value > 0 ? fmtHours(value) : '') + '" /></td>';
       }
-      return '<td class="col-day' + todayCls(isoDate) + '">' +
+      return '<td class="' + td + '">' +
         '<button class="' + cls + '" type="button" ' + what + '>' +
         alwDot(key, isoDate) +
         (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</button></td>';
@@ -2177,10 +2230,22 @@
   function actHead() { return state.editing ? '<th class="col-act"></th>' : ''; }
   function actCell(inner) { return state.editing ? '<td class="col-act">' + inner + '</td>' : ''; }
 
+  /* A day that has been handed in is a day nobody can take back, and a
+     row cannot be removed around it. */
+  function rowLocked(key) {
+    return days().some(function (d) { return cellLocked(key, iso(d)); });
+  }
   function rowDrop(key) {
-    if (!state.editing || extraRows.indexOf(key) === -1) return '';
+    if (!state.editing || !key) return '';
+    if (rowLocked(key)) {
+      return '<button class="row-drop" type="button" disabled' +
+        ' aria-label="This task cannot be removed"' +
+        ' data-tip="One of these days has been handed in, so the task has to stay">' +
+        '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.4 4.5l.6 8.3h6l.6-8.3M6.8 7v3.6M9.2 7v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '</button>';
+    }
     return '<button class="row-drop" type="button" data-drop-key="' + Shell.esc(key) + '"' +
-      ' aria-label="Remove this task" data-tip="Remove this task — it has not been saved yet">' +
+      ' aria-label="Remove this task" data-tip="Remove this task from the week">' +
       '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.4 4.5l.6 8.3h6l.6-8.3M6.8 7v3.6M9.2 7v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
       '</button>';
   }
@@ -2346,7 +2411,8 @@
             '<td class="col-site"></td><td class="col-sup"></td>' +
             (fresh
               ? '<td class="col-task">' + taskPickBtn(t.key, t.label) + '</td>'
-              : '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>') +
+              : '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' +
+                  '<span class="tname">' + Shell.esc(t.label) + '</span></td>') +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell(rowDrop(t.key)) +
@@ -2405,7 +2471,8 @@
 
         sup.tasks.forEach(function (t) {
           rows.push('<tr class="row-task' + (isJustAdded(t.key) ? ' just-added' : '') + '">' +
-            '<td class="col-label" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' + Shell.esc(t.label) + '</td>' +
+            '<td class="col-label" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' +
+              '<span class="tname">' + Shell.esc(t.label) + '</span></td>' +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell(rowDrop(t.key)) + '</tr>');
@@ -2837,7 +2904,18 @@
   });
 
   /* ─── Edit mode ───────────────────────────────────────────────── */
-  function changeCount() { return draft ? Object.keys(draft).length : 0; }
+  function changeCount() {
+    if (!draft) return 0;
+    var dks = Object.keys(draft), n = dks.length;
+    /* A row put on the week is a change in itself: Stijn's data model
+       stores it as a week of nothing, and Save has to be able to say so
+       before any hours are typed. */
+    extraRows.forEach(function (k) {
+      var typed = dks.some(function (dk) { return dk.indexOf(k + '|') === 0; });
+      if (!typed) n++;
+    });
+    return n;
+  }
   /* Every day on screen that holds more than a day's worth of hours. */
   function badDays() {
     return days().filter(function (d) { return overCap(iso(d)); });
@@ -2845,9 +2923,15 @@
   function syncEditBar() {
     var bad = badDays();
     var btn = document.getElementById('btn-save');
-    btn.disabled = changeCount() === 0 || bad.length > 0;
+    btn.disabled = changeCount() === 0 || bad.length > 0 || pending.length > 0;
     var wrap = document.getElementById('save-wrap');
-    if (bad.length) {
+    /* Hours can be left out — a row with none is a day of nothing. A
+       task cannot: a row with no task is a row about nothing. */
+    if (pending.length) {
+      wrap.setAttribute('data-tip', pending.length === 1
+        ? 'Choose a task for the row you added, or remove the row.'
+        : 'Choose a task for the ' + pending.length + ' rows you added, or remove them.');
+    } else if (bad.length) {
       wrap.setAttribute('data-tip', bad.length === 1
         ? 'Resolve the error on ' + fmtDay(bad[0]) + ' — a day holds ' + DAY_CAP + ' hours.'
         : 'Resolve the errors on ' + bad.length + ' days — a day holds ' + DAY_CAP + ' hours.');
@@ -2855,10 +2939,41 @@
       wrap.removeAttribute('data-tip');
     }
   }
+  /* ─── Going into edit ───────────────────────────────
+     The week is fetched again first, because a sheet left open since
+     the morning is a sheet somebody else has had all day. The snackbar
+     only comes up when something actually came back different — one
+     that fires every time teaches the reader to ignore it. */
+  var EDIT_MODE = 'same';
+  function refreshBeforeEdit() {
+    if (EDIT_MODE !== 'changed') return;
+    var ds = days().map(iso);
+    var hit = null;
+    Object.keys(taskMeta).some(function (k) {
+      return ds.some(function (d) {
+        if (!(savedCell(k, d).h > 0) || cellLocked(k, d)) return false;
+        hit = { key: k, date: d };
+        return true;
+      });
+    });
+    if (!hit) return;
+    var m = taskMeta[hit.key];
+    for (var i = entries.length - 1; i >= 0; i--) {
+      if (entries[i].key === hit.key && entries[i].date === hit.date) entries.splice(i, 1);
+    }
+    entries.push({ date: hit.date, key: hit.key, hours: 4, start: '', finish: '', allowances: [] });
+    lastWord[hit.key + '|' + hit.date] = true;
+    Shell.snackbar(m.sup + ' changed the hours on ' + fmtDay(fromIso(hit.date)) +
+      ' while this was open. The week below is up to date.',
+      { title: 'This timesheet was updated' });
+  }
+
   function enterEdit() {
-    state.editing = true; draft = Object.create(null); extraRows = []; pending = [];
-    overAt = Object.create(null);
+    /* Last edit's news has been read by now. */
     lastWord = Object.create(null);
+    refreshBeforeEdit();
+    state.editing = true; draft = Object.create(null); extraRows = []; pending = [];
+    overAt = Object.create(null); removedRows = [];
     document.body.classList.add('editing');
     /* The week is the thing being edited; changing it underneath a draft
        would leave the draft pointing at days no longer on screen. */
@@ -2873,7 +2988,7 @@
   }
   function exitEdit() {
     state.editing = false; draft = null; extraRows = []; pending = []; justAdded = null;
-    overAt = Object.create(null);
+    overAt = Object.create(null); removedRows = [];
     closeTaskPop(); closeWherePop(); closeAddMenu();
     document.body.classList.remove('editing');
     syncDateLock();
@@ -2886,6 +3001,29 @@
      same way whichever one comes back. Which one is a prototype switch;
      everything after it is the screen the answer leads to. */
   var SAVE_MODE = 'clean';
+
+  /* A row with no hours on it is still a row the person put there — it
+     is saved as a day of nothing rather than dropped, and the order the
+     rows are in now is the order they stay in until the period changes. */
+  function settleRows() {
+    var w = weekNow(), ds = days().map(iso);
+    extraRows.forEach(function (k) {
+      if (w.pinned.indexOf(k) === -1) w.pinned.push(k);
+    });
+    weekKeys().forEach(function (k) {
+      var any = ds.some(function (d) { return savedCell(k, d).h > 0; });
+      if (any) delete w.empty[k]; else w.empty[k] = true;
+    });
+    /* A row taken off the week is off it: it is not kept as an empty one. */
+    removedRows.forEach(function (k) {
+      delete w.empty[k];
+      w.pinned = w.pinned.filter(function (x) { return x !== k; });
+      for (var i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].key === k) entries.splice(i, 1);
+      }
+      delete taskMeta[k];
+    });
+  }
 
   function writeCells(keys) {
     keys.forEach(function (dk) {
@@ -2917,6 +3055,7 @@
     if (SAVE_MODE === 'finalised') { saveFinalised(); return; }
     var n = changeCount();
     writeCells(draftKeys());
+    settleRows();
     exitEdit();
     Shell.snackbar(saved(n));
   });
@@ -2937,6 +3076,7 @@
     var mine = draftKeys().filter(function (dk) { return dkDate(dk) !== day; });
     var theirs = draftKeys().filter(function (dk) { return dkDate(dk) === day; });
     writeCells(mine);
+    settleRows();
     var who = '';
     theirs.forEach(function (dk) {
       var key = dkKey(dk), m = taskMeta[key];
@@ -2997,6 +3137,7 @@
     var keep = draftKeys().filter(function (dk) { return blockedKeys.indexOf(dk) === -1; });
     var n = keep.length;
     writeCells(keep);
+    settleRows();
     exitEdit();
     var lost = blockedKeys.length;
     Shell.snackbar((n ? saved(n) + ' ' : '') + lost +
@@ -3007,6 +3148,14 @@
     if (e.target === el('blocked-sheet') || e.target.closest('[data-close]')) {
       el('blocked-sheet').classList.remove('open');
     }
+  });
+
+  var editSwitch = el('edit-switch');
+  editSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-edit]');
+    if (!b) return;
+    EDIT_MODE = b.getAttribute('data-edit');
+    editSwitch.querySelectorAll('[data-edit]').forEach(function (x) { x.classList.toggle('on', x === b); });
   });
 
   var saveSwitch = el('save-switch');
@@ -4476,15 +4625,27 @@
   /* Taking back a row this edit added. Empty, it simply goes; with hours
      on it, it is worth asking, because the hours go with it. */
   function dropRow(key) {
+    var added = extraRows.indexOf(key) !== -1;
     extraRows = extraRows.filter(function (k) { return k !== key; });
     if (draft) {
       Object.keys(draft).forEach(function (dk) {
         if (dk.indexOf(key + '|') === 0) delete draft[dk];
       });
     }
-    /* Nothing was ever booked against it, so the task itself goes too. */
-    var everUsed = entries.some(function (e) { return e.key === key; });
-    if (!everUsed) delete taskMeta[key];
+    if (added) {
+      /* Nothing was ever booked against it, so the task itself goes too. */
+      var everUsed = entries.some(function (e) { return e.key === key; });
+      if (!everUsed) delete taskMeta[key];
+    } else {
+      /* A row that was already on the week goes when the edit is saved,
+         not now: the draft empties its days and holds it back from the
+         table, and Cancel puts it where it was. */
+      if (removedRows.indexOf(key) === -1) removedRows.push(key);
+      days().forEach(function (d) {
+        if (cellLocked(key, iso(d))) return;
+        draft[key + '|' + iso(d)] = { h: 0, s: '', f: '', a: [] };
+      });
+    }
     if (justAdded === key) justAdded = null;
     justAddedSet = justAddedSet.filter(function (k) { return k !== key; });
     render(); syncEditBar();
@@ -4499,10 +4660,12 @@
     var m = taskMeta[key];
     var hours = days().reduce(function (n, d) { return n + hoursFor(key, iso(d)); }, 0);
     if (!hours) { dropRow(key); return; }
+    var added = extraRows.indexOf(key) !== -1;
     askConfirm('Remove this task?',
       pathOf(m.levels) + ' has ' + fmtHours(hours) + ' h on it this week.',
       ['The hours entered against it are removed with it.',
-       'It was added during this edit and has not been saved.'],
+       added ? 'It was added during this edit and has not been saved.'
+             : 'It goes for good when you save; Cancel puts it back.'],
       function () { dropRow(key); Shell.snackbar('Task removed from this week.'); });
   }, true);
 
