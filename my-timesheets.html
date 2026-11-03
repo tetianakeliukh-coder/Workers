@@ -908,6 +908,9 @@
   /* ─── Today's column ──────────────────────────────────────────── */
   .grid-card th.tdy, .grid-card td.tdy { background: rgba(0, 51, 255, 0.045); }
   .grid-card thead th.tdy { background: #eef2ff; }
+  /* Enough room for the usual handful; past that it scrolls rather than
+     making the dialog taller than the screen. */
+  #bk-list { margin: 12px 0 0; max-height: 268px; }
   #bk-count { margin-top: 12px; color: var(--grey-600); }
 
   /* A figure that arrived from the supervisor rather than from here. */
@@ -1583,7 +1586,7 @@
     </div>
     <div class="modal-body">
       <p class="confirm-lead" id="bk-lead"></p>
-      <ul class="consequence" id="bk-list"></ul>
+      <div class="tlist short" id="bk-list"></div>
       <p class="confirm-lead" id="bk-count"></p>
     </div>
     <div class="modal-footer">
@@ -1614,6 +1617,8 @@
   function fmtDay(d) { return d.getDate() + ' ' + MONTHS[d.getMonth()]; }
   /* "26 October" — the column heading has the room for the month in full. */
   function fmtLong(d) { return d.getDate() + ' ' + MONTHS_LONG[d.getMonth()]; }
+  var DOW_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  function fmtDayLong(d) { return DOW_LONG[d.getDay()] + ', ' + fmtLong(d); }
   /* Rounded to a tenth before the test: a sum that drifts by a
      billionth of an hour is not a whole number, and would print the
      decimal it is meant to drop. */
@@ -2746,11 +2751,31 @@
     if (pos != null) { try { again.setSelectionRange(pos, pos); } catch (err) {} }
   }
 
+  /* Hours are a number: digits and one decimal mark, nothing else. What
+     does not belong is never typed rather than typed and then refused,
+     so there is no error to explain and nothing to undo. */
+  function keepNumeric(inp) {
+    var kept = '', seen = false;
+    inp.value.split('').forEach(function (ch) {
+      if (ch >= '0' && ch <= '9') { kept += ch; return; }
+      if ((ch === '.' || ch === ',') && !seen) { kept += '.'; seen = true; }
+    });
+    return kept;
+  }
+
   gridBody.addEventListener('input', function (e) {
     var inp = e.target.closest ? e.target.closest('input.hr-cell') : null;
     if (!inp || !draft) return;
     var key = inp.getAttribute('data-key'), date = inp.getAttribute('data-date');
-    var raw = inp.value.trim().replace(',', '.');
+    var kept = keepNumeric(inp);
+    if (kept !== inp.value) {
+      /* Put the caret back where it was, less whatever was dropped. */
+      var at = inp.selectionStart == null ? kept.length : inp.selectionStart;
+      var drop = inp.value.length - kept.length;
+      inp.value = kept;
+      try { inp.setSelectionRange(Math.max(0, at - drop), Math.max(0, at - drop)); } catch (err) {}
+    }
+    var raw = kept;
     /* Half-typed nonsense is left on screen rather than written as a
        zero: the figure is taken when it is a figure. */
     if (raw !== '' && (isNaN(Number(raw)) || Number(raw) < 0)) return;
@@ -2921,9 +2946,10 @@
       lastWord[dk] = true;
     });
     exitEdit();
-    Shell.snackbar(fmtDay(fromIso(day)) + ' was finalised by ' + (who || 'your supervisor') +
-      ' while you were editing — those hours are theirs now. Everything else was saved.',
-      { variant: 'error', persistent: true });
+    Shell.snackbar((who || 'Your supervisor') + ' finalised the timesheet while you were ' +
+      'editing, so your changes to that day were removed. Everything else was saved.',
+      { title: fmtDayLong(fromIso(day)) + ' was finalised',
+        variant: 'error', persistent: true });
   }
 
   /* Something was taken away mid-edit — a permission, a site setting.
@@ -2945,9 +2971,16 @@
     el('bk-lead').textContent = 'Your changes to ' + site + ' cannot be saved: you are no ' +
       'longer allowed to enter hours for that site. If that was done by mistake, ask your manager.';
     el('bk-list').innerHTML = stuck.map(function (dk) {
-      var m = taskMeta[dkKey(dk)] || {};
-      return '<li>' + Shell.esc(fmtDay(fromIso(dkDate(dk)))) + ' &mdash; ' +
-        Shell.esc(pathOf(m.levels || [])) + ' &mdash; ' + fmtHours(draft[dk].h) + ' h</li>';
+      var m = taskMeta[dkKey(dk)] || { levels: [] };
+      var rest = taskRest(m, -1);
+      var where = [Shell.esc(m.site), Shell.esc(m.sup),
+        fmtDay(fromIso(dkDate(dk))) + ' · ' + fmtHours(draft[dk].h) + ' h'].join(' · ');
+      return '<div class="recent-row">' +
+        '<span class="rr-body">' +
+          '<span class="rr-code">' + Shell.esc(taskTitle(m)) + '</span>' +
+          (rest ? '<span class="rr-sub">' + Shell.esc(rest) + '</span>' : '') +
+          '<span class="rr-where">' + where + '</span>' +
+        '</span></div>';
     }).join('');
     el('bk-count').textContent = stuck.length === 1
       ? 'One change will be lost.'
@@ -3185,7 +3218,16 @@
     renderGrid(); renderWeek(); syncEditBar();
   }
 
-  el('cp-h').addEventListener('input', syncCellErr);
+  el('cp-h').addEventListener('input', function () {
+    var kept = keepNumeric(this);
+    if (kept !== this.value) {
+      var at = this.selectionStart == null ? kept.length : this.selectionStart;
+      var drop = this.value.length - kept.length;
+      this.value = kept;
+      try { this.setSelectionRange(Math.max(0, at - drop), Math.max(0, at - drop)); } catch (err) {}
+    }
+    syncCellErr();
+  });
   ['cp-s', 'cp-f'].forEach(function (id) {
     el(id).addEventListener('input', function () {
       var v = hoursBetween(el('cp-s').value, el('cp-f').value);

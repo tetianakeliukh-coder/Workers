@@ -385,29 +385,40 @@ tbody td {
 .empty-title { font-size: 16px; font-weight: 500; color: var(--grey-800); }
 .empty-sub { font-size: 14px; color: var(--grey-600); }
 
-/* ─── Snackbar ────────────────────────────────────────────────────────── */
+/* ─── Snackbar ──────────────────────────────────────────────────────────
+   Material's own: a dark slab in the bottom-left corner, out of the way
+   of everything the page puts on the right. A title is optional and sets
+   the subject; the line under it says what happened to it. */
 .snackbar {
-  position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 16px);
-  display: flex; align-items: center; gap: 12px;
-  min-width: 320px; max-width: 460px; padding: 12px 16px;
-  background: var(--white); border: 1px solid var(--grey-200);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-dialog);
-  font-size: 14px; color: var(--text-main); z-index: 500;
+  position: fixed; left: 24px; bottom: 24px; transform: translateY(16px);
+  display: flex; align-items: flex-start; gap: 12px;
+  min-width: 288px; max-width: 568px; padding: 10px 16px;
+  background: #323232; color: var(--white);
+  border-radius: 4px;
+  box-shadow: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px rgba(0, 0, 0, .14),
+              0 1px 18px rgba(0, 0, 0, .12);
+  font-family: var(--fs-sans); font-size: 14px; line-height: 20px; z-index: 500;
   opacity: 0; pointer-events: none; transition: opacity var(--t-normal), transform var(--t-normal);
 }
-.snackbar.visible { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
-.snackbar-msg { flex: 1; }
+.snackbar.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.snackbar-body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.snackbar-title { font-weight: 500; }
+.snackbar-title[hidden] { display: none; }
+.snackbar-msg { color: rgba(255, 255, 255, .82); }
+.snackbar-title + .snackbar-msg:empty { display: none; }
 
 /* A failure has to stay put until it is read, so it carries a dismiss. */
-.snackbar.error { border-color: var(--error); border-left: 3px solid var(--error); }
+.snackbar.error { padding-left: 13px; border-left: 3px solid #f0808c; }
 .snackbar-close {
-  display: none; flex-shrink: 0; width: 24px; height: 24px; padding: 0;
+  display: none; flex-shrink: 0; width: 24px; height: 24px; padding: 0; margin-top: -1px;
   align-items: center; justify-content: center;
   background: none; border: none; border-radius: 4px;
-  color: var(--grey-600); cursor: pointer;
+  color: rgba(255, 255, 255, .72); cursor: pointer;
 }
-.snackbar-close:hover { background: var(--grey-200); color: var(--text-main); }
+.snackbar-close:hover { background: rgba(255, 255, 255, .12); color: var(--white); }
 .snackbar-close.visible { display: flex; }
+
+body.shell-mobile .snackbar { left: 16px; right: 16px; max-width: none; }
 
 /* ─── Modal ───────────────────────────────────────────────────────────── */
 .modal-backdrop {

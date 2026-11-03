@@ -38,7 +38,7 @@
     { id: 'search',     label: 'Search',           icon: 'search',     action: 'global-search' },
     { id: 'home',       label: 'Home',             icon: 'home' },
     { id: 'documents',  label: 'Documents',        icon: 'documents' },
-    { id: 'workers',    label: 'Workers',          icon: 'workers',    href: 'index.html' },
+    { id: 'workers',    label: 'Workers',          icon: 'workers',    href: 'workers/index.html' },
     { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
     { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
@@ -304,7 +304,9 @@
 
   /* snackbar(msg) auto-dismisses. snackbar(msg, { variant: 'error',
      persistent: true }) stays until the user dismisses it — a failure the
-     user has to act on shouldn't vanish while they are reading it. */
+     user has to act on shouldn't vanish while they are reading it.
+     { title: '...' } puts a line above the message naming what the
+     message is about. */
   var snackTimer;
   function snackbar(msg, opts) {
     opts = opts || {};
@@ -312,7 +314,10 @@
     if (!el) {
       el = document.createElement('div');
       el.id = 'shell-snackbar';
-      el.innerHTML = '<span class="snackbar-msg"></span>' +
+      el.innerHTML = '<span class="snackbar-body">' +
+          '<span class="snackbar-title" hidden></span>' +
+          '<span class="snackbar-msg"></span>' +
+        '</span>' +
         '<button class="snackbar-close" type="button" aria-label="Dismiss">' +
           '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
         '</button>';
@@ -322,6 +327,9 @@
       });
     }
     el.className = 'snackbar' + (opts.variant ? ' ' + opts.variant : '');
+    var title = el.querySelector('.snackbar-title');
+    title.textContent = opts.title || '';
+    title.hidden = !opts.title;
     el.querySelector('.snackbar-msg').textContent = msg;
     el.querySelector('.snackbar-close').classList.toggle('visible', !!opts.persistent);
     el.classList.add('visible');
