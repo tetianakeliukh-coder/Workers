@@ -267,7 +267,10 @@
   }
   .hr-cell:hover { border-color: var(--border-hover); }
   .hr-cell:focus { outline: none; border-color: var(--primary); }
-  .hr-cell.changed { border-color: var(--primary); background: var(--bg-blue-light); }
+  /* Typed in this edit and not yet saved. Amber rather than blue: blue
+     is the focus ring on the cell next to it, and the two read as the
+     same thing. */
+  .hr-cell.changed { border-color: var(--sec-amber); background: #fdf4e8; }
   /* Changed and over-booked at once: over-booked is the one to say. */
   .hr-cell.over, .hr-cell.changed.over { border-color: var(--error); background: #fdf2f3; }
   /* Already submitted or finalised: shown, not offered. */
@@ -1836,6 +1839,13 @@
   function cellOf(key, isoDate) {
     var dk = key + '|' + isoDate;
     if (draft && dk in draft) return draft[dk];
+    return savedCell(key, isoDate);
+  }
+  /* What the cell would show if this edit were thrown away. Changes are
+     measured against this and not against the draft, so a cell that was
+     typed into and then emptied again goes back to untouched instead of
+     counting as a change for the rest of the edit. */
+  function savedCell(key, isoDate) {
     var h = 0, st = '', fi = '', al = [];
     entries.forEach(function (e) {
       if (e.key !== key || e.date !== isoDate) return;
@@ -1932,9 +1942,15 @@
     return n;
   }
   function overCap(isoDate) { return dayTotal(isoDate, false) > DAY_CAP; }
-  /* The cell the day was pushed over by, kept so the mark survives the
-     editor closing and the grid being drawn again. */
-  var overKey = null;
+  /* Which cell pushed each day over, so the mark survives the editor
+     closing and the grid being drawn again. A day that arrived over the
+     cap has no such cell — nobody in this edit put it there — so every
+     cell on it that holds hours is marked instead. */
+  var overAt = Object.create(null);
+  function cellOver(dk, isoDate, value) {
+    if (!(value > 0) || !overCap(isoDate)) return false;
+    return !overAt[isoDate] || overAt[isoDate] === dk;
+  }
 
   /* ─── Desktop grid ────────────────────────────────────────────── */
   var gridCols = document.getElementById('grid-cols');
@@ -2054,7 +2070,7 @@
       var lock = cellLocked(key, isoDate);
       return '<td class="col-day' + todayCls(isoDate) + '">' +
         '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
-        (overKey === dk && overCap(isoDate) ? ' over' : '') + '" type="button" ' +
+        (cellOver(dk, isoDate, value) ? ' over' : '') + '" type="button" ' +
         'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
         (lock ? ' disabled data-tip="' + TIP_LOCKED + '"' : '') + '>' +
         alwDot(key, isoDate) +
@@ -2682,6 +2698,7 @@
   }
   function enterEdit() {
     state.editing = true; draft = Object.create(null); extraRows = []; pending = [];
+    overAt = Object.create(null);
     document.body.classList.add('editing');
     /* The week is the thing being edited; changing it underneath a draft
        would leave the draft pointing at days no longer on screen. */
@@ -2696,6 +2713,7 @@
   }
   function exitEdit() {
     state.editing = false; draft = null; extraRows = []; pending = []; justAdded = null;
+    overAt = Object.create(null);
     closeTaskPop(); closeWherePop(); closeAddMenu();
     document.body.classList.remove('editing');
     syncDateLock();
@@ -2876,6 +2894,16 @@
     });
   }
 
+  /* A cell is in the draft while it differs from what is saved, and out
+     of it otherwise — which is what makes clearing a cell back to its
+     old figure the same as never having touched it. */
+  function putCell(key, isoDate, next) {
+    if (!draft) return;
+    var dk = key + '|' + isoDate;
+    if (sameCell(next, savedCell(key, isoDate))) delete draft[dk];
+    else draft[dk] = next;
+  }
+
   function commitCell() {
     if (!popKey || !draft) return;
     var period = entryModeOf(popKey) === 'period';
@@ -2885,9 +2913,15 @@
       var fromTimes = hoursBetween(sT, fT);
       if (fromTimes == null) { sT = ''; fT = ''; v = 0; } else { v = fromTimes; }
     } else {
-      /* An hours site has no times to keep, so none are written. */
+      /* An hours site has no times to keep, so none are written. The
+         prototype can also put an hours-only face on a site that does
+         book times: those are kept while the figure is still the one
+         they add up to, so a cell typed into and put back reads as
+         untouched, and dropped the moment it is not. */
       var h = el('cp-h').value.trim().replace(',', '.');
       v = h === '' ? 0 : Number(h);
+      var sv = savedCell(popKey, popDate);
+      if (v === sv.h) { sT = sv.s; fT = sv.f; }
     }
     if (isNaN(v) || v < 0) v = 0;
     /* A person cannot work more than a day in a day — but silently cutting
@@ -2895,9 +2929,9 @@
        to say. The figure is kept as entered, the day it lands on is marked,
        and Save is what refuses until the day adds up. */
     var others = dayTotal(popDate, false) - cellOf(popKey, popDate).h;
-    overKey = (others + v > DAY_CAP) ? (popKey + '|' + popDate) : null;
-    var next = { h: v, s: sT, f: fT, a: cellAllowances() };
-    if (!sameCell(next, cellOf(popKey, popDate))) draft[popKey + '|' + popDate] = next;
+    if (others + v > DAY_CAP) overAt[popDate] = popKey + '|' + popDate;
+    else delete overAt[popDate];
+    putCell(popKey, popDate, { h: v, s: sT, f: fT, a: cellAllowances() });
     closeCell();
     renderGrid(); renderWeek(); syncEditBar();
   }
@@ -2916,7 +2950,10 @@
     });
   });
   el('cp-clear').addEventListener('click', function () {
-    if (popKey && draft) draft[popKey + '|' + popDate] = { h: 0, s: '', f: '', a: [] };
+    if (popKey) putCell(popKey, popDate, { h: 0, s: '', f: '', a: [] });
+    /* Emptying a cell cannot be what pushed the day over, so if the day
+       is still over it is no longer known which cell did. */
+    delete overAt[popDate];
     closeCell();
     renderGrid(); renderWeek(); syncEditBar();
   });
@@ -2925,7 +2962,7 @@
     if (e.key === 'Enter') { e.preventDefault(); commitCell(); }
     /* Escape is the way out that keeps nothing — and it must not travel
        on, or the page's own Escape would end the whole edit. */
-    if (e.key === 'Escape') { e.stopPropagation(); closeCell(); }
+    if (e.key === 'Escape') { e.stopPropagation(); closeCell(); renderGrid(); }
   });
 
   /* Leaving the editor keeps what is in it. Typing a number and clicking
