@@ -707,8 +707,10 @@
   }
   .vp-switch button:hover { background: var(--grey-100); color: var(--text-main); }
   .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
-  /* Sits to the left of the preview switcher — needs to outrank .vp-switch. */
-
+  /* With allowances off there is nothing to claim, so the line the claim
+     would sit on goes with it rather than saying the site has none. */
+  body.no-allowances #cp-alw-sep,
+  body.no-allowances #cp-alw { display: none; }
 
   /* ─── Week dropdown ────────────────────────────────────────────── */
   .period-dd .dd-trigger { min-width: 232px; }
@@ -1234,19 +1236,32 @@
 
 
 
-<div class="vp-switch" id="layout-switch" role="group" aria-label="Prototype add-task layout">
+<!-- ── Prototype switchers: the shell gathers every .vp-switch into one
+     dock in the corner, so each one only has to name itself. ────── -->
+<div class="vp-switch" id="layout-switch" role="group" aria-label="Add a task">
   <button type="button" data-layout="inline" class="on">In the row</button>
   <button type="button" data-layout="one">With a tray</button>
   <button type="button" data-layout="cols">Two halves</button>
 </div>
 
-<!-- ── Prototype viewport switcher ──────────────────────────────── -->
-<div class="vp-switch fields-switch" id="fields-switch" role="group" aria-label="Fields that name a task">
+<div class="vp-switch" id="fields-switch" role="group" aria-label="Fields that name a task">
   <button type="button" data-fields="0" class="on">Site&rsquo;s own</button>
   <button type="button" data-fields="1">1 field</button>
   <button type="button" data-fields="2">2</button>
   <button type="button" data-fields="3">3</button>
   <button type="button" data-fields="4">4</button>
+</div>
+
+<!-- Iteration one books hours and nothing else, and carries no
+     allowances; the mixed setting is what the sites run today. -->
+<div class="vp-switch" id="entry-switch" role="group" aria-label="Time entry">
+  <button type="button" data-entry="site" class="on">Site&rsquo;s own</button>
+  <button type="button" data-entry="hours">Hours only</button>
+</div>
+
+<div class="vp-switch" id="allow-switch" role="group" aria-label="Allowances">
+  <button type="button" data-allow="1" class="on">On</button>
+  <button type="button" data-allow="0">Off</button>
 </div>
 
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
@@ -1435,7 +1450,7 @@
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.3v4M8 4.8v.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     <span id="cp-err-t"></span>
   </p>
-  <div class="cp-sep">allowance claimed for this day</div>
+  <div class="cp-sep" id="cp-alw-sep">allowance claimed for this day</div>
   <div class="cp-alw" id="cp-alw"></div>
   <!-- No Done: the page is in edit mode and Save at the top is the
        commit. What is typed here is kept on the way out, so a button
@@ -1631,7 +1646,13 @@
       { name: 'Breakfast',        type: 'check' }
     ]
   };
-  function allowancesFor(site) { return ALLOWANCES_BY_SITE[site] || []; }
+  function allowancesFor(site) {
+    return PROTO.allowances ? (ALLOWANCES_BY_SITE[site] || []) : [];
+  }
+
+  /* Prototype-only settings. The first iteration books hours alone and
+     carries no allowances, so both have to be switchable to be shown. */
+  var PROTO = { entry: 'site', allowances: true };
 
   /* How a site records time, set in its own settings and not up for
      argument on a timesheet: 'period' sites are worked in start and
@@ -1642,7 +1663,10 @@
     'MMA VIGILANT ROV':   'period',
     'SA BHP OLYMPIC DAM': 'hours'
   };
-  function entryModeFor(site) { return ENTRY_BY_SITE[site] === 'hours' ? 'hours' : 'period'; }
+  function entryModeFor(site) {
+    if (PROTO.entry === 'hours') return 'hours';
+    return ENTRY_BY_SITE[site] === 'hours' ? 'hours' : 'period';
+  }
   function entryModeOf(key) { var m = taskMeta[key]; return entryModeFor(m && m.site); }
 
   var SUPS_BY_SITE = {
@@ -2018,7 +2042,7 @@
   }
   /* A cell that carries a claim flags itself. */
   function alwDot(key, isoDate) {
-    if (!key) return '';
+    if (!key || !PROTO.allowances) return '';
     var a = allowOf(key, isoDate);
     if (!a.length) return '';
     return '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowTip(a)) + '">' + ICO_ALW + '</span>';
@@ -4118,6 +4142,30 @@
     sync();
     var first = el('oc-fields').querySelector('select');
     if (first) first.focus();
+  });
+
+  /* How a site records time, and whether allowances exist at all. Both
+     rewrite every cell, so the cell editor is closed rather than left
+     showing the fields of a mode that is no longer on. */
+  var entrySwitch = el('entry-switch');
+  entrySwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-entry]');
+    if (!b) return;
+    PROTO.entry = b.getAttribute('data-entry');
+    entrySwitch.querySelectorAll('[data-entry]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    closeCell();
+    render();
+  });
+
+  var allowSwitch = el('allow-switch');
+  allowSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-allow]');
+    if (!b) return;
+    PROTO.allowances = b.getAttribute('data-allow') === '1';
+    allowSwitch.querySelectorAll('[data-allow]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    document.body.classList.toggle('no-allowances', !PROTO.allowances);
+    closeCell();
+    render();
   });
 
   var fieldsSwitch = document.getElementById('fields-switch');
