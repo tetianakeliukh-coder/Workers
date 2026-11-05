@@ -318,6 +318,7 @@
           '<span class="snackbar-title" hidden></span>' +
           '<span class="snackbar-msg"></span>' +
         '</span>' +
+        '<button class="snackbar-action" type="button" hidden></button>' +
         '<button class="snackbar-close" type="button" aria-label="Dismiss">' +
           '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
         '</button>';
@@ -331,6 +332,20 @@
     title.textContent = opts.title || '';
     title.hidden = !opts.title;
     el.querySelector('.snackbar-msg').textContent = msg;
+    /* One way back from something that has already happened. It lives on
+       the message rather than on the page, because by the time it is
+       wanted the thing it undoes is no longer on screen. */
+    var act = el.querySelector('.snackbar-action');
+    act.hidden = !opts.action;
+    act.onclick = null;
+    if (opts.action) {
+      act.textContent = opts.action.label || 'Undo';
+      act.onclick = function () {
+        el.classList.remove('visible');
+        clearTimeout(snackTimer);
+        opts.action.onClick();
+      };
+    }
     el.querySelector('.snackbar-close').classList.toggle('visible', !!opts.persistent);
     el.classList.add('visible');
     clearTimeout(snackTimer);
