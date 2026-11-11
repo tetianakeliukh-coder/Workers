@@ -27,10 +27,40 @@
      cell no longer has, so one column of figures lines up down the page:
      header, summary line and task row all on the same edge. */
   .cell-fig {
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 4px; padding: 0 8px; min-height: 30px;
+    display: flex; align-items: center; gap: 0; padding: 0 8px; min-height: 30px;
   }
-  .cell-fig .hr-lock, .hr-view.locked .hr-lock { margin-right: 0; }
+  /* ─── Slots ─────────────────────────────────────────────────────
+     A mark gets a place, not a position in a queue. The slot is drawn
+     whether or not anything is in it, so the padlock on row four lands
+     in the same column as the padlock on row one, and the figure never
+     moves because something appeared to the left of it. The cost is
+     the width of the empty slots, paid in every cell — which is the
+     trade the three-mark variant is asking about. */
+  .cmarks { display: flex; align-items: center; flex-shrink: 0; }
+  .cm {
+    width: 15px; height: 16px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--grey-600);
+  }
+  .cfig { flex: 1 1 auto; min-width: 0; text-align: right; }
+  .cm-cmt { color: var(--grey-600); }
+  .cm-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--sec-amber); }
+  /* ─── The corner ────────────────────────────────────────────────
+     Out of the row altogether, into the cell's own corner, where it
+     costs no width at all and cannot be pushed about by anything else.
+     What it cannot do is say which of the two it is — that is the
+     trade this variant is asking about. */
+  #grid td.col-day { position: relative; }
+  .cm-corner {
+    position: absolute; top: 4px; left: 5px; width: 0; height: 0; pointer-events: none;
+    border-top: 7px solid var(--sec-amber); border-right: 7px solid transparent;
+  }
+  /* A mark that sits in a corner needs the reader to know whose corner
+     it is. Days are the one place in this table with no rule between
+     them, so this variant draws one. */
+  body.marks-corner #grid th.col-day,
+  body.marks-corner #grid td.col-day { box-shadow: inset 1px 0 0 var(--grey-200); }
+  body.marks-corner #grid tbody td.col-total { box-shadow: inset 1px 0 0 var(--grey-200); }
   /* Secondary actions read as actions. */
   .period-bar .btn-ghost { color: var(--primary); }
   .step {
@@ -69,9 +99,32 @@
   .save-state[data-state="saving"]::before { background: var(--grey-400); }
   .save-state[data-state="error"] { color: var(--error); }
   .save-state[data-state="error"]::before { background: var(--error); }
-  body.week-empty .add-hint { display: none; }
+  /* The one place anything refused can be sent again. A retry inside
+     the cell is a button that only exists under the pointer, which is
+     a button you have to chase; a retry in the snackbar is ten
+     snackbars to pick through. The header already answers "is my work
+     safe" — so it is where the answer "no, press this" belongs. */
+  .save-retry {
+    font-family: var(--fs-sans); font-size: 13px; line-height: 18px;
+    color: var(--primary); background: none; border: 0; padding: 0; margin-left: -2px;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .save-retry:hover { color: var(--primary-dark); }
+  .save-retry[hidden] { display: none; }
   #add-menu-wrap { display: none; position: relative; }
   body.editing #add-menu-wrap { display: inline-flex; }
+  /* A week with nothing on it has nothing to sort, nothing to fold and
+     nothing to add to from the toolbar — and a row of controls over an
+     empty table is a row of things to read before the one button that
+     matters. The empty state carries both ways in itself, so it is the
+     only thing offered. Written after the rule that shows Add task,
+     because the two sit at the same specificity and the later one is
+     the one that counts. */
+  body.week-empty .add-hint,
+  body.week-empty #add-menu-wrap,
+  body.week-empty #sort-wrap,
+  body.week-empty #btn-collapse,
+  body.week-empty .period-actions { display: none; }
   /* Putting work on the week is the thing this page is for, so it is
      the one button that looks like one — and it sits in the header,
      with the period it will be added to. */
@@ -162,12 +215,23 @@
   .pick-modal .modal-footer { padding: 16px 24px 20px; }
   /* Offered, not pressed: it is the shortcut for the week that repeats
      whole, and it sits above the list it would stand in for. */
-  .pick-dup {
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    padding: 10px 12px; border-radius: 10px; background: var(--bg-blue-light);
-    font-size: 13px; line-height: 18px; color: var(--text-main);
+  /* The same shape as a row in the list underneath it, because it is
+     the row that stands for all of them. */
+  .pick-all {
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    padding: 8px 12px; border-radius: 10px; background: var(--grey-100);
+    font-size: 13px; line-height: 18px; font-weight: 500; color: var(--text-main);
   }
-  .pick-dup button { flex-shrink: 0; }
+  .pick-all:hover { background: var(--grey-200); }
+  .pick-all[hidden] { display: none; }
+  .pick-all .rr-tick {
+    width: 16px; height: 16px; flex-shrink: 0; border-radius: 4px;
+    border: 1.5px solid var(--grey-400); background: var(--white);
+    display: flex; align-items: center; justify-content: center; color: var(--white);
+  }
+  .pick-all.on .rr-tick { background: var(--primary); border-color: var(--primary); }
+  .pick-all .rr-tick svg { opacity: 0; }
+  .pick-all.on .rr-tick svg { opacity: 1; }
   .rr-where { font-size: 12px; line-height: 16px; color: var(--grey-600);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rr-where b { font-weight: 500; color: var(--grey-700); }
@@ -274,7 +338,23 @@
      The work order is what the row is found by, so it leads on its own
      line; the rest is what tells it from the row under it. */
   .tname { display: block; min-width: 0; }
-  .tn-code { display: block; font-weight: 500; color: var(--text-main); line-height: 18px; }
+  /* The end of a task name is often the only thing telling it from the
+     one above it, so a name too long for the column wraps rather than
+     being cut off with an ellipsis. Three lines is where it stops:
+     past that the row is taller than the week is worth. */
+  #grid td.col-task { white-space: normal; text-overflow: clip; }
+  /* One level, one line — and the line wraps rather than being cut,
+     because the end of a task name is often the only thing telling it
+     from the one above. */
+  .tn-one {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+    overflow: hidden; font-weight: 500; color: var(--text-main);
+    font-size: 14px; line-height: 19px;
+  }
+  .tn-code {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
+    overflow: hidden; font-weight: 500; color: var(--text-main); line-height: 18px;
+  }
   .tn-rest {
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
     overflow: hidden; margin-top: 1px;
@@ -397,15 +477,37 @@
   }
   .tname-btn:hover { border-color: var(--border-hover); background: var(--white); }
   .tname-btn:focus-visible { outline: none; border-color: var(--primary); }
-  /* The padlock on its own. The name is the longest thing in the row
-     and the thing most often read; wrapping it in a grey box to say one
-     small thing about it costs more than the thing is worth. */
-  .tname-locked { display: flex; align-items: flex-start; gap: 6px; }
-  /* Beside the name it is about, not at the far edge of the column
-     where it would sit against the first day and look like a mark on
-     that instead. */
-  .tname-locked .hr-lock { flex-shrink: 0; margin-top: 2px; color: var(--grey-600); }
-  .tname-locked .tname { flex: 0 1 auto; }
+  /* The field only showed itself under the pointer — so the moment the
+     dropdown opened and the pointer moved down into it, the thing being
+     edited stopped looking like a thing being edited. While the panel
+     is open the field stays open with it. */
+  .tname-btn.open, .tname-btn.open:hover {
+    border-color: var(--primary); background: var(--white);
+  }
+  /* A task whose name is settled says so by fading, not by carrying a
+     padlock. The padlock belongs on the hours, where every cell needs
+     to answer "can I type here" on its own; on the name it would sit
+     either in front of the text — making every task in the column
+     start at a different place, depending on whether it happened to be
+     locked — or at the far edge of the column, where it reads as a
+     mark on the first day instead. Faded is the same "switched off"
+     the rest of the product uses, and it costs the column nothing. */
+  #grid td.col-task.shut .tname { opacity: 0.5; }
+  /* A task on its way in, or refused. The row is already on the page —
+     the person put it there — so the colour is on the name and on the
+     days it is holding shut, not a second row somewhere saying the
+     first one is provisional. */
+  #grid td.col-task.saving { display: flex; align-items: flex-start; gap: 6px; }
+  #grid td.col-task.saving .hr-spin { margin-top: 7px; }
+  #grid td.col-task.err { background: var(--error-light); }
+  #grid td.col-task.err .tname { opacity: 1; }
+  /* Shut because the row has no task yet, or because its task is not
+     in. Both are "not yet", which is a greyer thing than "never": the
+     cell is tinted so the row reads as a block rather than as seven
+     days that each happen to be empty. */
+  #grid td.col-day.held, #grid td.col-total.held { background: var(--grey-100); }
+  #grid td.col-day.held .cell-empty, #grid td.col-total.held .cell-empty { color: var(--grey-400); }
+  #grid tr.row-pend td.col-task { background: var(--grey-100); }
 
   /* ─── The cell at rest ──────────────────────────────────────────
      The page is a page of figures first. A grid of boxes reads as a
@@ -414,7 +516,8 @@
      where it is the answer to "can I change this?" at the moment the
      question is asked. */
   .hr-view {
-    display: block; width: calc(100% - 8px); height: 30px; margin: 0 4px; padding: 0 3px;
+    display: flex; align-items: center;
+    width: calc(100% - 8px); height: 30px; margin: 0 4px; padding: 0 3px;
     text-align: right; font-family: var(--fs-sans); font-size: 14px;
     color: var(--text-main); font-variant-numeric: tabular-nums;
     border: 1px solid transparent; border-radius: 6px; background: none;
@@ -439,7 +542,6 @@
      it reads as part of the table, and the figure sits in it as plainly
      as it does anywhere else. */
   .hr-view.locked, .hr-view.locked:hover {
-    display: flex; align-items: center; justify-content: flex-end; gap: 4px;
     color: var(--grey-600); cursor: default;
     border-color: transparent; background: none;
   }
@@ -468,6 +570,34 @@
     0%   { background: rgba(40, 158, 26, 0.18); border-color: var(--success); }
     100% { background: none; border-color: transparent; }
   }
+  /* ─── Still in the air ──────────────────────────────────────────
+     A write that answers inside a second is a write nobody needs
+     telling about: the green mark at the end says it, and a spinner on
+     every figure is noise on a week that is forty figures long. Past a
+     second the cell admits it is waiting, and it does it the way the
+     rest of the product says wait — grey, a spinner, and no box,
+     because the field that was typed into has already closed. */
+  .hr-view.saving, .hr-view.saving:hover {
+    background: var(--grey-200); border-color: transparent; color: var(--grey-700);
+  }
+  .hr-spin {
+    width: 11px; height: 11px; flex-shrink: 0; border-radius: 50%;
+    border: 1.5px solid var(--grey-350); border-top-color: var(--grey-600);
+    animation: hr-turn 0.7s linear infinite;
+  }
+  @keyframes hr-turn { to { transform: rotate(360deg); } }
+  /* ─── Refused, and the figure stays ─────────────────────────────
+     What a worker loses when a save fails is the number they typed,
+     and putting the old one back loses it twice over — they are left
+     not knowing what it was they lost. So the cell keeps what they
+     wrote and goes red around it: the same footprint the green mark
+     uses, in the opposite colour, and it does not fade. The reason
+     arrives on hover; the way out of it is the one Retry in the
+     header. */
+  .hr-view.err, .hr-view.err:hover {
+    background: var(--error-light); border-color: transparent;
+  }
+  .hr-view.err.selected, .hr-view.err.selected:hover { border-color: var(--error); }
   /* The padlock and the allowance are two grey marks in the same corner
      of the same cell. The padlock is a condition of the day, so it is
      drawn lighter than the claim, which is something the worker put
@@ -1390,6 +1520,7 @@
         <h1 class="page-title">My Timesheets</h1>
         <div class="header-actions">
           <span class="save-state" id="save-state" data-state="idle">All changes saved</span>
+          <button class="save-retry" type="button" id="save-retry" hidden>Retry</button>
           <div class="dd-wrap" id="date-dd">
             <button class="dd-trigger" type="button">
               <span>Date: <span id="date-dd-value">Current week</span></span>
@@ -1409,7 +1540,7 @@
             <div class="add-menu" id="add-menu" role="menu">
               <button type="button" role="menuitem" data-addmode="recent">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 4.2v4l2.6 1.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.2 8a5.8 5.8 0 105.8-5.8c-2 0-3.8 1-4.9 2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2 2.6v2.6h2.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Select a recent task
+                Select recent tasks
               </button>
               <button type="button" role="menuitem" data-addmode="new">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
@@ -1512,6 +1643,22 @@
   <button type="button" data-save="finalised">Day finalised</button>
   <button type="button" data-save="blocked">Permission lost</button>
   <button type="button" data-save="server">Server error</button>
+</div>
+
+<!-- What a cell can carry besides its figure, and how. Every variant
+     keeps the padlock in a slot of its own so it never shifts. -->
+<div class="vp-switch" id="marks-switch" role="group" aria-label="Marks in a cell">
+  <button type="button" data-marks="three" class="on">Three icons</button>
+  <button type="button" data-marks="corner">Corner mark</button>
+  <button type="button" data-marks="dot">One dot</button>
+</div>
+
+<!-- How long the answer takes. Under a second the cell draws nothing
+     at all; over it, it says it is still waiting; at ten it stops. -->
+<div class="vp-switch" id="speed-switch" role="group" aria-label="How long a save takes">
+  <button type="button" data-speed="fast" class="on">Answers fast</button>
+  <button type="button" data-speed="slow">Answers slowly</button>
+  <button type="button" data-speed="timeout">Times out</button>
 </div>
 
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
@@ -1741,7 +1888,7 @@
   <div class="modal pick-modal">
     <div class="modal-header">
       <div class="modal-heading">
-        <span class="modal-title" id="pick-title">Select a recent task</span>
+        <span class="modal-title" id="pick-title">Select recent tasks</span>
         <!-- The site and the supervisor are on every card, because the
              worker has not been asked for them: one pick can reach
              across two timesheets and that has to be visible. -->
@@ -1753,10 +1900,10 @@
     <div class="modal-body">
       <!-- Only the tasks come over. The hours are what the week is a
            record of, and a week nobody has worked yet has none. -->
-      <div class="pick-dup" id="pick-dup" hidden>
-        <span>Same work as last week?</span>
-        <button class="btn-outline" type="button" id="pick-dup-go">Copy last week&rsquo;s tasks</button>
-      </div>
+      <!-- The list already leaves out everything that is on the week
+           already, so "all of them" is a real answer: the week that
+           repeats whole is one tick and one press. -->
+      <div class="pick-all" id="pick-all" hidden></div>
       <div class="tlist" id="pick-list"></div>
     </div>
     <div class="modal-footer">
@@ -1785,7 +1932,7 @@
     </div>
     <div class="modal-footer">
       <div class="modal-footer-actions">
-        <button class="btn-ghost" type="button" data-close>Keep it</button>
+        <button class="btn-ghost" type="button" data-close id="confirm-no">Keep it</button>
         <button class="btn-danger" type="button" id="confirm-ok">Remove</button>
       </div>
     </div>
@@ -1983,12 +2130,23 @@
     return rows.slice(0, 12);
   }
   function pathOf(levels) { return levels.filter(Boolean).join(' | '); }
+  /* The same name as it is written for a person rather than for a key:
+     the pipes are how the levels are joined into something unique, not
+     how anybody reads a task out loud. */
+  function saidAs(levels) { return levels.filter(Boolean).join(' \u00b7 '); }
   function keyOf(site, sup, levels) { return site + '§' + sup + '§' + pathOf(levels); }
 
   /* ─── The worker's own entries ────────────────────────────────────
      Generated around today so the week always has something in it. */
   var entries = [];
   var taskMeta = Object.create(null);         // key -> { site, sup, levels }
+  /* Notes live per cell, like hours do. Declared here rather than beside
+     the marks that draw them, because the week below is seeded with
+     them and a var assigned further down the file is still undefined
+     when that runs. */
+  var cellNote = Object.create(null);
+  /* What Stijn's team settles on for short free text. */
+  var NOTE_MAX = 255;
 
   function add(day, site, sup, levels, hours, start, finish, allow) {
     var k = keyOf(site, sup, levels);
@@ -2045,6 +2203,30 @@
     [{ name: 'Dive Allowance', type: 'amount', qty: 2 }]);
   add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', E, 2, '13:30', '15:30',
     [{ name: 'Offshore Living', type: 'check' }]);
+
+  /* Notes, written where a worker would actually leave one: the day
+     that went wrong, the day somebody else needs to know about. Laid on
+     thickly here on purpose — the question on the table is what a cell
+     looks like when the day is handed in, carries an allowance and has
+     a note on it all at once, and a sheet with two marks on it cannot
+     answer that. */
+  function note(day, site, sup, levels, text) {
+    cellNote[keyOf(site, sup, levels) + '|' + iso(day)] = text.slice(0, NOTE_MAX);
+  }
+  note(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A,
+    'Started an hour late, crane was still on the other deck.');
+  note(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', B,
+    'Only got the first two plates done before the weather came in.');
+  note(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A,
+    'Short day, sent up to help Tom after crib.');
+  note(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Tom Halloran', H,
+    'Handrail on the port walkway, second section.');
+  note(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H,
+    'Rope access, signed off by Tom on the deck.');
+  note(addDays(THIS_MON, 2), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F,
+    'Drove in from Roxby, two hours each way.');
+  note(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D,
+    'Two dives, second one cut short on a thruster fault.');
 
   /* Older work, so the quick picks can say when each was last used —
      and enough of it that the list of recent tasks is a list. */
@@ -2105,9 +2287,11 @@
   var liveCell = null;       // 'key|date' being typed into, or null
   var selCell = null;        // picked, not yet opened — only in the two-click mode
   var CLICK_MODE = 'two';    // 'two' = pick then open, 'one' = open on the first click
-  var justSaved = null;      // the cell written last, while its mark fades
-  var savedTimer = null;
-  var saveState = 'idle';    // what the header says: idle | saving | error
+  /* Every cell whose mark is still fading, not just the last one:
+     Retry sends a handful at once, and a handful coming back green one
+     after another is the only sign that the button did anything. */
+  var justSaved = Object.create(null);
+  var savedTimer = Object.create(null);
   var extraRows = [];        // keys added during this edit
   /* A row put on the week before it has a task on it. It has no key —
      a key is what the task makes — so it is held by an id of its own
@@ -2279,6 +2463,10 @@
      with three decimals — so the column is cut to that, not to what a
      typical 8 looks like. */
   var DAY_W = 96;
+  /* Three marks need three slots, and three slots need the width. The
+     column grows for that mode rather than the figure being squeezed —
+     which is itself part of the answer to "can we have three icons". */
+  function dayW() { return MARK_MODE === 'three' ? 118 : 96; }
   function dayTotal(isoDate, searchedOnly) {
     var n = 0;
     Object.keys(taskMeta).forEach(function (k) {
@@ -2375,8 +2563,16 @@
      because the day was finalised mid-edit. Marked until the worker
      opens the next edit, by which time they have read it. */
   var lastWord = Object.create(null);
+  /* Days this session has written to. Hours now land the moment they
+     are typed, so without this a day that was empty becomes a day with
+     saved hours on it — and the mock's rule for "handed in" would shut
+     the cell the worker is still sitting in. Nobody hands a day in by
+     entering it. */
+  var typedHere = Object.create(null);
   function dayLocked(site, sup, isoDate) {
-    if (lockedSince[site + '\u00a7' + sup + '\u00a7' + isoDate]) return true;
+    var sheetDay = site + '\u00a7' + sup + '\u00a7' + isoDate;
+    if (lockedSince[sheetDay]) return true;
+    if (typedHere[sheetDay]) return false;
     if (!groupHours(site, sup, isoDate)) return false;
     if (!groupSavedOn(site, sup, isoDate)) return false;
     var i = ALL_SHEETS.indexOf(site + '\u00a7' + sup);
@@ -2396,28 +2592,56 @@
      is one timesheet — and one padlock on it says the whole of what the
      worker needs from it. An open day is drawn as nothing at all: there
      is no second mark for "yes, you may". */
+  /* ─── What a cell can carry besides a figure ────────────────────
+     Three things can be true of one cell at once: the day is handed
+     in, there is an allowance on it, and somebody left a note. Drawn
+     as three marks in a row they shuffle sideways as their number
+     changes, and a padlock that sits in a different place on every row
+     is a padlock nobody can scan down the column for.
+
+     So every mark has a slot of its own, and the slot is there whether
+     the mark is or not. Nothing moves. The modes below differ only in
+     how many slots there are and what fills them — the figure is in
+     the same place in all three. */
+  var MARK_MODE = 'three';   // three | corner | dot
+  function noteOf(key, isoDate) {
+    return (key && cellNote[key + '|' + isoDate]) || '';
+  }
+
+  var ICO_CMT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M13.5 9.2a1.8 1.8 0 0 1-1.8 1.8H5.2L2.5 13.5V3.8A1.8 1.8 0 0 1 4.3 2h7.4a1.8 1.8 0 0 1 1.8 1.8z" ' +
+    'stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
   var ICO_LOCK = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
     '<rect x="3" y="7" width="10" height="6.5" rx="1.3" stroke="currentColor" stroke-width="1.3"/>' +
     '<path d="M5.5 7V5.2a2.5 2.5 0 015 0V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
   var TIP_LOCKED = 'This day has been handed in &mdash; its hours can no longer be changed';
+  function figOf(value) {
+    return '<span class="cfig">' +
+      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</span>';
+  }
+  /* The summary line keeps the same slots as the rows under it, so the
+     padlocks and the figures run down one column from the heading to
+     the last task. */
   function dayCellGroup(value, isoDate, site, sup) {
     var shut = dayLocked(site, sup, isoDate);
     return '<td class="col-day' + todayCls(isoDate) + (shut ? ' shut' : '') + '"' +
       (shut ? ' data-tip="' + TIP_LOCKED + '"' : '') + '><span class="cell-fig">' +
-      (shut ? '<span class="hr-lock">' + ICO_LOCK + '</span>' : '') +
-      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</span></td>';
+      cellMarks(null, isoDate, shut) + figOf(value) + '</span></td>';
   }
   function dayCell(value, isoDate, key) {
     var theirs = key && lastWord[key + '|' + isoDate];
+    var says = cellSays(key, isoDate, false);
+    var tip = theirs
+      ? 'Finalised by your supervisor while you were editing &mdash; this is their figure'
+      : says;
     return '<td class="col-day' + todayCls(isoDate) + (theirs ? ' theirs' : '') + '"' +
-      (theirs ? ' data-tip="Finalised by your supervisor while you were editing — this is their figure"' : '') + '><span class="cell-fig">' +
-      alwDot(key, isoDate) +
-      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</span></td>';
+      (tip ? ' data-tip="' + tip + '"' : '') + '>' + cellCorner(key, isoDate) +
+      '<span class="cell-fig">' + cellMarks(key, isoDate, false) + figOf(value) + '</span></td>';
   }
-
   function dayCellPlain(value, isoDate) {
     return '<td class="col-day' + todayCls(isoDate) + '"><span class="cell-fig">' +
-      (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') + '</span></td>';
+      cellMarks(null, isoDate, false) + figOf(value) + '</span></td>';
   }
 
   /* hand-coins, as the product draws it. */
@@ -2440,10 +2664,54 @@
     return '<span class="alw-mark" data-tip="Allowance &mdash; ' + Shell.esc(allowTip(a)) + '">' + ICO_ALW + '</span>';
   }
 
+  /* Everything the cell has to say besides its figure, gathered once
+     so the hover answers in one place rather than making the reader
+     find three separate marks and hover each of them. */
+  function cellSays(key, isoDate, lock) {
+    var out = [];
+    if (lock) out.push(TIP_LOCKED);
+    var a = key ? allowOf(key, isoDate) : [];
+    if (a.length) out.push('Allowance &mdash; ' + Shell.esc(allowTip(a)));
+    var n = noteOf(key, isoDate);
+    if (n) out.push('Note &mdash; ' + Shell.esc(n));
+    return out.join(' \u00b7 ');
+  }
+  /* The slots. Every one of them is drawn whether it has a mark in it
+     or not — an empty slot is the whole point, because it is what
+     holds the next row's padlock in the same column as this one's. */
+  function cellMarks(key, isoDate, lock) {
+    var a = key ? allowOf(key, isoDate) : [];
+    var n = noteOf(key, isoDate);
+    function slot(inner, cls) {
+      return '<span class="cm' + (cls ? ' ' + cls : '') + '">' + (inner || '') + '</span>';
+    }
+    var lk = slot(lock ? ICO_LOCK : '', 'cm-lock');
+    if (MARK_MODE === 'three') {
+      return '<span class="cmarks">' +
+        slot(a.length ? ICO_ALW : '', 'cm-alw') +
+        slot(n ? ICO_CMT : '', 'cm-cmt') + lk + '</span>';
+    }
+    if (MARK_MODE === 'dot') {
+      return '<span class="cmarks">' +
+        slot((a.length || n) ? '<span class="cm-pip"></span>' : '', 'cm-pip-slot') +
+        lk + '</span>';
+    }
+    /* corner: the mark leaves the row entirely and goes into the
+       cell's own corner, so the row holds nothing but the padlock. */
+    return '<span class="cmarks">' + lk + '</span>';
+  }
+  function cellCorner(key, isoDate) {
+    if (MARK_MODE !== 'corner') return '';
+    var a = key ? allowOf(key, isoDate) : [];
+    if (!a.length && !noteOf(key, isoDate)) return '';
+    return '<span class="cm-corner" aria-hidden="true"></span>';
+  }
+
   function cellHtml(value, key, isoDate) {
     if (state.editing && key) {
       var dk = key + '|' + isoDate, changed = draft && dk in draft;
-      var lock = cellLocked(key, isoDate);
+      var held = heldRow(key);
+      var lock = cellLocked(key, isoDate) || held;
       var cls = 'hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
         (cellOver(key, isoDate, value) ? ' over' : '');
       var what = 'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
@@ -2460,26 +2728,50 @@
             '<input class="' + cls + '" type="text" inputmode="decimal" autocomplete="off" ' +
             'placeholder="&ndash;" ' + what + ' value="' + (value > 0 ? fmtHours(value) : '') + '" /></td>';
         }
-        var fig = value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>';
+        var fig = '<span class="cfig">' +
+          (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') +
+          '</span>';
+        var says = cellSays(key, isoDate, lock);
         /* The reason sits on the cell rather than on the figure inside
            it: a locked cell is nothing to press, and nothing to press
            is nothing to hover for an explanation. */
+        /* A row whose task is still being saved, or was refused, is a
+           row with nowhere to put a figure. It is shut the same way a
+           handed-in day is shut, and says which of the two it is. */
+        if (held) {
+          return '<td class="' + td + ' held" data-tip="' + Shell.esc(rowFly[key]
+            ? 'Saving this task\u2026 hours can go in once it is saved.'
+            : rowErr[key]) + '">' +
+            '<span class="hr-view locked">' + cellMarks(key, isoDate, false) +
+            fig + '</span></td>';
+        }
         if (lock) {
           /* The padlock on the group's summary line says the day is in,
              but the reader is looking at a row, not at a summary — and
              a reason that only arrives on hover is a reason they have
              to go hunting for, cell by cell, to find out where they are
              allowed to type. The mark goes on the cell itself. */
-          return '<td class="' + td + '" data-tip="' + TIP_LOCKED + '">' +
-            '<span class="hr-view locked">' +
-            '<span class="hr-lock" role="img" aria-label="Handed in &mdash; ' +
-            'these hours can no longer be changed">' + ICO_LOCK + '</span>' +
+          return '<td class="' + td + '" data-tip="' + says + '">' +
+            cellCorner(key, isoDate) +
+            '<span class="hr-view locked">' + cellMarks(key, isoDate, true) +
             fig + '</span></td>';
         }
-        return '<td class="' + td + '">' +
-          '<button class="hr-view' + (justSaved === dk ? ' saved' : '') +
-          (selCell === dk ? ' selected' : '') + '" type="button" ' +
-          'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '">' + fig + '</button></td>';
+        /* Waiting, or refused. Neither is a state the cell can be put
+           into by hand, so neither is drawn while it is open — they
+           are what the cell comes back as once it has been left. */
+        var fly = inFlight[dk], bad = cellErr[dk];
+        var tip = bad ? Shell.esc(bad.msg) : says;
+        return '<td class="' + td + '"' + (tip ? ' data-tip="' + tip + '"' : '') + '>' +
+          cellCorner(key, isoDate) +
+          '<button class="hr-view' + (justSaved[dk] ? ' saved' : '') +
+          (selCell === dk ? ' selected' : '') +
+          (fly && fly.slow ? ' saving' : '') + (bad ? ' err' : '') + '" type="button" ' +
+          'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '">' +
+          (fly && fly.slow
+            ? '<span class="cmarks"><span class="cm"><span class="hr-spin" role="img" ' +
+              'aria-label="Saving"></span></span></span>'
+            : cellMarks(key, isoDate, false)) +
+          fig + '</button></td>';
       }
       return '<td class="' + td + '">' +
         '<button class="' + cls + '" type="button" ' + what + '>' +
@@ -2566,10 +2858,16 @@
   function taskName(t) {
     var m = t.meta;
     if (!m) return '<span class="tname">' + Shell.esc(t.label) + '</span>';
-    /* The first level is the work order wherever a site keeps one, and
-       it is what a row is found by when somebody is looking for a
-       particular job rather than reading down the list. */
     var lv = levelsOf(m).filter(Boolean);
+    /* The first version ships one level, so the task is one thing and
+       is written as one line. Splitting it into a name and a greyed
+       second line was a way of ranking levels against each other, and
+       the ranking turned out not to exist: which level matters is the
+       client's business, not ours. A long name wraps. */
+    if (PROTO.first) {
+      return '<span class="tname"><span class="tn-one">' +
+        Shell.esc(saidAs(lv) || t.label) + '</span></span>';
+    }
     var code = lv[0] || t.label;
     var rest = lv.slice(1).join(' \u00b7 ');
     return '<span class="tname">' +
@@ -2596,9 +2894,14 @@
       '<td class="col-site"></td><td class="col-sup"></td>' +
       '<td class="col-task">' + taskPickCell(x) + '</td>' +
       ds.map(function (d) {
-        return '<td class="col-day' + todayCls(iso(d)) + '"><span class="cell-fig"><span class="cell-empty">&mdash;</span></span></td>';
+        /* Hours cannot be saved against a task that has not been named
+           — so the days are shut, and say so rather than quietly doing
+           nothing when they are clicked. */
+        return '<td class="col-day held' + todayCls(iso(d)) +
+          '" data-tip="Pick a task first &mdash; hours have to be saved against one">' +
+          '<span class="cell-fig"><span class="cell-empty">&mdash;</span></span></td>';
       }).join('') +
-      '<td class="col-total"><span class="cell-empty">&mdash;</span></td>' +
+      '<td class="col-total held"><span class="cell-empty">&mdash;</span></td>' +
       actCell(pendDrop(x.id)) +
     '</tr>';
   }
@@ -2658,7 +2961,7 @@
     var ds = days();
     gridCols.innerHTML = '<col style="width:' + wPx('site') + '" /><col style="width:' + wPx('sup') + '" />' +
       '<col style="width:' + wPx('task') + '" />' +
-      ds.map(function () { return '<col style="width:' + DAY_W + 'px" />'; }).join('') +
+      ds.map(function () { return '<col style="width:' + dayW() + 'px" />'; }).join('') +
       '<col style="width:96px" />' + (state.editing ? '<col style="width:56px" />' : '');
 
     gridHead.innerHTML = '<tr>' +
@@ -2704,18 +3007,20 @@
           rows.push('<tr class="row-flat' + (isJustAdded(t.key) ? ' row-focus' : '') + '">' +
             '<td class="col-site"></td><td class="col-sup"></td>' +
             (renameable
-              ? '<td class="col-task" data-tip="Task &mdash; ' + Shell.esc(t.label) + '">' +
-                  '<button class="tname-btn" type="button" data-rename="' + Shell.esc(t.key) + '">' +
+              ? '<td class="col-task' + (rowFly[t.key] ? ' saving' : '') +
+                  (rowErr[t.key] ? ' err' : '') + '" data-tip="' +
+                  Shell.esc(rowErr[t.key] || ('Task \u2014 ' + t.label)) + '">' +
+                  (rowFly[t.key] ? '<span class="hr-spin" role="img" aria-label="Saving"></span>' : '') +
+                  '<button class="tname-btn' +
+                  (tpRename && tpRename.key === t.key ? ' open' : '') +
+                  '" type="button" data-rename="' + Shell.esc(t.key) + '">' +
                   taskName(t) + '</button></td>'
-              : '<td class="col-task' + (shut ? ' shut' : '') + '" data-tip="' + (shut
+              : '<td class="col-task' + (shut ? ' shut' : '') +
+                  (rowFly[t.key] ? ' saving' : '') + (rowErr[t.key] ? ' err' : '') +
+                  '" data-tip="' + (shut
                   ? 'One of these days has been handed in, so the task has to stay'
                   : 'Task &mdash; ' + Shell.esc(t.label)) + '">' +
-                  (shut
-                    ? '<span class="tname-locked">' + taskName(t) +
-                        '<span class="hr-lock" role="img" aria-label="Handed in &mdash; ' +
-                        'this task can no longer be changed">' + ICO_LOCK + '</span>' +
-                      '</span>'
-                    : taskName(t)) + '</td>') +
+                  taskName(t) + '</td>') +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell(rowDrop(t.key)) +
@@ -2742,7 +3047,7 @@
     if (rowsMode === 'flat') return renderFlat();
     var ds = days();
     gridCols.innerHTML = '<col style="width:' + wPx('label') + '" />' +
-      ds.map(function () { return '<col style="width:' + DAY_W + 'px" />'; }).join('') +
+      ds.map(function () { return '<col style="width:' + dayW() + 'px" />'; }).join('') +
       '<col style="width:96px" />' + (state.editing ? '<col style="width:56px" />' : '');
 
     gridHead.innerHTML = '<tr><th class="col-label" data-w="label">Breakdown' + Shell.colGrip() + '</th>' +
@@ -2980,11 +3285,13 @@
     if (key < pick.from) { pick.from = key; renderCal(); return; }
     if (outOfSpan(key)) return;
     pick.to = key;
-    state.range = 'custom'; state.from = pick.from; state.to = pick.to;
-    markRange('custom');
-    syncDateLabel();
-    Shell.closeAllDropdowns();
-    render();
+    leavePeriod(function () {
+      state.range = 'custom'; state.from = pick.from; state.to = pick.to;
+      markRange('custom');
+      syncDateLabel();
+      Shell.closeAllDropdowns();
+      render();
+    });
   }
 
   datePanel.addEventListener('click', function (e) { e.stopPropagation(); });
@@ -2993,11 +3300,13 @@
     if (item) {
       var k = item.getAttribute('data-range');
       if (k === 'custom') { openCalendar(); return; }
-      state.range = k;
-      markRange(k);
-      syncDateLabel();
-      Shell.closeAllDropdowns();
-      render();
+      leavePeriod(function () {
+        state.range = k;
+        markRange(k);
+        syncDateLabel();
+        Shell.closeAllDropdowns();
+        render();
+      });
       return;
     }
     var nav = e.target.closest('[data-nav]');
@@ -3160,6 +3469,20 @@
     if (v === sv.h) { next.s = sv.s; next.f = sv.f; }
     putCell(key, date, next);
     markOver(date, key);
+    /* Said while the figure is still in the cell and still the thing
+       being looked at — not after the cell has closed and the reader
+       has moved on. Once per day, not once per digit: typing 2, then
+       5, then 1 is three keystrokes and one mistake. */
+    if (overCap(date)) {
+      if (!warnedOver[date]) {
+        warnedOver[date] = true;
+        Shell.snackbar(fmtDayLong(fromIso(date)) + ' would come to more than ' + DAY_CAP +
+          ' h. A day holds ' + DAY_CAP + ', so this one will not be saved.',
+          { title: 'More than a day in a day', variant: 'error' });
+      }
+    } else {
+      delete warnedOver[date];
+    }
     redrawKeeping(key, date);
   });
 
@@ -3193,6 +3516,25 @@
        lose the figure that is sitting in the cell. */
     if (!next) { commitHours(); return; }
     openHours(next.getAttribute('data-key'), next.getAttribute('data-date'));
+    /* The week is wider than the card and longer than the window. A
+       cell the keyboard has walked to and the table has not is a cell
+       being typed into blind — and blind is how a figure lands on a
+       day that already had twelve hours on it somewhere off screen. */
+    var inp = liveInput();
+    if (inp) { ensureVisible(inp.closest('tr')); ensureAcross(inp); }
+  }
+  function ensureAcross(node) {
+    if (!scrollBox || !node) return;
+    var r = node.getBoundingClientRect(), box = scrollBox.getBoundingClientRect();
+    /* The task column is frozen over the scroller, so the left edge
+       worth clearing is where that column ends, not where the card
+       does. */
+    var froz = node.closest('tr') && node.closest('tr').querySelector('td.col-task');
+    var edge = froz ? froz.getBoundingClientRect().right : box.left;
+    var by = 0;
+    if (r.right > box.right - 8) by = r.right - (box.right - 8);
+    else if (r.left < edge + 8) by = r.left - (edge + 8);
+    if (by) scrollBox.scrollLeft += by;
   }
   function stepSel(key, date, dx, dy) {
     var next = neighbourCell(key, date, dx, dy);
@@ -3362,10 +3704,12 @@
   function syncEditBar() {
     var box = document.getElementById('save-state');
     if (!box) return;
-    box.setAttribute('data-state', saveState);
-    box.textContent = saveState === 'saving' ? 'Saving\u2026'
-      : saveState === 'error' ? 'Not saved'
-      : 'All changes saved';
+    var bad = errCount(), fly = flyCount();
+    box.setAttribute('data-state', bad ? 'error' : fly ? 'saving' : 'idle');
+    box.textContent = bad ? errNoun(bad) + ' not saved'
+      : fly ? 'Saving\u2026' : 'All changes saved';
+    var again = document.getElementById('save-retry');
+    if (again) again.hidden = retryable().length === 0 && Object.keys(rowErr).length === 0;
   }
   /* ─── Always in ─────────────────────────────────────
      There is no edit to go into. The class stays on the body because
@@ -3401,6 +3745,42 @@
      same way whichever one comes back. Which one is a prototype switch;
      everything after it is the screen the answer leads to. */
   var SAVE_MODE = 'clean';
+  /* How long the answer takes, which the page cares about only because
+     of where the line falls: under a second nothing is drawn, over it
+     the cell says it is waiting, and at ten seconds it stops waiting. */
+  var SAVE_SPEED = 'fast';
+  var LAT = { fast: 350, slow: 2600, timeout: 10000 };
+  var SLOW_AFTER = 1000;
+  /* Cells still in the air, and cells that came back refused — both
+     keyed by the cell, because one cell is now the whole blast radius
+     of a failure. That is what the Save button cost and why it went. */
+  var inFlight = Object.create(null);
+  var cellErr = Object.create(null);
+  /* A task is a row the back end has to agree to before any hours can
+     hang off it, so it saves the same way a figure does — and until it
+     has, the row's days are shut. A figure written against a task that
+     turns out not to exist is a figure with nowhere to go. */
+  var rowFly = Object.create(null);
+  var rowErr = Object.create(null);
+  function heldRow(key) { return !!(rowFly[key] || rowErr[key]); }
+  /* Days already told they hold too much, so the snackbar says it once
+     per day rather than once per keystroke. */
+  var warnedOver = Object.create(null);
+  function errCount() { return Object.keys(cellErr).length + Object.keys(rowErr).length; }
+  function flyCount() { return Object.keys(inFlight).length + Object.keys(rowFly).length; }
+  /* A failed task and a failed figure are both one thing that is not
+     in, and the header counts them together — but it only calls them
+     cells while that is all they are. */
+  function errNoun(n) {
+    return Object.keys(rowErr).length
+      ? n + (n === 1 ? ' change is' : ' changes are')
+      : n + (n === 1 ? ' cell is' : ' cells are');
+  }
+  /* A day that holds twenty-five hours will hold twenty-five hours
+     however many times it is sent, so Retry leaves those alone. */
+  function retryable() {
+    return Object.keys(cellErr).filter(function (dk) { return cellErr[dk].kind !== 'cap'; });
+  }
 
   /* A row with no hours on it is still a row the person put there — it
      is saved as a day of nothing rather than dropped, and the order the
@@ -3574,59 +3954,150 @@
   }
 
   function flashSaved(dk) {
-    justSaved = dk;
-    if (savedTimer) clearTimeout(savedTimer);
-    savedTimer = setTimeout(function () { justSaved = null; renderGrid(); }, 1600);
+    justSaved[dk] = true;
+    if (savedTimer[dk]) clearTimeout(savedTimer[dk]);
+    savedTimer[dk] = setTimeout(function () {
+      delete justSaved[dk]; delete savedTimer[dk]; renderGrid();
+    }, 1600);
   }
   function commitHours() {
     if (!liveCell) return;
     var dk = liveCell, at = dk.lastIndexOf('|');
     var key = dk.slice(0, at), date = dk.slice(at + 1);
     liveCell = null;
-    /* Opened, read, left alone: there is nothing to send. */
-    if (!draft || !(dk in draft)) { renderGrid(); renderWeek(); syncEditBar(); return; }
+    var typed = draft && (dk in draft);
+    /* Opened, read, left alone: there is nothing to send — unless the
+       cell was already red, in which case leaving it is the retry. */
+    if (!typed && !cellErr[dk]) { renderGrid(); renderWeek(); syncEditBar(); return; }
+    /* The figure goes in whatever the back end is about to say about
+       it. Everything the worker typed stays on the page; what changes
+       is only whether the page claims it is safe. */
+    if (typed) {
+      lastWrite = { key: key, date: date, prev: savedCell(key, date) };
+      writeCells([dk]);
+      delete draft[dk];
+      settleRows();
+    }
+    sendCell(dk, key, date);
+  }
 
-    /* A day holds twenty-four hours, so this figure is never sent —
-       there is nothing the back end could do with it. The cell goes
-       back to what it was holding and the reason is said out loud: a
-       cell that silently refuses to change is a cell that looks
-       broken. */
+  /* ─── One cell, sent ────────────────────────────────────────────
+     Nothing is held and nothing is frozen: the next cell opens while
+     this one is still in the air. Waiting for each figure in turn is
+     what makes a simple week — twelve, tab, twelve, tab — unbearable,
+     and the cost of not waiting is only that two cells can be in the
+     air at once, which the cells say for themselves. */
+  function sendCell(dk, key, date) {
+    clearFly(dk);
+    delete cellErr[dk];
+    /* The one answer the page gives itself. A day holds twenty-four
+       hours whatever the back end thinks, so this never leaves the
+       browser — but the figure stays in the cell, red, rather than
+       being taken away and leaving the worker to remember what they
+       had typed. */
     if (overCap(date)) {
       var over = Math.round(dayTotal(date, false) * 100) / 100;
-      delete draft[dk];
-      markOver(date, null);
+      cellErr[dk] = { kind: 'cap', msg: fmtDayLong(fromIso(date)) + ' comes to ' +
+        fmtHours(over) + ' h. A day holds ' + DAY_CAP + ', so this was not saved.' };
+      markOver(date, key);
       renderGrid(); renderWeek(); syncEditBar();
-      Shell.snackbar('That would put ' + fmtHours(over) + ' h on ' +
-        fmtDayLong(fromIso(date)) + '. A day holds ' + DAY_CAP +
-        ', so the cell was left as it was.',
-        { title: 'More than a day in a day', variant: 'error' });
       return;
     }
-
-    lastWrite = { key: key, date: date, prev: savedCell(key, date) };
-    if (SAVE_MODE === 'server')    { cellServerError(dk, date); return; }
+    markOver(date, null);
+    var rec = { slow: false };
+    inFlight[dk] = rec;
+    rec.spin = setTimeout(function () { rec.slow = true; renderGrid(); }, SLOW_AFTER);
+    rec.timer = setTimeout(function () { answerCell(dk, key, date); }, LAT[SAVE_SPEED]);
+    renderGrid(); renderWeek(); syncEditBar();
+  }
+  function clearFly(dk) {
+    var r = inFlight[dk];
+    if (!r) return;
+    clearTimeout(r.timer); clearTimeout(r.spin);
+    delete inFlight[dk];
+  }
+  /* The answer. Green is a confirmation, so it is drawn here and
+     nowhere earlier: it means the database has it, not that the
+     browser sent it. */
+  function answerCell(dk, key, date) {
+    clearFly(dk);
+    if (SAVE_SPEED === 'timeout') {
+      cellErr[dk] = { kind: 'timeout', msg: 'The server did not answer, so this was not ' +
+        'saved. Press Retry at the top of the page to send it again.' };
+      renderGrid(); renderWeek(); syncEditBar();
+      return;
+    }
+    if (SAVE_MODE === 'server')    { cellServerError(dk); return; }
     if (SAVE_MODE === 'blocked')   { cellBlocked(dk, key, date); return; }
     if (SAVE_MODE === 'finalised') { cellFinalised(dk, key, date); return; }
-
-    writeCells([dk]);
-    delete draft[dk];
-    settleRows();
-    markOver(date, null);
-    saveState = 'idle';
+    var m = taskMeta[key];
+    if (m) typedHere[m.site + '\u00a7' + m.sup + '\u00a7' + date] = true;
     flashSaved(dk);
     renderGrid(); renderWeek(); syncEditBar();
   }
+  /* Everything red goes back up at once, from the one button at the
+     top. The alternatives were weighed and dropped: a retry that lives
+     inside the cell only exists while the pointer is on it, and a
+     retry per snackbar means hunting through ten snackbars to find the
+     cell each one belongs to. */
+  function retryAll() {
+    if (liveCell) commitHours();
+    var rows = Object.keys(rowErr), list = retryable();
+    if (!rows.length && !list.length) return;
+    rows.forEach(function (k) { sendRow(k); });
+    list.forEach(function (dk) {
+      var at = dk.lastIndexOf('|');
+      sendCell(dk, dk.slice(0, at), dk.slice(at + 1));
+    });
+    render();
+  }
 
-  /* Nothing is known about what went wrong, so nothing is guessed at:
-     the figure is dropped and the reader is sent back to what the back
-     end actually holds. */
-  function cellServerError(dk, date) {
-    delete draft[dk];
-    markOver(date, null);
-    saveState = 'error';
+  /* ─── A task, sent ──────────────────────────────────────────────
+     The same three answers a figure gets, on the thing a figure needs
+     to exist first. The days stay shut for as long as it is in the
+     air — not to make anybody wait, but because there is nowhere yet
+     for what they would type to go. */
+  function sendRow(key) {
+    if (rowFly[key]) { clearTimeout(rowFly[key].timer); }
+    delete rowErr[key];
+    var rec = {};
+    rowFly[key] = rec;
+    rec.timer = setTimeout(function () { answerRow(key); }, LAT[SAVE_SPEED]);
+    render();
+  }
+  function answerRow(key) {
+    delete rowFly[key];
+    if (SAVE_SPEED === 'timeout' || SAVE_MODE === 'server' || SAVE_MODE === 'blocked') {
+      rowErr[key] = SAVE_SPEED === 'timeout'
+        ? 'This task was not saved: the server did not answer. Press Retry at the ' +
+          'top of the page. Hours cannot go on it until it is in.'
+        : 'This task could not be saved, so hours cannot go on it yet. Press Retry ' +
+          'at the top of the page, or refresh.';
+      render();
+      Shell.snackbar('The task was not added, so no hours can be entered against it yet.',
+        { title: 'Task not saved', variant: 'error' });
+      return;
+    }
+    render();
+    /* In, and the week carries on where it left off: the first day of
+       the new row, open and waiting. */
+    var row = document.querySelector('tr.row-focus');
+    if (!row) return;
+    ensureVisible(row);
+    var cell = row.querySelector('.hr-view[data-key], input.hr-cell:not([disabled])');
+    if (cell) openCell(cell);
+  }
+
+  /* Nothing is known about what went wrong, so nothing is guessed at —
+     but the figure is not taken away over it. The cell holds what was
+     typed, says in its colour that it is not in, and the reason is one
+     hover away. */
+  function cellServerError(dk) {
+    cellErr[dk] = { kind: 'server', msg: 'The server refused this change, so it was not ' +
+      'saved. Press Retry at the top of the page, or refresh and try again.' };
     renderGrid(); renderWeek(); syncEditBar();
     Shell.snackbar('Your changes could not be saved. Please refresh the page and try again.',
-      { title: 'Nothing was saved', variant: 'error', persistent: true });
+      { title: 'Not saved', variant: 'error' });
   }
 
   /* The supervisor signed the day off between the cell opening and the
@@ -3634,13 +4105,24 @@
      locks behind it. */
   function cellFinalised(dk, key, date) {
     var m = taskMeta[key];
-    delete draft[dk];
+    /* The one answer that does take the typed figure back, because it
+       is not a failure to retry: somebody with the last word wrote the
+       day while this cell was open, and theirs is the figure that
+       stands. The day closes behind it, so there is nothing left to
+       keep the worker's number in. */
+    if (lastWrite && lastWrite.key === key && lastWrite.date === date) {
+      if (!draft) draft = Object.create(null);
+      draft[dk] = lastWrite.prev;
+      writeCells([dk]);
+      delete draft[dk];
+      lastWrite = null;
+    }
+    delete cellErr[dk];
     if (m) {
       lockedSince[m.site + '\u00a7' + m.sup + '\u00a7' + date] = true;
       lastWord[dk] = true;
     }
     markOver(date, null);
-    saveState = 'idle';
     renderGrid(); renderWeek(); syncEditBar();
     Shell.snackbar(((m && m.sup) || 'Your supervisor') + ' finalised this day while you were ' +
       'typing, so your figure was not saved. The cell shows theirs.',
@@ -3654,9 +4136,14 @@
      The worker finds out by trying, and is told what to do about it. */
   function cellBlocked(dk, key, date) {
     var m = taskMeta[key];
-    delete draft[dk];
+    /* A configuration taken away behaves like any other refusal now:
+       Kerdi's point was that a worker should not have to learn two
+       different outcomes for two things they cannot tell apart. The
+       figure stays, the cell is red, and the popup says the part no
+       colour could. */
+    cellErr[dk] = { kind: 'blocked', msg: 'You are no longer allowed to enter hours for ' +
+      ((m && m.site) || 'this site') + ', so this was not saved.' };
     markOver(date, null);
-    saveState = 'error';
     renderGrid(); renderWeek(); syncEditBar();
     el('bk-lead').textContent = 'You are no longer allowed to enter hours for ' +
       ((m && m.site) || 'this site') + ', so this change was not saved.';
@@ -3681,6 +4168,33 @@
     clickSwitch.querySelectorAll('[data-click]').forEach(function (x) { x.classList.toggle('on', x === b); });
     if (liveCell) commitHours();
     clearSel();
+  });
+
+  el('save-retry').addEventListener('click', retryAll);
+
+  var marksSwitch = el('marks-switch');
+  function syncMarks() {
+    document.body.classList.toggle('marks-corner', MARK_MODE === 'corner');
+    marksSwitch.querySelectorAll('[data-marks]').forEach(function (x) {
+      x.classList.toggle('on', x.getAttribute('data-marks') === MARK_MODE);
+    });
+  }
+  marksSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-marks]');
+    if (!b) return;
+    MARK_MODE = b.getAttribute('data-marks');
+    syncMarks();
+    if (liveCell) commitHours();
+    render();
+  });
+  syncMarks();
+
+  var speedSwitch = el('speed-switch');
+  speedSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-speed]');
+    if (!b) return;
+    SAVE_SPEED = b.getAttribute('data-speed');
+    speedSwitch.querySelectorAll('[data-speed]').forEach(function (x) { x.classList.toggle('on', x === b); });
   });
 
   var saveSwitch = el('save-switch');
@@ -4616,12 +5130,35 @@
   var confirmSheet = document.getElementById('confirm-sheet');
   var confirmAction = null;
 
-  function askConfirm(title, lead, points, onYes) {
+  function askConfirm(title, lead, points, onYes, opts) {
+    opts = opts || {};
     el('confirm-title').textContent = title;
     el('confirm-lead').textContent = lead;
     el('confirm-list').innerHTML = points.map(function (p) { return '<li>' + p + '</li>'; }).join('');
+    el('confirm-ok').textContent = opts.ok || 'Remove';
+    el('confirm-ok').classList.toggle('btn-danger', opts.danger !== false);
+    el('confirm-ok').classList.toggle('btn-primary', opts.danger === false);
+    el('confirm-no').textContent = opts.cancel || 'Keep it';
     confirmAction = onYes;
     confirmSheet.classList.add('open');
+  }
+  /* ─── Leaving the period ────────────────────────────────────────
+     Another period is another call to the back end, and its answer
+     replaces this one — so a figure that never made it in is gone with
+     the page it was typed on. There is no Save to press first, which
+     is exactly why this has to be said out loud rather than discovered
+     by coming back and finding the day empty. */
+  function leavePeriod(go) {
+    var n = errCount() + flyCount();
+    if (!n) { go(); return; }
+    Shell.closeAllDropdowns();
+    askConfirm('Change the period?',
+      n === 1 ? 'One change has not been saved yet.'
+              : n + ' changes have not been saved yet.',
+      ['Another period is loaded fresh from the server, so anything not saved ' +
+       'is lost &mdash; it is not kept and sent later.',
+       'Press Retry at the top of the page first to send them again.'],
+      go, { ok: 'Change anyway', cancel: 'Stay here', danger: false });
   }
   el('confirm-ok').addEventListener('click', function () {
     var run = confirmAction;
@@ -4919,12 +5456,11 @@
     justAdded = k; justAddedSet = [k];
     closeTaskPop();
     delete collapsed[flatKey(x.site, x.sup)];
-    render(); syncEditBar();
+    /* The row appears at once, because the person put it there — but
+       it is not a place hours can go until the back end says it is. */
+    sendRow(k);
     var row = document.querySelector('tr.row-focus');
-    if (!row) return;
-    ensureVisible(row);
-    var cell = row.querySelector('.hr-view[data-key], input.hr-cell:not([disabled])');
-    if (cell) openCell(cell);
+    if (row) ensureVisible(row);
   }
 
   /* A row booked against the wrong task is the mistake Stijn described:
@@ -4993,7 +5529,15 @@
       if (!m) return;
       if (liveCell) commitHours();
       tpRename = { key: key, site: m.site, sup: m.sup, levels: m.levels.slice() };
-      openTaskPop(again, null);
+      /* Drawn again first, so the row shows the open field — and the
+         panel is then hung on that button rather than on the one the
+         redraw has just thrown away. */
+      renderGrid();
+      var live = null;
+      [].forEach.call(gridBody.querySelectorAll('[data-rename]'), function (x) {
+        if (!live && x.getAttribute('data-rename') === key) live = x;
+      });
+      openTaskPop(live || again, null);
       return;
     }
 
@@ -5046,16 +5590,33 @@
         '</span></div>';
     }).join('') : '<div class="recent-empty">Everything you have booked before is already on this week.</div>';
 
+    /* Stijn wanted the whole of last period back in one press, and
+       kept it out of the dialog's way: the list is already only what
+       is not on the week, so ticking all of it is that press. */
+    var all = el('pick-all');
+    all.hidden = !list.length;
+    var every = list.length > 0 && list.every(function (r) { return picked[r.key]; });
+    all.classList.toggle('on', every);
+    all.innerHTML = '<span class="rr-tick">' + ICO_TICK + '</span><span>' +
+      (every ? 'Clear all' : 'Select all ' + list.length +
+        (list.length === 1 ? ' task' : ' tasks')) + '</span>';
+
     var n = Object.keys(picked).filter(function (k) { return picked[k]; }).length;
     el('pick-go').disabled = !n;
     el('pick-go').textContent = n > 1 ? 'Add ' + n + ' tasks' : 'Add';
   }
-  function openPick(fromEmpty) {
+  function openPick() {
     picked = Object.create(null);
-    el('pick-dup').hidden = !fromEmpty;
     renderPick();
     pickModal.classList.add('open');
   }
+  el('pick-all').addEventListener('click', function () {
+    var list = recentPool();
+    var every = list.length > 0 && list.every(function (r) { return picked[r.key]; });
+    picked = Object.create(null);
+    if (!every) list.forEach(function (r) { picked[r.key] = 1; });
+    renderPick();
+  });
   el('pick-list').addEventListener('click', function (e) {
     var row = e.target.closest('[data-pickkey]');
     if (!row) return;
@@ -5087,32 +5648,6 @@
     if (cell) openCell(cell);
   });
 
-  /* The same work again is one press, not twelve — but only the work.
-     Hours are what the week is a record of, and copying them forward
-     would be filling in a week nobody has worked yet; a sheet that
-     arrives pre-filled is a sheet that gets saved without being read. */
-  el('pick-dup-go').addEventListener('click', function () {
-    if (!state.editing) enterEdit();
-    var ds = days(), on = Object.create(null), seen = Object.create(null), n = 0;
-    weekKeys().forEach(function (k) { on[k] = 1; });
-    ds.forEach(function (d) {
-      var src = iso(addDays(d, -7));
-      Object.keys(taskMeta).forEach(function (k) {
-        if (on[k] || seen[k]) return;
-        if (!(cellOf(k, src).h > 0)) return;
-        var m = taskMeta[k];
-        seen[k] = 1; n++;
-        if (extraRows.indexOf(k) === -1) extraRows.push(k);
-        delete collapsed[flatKey(m.site, m.sup)];
-      });
-    });
-    pickModal.classList.remove('open');
-    if (!n) { Shell.snackbar('Nothing was booked the week before.'); return; }
-    justAdded = null; justAddedSet = Object.keys(seen);
-    render(); syncEditBar();
-    Shell.snackbar(n + ' task' + (n === 1 ? '' : 's') + ' brought over from last week — the hours are yours to enter.');
-  });
-
   /* ── Nothing booked yet ──────────────────────────────────────── */
   var ICO_EMPTY = '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
     'stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -5124,7 +5659,7 @@
       '<h3>No timesheet for this week yet</h3>' +
       '<p>Add the tasks you have worked on and the hours go in beside them.</p>' +
       '<div class="ts-empty-acts">' +
-        '<button class="btn-primary" type="button" data-empty="recent">Select a recent task</button>' +
+        '<button class="btn-primary" type="button" data-empty="recent">Select recent tasks</button>' +
         '<button class="btn-outline" type="button" data-empty="new">Create a new task</button>' +
       '</div></div>';
   }
@@ -5137,7 +5672,7 @@
        panel hung on nothing is placed in the corner of the screen. It is
        hung on the button that took its place instead. */
     if (!state.editing) enterEdit();
-    if (mode === 'recent') { openPick(true); return; }
+    if (mode === 'recent') { openPick(); return; }
     openWherePop(document.querySelector('[data-empty="new"]') || el('btn-new-task'));
   });
 
@@ -5153,7 +5688,7 @@
     if (!b) return;
     e.stopPropagation();
     closeAddMenu();
-    if (b.getAttribute('data-addmode') === 'recent') openPick(false);
+    if (b.getAttribute('data-addmode') === 'recent') openPick();
     else openWherePop(el('btn-new-task'));
   });
   /* The light goes out when the reader looks somewhere else — not on a
@@ -5259,6 +5794,17 @@
   function dropRow(key) {
     var added = extraRows.indexOf(key) !== -1;
     extraRows = extraRows.filter(function (k) { return k !== key; });
+    /* Removing the row is the other way out of a task that would not
+       save, so nothing about it is left behind counting against the
+       header. */
+    if (rowFly[key]) { clearTimeout(rowFly[key].timer); delete rowFly[key]; }
+    delete rowErr[key];
+    Object.keys(cellErr).forEach(function (dk) {
+      if (dk.indexOf(key + '|') === 0) delete cellErr[dk];
+    });
+    Object.keys(inFlight).forEach(function (dk) {
+      if (dk.indexOf(key + '|') === 0) clearFly(dk);
+    });
     if (draft) {
       Object.keys(draft).forEach(function (dk) {
         if (dk.indexOf(key + '|') === 0) delete draft[dk];
@@ -5291,12 +5837,16 @@
     var key = x.getAttribute('data-drop-key');
     var m = taskMeta[key];
     var hours = days().reduce(function (n, d) { return n + hoursFor(key, iso(d)); }, 0);
-    if (!hours) { removeRow(key); return; }
+    /* Asked every time, hours or no hours. With nothing held back until
+       a Save, the press is the removal — and a row taken off by a
+       misplaced click is a row somebody has to notice is gone before
+       they can ask for it back. */
     askConfirm('Remove this task?',
-      pathOf(m.levels) + ' has ' + fmtHours(hours) + ' h on it this week.',
-      ['The hours entered against it are removed with it.',
-       'There is no Save to hold this back &mdash; it happens now. ' +
-       'Undo is offered for a few seconds afterwards.'],
+      hours ? saidAs(m.levels) + ' has ' + fmtHours(hours) + ' h on it this week.'
+            : saidAs(m.levels) + ' has no hours on it this week.',
+      (hours ? ['The hours entered against it are removed with it.'] : []).concat(
+      ['There is no Save to hold this back &mdash; it happens now. ' +
+       'Undo is offered for a few seconds afterwards.']),
       function () { removeRow(key); });
   }, true);
 
