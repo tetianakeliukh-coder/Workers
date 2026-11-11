@@ -83,6 +83,15 @@
     0%   { background: #e9f5e4; }
     100% { background: transparent; }
   }
+  /* Taken by somebody with the last word while the cell was open. Not
+     a failure and not the worker's to fix, so it says so once, in a
+     colour that is neither green nor red, and then settles into the
+     closed day it now belongs to. */
+  #grid tbody td.col-day.c-taken { animation: cell-taken 4s ease-out 1; }
+  @keyframes cell-taken {
+    0%, 55% { background: #faeeda; }
+    100%    { background: transparent; }
+  }
   /* Refused and still holding what was typed. It does not fade: the
      figure is not in, and will not be until somebody does something
      about it. */
@@ -166,6 +175,19 @@
   }
   .save-retry:hover { color: var(--primary-dark); }
   .save-retry[hidden] { display: none; }
+  /* A switcher that is a list rather than a row of buttons. The dock
+     gives it its label and its box; it only has to hold the select. */
+  .vp-pick { padding: 0; border: none; background: none; box-shadow: none; }
+  .vp-pick select {
+    height: 32px; min-width: 232px; padding: 0 28px 0 10px;
+    border: 1px solid var(--grey-350); border-radius: 8px; background: var(--white);
+    font-family: var(--fs-sans); font-size: 13px; color: var(--text-main);
+    cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none'%3E%3Cpath d='M3 4.5l3 3 3-3' stroke='%23616161' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 9px center;
+  }
+  .vp-pick select:hover { border-color: var(--border-hover); }
+  .vp-pick select:focus { outline: none; border-color: var(--primary); }
   #add-menu-wrap { display: none; position: relative; }
   body.editing #add-menu-wrap { display: inline-flex; }
   /* A week with nothing on it has nothing to sort, nothing to fold and
@@ -312,6 +334,24 @@
      outrank it rather than merely come after it. */
   .cell-pop.task-pop, .cell-pop.where-pop { width: 288px; }
   body.pop-room .content { padding-bottom: 360px; }
+  /* ─── The header stays ──────────────────────────────────────────
+     Whether the work is saved, which period is on screen and the way
+     to add a task are the three things a worker needs while they are
+     halfway down a long week — which is exactly when they had all
+     scrolled away. It pins, and the table's own heading row pins
+     under it rather than behind it. */
+  /* The shell gives .main an overflow-x, which makes it a scroll
+     container on both axes — and a sticky child of a scroll container
+     sticks to that container, not to the window, so it scrolled away
+     with everything else. The grid does its own horizontal scrolling
+     inside its card, so this page does not need .main to do any. */
+  body[data-module="mytime"] .main { overflow-x: visible; }
+  .page-header {
+    position: sticky; top: 0; z-index: 6;
+    margin: 0 -4px; padding: 12px 4px 10px;
+    background: var(--bg-page);
+  }
+  body.is-narrow .page-header { position: static; margin: 0; padding: 0; }
   .task-pop .fld, .where-pop .fld { margin-bottom: 10px; }
   .task-pop select, .where-pop select {
     width: 100%; height: 36px; padding: 0 8px; border-radius: 8px;
@@ -443,7 +483,11 @@
   td.col-day, td.col-total { font-variant-numeric: tabular-nums; }
   /* A dash says "nothing here". It has to hold the column together
      without competing with the figures that are the point of it. */
-  #grid td.col-day .cell-empty, #grid td.col-total .cell-empty { color: var(--grey-350); }
+  /* A step darker than it was: on today's column and on the grey
+     summary line the old one disappeared into the background, and a
+     cell that reads as blank rather than as empty is a cell nobody
+     can tell they are allowed to type in. */
+  #grid td.col-day .cell-empty, #grid td.col-total .cell-empty { color: var(--grey-400); }
 
   #grid tfoot td {
     position: sticky; bottom: 0; background: var(--white);
@@ -1715,17 +1759,19 @@
   <button type="button" data-iter="0">Off</button>
 </div>
 
-<!-- One list, each option named by what the cell will do rather than by
-     what went wrong behind it. How long it takes and what the answer is
-     were two switches, and nobody could tell which combination of them
-     produced which screen. -->
-<div class="vp-switch" id="case-switch" role="group" aria-label="When a cell is left">
-  <button type="button" data-case="ok" class="on">Saves</button>
-  <button type="button" data-case="slow">Saves slowly</button>
-  <button type="button" data-case="timeout">Never answers</button>
-  <button type="button" data-case="server">Server refuses</button>
-  <button type="button" data-case="blocked">Site closed to you</button>
-  <button type="button" data-case="finalised">Day already signed off</button>
+<!-- Six situations, each named by what the cell will do rather than by
+     what went wrong behind it. A row of six buttons was wider than the
+     dock and still not self-explanatory; a list has room to say what
+     each one is. -->
+<div class="vp-switch vp-pick" id="case-switch" aria-label="Situation">
+  <select id="case-pick" aria-label="Situation">
+    <option value="ok">Saves straight away</option>
+    <option value="slow">Saves slowly &mdash; spinner first</option>
+    <option value="timeout">Never answers &mdash; times out</option>
+    <option value="server">Server refuses the change</option>
+    <option value="blocked">Site closed to you mid-week</option>
+    <option value="finalised">Day signed off while you type</option>
+  </select>
 </div>
 
 <!-- What a cell can carry besides its figure, and how. Every variant
@@ -2680,7 +2726,17 @@
   }
   function cellLocked(key, isoDate) {
     var m = taskMeta[key];
-    return !!m && dayLocked(m.site, m.sup, isoDate);
+    if (!m) return false;
+    if (blockedSites[m.site]) return true;
+    return dayLocked(m.site, m.sup, isoDate);
+  }
+  /* Two reasons a cell is shut, and they are not the same reason. */
+  function lockWhy(key) {
+    var m = key && taskMeta[key];
+    return m && blockedSites[m.site]
+      ? 'You are no longer allowed to enter hours for ' + Shell.esc(m.site) +
+        ' &mdash; reload the page once it has been sorted out'
+      : TIP_LOCKED;
   }
 
   /* The group's summary row crosses every day, so each of its day cells
@@ -2771,7 +2827,7 @@
        here that changes what the reader may do rather than telling them
        something about the hours. */
     if (lock) {
-      out += '<em>' + TIP_LOCKED + '</em>';
+      out += '<em>' + lockWhy(key) + '</em>';
       if (a.length || n) out += '<hr>';
     }
     if (a.length) {
@@ -2858,6 +2914,7 @@
         (lock ? ' shut' : '') +
         (fly && fly.slow ? ' c-load' : '') +
         (justSaved[dk] ? ' c-saved' : '') +
+        (justTaken === dk ? ' c-taken' : '') +
         (over ? ' c-cap' : bad ? ' c-err' : '');
       /* Hours alone, and no claim to carry, leaves nothing for a panel
          to hold: the cell is the field. But only while it is being
@@ -3926,6 +3983,17 @@
      of a failure. That is what the Save button cost and why it went. */
   var inFlight = Object.create(null);
   var cellErr = Object.create(null);
+  /* A site whose settings changed under the worker. Nothing on it can
+     be saved any more, so nothing on it is offered: the figure that
+     was refused goes back to what the back end holds, and the whole
+     site goes read-only until the page is loaded again. Dimming one
+     cell would have left the next twenty looking editable and failing
+     one at a time. */
+  var blockedSites = Object.create(null);
+  /* The cell that was taken while it was open, so the week can say
+     which day it was rather than leaving the reader to find a grey
+     figure among the grey ones. */
+  var justTaken = null, takenTimer = null;
   /* A task is a row the back end has to agree to before any hours can
      hang off it, so it saves the same way a figure does — and until it
      has, the row's days are shut. A figure written against a task that
@@ -4147,6 +4215,14 @@
       writeCells([dk]);
       delete draft[dk];
       settleRows();
+      /* Recorded here rather than when the server says yes. The mock
+         decides a day looks handed in from the hours sitting on it, and
+         the figure goes in before the answer comes back — so a save
+         that failed was locking the very cell it had just refused, and
+         the worker could neither retry it nor clear it. Nobody hands a
+         day in by typing in it, whatever the server then says. */
+      var tm = taskMeta[key];
+      if (tm) typedHere[tm.site + '\u00a7' + tm.sup + '\u00a7' + date] = true;
     }
     sendCell(dk, key, date);
   }
@@ -4202,8 +4278,6 @@
       if (SAVE_MODE === 'blocked')   { cellBlocked(dk, key, date); return; }
       if (SAVE_MODE === 'finalised') { cellFinalised(dk, key, date); return; }
     }
-    var m = taskMeta[key];
-    if (m) typedHere[m.site + '\u00a7' + m.sup + '\u00a7' + date] = true;
     flashSaved(dk);
     renderGrid(); renderWeek(); syncEditBar();
   }
@@ -4295,7 +4369,16 @@
     if (m) {
       lockedSince[m.site + '\u00a7' + m.sup + '\u00a7' + date] = true;
       lastWord[dk] = true;
+      /* The day the worker loses is one grey figure among a week of
+         grey figures. It is marked, loudly enough and briefly enough
+         to be caught on the way past, so nobody has to go hunting for
+         which cell the snackbar is about. */
+      typedHere[m.site + '\u00a7' + m.sup + '\u00a7' + date] = false;
+      delete typedHere[m.site + '\u00a7' + m.sup + '\u00a7' + date];
     }
+    justTaken = dk;
+    if (takenTimer) clearTimeout(takenTimer);
+    takenTimer = setTimeout(function () { justTaken = null; renderGrid(); }, 4000);
     markOver(date, null);
     renderGrid(); renderWeek(); syncEditBar();
     Shell.snackbar(((m && m.sup) || 'Your supervisor') + ' finalised this day while you were ' +
@@ -4308,8 +4391,11 @@
      not redrawn around it: it is rare, it means somebody made a mistake
      somewhere else, and a refresh would take those cells away entirely.
      The worker finds out by trying, and is told what to do about it. */
+  var blockedAt = null;
   function cellBlocked(dk, key, date) {
     var m = taskMeta[key];
+    blockedAt = { dk: dk, key: key, date: date,
+      prev: lastWrite && lastWrite.key === key && lastWrite.date === date ? lastWrite.prev : null };
     /* A configuration taken away behaves like any other refusal now:
        Kerdi's point was that a worker should not have to learn two
        different outcomes for two things they cannot tell apart. The
@@ -4325,13 +4411,33 @@
     el('blocked-sheet').classList.add('open');
   }
 
-  el('bk-stay').addEventListener('click', function () {
+  /* Closing the popup is the moment the page catches up with what it
+     has just been told. The figure goes back to what the back end
+     holds — it was never going to be saved — and the site it belongs
+     to is shut. A refresh would take those rows away entirely; this is
+     the honest version of that without throwing away the rest of the
+     week the worker is in the middle of. */
+  function closeBlocked() {
     el('blocked-sheet').classList.remove('open');
-  });
-  el('blocked-sheet').addEventListener('click', function (e) {
-    if (e.target === el('blocked-sheet') || e.target.closest('[data-close]')) {
-      el('blocked-sheet').classList.remove('open');
+    var b = blockedAt;
+    blockedAt = null;
+    if (!b) return;
+    delete cellErr[b.dk];
+    if (b.prev) {
+      if (!draft) draft = Object.create(null);
+      draft[b.dk] = b.prev;
+      writeCells([b.dk]);
+      delete draft[b.dk];
+      lastWrite = null;
     }
+    var m = taskMeta[b.key];
+    if (m) blockedSites[m.site] = true;
+    markOver(b.date, null);
+    render();
+  }
+  el('bk-stay').addEventListener('click', closeBlocked);
+  el('blocked-sheet').addEventListener('click', function (e) {
+    if (e.target === el('blocked-sheet') || e.target.closest('[data-close]')) closeBlocked();
   });
 
   el('save-retry').addEventListener('click', retryAll);
@@ -4346,13 +4452,10 @@
     blocked:   { mode: 'blocked',   speed: 'fast' },
     finalised: { mode: 'finalised', speed: 'fast' }
   };
-  var caseSwitch = el('case-switch');
-  caseSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-case]');
-    if (!b) return;
-    var c = CASES[b.getAttribute('data-case')];
+  el('case-pick').addEventListener('change', function (e) {
+    var c = CASES[e.target.value];
+    if (!c) return;
     SAVE_MODE = c.mode; SAVE_SPEED = c.speed;
-    caseSwitch.querySelectorAll('[data-case]').forEach(function (x) { x.classList.toggle('on', x === b); });
   });
 
   var marksSwitch = el('marks-switch');
@@ -5302,6 +5405,7 @@
     el('confirm-title').textContent = title;
     el('confirm-lead').textContent = lead;
     el('confirm-list').innerHTML = points.map(function (p) { return '<li>' + p + '</li>'; }).join('');
+    el('confirm-list').hidden = !points.length;
     el('confirm-ok').textContent = opts.ok || 'Remove';
     el('confirm-ok').classList.toggle('btn-danger', opts.danger !== false);
     el('confirm-ok').classList.toggle('btn-primary', opts.danger === false);
@@ -5319,13 +5423,10 @@
     var n = errCount() + flyCount();
     if (!n) { go(); return; }
     Shell.closeAllDropdowns();
-    askConfirm('Change the period?',
-      n === 1 ? 'One change has not been saved yet.'
-              : n + ' changes have not been saved yet.',
-      ['Another period is loaded fresh from the server, so anything not saved ' +
-       'is lost &mdash; it is not kept and sent later.',
-       'Press Retry at the top of the page first to send them again.'],
-      go, { ok: 'Change anyway', cancel: 'Stay here', danger: false });
+    askConfirm('Remove changes?',
+      'You have ' + n + ' unsaved change' + (n === 1 ? '' : 's') +
+      '. Would you like to remove them?',
+      [], go, { ok: 'Yes, remove', cancel: 'Stay here' });
   }
   el('confirm-ok').addEventListener('click', function () {
     var run = confirmAction;
