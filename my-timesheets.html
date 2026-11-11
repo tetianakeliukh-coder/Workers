@@ -36,17 +36,18 @@
      moves because something appeared to the left of it. The cost is
      the width of the empty slots, paid in every cell — which is the
      trade the three-mark variant is asking about. */
-  .cmarks { display: flex; align-items: center; flex-shrink: 0; }
-  .cm {
-    width: 15px; height: 16px; flex-shrink: 0;
-    display: inline-flex; align-items: center; justify-content: center;
-    color: var(--grey-600);
+  /* The figure takes only the room it needs, so the padlock can sit
+     against it. Everything else is pushed to the far edge. */
+  .cfig { flex: 0 0 auto; min-width: 0; text-align: left; }
+  .cm-lock {
+    display: inline-flex; align-items: center; flex-shrink: 0;
+    margin-left: 5px; color: var(--grey-600);
   }
-  .cfig { flex: 1 1 auto; min-width: 0; text-align: left; }
-  /* Pushed to the far edge rather than following the figure, so the
-     marks line up down the table whatever the figure beside them is. */
-  .cmarks { margin-left: auto; }
-  .cm-cmt { color: var(--grey-600); }
+  .cmarks {
+    display: flex; align-items: center; gap: 3px; flex-shrink: 0;
+    margin-left: auto; padding-left: 8px; color: var(--grey-600);
+  }
+  .cm-cmt, .cm-alw { display: inline-flex; align-items: center; flex-shrink: 0; }
   /* ─── The corner ────────────────────────────────────────────────
      Out of the row altogether, into the cell's own corner, where it
      costs no width at all and cannot be pushed about by anything else.
@@ -2531,11 +2532,21 @@
      is the allowance mark, the status mark and a number of four digits
      with three decimals — so the column is cut to that, not to what a
      typical 8 looks like. */
-  var DAY_W = 96;
-  /* Three marks need three slots, and three slots need the width. The
-     column grows for that mode rather than the figure being squeezed —
-     which is itself part of the answer to "can we have three icons". */
-  function dayW() { return MARK_MODE === 'three' ? 118 : 96; }
+  /* ─── How wide a day is ─────────────────────────────────────────
+     Counted from the widest thing the cell can actually hold rather
+     than guessed at. Hours are rounded to one decimal and a day holds
+     twenty-four, so the longest figure is "24.0" — about 29px at 14px
+     tabular. Add the cell's 8px gutters, 5px and a 13px padlock after
+     the figure, then 8px of air and the two 13px marks with 3px
+     between them: 8 + 29 + 5 + 13 + 8 + 13 + 3 + 13 + 8 = 100.
+
+     106 is what that rounds to and what the Figma component is, so the
+     column is 106. The old 96 was budgeted for a figure of four digits
+     and three decimals, which nothing here can produce, and the 118
+     after it was paying for three reserved slots that no longer
+     exist. */
+  var DAY_W = 106;
+  function dayW() { return DAY_W; }
   function dayTotal(isoDate, searchedOnly) {
     var n = 0;
     Object.keys(taskMeta).forEach(function (k) {
@@ -2760,21 +2771,28 @@
   /* The slots. Every one of them is drawn whether it has a mark in it
      or not — an empty slot is the whole point, because it is what
      holds the next row's padlock in the same column as this one's. */
+  /* ─── Two kinds of mark, two places ─────────────────────────────
+     The padlock is not an attachment to the hours, it is a fact about
+     them — these ones cannot be changed — so it travels with the
+     figure, a few pixels off its end, and moves as the figure's length
+     moves. The allowance and the note are things hung on the cell, so
+     they hang off its right edge instead, where they make a column of
+     their own down the week.
+
+     Those two collapse rather than holding a slot each. The allowance
+     is the one that comes up constantly, so it takes the outside
+     position; the note tucks in beside it, and on the rare cell that
+     has a note and no allowance the note simply takes the edge. The
+     thing that must not move is the outermost mark, and it does not. */
   function cellMarks(key, isoDate, lock) {
     var a = key ? allowOf(key, isoDate) : [];
     var n = noteOf(key, isoDate);
-    function slot(inner, cls) {
-      return '<span class="cm' + (cls ? ' ' + cls : '') + '">' + (inner || '') + '</span>';
-    }
-    var lk = slot(lock ? ICO_LOCK : '', 'cm-lock');
-    if (MARK_MODE === 'three') {
-      return '<span class="cmarks">' +
-        slot(a.length ? ICO_ALW : '', 'cm-alw') +
-        slot(n ? ICO_CMT : '', 'cm-cmt') + lk + '</span>';
-    }
-    /* corner: the mark leaves the row entirely and goes into the
-       cell's own corner, so the row holds nothing but the padlock. */
-    return '<span class="cmarks">' + lk + '</span>';
+    var out = lock ? '<span class="cm-lock">' + ICO_LOCK + '</span>' : '';
+    if (MARK_MODE !== 'three' || (!a.length && !n)) return out;
+    return out + '<span class="cmarks">' +
+      (n ? '<span class="cm-cmt">' + ICO_CMT + '</span>' : '') +
+      (a.length ? '<span class="cm-alw">' + ICO_ALW + '</span>' : '') +
+      '</span>';
   }
   function cellCorner(key, isoDate) {
     if (MARK_MODE !== 'corner') return '';
@@ -2856,8 +2874,8 @@
           'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '">' +
           fig +
           (fly && fly.slow
-            ? '<span class="cmarks"><span class="cm"><span class="hr-spin" role="img" ' +
-              'aria-label="Saving"></span></span></span>'
+            ? '<span class="cm-lock"><span class="hr-spin" role="img" ' +
+              'aria-label="Saving"></span></span>'
             : cellMarks(key, isoDate, false)) +
           '</button></td>';
       }
