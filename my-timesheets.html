@@ -50,6 +50,42 @@
      What it cannot do is say which of the two it is — that is the
      trade this variant is asking about. */
   #grid td.col-day { position: relative; }
+  /* ─── Today, down the whole column ──────────────────────────────
+     The tint was on the heading alone, which named the column but left
+     the cells under it looking like any other day. Half strength on a
+     task row and full on the summary line, so the band reads as one
+     column rather than as a stripe per row. */
+  #grid tbody td.col-day.tdy { background: rgba(236, 241, 248, 0.5); }
+  #grid tbody tr.row-summary td.col-day.tdy { background: var(--primary-hover-bg); }
+  /* ─── A state is a fact about the cell ──────────────────────────
+     So it is painted on the cell: the full width of the column, under
+     the figure and under its marks. Only the states that are a box
+     draw a box, and they draw it inside. Written after the rule that
+     tints today's column, because the two meet at the same weight and
+     whichever comes last is the one the reader sees. */
+  /* Written with tbody in them so they carry the same weight as the
+     today rule above and, coming after it, win. A state is about this
+     cell now; today is only which column it is in. */
+  #grid tbody td.col-day.c-load { background: var(--grey-100); }
+  #grid tbody td.col-day.c-saved { animation: cell-saved 1.5s ease-out 1; }
+  @keyframes cell-saved {
+    0%   { background: #e9f5e4; }
+    100% { background: transparent; }
+  }
+  /* Refused and still holding what was typed. It does not fade: the
+     figure is not in, and will not be until somebody does something
+     about it. */
+  #grid tbody td.col-day.c-err,
+  #grid tbody td.col-day.c-cap { background: #f5e7e4; }
+  /* A day cannot hold more than a day, and that one is drawn twice
+     over — the wash on the cell says the same as every other refusal,
+     and the box inside says this one was never sent. */
+  #grid td.col-day.c-cap .hr-view,
+  #grid td.col-day.c-cap input.hr-cell,
+  #grid td.col-day.c-cap input.hr-cell:focus {
+    background: #fdf2f3; border-color: var(--error);
+    box-shadow: inset 0 0 0 1px var(--error);
+  }
   .cm-corner {
     position: absolute; top: 4px; left: 5px; width: 0; height: 0; pointer-events: none;
     border-top: 7px solid var(--sec-amber); border-right: 7px solid transparent;
@@ -450,8 +486,14 @@
     background: var(--grey-100); border-color: var(--grey-300);
     color: var(--grey-600); cursor: default;
   }
-  .hr-cell:hover { border-color: var(--border-hover); }
-  .hr-cell:focus { outline: none; border-color: var(--primary); }
+  .hr-cell:hover { border-color: var(--grey-300); }
+  /* Open, and two pixels of it. Drawn as a second pixel inside rather
+     than a thicker border, so the field does not grow by a pixel at
+     the moment it opens and nudge the figure beside it. */
+  .hr-cell:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: inset 0 0 0 1px var(--primary);
+  }
   /* Typed in this edit and not yet saved. A darker rule and a heavier
      figure, with no fill: blue is the focus ring on the cell next to
      it, and anything coloured reads as something being wrong. */
@@ -525,7 +567,7 @@
   /* The pointer says what the cell is for: a figure is typed, not
      pressed. It is the one cue that arrives before anything is read. */
   .hr-view { cursor: text; }
-  .hr-view:hover { border-color: var(--border-hover); background: var(--white); }
+  .hr-view:hover { border-color: var(--grey-300); background: var(--white); }
   .hr-view:focus-visible { outline: none; border-color: var(--primary); }
   /* Picked, not yet open. The first click of two lands here: enough to
      see which cell is about to be typed into, and nothing is lost if it
@@ -540,8 +582,11 @@
      off — so it has no box of its own. The tint goes on the cell, where
      it reads as part of the table, and the figure sits in it as plainly
      as it does anywhere else. */
+  /* Half strength, which is what the rest of the sheet uses for a
+     thing that is there and cannot be touched — the same 50% the
+     locked task name takes. */
   .hr-view.locked, .hr-view.locked:hover {
-    color: var(--grey-600); cursor: default;
+    opacity: 0.5; cursor: default;
     border-color: transparent; background: none;
   }
   /* A handed-in day is handed in for the whole timesheet, so the tint
@@ -564,11 +609,6 @@
   .hr-view.locked .hr-lock { color: var(--grey-600); }
   /* Just written. Long enough to be caught out of the corner of an eye
      on the way to the next cell, and gone before it becomes furniture. */
-  .hr-view.saved { animation: cell-saved 1.5s ease-out 1; }
-  @keyframes cell-saved {
-    0%   { background: rgba(40, 158, 26, 0.18); border-color: var(--success); }
-    100% { background: none; border-color: transparent; }
-  }
   /* ─── Still in the air ──────────────────────────────────────────
      A write that answers inside a second is a write nobody needs
      telling about: the green mark at the end says it, and a spinner on
@@ -576,9 +616,6 @@
      second the cell admits it is waiting, and it does it the way the
      rest of the product says wait — grey, a spinner, and no box,
      because the field that was typed into has already closed. */
-  .hr-view.saving, .hr-view.saving:hover {
-    background: var(--grey-200); border-color: transparent; color: var(--grey-700);
-  }
   .hr-spin {
     width: 11px; height: 11px; flex-shrink: 0; border-radius: 50%;
     border: 1.5px solid var(--grey-350); border-top-color: var(--grey-600);
@@ -593,10 +630,6 @@
      uses, in the opposite colour, and it does not fade. The reason
      arrives on hover; the way out of it is the one Retry in the
      header. */
-  .hr-view.err, .hr-view.err:hover {
-    background: var(--error-light); border-color: transparent;
-  }
-  .hr-view.err.selected, .hr-view.err.selected:hover { border-color: var(--error); }
   /* The padlock and the allowance are two grey marks in the same corner
      of the same cell. The padlock is a condition of the day, so it is
      drawn lighter than the claim, which is something the worker put
@@ -2721,8 +2754,21 @@
         (cellOver(key, isoDate, value) ? ' over' : '');
       var what = 'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '"' +
         (lock ? ' disabled data-tip="' + TIP_LOCKED + '"' : '');
+      /* ─── Where a state is painted ──────────────────────────────
+         A wash is a fact about the cell, so it is painted on the cell:
+         edge to edge, the full width of the column, under the figure
+         and under whatever marks it carries. Only the states that are
+         a box — hover, picked, open, and the figure a day cannot hold —
+         draw a box, and they draw it inside. Painting the wash on the
+         inner box instead left a pale frame of untinted cell around
+         every saved and every refused figure. */
+      var fly = inFlight[dk], bad = cellErr[dk];
+      var over = cellOver(key, isoDate, value) || (bad && bad.kind === 'cap');
       var td = 'col-day' + todayCls(isoDate) + (lastWord[dk] ? ' theirs' : '') +
-        (lock ? ' shut' : '');
+        (lock ? ' shut' : '') +
+        (fly && fly.slow ? ' c-load' : '') +
+        (justSaved[dk] ? ' c-saved' : '') +
+        (over ? ' c-cap' : bad ? ' c-err' : '');
       /* Hours alone, and no claim to carry, leaves nothing for a panel
          to hold: the cell is the field. But only while it is being
          typed into — the rest of the week is read, not filled in, and a
@@ -2737,6 +2783,7 @@
           (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') +
           '</span>';
         var says = cellSays(key, isoDate, lock);
+        if (bad) says = ' data-tip="' + Shell.esc(bad.msg) + '"';
         /* The reason sits on the cell rather than on the figure inside
            it: a locked cell is nothing to press, and nothing to press
            is nothing to hover for an explanation. */
@@ -2764,13 +2811,10 @@
         /* Waiting, or refused. Neither is a state the cell can be put
            into by hand, so neither is drawn while it is open — they
            are what the cell comes back as once it has been left. */
-        var fly = inFlight[dk], bad = cellErr[dk];
-        var tip = bad ? ' data-tip="' + Shell.esc(bad.msg) + '"' : says;
-        return '<td class="' + td + '"' + tip + '>' +
+        return '<td class="' + td + '"' + says + '>' +
           cellCorner(key, isoDate) +
-          '<button class="hr-view' + (justSaved[dk] ? ' saved' : '') +
-          (selCell === dk ? ' selected' : '') +
-          (fly && fly.slow ? ' saving' : '') + (bad ? ' err' : '') + '" type="button" ' +
+          '<button class="hr-view' + (selCell === dk ? ' selected' : '') +
+          '" type="button" ' +
           'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '">' +
           (fly && fly.slow
             ? '<span class="cmarks"><span class="cm"><span class="hr-spin" role="img" ' +
