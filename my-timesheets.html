@@ -773,7 +773,7 @@
      because a note behind a second click is a note nobody leaves. */
   .cell-pop.note-pop { width: 272px; padding: 10px 12px 12px; }
   .np-day {
-    margin-bottom: 8px; font-size: 12px; line-height: 16px;
+    margin-bottom: 10px; font-size: 12px; line-height: 16px;
     font-weight: 500; color: var(--grey-600);
   }
   .np-fld { display: block; margin-bottom: 10px; }
@@ -793,14 +793,14 @@
      for it so the text never runs underneath. */
   .np-box { position: relative; display: block; }
   .np-box .np-count {
-    position: absolute; right: 9px; bottom: 7px; pointer-events: none;
-    font-size: 11px; line-height: 14px; color: var(--grey-500);
+    position: absolute; right: 9px; bottom: 6px; pointer-events: none;
+    font-size: 12px; line-height: 16px; color: var(--grey-500);
     background: var(--white); padding-left: 4px;
   }
   .note-pop textarea {
-    display: block; width: 100%; min-height: 62px; max-height: 120px;
-    padding: 7px 10px 22px; resize: vertical;
-    font-family: var(--fs-sans); font-size: 13px; line-height: 18px;
+    display: block; width: 100%; min-height: 64px; max-height: 120px;
+    padding: 7px 10px 24px; resize: vertical;
+    font-family: var(--fs-sans); font-size: 14px; line-height: 20px;
     color: var(--text-main); background: var(--white);
     border: 1px solid var(--grey-350); border-radius: 6px;
   }
@@ -816,18 +816,14 @@
      leave by clicking somewhere and hoping. The keys stay the fast way
      out; the buttons are the way anyone finds. */
   .np-foot {
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 8px; margin-top: 12px;
-  }
-  .np-foot .btn-ghost, .np-foot .btn-primary {
-    height: 32px; padding: 0 14px; font-size: 13px;
+    display: flex; align-items: center; justify-content: flex-end; gap: 8px;
   }
   /* Counted quietly all the way along, and only worth reading near the
      end — so it only darkens near the end. */
   .np-count.near { color: var(--text-main); }
   /* A day that will not take what was typed says so here, where the
      typing is happening — not only in a message that slides away. */
-  .note-pop .cp-err { margin: -4px 0 10px; }
+  .note-pop .cp-err { margin: 0 0 10px; }
   .note-pop .cp-err[hidden] { display: none; }
   /* The other thing the cell carries. It is not edited here, but a
      panel that showed the hours and the note and said nothing about an
