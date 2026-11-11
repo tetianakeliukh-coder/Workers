@@ -50,7 +50,8 @@
     margin-left: 5px; color: var(--grey-600);
   }
   .cmarks {
-    display: flex; align-items: center; gap: 3px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: flex-end; gap: 3px;
+    flex-shrink: 0; min-width: var(--marks-w, 31px);
     margin-left: 8px; color: var(--grey-600);
   }
   .cm-cmt, .cm-alw { display: inline-flex; align-items: center; flex-shrink: 0; }
@@ -106,6 +107,15 @@
      columns. */
   #grid th.col-day, #grid td.col-day,
   #grid tbody td.col-total { box-shadow: inset 1px 0 0 var(--grey-200); }
+  /* The summary line is grey, and a rule the colour of the lightest
+     grey disappears into it. It takes a darker one — the same the
+     heading row uses — so the columns run unbroken from top to
+     bottom instead of stopping at every group. */
+  #grid tbody tr.row-summary td.col-day,
+  #grid tbody tr.row-summary td.col-total,
+  #grid thead th.col-day, #grid thead th.col-total {
+    box-shadow: inset 1px 0 0 var(--grey-300);
+  }
   /* Secondary actions read as actions. */
   .period-bar .btn-ghost { color: var(--primary); }
   .step {
@@ -544,6 +554,7 @@
      the same way the hours do. The rule appears under the pointer and
      nowhere else, so a column of thirteen tasks is still a column of
      thirteen names. */
+  .tcell > .tname-btn { flex: 1 1 auto; min-width: 0; }
   .tname-btn {
     display: block; width: 100%; margin: -3px -6px; padding: 3px 6px;
     text-align: left; font: inherit; color: inherit; background: none;
@@ -565,8 +576,13 @@
      between the two columns. There is a rule there now, so the right
      edge is plainly the task's own. Fading alone was too quiet for the
      one thing this page has to answer at a glance. */
-  #grid td.col-task.shut { display: flex; align-items: flex-start; gap: 8px; }
-  #grid td.col-task.shut .tname { flex: 1 1 auto; min-width: 0; opacity: 0.5; }
+  /* Laid out inside the cell, never on the cell. display:flex on a
+     <td> takes it out of the table layout altogether — the row stops
+     sharing its height and its rules with the cells beside it, which
+     is what broke the line under the locked rows. */
+  .tcell { display: flex; align-items: flex-start; gap: 8px; }
+  .tcell .tname { flex: 1 1 auto; min-width: 0; }
+  #grid td.col-task.shut .tname { opacity: 0.5; }
   .tn-lock {
     display: inline-flex; align-items: center; flex-shrink: 0;
     margin-top: 2px; color: var(--grey-600);
@@ -575,8 +591,7 @@
      the person put it there — so the colour is on the name and on the
      days it is holding shut, not a second row somewhere saying the
      first one is provisional. */
-  #grid td.col-task.saving { display: flex; align-items: flex-start; gap: 6px; }
-  #grid td.col-task.saving .hr-spin { margin-top: 7px; }
+  #grid td.col-task.saving .hr-spin { margin-top: 7px; flex-shrink: 0; }
   #grid td.col-task.err { background: var(--error-light); }
   #grid td.col-task.err .tname { opacity: 1; }
   /* Shut because the row has no task yet, or because its task is not
@@ -2803,15 +2818,14 @@
     var a = key ? allowOf(key, isoDate) : [];
     var n = noteOf(key, isoDate);
     if (MARK_MODE !== 'three' || (!a.length && !n)) return '';
-    /* The allowance leads. It was the outer one while the group hung
-       off the right edge, for the same reason: it is the mark that
-       comes up constantly, so it takes the position that never moves.
-       Now that the group hangs off the figure instead, the position
-       that never moves is the first one. The note, which is rare,
-       tucks in after it. */
+    /* The pair sits in a slot of its own, wide enough for both, and
+       fills it from the right. So the outer position is the one that
+       is always taken: the allowance when there is one, the note when
+       it is alone. That is what keeps a column of marks down the week
+       whether a cell carries one of them or both. */
     return '<span class="cmarks">' +
-      (a.length ? '<span class="cm-alw">' + ICO_ALW + '</span>' : '') +
       (n ? '<span class="cm-cmt">' + ICO_CMT + '</span>' : '') +
+      (a.length ? '<span class="cm-alw">' + ICO_ALW + '</span>' : '') +
       '</span>';
   }
   function cellCorner(key, isoDate) {
@@ -3152,20 +3166,21 @@
               ? '<td class="col-task' + (rowFly[t.key] ? ' saving' : '') +
                   (rowErr[t.key] ? ' err' : '') + '" data-tip="' +
                   Shell.esc(rowErr[t.key] || ('Task \u2014 ' + t.label)) + '">' +
+                  '<span class="tcell">' +
                   (rowFly[t.key] ? '<span class="hr-spin" role="img" aria-label="Saving"></span>' : '') +
                   '<button class="tname-btn' +
                   (tpRename && tpRename.key === t.key ? ' open' : '') +
                   '" type="button" data-rename="' + Shell.esc(t.key) + '">' +
-                  taskName(t) + '</button></td>'
+                  taskName(t) + '</button></span></td>'
               : '<td class="col-task' + (shut ? ' shut' : '') +
                   (rowFly[t.key] ? ' saving' : '') + (rowErr[t.key] ? ' err' : '') +
                   '" data-tip="' + (shut
                   ? 'One of these days has been handed in, so the task has to stay'
                   : 'Task &mdash; ' + Shell.esc(t.label)) + '">' +
-                  taskName(t) +
+                  '<span class="tcell">' + taskName(t) +
                   (shut ? '<span class="tn-lock" role="img" aria-label="Handed in ' +
                     '&mdash; this task can no longer be changed">' + ICO_LOCK + '</span>' : '') +
-                  '</td>') +
+                  '</span></td>') +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell(rowDrop(t.key)) +
