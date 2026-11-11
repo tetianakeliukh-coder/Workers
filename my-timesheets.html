@@ -2118,9 +2118,14 @@
   /* Rounded to a tenth before the test: a sum that drifts by a
      billionth of an hour is not a whole number, and would print the
      decimal it is meant to drop. */
+  /* Three decimals, because that is the precision the hours are kept
+     at — but trailing zeros are noise on a column that is mostly whole
+     numbers, so eight hours is "8" and not "8.000". The column is
+     budgeted for the longest string it can ever hold either way. */
   function fmtHours(n) {
-    var v = Math.round(n * 10) / 10;
-    return v % 1 === 0 ? String(v) : v.toFixed(1);
+    var v = Math.round(n * 1000) / 1000;
+    if (v % 1 === 0) return String(v);
+    return String(v).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
   }
 
   var TODAY = startOfDay(new Date());
@@ -2597,19 +2602,18 @@
      tabular figures, "24.0" and "10.5" both come to 31px; the padlock
      and each mark are 13 and 14.
 
-     The slot the figure and its padlock share:
-         31 (figure) + 5 (gap) + 13 (padlock) = 49
+     Hours are kept to three decimals, so the longest string the column
+     can ever hold is "24.000" — 48px at 14px tabular, against 31 for
+     "24.0". The slot the figure and its padlock share:
+         48 (figure) + 5 (gap) + 13 (padlock) = 66
      and the column around it:
-         12 + 49 + 8 + 14 (note) + 3 + 14 (allowance) + 12 = 112
+         12 + 66 + 8 + 14 (note) + 3 + 14 (allowance) + 12 = 129
 
-     That is for hours as they are written now, which is one decimal —
-     a day holds twenty-four, so "24.0" is the longest string the
-     column can ever hold. If hours turn out to need three decimals,
-     "23.333" measures 48 instead of 31: the slot becomes 66 and the
-     column 129, and a week then wants 119 more pixels than it has at
-     1440. Two numbers to change, and nothing else. */
-  var NUM_W = 49;
-  var DAY_W = 112;
+     That is 17px a day more than one decimal cost, 119 across a week,
+     which is why the week no longer fits at 1440 and the table scrolls.
+     Two numbers to change if the precision ever changes again. */
+  var NUM_W = 66;
+  var DAY_W = 129;
   function dayW() { return DAY_W; }
   function dayTotal(isoDate, searchedOnly) {
     var n = 0;
