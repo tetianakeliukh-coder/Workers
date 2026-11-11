@@ -20,14 +20,14 @@
   .period-bar .search-wrap { width: 300px; }
   /* Headers take the shell's 24px right padding, cells 16px — which left
      the dates off their own numbers. */
-  .grid-card thead th.col-day, .grid-card thead th.col-total { padding-left: 8px; }
+  .grid-card thead th.col-day, .grid-card thead th.col-total { padding-left: 12px; }
   #grid th.col-day { padding-left: 8px; padding-right: 8px; }
   #grid td.col-day { padding-left: 0; padding-right: 0; }
   /* Everything printed straight into a day cell carries the gutter the
      cell no longer has, so one column of figures lines up down the page:
      header, summary line and task row all on the same edge. */
   .cell-fig {
-    display: flex; align-items: center; gap: 0; padding: 0 8px; min-height: 30px;
+    display: flex; align-items: center; gap: 0; padding: 0 12px; min-height: 30px;
   }
   /* ─── Slots ─────────────────────────────────────────────────────
      A mark gets a place, not a position in a queue. The slot is drawn
@@ -36,8 +36,14 @@
      moves because something appeared to the left of it. The cost is
      the width of the empty slots, paid in every cell — which is the
      trade the three-mark variant is asking about. */
-  /* The figure takes only the room it needs, so the padlock can sit
-     against it. Everything else is pushed to the far edge. */
+  /* The figure and its padlock share one slot, as wide as the longest
+     figure this column can hold. That is what keeps the padlock
+     against its own figure — moving with it as it gets longer — while
+     still landing the marks after it on the same pixel in every row. */
+  .cnum {
+    display: flex; align-items: center; flex: 0 0 auto;
+    min-width: var(--num-w, 48px);
+  }
   .cfig { flex: 0 0 auto; min-width: 0; text-align: left; }
   .cm-lock {
     display: inline-flex; align-items: center; flex-shrink: 0;
@@ -45,7 +51,7 @@
   }
   .cmarks {
     display: flex; align-items: center; gap: 3px; flex-shrink: 0;
-    margin-left: auto; padding-left: 8px; color: var(--grey-600);
+    margin-left: 8px; color: var(--grey-600);
   }
   .cm-cmt, .cm-alw { display: inline-flex; align-items: center; flex-shrink: 0; }
   /* ─── The corner ────────────────────────────────────────────────
@@ -506,7 +512,7 @@
      as every other figure in the column. */
   input.hr-cell {
     display: block; width: calc(100% - 8px); margin: 0 4px;
-    padding: 0 4px; text-align: left;
+    padding: 0 8px; text-align: left;
   }
   input.hr-cell::placeholder { color: var(--grey-400); }
   input.hr-cell:disabled, input.hr-cell:disabled:hover {
@@ -552,15 +558,19 @@
   .tname-btn.open, .tname-btn.open:hover {
     border-color: var(--primary); background: var(--white);
   }
-  /* A task whose name is settled says so by fading, not by carrying a
-     padlock. The padlock belongs on the hours, where every cell needs
-     to answer "can I type here" on its own; on the name it would sit
-     either in front of the text — making every task in the column
-     start at a different place, depending on whether it happened to be
-     locked — or at the far edge of the column, where it reads as a
-     mark on the first day instead. Faded is the same "switched off"
-     the rest of the product uses, and it costs the column nothing. */
-  #grid td.col-task.shut .tname { opacity: 0.5; }
+  /* The padlock is back on the task, and on the right. In front of the
+     name it made every task in the column start at a different place
+     depending on whether it happened to be locked; at the far edge it
+     used to read as a mark on the first day, because there was nothing
+     between the two columns. There is a rule there now, so the right
+     edge is plainly the task's own. Fading alone was too quiet for the
+     one thing this page has to answer at a glance. */
+  #grid td.col-task.shut { display: flex; align-items: flex-start; gap: 8px; }
+  #grid td.col-task.shut .tname { flex: 1 1 auto; min-width: 0; opacity: 0.5; }
+  .tn-lock {
+    display: inline-flex; align-items: center; flex-shrink: 0;
+    margin-top: 2px; color: var(--grey-600);
+  }
   /* A task on its way in, or refused. The row is already on the page —
      the person put it there — so the colour is on the name and on the
      days it is holding shut, not a second row somewhere saying the
@@ -585,7 +595,7 @@
      question is asked. */
   .hr-view {
     display: flex; align-items: center;
-    width: calc(100% - 8px); height: 30px; margin: 0 4px; padding: 0 4px;
+    width: calc(100% - 8px); height: 30px; margin: 0 4px; padding: 0 8px;
     text-align: left; font-family: var(--fs-sans); font-size: 14px;
     color: var(--text-main); font-variant-numeric: tabular-nums;
     border: 1px solid transparent; border-radius: 6px; background: none;
@@ -1690,22 +1700,17 @@
   <button type="button" data-iter="0">Off</button>
 </div>
 
-<!-- Opening a cell. Grids default to a double click, which novices are
-     known not to find; a single click finds everything and opens things
-     nobody meant to open. The middle way is the one spreadsheets settled
-     on: the first click picks the cell, the second opens it. -->
-<div class="vp-switch" id="click-switch" role="group" aria-label="Opening a cell">
-  <button type="button" data-click="two" class="on">Click, then click</button>
-  <button type="button" data-click="one">One click</button>
-</div>
-
-<!-- What the back end says when a cell is left. Every cell is written
-     the same way; this is the answer that comes back. -->
-<div class="vp-switch" id="save-switch" role="group" aria-label="When a cell saves">
-  <button type="button" data-save="clean" class="on">Saves</button>
-  <button type="button" data-save="finalised">Day finalised</button>
-  <button type="button" data-save="blocked">Permission lost</button>
-  <button type="button" data-save="server">Server error</button>
+<!-- One list, each option named by what the cell will do rather than by
+     what went wrong behind it. How long it takes and what the answer is
+     were two switches, and nobody could tell which combination of them
+     produced which screen. -->
+<div class="vp-switch" id="case-switch" role="group" aria-label="When a cell is left">
+  <button type="button" data-case="ok" class="on">Saves</button>
+  <button type="button" data-case="slow">Saves slowly</button>
+  <button type="button" data-case="timeout">Never answers</button>
+  <button type="button" data-case="server">Server refuses</button>
+  <button type="button" data-case="blocked">Site closed to you</button>
+  <button type="button" data-case="finalised">Day already signed off</button>
 </div>
 
 <!-- What a cell can carry besides its figure, and how. Every variant
@@ -1713,14 +1718,6 @@
 <div class="vp-switch" id="marks-switch" role="group" aria-label="Marks in a cell">
   <button type="button" data-marks="three" class="on">Three icons</button>
   <button type="button" data-marks="corner">Corner mark</button>
-</div>
-
-<!-- How long the answer takes. Under a second the cell draws nothing
-     at all; over it, it says it is still waiting; at ten it stops. -->
-<div class="vp-switch" id="speed-switch" role="group" aria-label="How long a save takes">
-  <button type="button" data-speed="fast" class="on">Answers fast</button>
-  <button type="button" data-speed="slow">Answers slowly</button>
-  <button type="button" data-speed="timeout">Times out</button>
 </div>
 
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
@@ -2356,7 +2353,6 @@
      committed to — which is the state the back end can least afford. */
   var liveCell = null;       // 'key|date' being typed into, or null
   var selCell = null;        // picked, not yet opened — only in the two-click mode
-  var CLICK_MODE = 'two';    // 'two' = pick then open, 'one' = open on the first click
   /* Every cell whose mark is still fading, not just the last one:
      Retry sends a handful at once, and a handful coming back green one
      after another is the only sign that the button did anything. */
@@ -2533,19 +2529,23 @@
      with three decimals — so the column is cut to that, not to what a
      typical 8 looks like. */
   /* ─── How wide a day is ─────────────────────────────────────────
-     Counted from the widest thing the cell can actually hold rather
-     than guessed at. Hours are rounded to one decimal and a day holds
-     twenty-four, so the longest figure is "24.0" — about 29px at 14px
-     tabular. Add the cell's 8px gutters, 5px and a 13px padlock after
-     the figure, then 8px of air and the two 13px marks with 3px
-     between them: 8 + 29 + 5 + 13 + 8 + 13 + 3 + 13 + 8 = 100.
+     Measured in the real font rather than guessed at. At 14px with
+     tabular figures, "24.0" and "10.5" both come to 31px; the padlock
+     and each mark are 13 and 14.
 
-     106 is what that rounds to and what the Figma component is, so the
-     column is 106. The old 96 was budgeted for a figure of four digits
-     and three decimals, which nothing here can produce, and the 118
-     after it was paying for three reserved slots that no longer
-     exist. */
-  var DAY_W = 106;
+     The slot the figure and its padlock share:
+         31 (figure) + 5 (gap) + 13 (padlock) = 49
+     and the column around it:
+         12 + 49 + 8 + 14 (note) + 3 + 14 (allowance) + 12 = 112
+
+     That is for hours as they are written now, which is one decimal —
+     a day holds twenty-four, so "24.0" is the longest string the
+     column can ever hold. If hours turn out to need three decimals,
+     "23.333" measures 48 instead of 31: the slot becomes 66 and the
+     column 129, and a week then wants 119 more pixels than it has at
+     1440. Two numbers to change, and nothing else. */
+  var NUM_W = 49;
+  var DAY_W = 112;
   function dayW() { return DAY_W; }
   function dayTotal(isoDate, searchedOnly) {
     var n = 0;
@@ -2707,7 +2707,7 @@
     var shut = dayLocked(site, sup, isoDate);
     return '<td class="col-day' + todayCls(isoDate) + (shut ? ' shut' : '') + '"' +
       cellSays(null, isoDate, shut) + '><span class="cell-fig">' +
-      figOf(value) + cellMarks(null, isoDate, shut) + '</span></td>';
+      cellBody(figOf(value), null, isoDate, shut) + '</span></td>';
   }
   function dayCell(value, isoDate, key) {
     var theirs = key && lastWord[key + '|' + isoDate];
@@ -2717,11 +2717,11 @@
       : cellSays(key, isoDate, false);
     return '<td class="col-day' + todayCls(isoDate) + (theirs ? ' theirs' : '') + '"' +
       tip + '>' + cellCorner(key, isoDate) +
-      '<span class="cell-fig">' + figOf(value) + cellMarks(key, isoDate, false) + '</span></td>';
+      '<span class="cell-fig">' + cellBody(figOf(value), key, isoDate, false) + '</span></td>';
   }
   function dayCellPlain(value, isoDate) {
     return '<td class="col-day' + todayCls(isoDate) + '"><span class="cell-fig">' +
-      figOf(value) + cellMarks(null, isoDate, false) + '</span></td>';
+      cellBody(figOf(value), null, isoDate, false) + '</span></td>';
   }
 
   /* hand-coins, as the product draws it. */
@@ -2784,14 +2784,34 @@
      position; the note tucks in beside it, and on the rare cell that
      has a note and no allowance the note simply takes the edge. The
      thing that must not move is the outermost mark, and it does not. */
-  function cellMarks(key, isoDate, lock) {
+  /* ─── The inside of a cell ──────────────────────────────────────
+     Pinning the figure to one edge and the marks to the other put the
+     widest gap in the cell between them — the marks stopped looking
+     like they were about the figure at all. So nothing is pinned to
+     the right any more. The figure and its padlock share a slot as
+     wide as the longest figure the column can hold, the marks follow
+     it at a fixed distance, and whatever is left over is left over at
+     the right edge, where it is only air rather than a gap in the
+     middle of a group. Everything still lands in the same place in
+     every row, which was the point of the slots to begin with. */
+  function cellBody(fig, key, isoDate, lock, tail) {
+    return '<span class="cnum">' + fig +
+      (lock ? '<span class="cm-lock">' + ICO_LOCK + '</span>' : '') + '</span>' +
+      (tail != null ? tail : cellMarksOnly(key, isoDate));
+  }
+  function cellMarksOnly(key, isoDate) {
     var a = key ? allowOf(key, isoDate) : [];
     var n = noteOf(key, isoDate);
-    var out = lock ? '<span class="cm-lock">' + ICO_LOCK + '</span>' : '';
-    if (MARK_MODE !== 'three' || (!a.length && !n)) return out;
-    return out + '<span class="cmarks">' +
-      (n ? '<span class="cm-cmt">' + ICO_CMT + '</span>' : '') +
+    if (MARK_MODE !== 'three' || (!a.length && !n)) return '';
+    /* The allowance leads. It was the outer one while the group hung
+       off the right edge, for the same reason: it is the mark that
+       comes up constantly, so it takes the position that never moves.
+       Now that the group hangs off the figure instead, the position
+       that never moves is the first one. The note, which is rare,
+       tucks in after it. */
+    return '<span class="cmarks">' +
       (a.length ? '<span class="cm-alw">' + ICO_ALW + '</span>' : '') +
+      (n ? '<span class="cm-cmt">' + ICO_CMT + '</span>' : '') +
       '</span>';
   }
   function cellCorner(key, isoDate) {
@@ -2850,8 +2870,8 @@
           return '<td class="' + td + ' held" data-tip="' + Shell.esc(rowFly[key]
             ? 'Saving this task\u2026 hours can go in once it is saved.'
             : rowErr[key]) + '">' +
-            '<span class="hr-view locked">' + fig +
-            cellMarks(key, isoDate, false) + '</span></td>';
+            '<span class="hr-view locked">' +
+            cellBody(fig, key, isoDate, false) + '</span></td>';
         }
         if (lock) {
           /* The padlock on the group's summary line says the day is in,
@@ -2861,8 +2881,8 @@
              allowed to type. The mark goes on the cell itself. */
           return '<td class="' + td + '"' + says + '>' +
             cellCorner(key, isoDate) +
-            '<span class="hr-view locked">' + fig +
-            cellMarks(key, isoDate, true) + '</span></td>';
+            '<span class="hr-view locked">' +
+            cellBody(fig, key, isoDate, true) + '</span></td>';
         }
         /* Waiting, or refused. Neither is a state the cell can be put
            into by hand, so neither is drawn while it is open — they
@@ -2872,11 +2892,10 @@
           '<button class="hr-view' + (selCell === dk ? ' selected' : '') +
           '" type="button" ' +
           'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '">' +
-          fig +
           (fly && fly.slow
-            ? '<span class="cm-lock"><span class="hr-spin" role="img" ' +
-              'aria-label="Saving"></span></span>'
-            : cellMarks(key, isoDate, false)) +
+            ? '<span class="cnum">' + fig + '<span class="cm-lock">' +
+              '<span class="hr-spin" role="img" aria-label="Saving"></span></span></span>'
+            : cellBody(fig, key, isoDate, false)) +
           '</button></td>';
       }
       return '<td class="' + td + '">' +
@@ -3051,6 +3070,7 @@
     var g = document.getElementById('grid');
     g.style.setProperty('--x-sup', colW.site + 'px');
     g.style.setProperty('--x-task', (colW.site + colW.sup) + 'px');
+    g.style.setProperty('--num-w', NUM_W + 'px');
   }
 
   /* One heading cell per day: the date, then the day's own total under a
@@ -3142,7 +3162,10 @@
                   '" data-tip="' + (shut
                   ? 'One of these days has been handed in, so the task has to stay'
                   : 'Task &mdash; ' + Shell.esc(t.label)) + '">' +
-                  taskName(t) + '</td>') +
+                  taskName(t) +
+                  (shut ? '<span class="tn-lock" role="img" aria-label="Handed in ' +
+                    '&mdash; this task can no longer be changed">' + ICO_LOCK + '</span>' : '') +
+                  '</td>') +
             ds.map(function (d) { return cellHtml(hoursFor(t.key, iso(d)), t.key, iso(d)); }).join('') +
             '<td class="col-total">' + fmtHours(ds.reduce(function (acc, d) { return acc + hoursFor(t.key, iso(d)); }, 0)) + '</td>' +
             actCell(rowDrop(t.key)) +
@@ -3827,6 +3850,7 @@
     var box = document.getElementById('save-state');
     if (!box) return;
     var bad = errCount(), fly = flyCount();
+    if (!bad && !fly) retryRound = 0;
     box.setAttribute('data-state', bad ? 'error' : fly ? 'saving' : 'idle');
     box.textContent = bad ? errNoun(bad) + ' not saved'
       : fly ? 'Saving\u2026' : 'All changes saved';
@@ -3871,8 +3895,17 @@
      of where the line falls: under a second nothing is drawn, over it
      the cell says it is waiting, and at ten seconds it stops waiting. */
   var SAVE_SPEED = 'fast';
-  var LAT = { fast: 350, slow: 2600, timeout: 10000 };
-  var SLOW_AFTER = 1000;
+  var LAT = { fast: 300, slow: 2600, timeout: 10000 };
+  /* A second was long enough that a save which took a second and a half
+     looked like nothing happening at all. The spinner comes in at four
+     hundred milliseconds — past the point where the eye reads it as
+     instant, and still short of where it starts flickering on every
+     ordinary save. */
+  var SLOW_AFTER = 400;
+  /* Pressing Retry and watching it fail again is the story once. After
+     that the point is to see it work, so the second press goes through
+     whatever the case says. It resets as soon as nothing is red. */
+  var retryRound = 0;
   /* Cells still in the air, and cells that came back refused — both
      keyed by the cell, because one cell is now the whole blast radius
      of a failure. That is what the Save button cost and why it went. */
@@ -4143,15 +4176,17 @@
      browser sent it. */
   function answerCell(dk, key, date) {
     clearFly(dk);
-    if (SAVE_SPEED === 'timeout') {
+    if (retryRound < 2 && SAVE_SPEED === 'timeout') {
       cellErr[dk] = { kind: 'timeout', msg: 'The server did not answer, so this was not ' +
         'saved. Press Retry at the top of the page to send it again.' };
       renderGrid(); renderWeek(); syncEditBar();
       return;
     }
-    if (SAVE_MODE === 'server')    { cellServerError(dk); return; }
-    if (SAVE_MODE === 'blocked')   { cellBlocked(dk, key, date); return; }
-    if (SAVE_MODE === 'finalised') { cellFinalised(dk, key, date); return; }
+    if (retryRound < 2) {
+      if (SAVE_MODE === 'server')    { cellServerError(dk); return; }
+      if (SAVE_MODE === 'blocked')   { cellBlocked(dk, key, date); return; }
+      if (SAVE_MODE === 'finalised') { cellFinalised(dk, key, date); return; }
+    }
     var m = taskMeta[key];
     if (m) typedHere[m.site + '\u00a7' + m.sup + '\u00a7' + date] = true;
     flashSaved(dk);
@@ -4166,6 +4201,7 @@
     if (liveCell) commitHours();
     var rows = Object.keys(rowErr), list = retryable();
     if (!rows.length && !list.length) return;
+    retryRound++;
     rows.forEach(function (k) { sendRow(k); });
     list.forEach(function (dk) {
       var at = dk.lastIndexOf('|');
@@ -4189,7 +4225,8 @@
   }
   function answerRow(key) {
     delete rowFly[key];
-    if (SAVE_SPEED === 'timeout' || SAVE_MODE === 'server' || SAVE_MODE === 'blocked') {
+    if (retryRound < 2 &&
+        (SAVE_SPEED === 'timeout' || SAVE_MODE === 'server' || SAVE_MODE === 'blocked')) {
       rowErr[key] = SAVE_SPEED === 'timeout'
         ? 'This task was not saved: the server did not answer. Press Retry at the ' +
           'top of the page. Hours cannot go on it until it is in.'
@@ -4282,17 +4319,26 @@
     }
   });
 
-  var clickSwitch = el('click-switch');
-  clickSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-click]');
-    if (!b) return;
-    CLICK_MODE = b.getAttribute('data-click');
-    clickSwitch.querySelectorAll('[data-click]').forEach(function (x) { x.classList.toggle('on', x === b); });
-    if (liveCell) commitHours();
-    clearSel();
-  });
-
   el('save-retry').addEventListener('click', retryAll);
+
+  /* Each case is one thing to look at, so it sets both halves of what
+     used to be two switches. */
+  var CASES = {
+    ok:        { mode: 'clean',     speed: 'fast' },
+    slow:      { mode: 'clean',     speed: 'slow' },
+    timeout:   { mode: 'clean',     speed: 'timeout' },
+    server:    { mode: 'server',    speed: 'fast' },
+    blocked:   { mode: 'blocked',   speed: 'fast' },
+    finalised: { mode: 'finalised', speed: 'fast' }
+  };
+  var caseSwitch = el('case-switch');
+  caseSwitch.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-case]');
+    if (!b) return;
+    var c = CASES[b.getAttribute('data-case')];
+    SAVE_MODE = c.mode; SAVE_SPEED = c.speed;
+    caseSwitch.querySelectorAll('[data-case]').forEach(function (x) { x.classList.toggle('on', x === b); });
+  });
 
   var marksSwitch = el('marks-switch');
   function syncMarks() {
@@ -4310,22 +4356,6 @@
     render();
   });
   syncMarks();
-
-  var speedSwitch = el('speed-switch');
-  speedSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-speed]');
-    if (!b) return;
-    SAVE_SPEED = b.getAttribute('data-speed');
-    speedSwitch.querySelectorAll('[data-speed]').forEach(function (x) { x.classList.toggle('on', x === b); });
-  });
-
-  var saveSwitch = el('save-switch');
-  saveSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-save]');
-    if (!b) return;
-    SAVE_MODE = b.getAttribute('data-save');
-    saveSwitch.querySelectorAll('[data-save]').forEach(function (x) { x.classList.toggle('on', x === b); });
-  });
 
   /* ─── One cell ──────────────────────────────────────────────────── */
   var pop = el('cell-pop'), popKey = null, popDate = null, popCell = null;
@@ -4597,7 +4627,7 @@
       if (popKey) commitCell();
       /* One click picks, the second opens — unless the switch says the
          first click should open it. */
-      if (PROTO.first && CLICK_MODE === 'two' && cell.classList.contains('hr-view')
+      if (PROTO.first && cell.classList.contains('hr-view')
           && selCell !== k + '|' + d) {
         selectHours(k, d);
         return;
@@ -5370,11 +5400,19 @@
     el('btn-new-task').setAttribute('aria-expanded', 'false');
   }
   function closeWherePop() { if (wherePop) wherePop.classList.remove('open'); }
-  function closeTaskPop() {
+  /* Closing the picker on a row that never got a task takes the row
+     with it. There is no edit mode for a half-made row to wait in —
+     hours cannot be saved against nothing, so an empty row is a row
+     that can only sit there being disabled until somebody tidies it
+     up. Adding it again is one click. */
+  function closeTaskPop(keepPend) {
+    var orphan = !keepPend && tpId != null ? pendById(tpId) : null;
     if (taskPop) taskPop.classList.remove('open');
     document.body.classList.remove('pop-room');
     document.body.classList.remove('task-open');
     tpId = null; tpRename = null;
+    if (orphan && !pendDone(orphan)) { dropPendRow(orphan.id); return true; }
+    return false;
   }
 
   /* ── Where the row goes ──────────────────────────────────────────
@@ -5676,7 +5714,7 @@
       });
     }
     pending = pending.filter(function (z) { return String(z.id) !== String(id); });
-    if (tpId && String(tpId) === String(id)) closeTaskPop();
+    if (tpId && String(tpId) === String(id)) closeTaskPop(true);
     render(); syncEditBar();
   }
 
