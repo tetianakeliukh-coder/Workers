@@ -779,9 +779,18 @@
     width: 100%; height: 34px; margin: 0; padding: 0 10px;
     text-align: left; font-size: 14px;
   }
+  /* The count belongs to the field, so it sits in the field — bottom
+     right, clear of the first line and of the caret, with room kept
+     for it so the text never runs underneath. */
+  .np-box { position: relative; display: block; }
+  .np-box .np-count {
+    position: absolute; right: 9px; bottom: 7px; pointer-events: none;
+    font-size: 11px; line-height: 14px; color: var(--grey-500);
+    background: var(--white); padding-left: 4px;
+  }
   .note-pop textarea {
-    display: block; width: 100%; min-height: 54px; max-height: 120px;
-    padding: 7px 10px; resize: vertical;
+    display: block; width: 100%; min-height: 62px; max-height: 120px;
+    padding: 7px 10px 22px; resize: vertical;
     font-family: var(--fs-sans); font-size: 13px; line-height: 18px;
     color: var(--text-main); background: var(--white);
     border: 1px solid var(--grey-350); border-radius: 6px;
@@ -791,14 +800,26 @@
     box-shadow: inset 0 0 0 1px var(--primary);
   }
   .note-pop textarea::placeholder { color: var(--grey-400); }
+  /* ─── Two buttons that repeat two keys ──────────────────────────
+     Enter is Done and Escape is Cancel, and the panel worked with
+     neither button drawn. They are drawn anyway: a panel that can only
+     be left by a key the reader already has to know is a panel they
+     leave by clicking somewhere and hoping. The keys stay the fast way
+     out; the buttons are the way anyone finds. */
   .np-foot {
-    display: flex; align-items: baseline; justify-content: space-between;
-    gap: 8px; margin-top: -4px;
-    font-size: 12px; line-height: 16px; color: var(--grey-500);
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; margin-top: 12px;
+  }
+  .np-foot .btn-ghost, .np-foot .btn-primary {
+    height: 32px; padding: 0 14px; font-size: 13px;
   }
   /* Counted quietly all the way along, and only worth reading near the
      end — so it only darkens near the end. */
   .np-count.near { color: var(--text-main); }
+  /* A day that will not take what was typed says so here, where the
+     typing is happening — not only in a message that slides away. */
+  .note-pop .cp-err { margin: -4px 0 10px; }
+  .note-pop .cp-err[hidden] { display: none; }
   /* The other thing the cell carries. It is not edited here, but a
      panel that showed the hours and the note and said nothing about an
      allowance would read as the whole of the cell, which it is not. */
@@ -2057,14 +2078,21 @@
     <span class="np-lab">Hours</span>
     <input class="hr-cell" id="np-h" type="text" inputmode="decimal" autocomplete="off" placeholder="&ndash;" />
   </label>
+  <p class="cp-err" id="np-err" hidden>
+    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.3v4M8 4.8v.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    <span id="np-err-t"></span>
+  </p>
   <p class="np-alw" id="np-alw" hidden></p>
   <label class="np-fld">
     <span class="np-lab">Comment</span>
-    <textarea id="np-note" rows="2" maxlength="255" placeholder="Why this day looks the way it does"></textarea>
+    <span class="np-box">
+      <textarea id="np-note" rows="2" maxlength="255" placeholder="Type the comment"></textarea>
+      <span class="np-count" id="np-count">0/255</span>
+    </span>
   </label>
   <div class="np-foot">
-    <span>Enter saves &middot; Esc keeps nothing</span>
-    <span class="np-count" id="np-count">0/255</span>
+    <button class="btn-ghost" type="button" id="np-cancel" tabindex="-1">Cancel</button>
+    <button class="btn-primary" type="button" id="np-done" tabindex="-1">Done</button>
   </div>
 </div>
 
@@ -3805,20 +3833,18 @@
     putCell(key, date, next);
     markOver(date, key);
     inp.classList.toggle('over', cellOver(key, date, v));
-    /* Said while the figure is still in the cell and still the thing
-       being looked at — not after the cell has closed and the reader
-       has moved on. Once per day, not once per digit: typing 2, then
-       5, then 1 is three keystrokes and one mistake. */
-    if (overCap(date)) {
-      if (!warnedOver[date]) {
-        warnedOver[date] = true;
-        Shell.snackbar(fmtDayLong(fromIso(date)) + ' would come to more than ' + DAY_CAP +
-          ' h. A day holds ' + DAY_CAP + ', so this one will not be saved.',
-          { title: 'More than a day in a day', variant: 'error' });
-      }
-    } else {
-      delete warnedOver[date];
-    }
+    /* ─── Where an error belongs ────────────────────────────────
+       Of everything that can go wrong with a figure, exactly one goes
+       wrong while the panel is still open: a day that will not hold
+       what was typed. The page answers that one itself, so it is known
+       at the keystroke — and it is said in the panel, under the field
+       it is about, where the reader already is.
+
+       Every other answer — the server refusing, the server never
+       answering, the day being signed off, the site closing — arrives
+       after the panel has gone, and lands on the cell, which is why
+       the cell has colours and the panel does not need them. */
+    syncNoteErr(date);
     redrawKeeping(key, date);
   });
 
@@ -3852,15 +3878,10 @@
        lose the figure that is sitting in the cell. */
     if (!next) { commitHours(); return; }
     openHours(next.getAttribute('data-key'), next.getAttribute('data-date'));
-    /* The week is wider than the card and longer than the window. A
-       cell the keyboard has walked to and the table has not is a cell
-       being typed into blind — and blind is how a figure lands on a
-       day that already had twelve hours on it somewhere off screen. */
-    var inp = liveInput();
-    if (inp) { ensureVisible(inp.closest('tr')); ensureAcross(inp); }
   }
   function ensureAcross(node) {
     if (!scrollBox || !node) return;
+    scrollQuietUntil = Date.now() + 500;
     var r = node.getBoundingClientRect(), box = scrollBox.getBoundingClientRect();
     /* The task column is frozen over the scroller, so the left edge
        worth clearing is where that column ends, not where the card
@@ -4642,11 +4663,27 @@
      there, underneath, for the day that needs one. */
   var notePop = el('note-pop');
   function noteOpen() { return notePop.classList.contains('open'); }
-  function closeNotePop() { notePop.classList.remove('open'); }
+  function closeNotePop() {
+    /* Hiding a panel the caret is still in leaves the keyboard pointed
+       at nothing. The last cell of the last row is where that shows. */
+    if (notePop.contains(document.activeElement)) document.activeElement.blur();
+    notePop.classList.remove('open');
+  }
   function focusNote() {
     var n = el('np-note');
     n.focus();
     try { n.setSelectionRange(n.value.length, n.value.length); } catch (err) {}
+  }
+  function syncNoteErr(date) {
+    var box = el('np-err');
+    if (!noteOpen()) return;
+    var over = overCap(date);
+    box.hidden = !over;
+    if (over) {
+      el('np-err-t').textContent = 'This day comes to ' +
+        fmtHours(Math.round(dayTotal(date, false) * 100) / 100) + ' h. A day holds ' +
+        DAY_CAP + ', so this will not be saved.';
+    }
   }
   function syncNoteCount() {
     var n = el('np-note'), c = el('np-count');
@@ -4664,6 +4701,7 @@
     h.setAttribute('data-date', date);
     h.value = c.h > 0 ? fmtHours(c.h) : '';
     h.classList.toggle('over', cellOver(key, date, c.h));
+    el('np-err').hidden = true;
     var n = el('np-note');
     n.value = noteOf(key, date);
     syncNoteCount();
@@ -4681,14 +4719,31 @@
     /* Measured with the panel laid out but not yet shown, so the page
        does not flicker through a first position on the way to the one
        it keeps. */
+    /* The week is wider than the card and longer than the window. A
+       cell the keyboard has walked to and the table has not is a cell
+       being typed into blind — and blind is how a figure lands on a day
+       that already had twelve hours on it somewhere off screen. Both
+       scrolls happen before the panel is placed, so it is hung on the
+       cell where the cell ends up. */
     notePop.style.visibility = 'hidden';
     notePop.classList.add('open');
     ensureVisible(anchor.closest('tr') || anchor, notePop.offsetHeight + 12);
+    ensureAcross(anchor);
     placePop(notePop, anchor, false);
     notePop.style.visibility = '';
+    syncNoteErr(date);
     if (atNote) { focusNote(); return; }
     h.focus(); h.select();
   }
+  /* The two keys, with faces on. Out of the tab order on purpose: Tab
+     walks the two fields and then the week, which is the path a week of
+     hours is actually typed along — stopping it at a button twice per
+     cell would cost more than the buttons are worth. */
+  el('np-done').addEventListener('click', function () {
+    if (liveCell) commitHours();
+    clearSel();
+  });
+  el('np-cancel').addEventListener('click', function () { cancelHours(); });
   el('np-note').addEventListener('input', syncNoteCount);
   el('np-note').addEventListener('keydown', function (e) {
     if (!liveCell) return;
