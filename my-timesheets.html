@@ -84,12 +84,14 @@
     100% { background: transparent; }
   }
   /* Taken by somebody with the last word while the cell was open. Not
-     a failure and not the worker's to fix, so it says so once, in a
-     colour that is neither green nor red, and then settles into the
-     closed day it now belongs to. */
+     a failure and not the worker's to fix — so it does not borrow the
+     colour of either. A grey splash that fades into the closed day the
+     cell now belongs to says the whole thing without inventing a hue
+     nobody has to learn: something happened here, and here is what it
+     left behind. */
   #grid tbody td.col-day.c-taken { animation: cell-taken 4s ease-out 1; }
   @keyframes cell-taken {
-    0%, 55% { background: #faeeda; }
+    0%, 55% { background: var(--grey-300); }
     100%    { background: transparent; }
   }
   /* Refused and still holding what was typed. It does not fade: the
