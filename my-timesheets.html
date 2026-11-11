@@ -49,12 +49,15 @@
     display: inline-flex; align-items: center; flex-shrink: 0;
     margin-left: 5px; color: var(--grey-600);
   }
+  /* One mark, one slot. It was two while a cell could also carry an
+     allowance; allowances are not in the product, so the week got
+     17px a day back and the slot got simple. */
   .cmarks {
-    display: flex; align-items: center; justify-content: flex-end; gap: 3px;
-    flex-shrink: 0; min-width: var(--marks-w, 31px);
+    display: flex; align-items: center; justify-content: flex-end;
+    flex-shrink: 0; min-width: var(--marks-w, 14px);
     margin-left: 8px; color: var(--grey-600);
   }
-  .cm-cmt, .cm-alw { display: inline-flex; align-items: center; flex-shrink: 0; }
+  .cm-cmt { display: inline-flex; align-items: center; flex-shrink: 0; }
   /* ─── The corner ────────────────────────────────────────────────
      Out of the row altogether, into the cell's own corner, where it
      costs no width at all and cannot be pushed about by anything else.
@@ -99,15 +102,15 @@
      about it. */
   #grid tbody td.col-day.c-err,
   #grid tbody td.col-day.c-cap { background: #f5e7e4; }
-  /* A day cannot hold more than a day, and that one is drawn twice
-     over — the wash on the cell says the same as every other refusal,
-     and the box inside says this one was never sent. */
-  #grid td.col-day.c-cap .hr-view,
-  #grid td.col-day.c-cap input.hr-cell,
-  #grid td.col-day.c-cap input.hr-cell:focus {
-    background: #fdf2f3; border-color: var(--error);
-    box-shadow: inset 0 0 0 1px var(--error);
-  }
+  /* ─── One error looks like one error ────────────────────────────
+     A day that cannot hold what was typed used to be drawn twice: the
+     wash on the cell and a red box inside it. But the wash already
+     says the whole of it — not saved — and it says it in the same
+     words as every other refusal, which is the point. A box is what a
+     cell wears while it is being typed into, not a second way of
+     being wrong. So it is gone from the closed cell, and the only box
+     left is the one in the panel, which turns red instead of blue
+     when what is in it will not be taken. */
   .cm-corner {
     position: absolute; top: 4px; left: 5px; width: 0; height: 0; pointer-events: none;
     border-top: 7px solid var(--sec-amber); border-right: 7px solid transparent;
@@ -592,6 +595,12 @@
   .hr-cell.changed { border-color: var(--grey-700); font-weight: 500; }
   /* Changed and over-booked at once: over-booked is the one to say. */
   .hr-cell.over, .hr-cell.changed.over { border-color: var(--error); background: #fdf2f3; }
+  /* The ring the field wears while the caret is in it. Blue says
+     "open"; red says "open, and this will not be taken" — so when both
+     are true, red is the one that gets said. Hung on the panel's field
+     rather than on :focus, because the panel's field is only ever on
+     screen while it is the thing being typed into. */
+  .note-pop input.hr-cell.over { box-shadow: inset 0 0 0 1px var(--error); }
   /* Already submitted or finalised: shown, not offered. */
   .hr-cell.locked, .hr-cell.locked:hover {
     background: var(--grey-100); border-color: var(--grey-300);
@@ -1246,6 +1255,10 @@
   }
   .vp-switch button:hover { background: var(--grey-100); color: var(--text-main); }
   .vp-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
+  /* Allowances are not in the product. The lines that claimed one are
+     kept out of the way rather than torn out, so the shape of the old
+     editor still reads if anyone opens it. */
+  #cp-alw-sep, #cp-alw, .alw-mark { display: none; }
   /* With no allowances there is nothing to claim, so the line the claim
      would sit on goes with it rather than saying the site has none. */
   body.iter-first #cp-alw-sep,
@@ -2082,7 +2095,6 @@
     <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.3v4M8 4.8v.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
     <span id="np-err-t"></span>
   </p>
-  <p class="np-alw" id="np-alw" hidden></p>
   <label class="np-fld">
     <span class="np-lab">Comment</span>
     <span class="np-box">
@@ -2427,33 +2439,26 @@
      grouping has something to group. */
   /* Some days carry allowances and some do not, which is the point: they
      vary cell by cell, not by task. */
-  var CRIB = [{ name: 'Crib Break', type: 'check' }];
   /* A person works a day, not a day and a half: eight to twelve hours
      is what a shift is, and a sheet that shows twenty-three says
      nothing true about either the work or the limit it is tested
      against. Monday to Wednesday are in; today is half-entered, which
      is the state the page is opened in most often; the rest of the week
      has not happened yet. */
-  add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00',
-    [{ name: 'Height Allowance', type: 'amount', qty: 2 }]);
+  add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
   add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', B, 2, '14:00', '16:00');
 
-  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A, 6, '06:00', '12:00', CRIB);
+  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A, 6, '06:00', '12:00');
   add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Tom Halloran', H, 2.5, '13:00', '15:30');
-  add(addDays(THIS_MON, 1), 'SA BHP OLYMPIC DAM', 'Grace Okafor', G, 2, '', '',
-    [{ name: 'Night Shift', type: 'check' }]);
+  add(addDays(THIS_MON, 1), 'SA BHP OLYMPIC DAM', 'Grace Okafor', G, 2);
 
-  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H, 6, '07:00', '13:00',
-    [{ name: 'Rope Allowance', type: 'amount', qty: 1 }]);
+  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H, 6, '07:00', '13:00');
   add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', A2, 2, '13:30', '15:30');
-  add(addDays(THIS_MON, 2), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F, 2, '', '',
-    [{ name: 'Travel Allowance', type: 'amount', qty: 1 }]);
+  add(addDays(THIS_MON, 2), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F, 2);
 
   /* Today, part done. */
-  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D, 5.5, '06:00', '11:30',
-    [{ name: 'Dive Allowance', type: 'amount', qty: 2 }]);
-  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', E, 2, '13:30', '15:30',
-    [{ name: 'Offshore Living', type: 'check' }]);
+  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D, 5.5, '06:00', '11:30');
+  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', E, 2, '13:30', '15:30');
 
   /* Notes, written where a worker would actually leave one: the day
      that went wrong, the day somebody else needs to know about. Laid on
@@ -2722,13 +2727,14 @@
      "24.0". The slot the figure and its padlock share:
          48 (figure) + 5 (gap) + 13 (padlock) = 66
      and the column around it:
-         12 + 66 + 8 + 14 (note) + 3 + 14 (allowance) + 12 = 129
+         12 + 66 + 8 + 14 (note) + 12 = 112
 
-     That is 17px a day more than one decimal cost, 119 across a week,
-     which is why the week no longer fits at 1440 and the table scrolls.
-     Two numbers to change if the precision ever changes again. */
+     Three decimals cost 17px a day; dropping the allowance mark gave
+     exactly that back, so a week fits the card again at 1440 and the
+     table has nothing left to scroll. Two numbers to change if the
+     precision ever changes again. */
   var NUM_W = 66;
-  var DAY_W = 129;
+  var DAY_W = 112;
   function dayW() { return DAY_W; }
   function dayTotal(isoDate, searchedOnly) {
     var n = 0;
@@ -2948,22 +2954,15 @@
      so the hover answers in one place rather than making the reader
      find three separate marks and hover each of them. */
   function cellSays(key, isoDate, lock) {
-    var a = key ? allowOf(key, isoDate) : [];
     var n = noteOf(key, isoDate);
-    if (!lock && !a.length && !n) return '';
+    if (!lock && !n) return '';
     var out = '';
     /* The closed day first and on its own, because it is the one thing
        here that changes what the reader may do rather than telling them
        something about the hours. */
     if (lock) {
       out += '<em>' + lockWhy(key) + '</em>';
-      if (a.length || n) out += '<hr>';
-    }
-    if (a.length) {
-      out += '<b>Allowance</b><span>' +
-        a.map(function (x) {
-          return Shell.esc(x.type === 'amount' ? x.name + ' (' + x.qty + ')' : x.name);
-        }).join('</span><span>') + '</span>';
+      if (n) out += '<hr>';
     }
     if (n) out += '<b>Comment</b><span>' + Shell.esc(n) + '</span>';
     return ' data-tip-html="' + out.replace(/"/g, '&quot;') + '"';
@@ -3000,23 +2999,18 @@
       (tail != null ? tail : cellMarksOnly(key, isoDate));
   }
   function cellMarksOnly(key, isoDate) {
-    var a = key ? allowOf(key, isoDate) : [];
     var n = noteOf(key, isoDate);
-    if (MARK_MODE !== 'three' || (!a.length && !n)) return '';
-    /* The pair sits in a slot of its own, wide enough for both, and
-       fills it from the right. So the outer position is the one that
-       is always taken: the allowance when there is one, the note when
-       it is alone. That is what keeps a column of marks down the week
-       whether a cell carries one of them or both. */
+    if (MARK_MODE !== 'three' || !n) return '';
+    /* The mark sits in a slot of its own and fills it from the right,
+       which is what keeps a column of marks running straight down the
+       week whether or not each cell carries one. */
     return '<span class="cmarks">' +
       (n ? '<span class="cm-cmt">' + ICO_CMT + '</span>' : '') +
-      (a.length ? '<span class="cm-alw">' + ICO_ALW + '</span>' : '') +
       '</span>';
   }
   function cellCorner(key, isoDate) {
     if (MARK_MODE !== 'corner') return '';
-    var a = key ? allowOf(key, isoDate) : [];
-    if (!a.length && !noteOf(key, isoDate)) return '';
+    if (!noteOf(key, isoDate)) return '';
     return '<span class="cm-corner" aria-hidden="true"></span>';
   }
 
@@ -4705,17 +4699,6 @@
     var n = el('np-note');
     n.value = noteOf(key, date);
     syncNoteCount();
-    /* An allowance is the other thing the cell can carry, and it is not
-       edited here. It is still said, because a panel that showed the
-       hours and the note and nothing else would read as the whole of
-       the cell — and on a cell with a claim on it, it would be wrong. */
-    var a = allowOf(key, date), alw = el('np-alw');
-    alw.hidden = !a.length;
-    if (a.length) {
-      alw.innerHTML = '<b>Allowance</b> &middot; ' + a.map(function (x) {
-        return Shell.esc(x.type === 'amount' ? x.name + ' (' + x.qty + ')' : x.name);
-      }).join(', ');
-    }
     /* Measured with the panel laid out but not yet shown, so the page
        does not flicker through a first position on the way to the one
        it keeps. */
