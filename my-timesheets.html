@@ -20,7 +20,7 @@
   .period-bar .search-wrap { width: 300px; }
   /* Headers take the shell's 24px right padding, cells 16px — which left
      the dates off their own numbers. */
-  .grid-card thead th.col-day, .grid-card thead th.col-total { padding-right: 8px; }
+  .grid-card thead th.col-day, .grid-card thead th.col-total { padding-left: 8px; }
   #grid th.col-day { padding-left: 8px; padding-right: 8px; }
   #grid td.col-day { padding-left: 0; padding-right: 0; }
   /* Everything printed straight into a day cell carries the gutter the
@@ -42,7 +42,10 @@
     display: inline-flex; align-items: center; justify-content: center;
     color: var(--grey-600);
   }
-  .cfig { flex: 1 1 auto; min-width: 0; text-align: right; }
+  .cfig { flex: 1 1 auto; min-width: 0; text-align: left; }
+  /* Pushed to the far edge rather than following the figure, so the
+     marks line up down the table whatever the figure beside them is. */
+  .cmarks { margin-left: auto; }
   .cm-cmt { color: var(--grey-600); }
   /* ─── The corner ────────────────────────────────────────────────
      Out of the row altogether, into the cell's own corner, where it
@@ -181,6 +184,22 @@
     border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
   }
   .add-menu.open { display: block; }
+  /* The row's own menu. Placed against the button rather than inside
+     the row, because the row is in a scroller with frozen columns and
+     anything absolute inside it gets clipped by them. */
+  .row-menu {
+    display: none; position: fixed; z-index: 430;
+    min-width: 212px; padding: 4px; border-radius: 10px; background: var(--white);
+    border: 1px solid var(--grey-300); box-shadow: var(--shadow-dropdown);
+  }
+  .row-menu.open { display: block; }
+  .row-menu button {
+    display: flex; align-items: center; gap: 10px; width: 100%; height: 36px;
+    padding: 0 10px; border: none; border-radius: 7px; background: none; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 14px; color: var(--error); text-align: left;
+  }
+  .row-menu button:hover { background: rgba(166, 13, 31, 0.08); }
+  .row-menu button svg { color: var(--error); flex-shrink: 0; }
   .add-menu button {
     display: flex; align-items: center; gap: 10px; width: 100%; height: 38px;
     padding: 0 10px; border: none; border-radius: 7px; background: none; cursor: pointer;
@@ -311,7 +330,14 @@
   }
   .sx-left th.col-label .tree, .sx-left td.col-label .tree,
   .sx-left td.col-label > .code { max-width: 100%; }
-  th.col-day, td.col-day, th.col-total, td.col-total { text-align: right; }
+  /* ─── Which edge the column hangs from ──────────────────────────
+     The figure used to sit on the right edge with its marks queued to
+     its left, which put the widest gap in the cell between the marks
+     and the thing they are about — they stopped reading as one group
+     long before the column rules went in. Swapped: the figure takes
+     the left edge, the same edge its date and its total take, and the
+     marks go to the right where they make a column of their own. */
+  th.col-day, td.col-day, th.col-total, td.col-total { text-align: left; }
   /* It is a sum, not a headline: it reads as the end of the row rather
      than as the point of it. */
   th.col-total, td.col-total { font-weight: 500; }
@@ -320,7 +346,7 @@
     position: sticky; top: 0; z-index: 3; background: var(--white); vertical-align: bottom;
   }
   .grid-card thead th.col-label { z-index: 4; }
-  .day-head { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; line-height: 16px; }
+  .day-head { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; line-height: 16px; }
   .day-head .dnum { font-size: 12px; font-weight: 500; color: var(--grey-600); white-space: nowrap; }
 
   /* A day's total belongs to its date, not to a row of its own: a rule
@@ -329,11 +355,11 @@
      parted from the date by a hairline only as wide as the figure. */
   #grid thead th { vertical-align: middle; }
   .day-head .dtot {
-    display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+    display: flex; align-items: center; justify-content: flex-start; gap: 5px;
     margin-top: 5px; padding-top: 4px; align-self: stretch;
     border-top: 1px solid var(--grey-300);
     font-size: 15px; font-weight: 600; color: var(--text-main);
-    font-variant-numeric: tabular-nums; text-align: right;
+    font-variant-numeric: tabular-nums; text-align: left;
   }
   .day-head .dtot.over { color: var(--error); }
   .day-head .dtot .cell-empty { font-weight: 400; }
@@ -479,7 +505,7 @@
      as every other figure in the column. */
   input.hr-cell {
     display: block; width: calc(100% - 8px); margin: 0 4px;
-    padding: 0 3px; text-align: right;
+    padding: 0 4px; text-align: left;
   }
   input.hr-cell::placeholder { color: var(--grey-400); }
   input.hr-cell:disabled, input.hr-cell:disabled:hover {
@@ -558,8 +584,8 @@
      question is asked. */
   .hr-view {
     display: flex; align-items: center;
-    width: calc(100% - 8px); height: 30px; margin: 0 4px; padding: 0 3px;
-    text-align: right; font-family: var(--fs-sans); font-size: 14px;
+    width: calc(100% - 8px); height: 30px; margin: 0 4px; padding: 0 4px;
+    text-align: left; font-family: var(--fs-sans); font-size: 14px;
     color: var(--text-main); font-variant-numeric: tabular-nums;
     border: 1px solid transparent; border-radius: 6px; background: none;
     cursor: pointer;
@@ -1364,7 +1390,11 @@
      which is the moment it has something to say. */
   .row-drop { border-color: transparent; background: none; color: var(--grey-500); }
   #grid tbody tr:hover .row-drop { border-color: var(--grey-350); background: var(--white); color: var(--grey-600); }
-  .row-drop:hover { border-color: var(--error); background: rgba(166, 13, 31, 0.08); color: var(--error); }
+  .row-drop:hover { border-color: var(--grey-400); background: var(--white); color: var(--text-main); }
+  .row-drop.on, .row-drop.on:hover,
+  #grid tbody tr:hover .row-drop.on {
+    border-color: var(--primary); background: var(--white); color: var(--text-main);
+  }
   .row-drop:focus-visible { border-color: var(--primary); background: var(--white); }
   /* A disabled button fires no pointer events, so the reason travels on
      the wrapper around it instead — the same thing Save does. */
@@ -1944,6 +1974,14 @@
       </div>
     </div>
   </div>
+</div>
+
+<!-- ── What a row offers, behind its three dots ─────────────────── -->
+<div class="row-menu" id="row-menu" role="menu">
+  <button type="button" role="menuitem" id="row-menu-drop">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.4 4.5l.6 8.3h6l.6-8.3M6.8 7v3.6M9.2 7v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Remove from this week
+  </button>
 </div>
 
 <!-- ── Confirm a removal, and say how far it reaches ────────────── -->
@@ -2658,7 +2696,7 @@
     var shut = dayLocked(site, sup, isoDate);
     return '<td class="col-day' + todayCls(isoDate) + (shut ? ' shut' : '') + '"' +
       cellSays(null, isoDate, shut) + '><span class="cell-fig">' +
-      cellMarks(null, isoDate, shut) + figOf(value) + '</span></td>';
+      figOf(value) + cellMarks(null, isoDate, shut) + '</span></td>';
   }
   function dayCell(value, isoDate, key) {
     var theirs = key && lastWord[key + '|' + isoDate];
@@ -2668,11 +2706,11 @@
       : cellSays(key, isoDate, false);
     return '<td class="col-day' + todayCls(isoDate) + (theirs ? ' theirs' : '') + '"' +
       tip + '>' + cellCorner(key, isoDate) +
-      '<span class="cell-fig">' + cellMarks(key, isoDate, false) + figOf(value) + '</span></td>';
+      '<span class="cell-fig">' + figOf(value) + cellMarks(key, isoDate, false) + '</span></td>';
   }
   function dayCellPlain(value, isoDate) {
     return '<td class="col-day' + todayCls(isoDate) + '"><span class="cell-fig">' +
-      cellMarks(null, isoDate, false) + figOf(value) + '</span></td>';
+      figOf(value) + cellMarks(null, isoDate, false) + '</span></td>';
   }
 
   /* hand-coins, as the product draws it. */
@@ -2794,8 +2832,8 @@
           return '<td class="' + td + ' held" data-tip="' + Shell.esc(rowFly[key]
             ? 'Saving this task\u2026 hours can go in once it is saved.'
             : rowErr[key]) + '">' +
-            '<span class="hr-view locked">' + cellMarks(key, isoDate, false) +
-            fig + '</span></td>';
+            '<span class="hr-view locked">' + fig +
+            cellMarks(key, isoDate, false) + '</span></td>';
         }
         if (lock) {
           /* The padlock on the group's summary line says the day is in,
@@ -2805,8 +2843,8 @@
              allowed to type. The mark goes on the cell itself. */
           return '<td class="' + td + '"' + says + '>' +
             cellCorner(key, isoDate) +
-            '<span class="hr-view locked">' + cellMarks(key, isoDate, true) +
-            fig + '</span></td>';
+            '<span class="hr-view locked">' + fig +
+            cellMarks(key, isoDate, true) + '</span></td>';
         }
         /* Waiting, or refused. Neither is a state the cell can be put
            into by hand, so neither is drawn while it is open — they
@@ -2816,11 +2854,12 @@
           '<button class="hr-view' + (selCell === dk ? ' selected' : '') +
           '" type="button" ' +
           'data-key="' + Shell.esc(key) + '" data-date="' + isoDate + '">' +
+          fig +
           (fly && fly.slow
             ? '<span class="cmarks"><span class="cm"><span class="hr-spin" role="img" ' +
               'aria-label="Saving"></span></span></span>'
             : cellMarks(key, isoDate, false)) +
-          fig + '</button></td>';
+          '</button></td>';
       }
       return '<td class="' + td + '">' +
         '<button class="' + cls + '" type="button" ' + what + '>' +
@@ -2848,16 +2887,29 @@
   }
   function rowDrop(key) {
     if (!state.editing || !key) return '';
+    /* A bin on every row advertises removal harder than removal
+       deserves — it is the rarest thing anybody does here and the only
+       one that cannot be typed back. Behind three dots it is still one
+       click away and no longer the loudest thing in the row. When the
+       only item in the menu is unavailable, the dots are unavailable:
+       a menu that opens on nothing is worse than a button that is
+       plainly off. */
     if (rowLocked(key)) {
       return '<span class="drop-wrap" data-tip="One of these days has been handed in, ' +
         'so the task has to stay">' +
-        '<button class="row-drop" type="button" disabled aria-label="This task cannot be removed">' +
-        '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.4 4.5l.6 8.3h6l.6-8.3M6.8 7v3.6M9.2 7v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+        '<button class="row-drop" type="button" disabled aria-label="No actions for this task">' +
+        '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+      '<circle cx="8" cy="3.4" r="1.3" fill="currentColor"/>' +
+      '<circle cx="8" cy="8" r="1.3" fill="currentColor"/>' +
+      '<circle cx="8" cy="12.6" r="1.3" fill="currentColor"/></svg>' +
         '</button></span>';
     }
-    return '<button class="row-drop" type="button" data-drop-key="' + Shell.esc(key) + '"' +
-      ' aria-label="Remove this task" data-tip="Remove this task from the week">' +
-      '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.4 4.5l.6 8.3h6l.6-8.3M6.8 7v3.6M9.2 7v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+    return '<button class="row-drop" type="button" data-more-key="' + Shell.esc(key) + '"' +
+      ' aria-haspopup="true" aria-label="Actions for this task" data-tip="Actions">' +
+      '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+      '<circle cx="8" cy="3.4" r="1.3" fill="currentColor"/>' +
+      '<circle cx="8" cy="8" r="1.3" fill="currentColor"/>' +
+      '<circle cx="8" cy="12.6" r="1.3" fill="currentColor"/></svg>' +
       '</button>';
   }
 
@@ -2932,9 +2984,12 @@
       '<span class="tp-text">' + Shell.esc(label) + '</span>' + DD_CARET + '</button>';
   }
   function pendDrop(id) {
-    return '<button class="row-drop" type="button" data-pdrop="' + id + '"' +
-      ' aria-label="Remove this row" data-tip="Remove this row">' +
-      '<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M4.4 4.5l.6 8.3h6l.6-8.3M6.8 7v3.6M9.2 7v3.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+    return '<button class="row-drop" type="button" data-more-pend="' + id + '"' +
+      ' aria-haspopup="true" aria-label="Actions for this row" data-tip="Actions">' +
+      '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+      '<circle cx="8" cy="3.4" r="1.3" fill="currentColor"/>' +
+      '<circle cx="8" cy="8" r="1.3" fill="currentColor"/>' +
+      '<circle cx="8" cy="12.6" r="1.3" fill="currentColor"/></svg>' +
       '</button>';
   }
   function pendRow(x, ds) {
@@ -5590,19 +5645,22 @@
       return;
     }
 
-    var drop = e.target.closest('[data-pdrop]');
-    if (drop) {
-      var id = drop.getAttribute('data-pdrop'), y = pendById(id);
-      if (y && y.from && draft) {
-        Object.keys(draft).forEach(function (dk) {
-          if (dk.indexOf(y.from + '|') === 0) delete draft[dk];
-        });
-      }
-      pending = pending.filter(function (z) { return String(z.id) !== String(id); });
-      if (tpId && String(tpId) === String(id)) closeTaskPop();
-      render(); syncEditBar();
-    }
   });
+
+  /* A row that never got a name has nothing saved against it, so it
+     goes without asking — there is nothing to lose and nothing to
+     put back. */
+  function dropPendRow(id) {
+    var y = pendById(id);
+    if (y && y.from && draft) {
+      Object.keys(draft).forEach(function (dk) {
+        if (dk.indexOf(y.from + '|') === 0) delete draft[dk];
+      });
+    }
+    pending = pending.filter(function (z) { return String(z.id) !== String(id); });
+    if (tpId && String(tpId) === String(id)) closeTaskPop();
+    render(); syncEditBar();
+  }
 
   /* ── The list of what has been booked before ─────────────────────
      Tasks, not timesheets: each card carries the site and the
@@ -5878,12 +5936,50 @@
     render(); syncEditBar();
   }
 
+  /* ─── The row's menu ────────────────────────────────────────────
+     One item in it for now. It is a menu rather than a button because
+     removal is the rarest thing on this page and the one that cannot
+     be typed back, and because the row will have more to offer later. */
+  var rowMenu = el('row-menu'), rowMenuKey = null, rowMenuPend = null, rowMenuBtn = null;
+  function closeRowMenu() {
+    rowMenu.classList.remove('open');
+    if (rowMenuBtn) rowMenuBtn.classList.remove('on');
+    rowMenuKey = null; rowMenuPend = null; rowMenuBtn = null;
+  }
+  function openRowMenu(btn, key, pend) {
+    closeRowMenu();
+    rowMenuKey = key; rowMenuPend = pend; rowMenuBtn = btn;
+    btn.classList.add('on');
+    el('row-menu-drop').lastChild.textContent = pend != null
+      ? ' Remove this row' : ' Remove from this week';
+    placePop(rowMenu, btn, true);
+  }
   document.addEventListener('click', function (e) {
-    var x = e.target.closest ? e.target.closest('[data-drop-key]') : null;
-    if (!x) return;
+    var hit = e.target.closest ? e.target.closest('[data-more-key], [data-more-pend]') : null;
+    if (!hit) { if (!e.target.closest('#row-menu')) closeRowMenu(); return; }
     e.preventDefault();
     e.stopPropagation();
-    var key = x.getAttribute('data-drop-key');
+    var k = hit.getAttribute('data-more-key');
+    var p = hit.getAttribute('data-more-pend');
+    if (rowMenuBtn === hit) { closeRowMenu(); return; }
+    openRowMenu(hit, k, p);
+  }, true);
+  window.addEventListener('scroll', closeRowMenu, true);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && rowMenu.classList.contains('open')) {
+      e.stopPropagation();
+      closeRowMenu();
+    }
+  }, true);
+
+  el('row-menu-drop').addEventListener('click', function () {
+    var key = rowMenuKey, pend = rowMenuPend;
+    closeRowMenu();
+    if (pend != null) { dropPendRow(pend); return; }
+    if (key) askRemoveRow(key);
+  });
+
+  function askRemoveRow(key) {
     var m = taskMeta[key];
     var hours = days().reduce(function (n, d) { return n + hoursFor(key, iso(d)); }, 0);
     /* Asked every time, hours or no hours. With nothing held back until
@@ -5897,7 +5993,7 @@
       ['There is no Save to hold this back &mdash; it happens now. ' +
        'Undo is offered for a few seconds afterwards.']),
       function () { removeRow(key); });
-  }, true);
+  }
 
   /* With nothing to press afterwards, removing a row is final the moment
      it is asked for — so the way back travels on the message that says it
