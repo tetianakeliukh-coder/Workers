@@ -501,6 +501,28 @@ body.shell-mobile .snackbar { left: 16px; right: 16px; max-width: none; }
   white-space: normal; overflow-wrap: break-word;
 }
 .row-tip.on { display: block; }
+/* ─── A tip with more than one thing to say ────────────────────────────
+   Three facts about a cell — the day is closed, there is an allowance,
+   somebody left a note — run together into one unreadable line when the
+   tip is a single string. Each gets a label and a line of its own, and
+   the labels are quieter than the things they label. */
+.row-tip.rich { max-width: 272px; padding: 9px 11px; }
+.row-tip.rich b {
+  display: block; margin: 10px 0 1px;
+  font-size: 10.5px; line-height: 14px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+.row-tip.rich b:first-child { margin-top: 0; }
+.row-tip.rich span, .row-tip.rich em {
+  display: block; font-style: normal; font-size: 12.5px; line-height: 17px;
+}
+/* The closed day is a condition of the cell rather than something in
+   it, so it sits above the rule, not under a heading of its own. */
+.row-tip.rich em + hr { margin-top: 8px; }
+.row-tip.rich hr {
+  border: 0; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 8px 0 0;
+}
 
 /* ─── Resizable columns ─────────────────────────────────────────────────
    A grip sitting on the header cell's right edge. It only shows when the

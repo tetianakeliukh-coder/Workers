@@ -44,7 +44,6 @@
   }
   .cfig { flex: 1 1 auto; min-width: 0; text-align: right; }
   .cm-cmt { color: var(--grey-600); }
-  .cm-pip { width: 6px; height: 6px; border-radius: 50%; background: var(--sec-amber); }
   /* ─── The corner ────────────────────────────────────────────────
      Out of the row altogether, into the cell's own corner, where it
      costs no width at all and cannot be pushed about by anything else.
@@ -55,12 +54,12 @@
     position: absolute; top: 4px; left: 5px; width: 0; height: 0; pointer-events: none;
     border-top: 7px solid var(--sec-amber); border-right: 7px solid transparent;
   }
-  /* A mark that sits in a corner needs the reader to know whose corner
-     it is. Days are the one place in this table with no rule between
-     them, so this variant draws one. */
-  body.marks-corner #grid th.col-day,
-  body.marks-corner #grid td.col-day { box-shadow: inset 1px 0 0 var(--grey-200); }
-  body.marks-corner #grid tbody td.col-total { box-shadow: inset 1px 0 0 var(--grey-200); }
+  /* Days were the one place in this table with no rule between them,
+     which left a mark drawn near a cell's edge belonging to whichever
+     column the eye decided it did. The rules make the seven days seven
+     columns. */
+  #grid th.col-day, #grid td.col-day,
+  #grid tbody td.col-total { box-shadow: inset 1px 0 0 var(--grey-200); }
   /* Secondary actions read as actions. */
   .period-bar .btn-ghost { color: var(--primary); }
   .step {
@@ -1650,7 +1649,6 @@
 <div class="vp-switch" id="marks-switch" role="group" aria-label="Marks in a cell">
   <button type="button" data-marks="three" class="on">Three icons</button>
   <button type="button" data-marks="corner">Corner mark</button>
-  <button type="button" data-marks="dot">One dot</button>
 </div>
 
 <!-- How long the answer takes. Under a second the cell draws nothing
@@ -2626,17 +2624,17 @@
   function dayCellGroup(value, isoDate, site, sup) {
     var shut = dayLocked(site, sup, isoDate);
     return '<td class="col-day' + todayCls(isoDate) + (shut ? ' shut' : '') + '"' +
-      (shut ? ' data-tip="' + TIP_LOCKED + '"' : '') + '><span class="cell-fig">' +
+      cellSays(null, isoDate, shut) + '><span class="cell-fig">' +
       cellMarks(null, isoDate, shut) + figOf(value) + '</span></td>';
   }
   function dayCell(value, isoDate, key) {
     var theirs = key && lastWord[key + '|' + isoDate];
-    var says = cellSays(key, isoDate, false);
     var tip = theirs
-      ? 'Finalised by your supervisor while you were editing &mdash; this is their figure'
-      : says;
+      ? ' data-tip="Finalised by your supervisor while you were editing &mdash; ' +
+        'this is their figure"'
+      : cellSays(key, isoDate, false);
     return '<td class="col-day' + todayCls(isoDate) + (theirs ? ' theirs' : '') + '"' +
-      (tip ? ' data-tip="' + tip + '"' : '') + '>' + cellCorner(key, isoDate) +
+      tip + '>' + cellCorner(key, isoDate) +
       '<span class="cell-fig">' + cellMarks(key, isoDate, false) + figOf(value) + '</span></td>';
   }
   function dayCellPlain(value, isoDate) {
@@ -2668,13 +2666,25 @@
      so the hover answers in one place rather than making the reader
      find three separate marks and hover each of them. */
   function cellSays(key, isoDate, lock) {
-    var out = [];
-    if (lock) out.push(TIP_LOCKED);
     var a = key ? allowOf(key, isoDate) : [];
-    if (a.length) out.push('Allowance &mdash; ' + Shell.esc(allowTip(a)));
     var n = noteOf(key, isoDate);
-    if (n) out.push('Note &mdash; ' + Shell.esc(n));
-    return out.join(' \u00b7 ');
+    if (!lock && !a.length && !n) return '';
+    var out = '';
+    /* The closed day first and on its own, because it is the one thing
+       here that changes what the reader may do rather than telling them
+       something about the hours. */
+    if (lock) {
+      out += '<em>' + TIP_LOCKED + '</em>';
+      if (a.length || n) out += '<hr>';
+    }
+    if (a.length) {
+      out += '<b>Allowance</b><span>' +
+        a.map(function (x) {
+          return Shell.esc(x.type === 'amount' ? x.name + ' (' + x.qty + ')' : x.name);
+        }).join('</span><span>') + '</span>';
+    }
+    if (n) out += '<b>Comment</b><span>' + Shell.esc(n) + '</span>';
+    return ' data-tip-html="' + out.replace(/"/g, '&quot;') + '"';
   }
   /* The slots. Every one of them is drawn whether it has a mark in it
      or not — an empty slot is the whole point, because it is what
@@ -2690,11 +2700,6 @@
       return '<span class="cmarks">' +
         slot(a.length ? ICO_ALW : '', 'cm-alw') +
         slot(n ? ICO_CMT : '', 'cm-cmt') + lk + '</span>';
-    }
-    if (MARK_MODE === 'dot') {
-      return '<span class="cmarks">' +
-        slot((a.length || n) ? '<span class="cm-pip"></span>' : '', 'cm-pip-slot') +
-        lk + '</span>';
     }
     /* corner: the mark leaves the row entirely and goes into the
        cell's own corner, so the row holds nothing but the padlock. */
@@ -2751,7 +2756,7 @@
              a reason that only arrives on hover is a reason they have
              to go hunting for, cell by cell, to find out where they are
              allowed to type. The mark goes on the cell itself. */
-          return '<td class="' + td + '" data-tip="' + says + '">' +
+          return '<td class="' + td + '"' + says + '>' +
             cellCorner(key, isoDate) +
             '<span class="hr-view locked">' + cellMarks(key, isoDate, true) +
             fig + '</span></td>';
@@ -2760,8 +2765,8 @@
            into by hand, so neither is drawn while it is open — they
            are what the cell comes back as once it has been left. */
         var fly = inFlight[dk], bad = cellErr[dk];
-        var tip = bad ? Shell.esc(bad.msg) : says;
-        return '<td class="' + td + '"' + (tip ? ' data-tip="' + tip + '"' : '') + '>' +
+        var tip = bad ? ' data-tip="' + Shell.esc(bad.msg) + '"' : says;
+        return '<td class="' + td + '"' + tip + '>' +
           cellCorner(key, isoDate) +
           '<button class="hr-view' + (justSaved[dk] ? ' saved' : '') +
           (selCell === dk ? ' selected' : '') +

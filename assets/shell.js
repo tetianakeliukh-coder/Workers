@@ -385,9 +385,21 @@
       document.body.appendChild(tipEl);
     }
     host.addEventListener('mouseover', function (e) {
-      var t = e.target.closest ? e.target.closest('[data-tip]') : null;
-      if (!t || !t.getAttribute('data-tip')) return;
-      tipEl.textContent = t.getAttribute('data-tip');
+      var t = e.target.closest ? e.target.closest('[data-tip], [data-tip-html]') : null;
+      if (!t) return;
+      /* A tip carrying several separate facts reads as one run-on
+         sentence when it is one line of text. data-tip-html lets the
+         caller lay them out — headings and values — and the markup is
+         the caller's to escape. data-tip stays plain text. */
+      var rich = t.getAttribute('data-tip-html');
+      if (rich) {
+        tipEl.innerHTML = rich;
+        tipEl.classList.add('rich');
+      } else {
+        if (!t.getAttribute('data-tip')) return;
+        tipEl.textContent = t.getAttribute('data-tip');
+        tipEl.classList.remove('rich');
+      }
       tipEl.classList.add('on');
       tipFor = t;
       placeTip(t);
@@ -399,7 +411,7 @@
     }, true);
     document.addEventListener('click', hideTip, true);
     host.addEventListener('mouseout', function (e) {
-      var t = e.target.closest ? e.target.closest('[data-tip]') : null;
+      var t = e.target.closest ? e.target.closest('[data-tip], [data-tip-html]') : null;
       if (!t) return;
       if (e.relatedTarget && t.contains(e.relatedTarget)) return;
       hideTip();
