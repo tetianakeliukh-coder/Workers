@@ -174,6 +174,9 @@
     cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
   }
   .save-retry:hover { color: var(--primary-dark); }
+  .save-retry:disabled {
+    color: var(--grey-500); cursor: default; text-decoration: none;
+  }
   .save-retry[hidden] { display: none; }
   /* A switcher that is a list rather than a row of buttons. The dock
      gives it its label and its box; it only has to hold the select. */
@@ -3921,13 +3924,19 @@
   function syncEditBar() {
     var box = document.getElementById('save-state');
     if (!box) return;
-    var bad = errCount(), fly = flyCount();
+    var bad = errCount(), fly = flyCount(), going = retryFlyCount();
     if (!bad && !fly) retryRound = 0;
-    box.setAttribute('data-state', bad ? 'error' : fly ? 'saving' : 'idle');
+    box.setAttribute('data-state', bad ? 'error' : going ? 'error' : fly ? 'saving' : 'idle');
     box.textContent = bad ? errNoun(bad) + ' not saved'
+      : going ? 'Trying ' + going + (going === 1 ? ' cell again\u2026' : ' cells again\u2026')
       : fly ? 'Saving\u2026' : 'All changes saved';
-    var again = document.getElementById('save-retry');
-    if (again) again.hidden = retryable().length === 0 && Object.keys(rowErr).length === 0;
+    /* The button stays put while its own retry is running, switched
+       off rather than taken away: a control that vanishes the moment
+       it is pressed leaves the reader unsure whether it did anything. */
+    var btn = document.getElementById('save-retry');
+    if (!btn) return;
+    btn.hidden = !going && retryable().length === 0 && Object.keys(rowErr).length === 0;
+    btn.disabled = going > 0;
   }
   /* ─── Always in ─────────────────────────────────────
      There is no edit to go into. The class stays on the body because
@@ -4006,6 +4015,18 @@
   var warnedOver = Object.create(null);
   function errCount() { return Object.keys(cellErr).length + Object.keys(rowErr).length; }
   function flyCount() { return Object.keys(inFlight).length + Object.keys(rowFly).length; }
+  /* Of those, the ones that are in the air because Retry put them
+     there. A retry empties the red cells into the queue, so for as
+     long as it is running the page has nothing red to count and used
+     to fall back to "Saving…" with the button gone — which reads as
+     everything being fine, at the one moment the reader is watching to
+     find out whether it is. */
+  function retryFlyCount() {
+    var n = 0;
+    Object.keys(inFlight).forEach(function (k) { if (inFlight[k].retry) n++; });
+    Object.keys(rowFly).forEach(function (k) { if (rowFly[k].retry) n++; });
+    return n;
+  }
   /* A failed task and a failed figure are both one thing that is not
      in, and the header counts them together — but it only calls them
      cells while that is all they are. */
@@ -4233,7 +4254,7 @@
      what makes a simple week — twelve, tab, twelve, tab — unbearable,
      and the cost of not waiting is only that two cells can be in the
      air at once, which the cells say for themselves. */
-  function sendCell(dk, key, date) {
+  function sendCell(dk, key, date, again) {
     clearFly(dk);
     delete cellErr[dk];
     /* The one answer the page gives itself. A day holds twenty-four
@@ -4250,7 +4271,7 @@
       return;
     }
     markOver(date, null);
-    var rec = { slow: false };
+    var rec = { slow: false, retry: !!again };
     inFlight[dk] = rec;
     rec.spin = setTimeout(function () { rec.slow = true; renderGrid(); }, SLOW_AFTER);
     rec.timer = setTimeout(function () { answerCell(dk, key, date); }, LAT[SAVE_SPEED]);
@@ -4291,10 +4312,10 @@
     var rows = Object.keys(rowErr), list = retryable();
     if (!rows.length && !list.length) return;
     retryRound++;
-    rows.forEach(function (k) { sendRow(k); });
+    rows.forEach(function (k) { sendRow(k, true); });
     list.forEach(function (dk) {
       var at = dk.lastIndexOf('|');
-      sendCell(dk, dk.slice(0, at), dk.slice(at + 1));
+      sendCell(dk, dk.slice(0, at), dk.slice(at + 1), true);
     });
     render();
   }
@@ -4304,10 +4325,10 @@
      to exist first. The days stay shut for as long as it is in the
      air — not to make anybody wait, but because there is nowhere yet
      for what they would type to go. */
-  function sendRow(key) {
+  function sendRow(key, again) {
     if (rowFly[key]) { clearTimeout(rowFly[key].timer); }
     delete rowErr[key];
-    var rec = {};
+    var rec = { retry: !!again };
     rowFly[key] = rec;
     rec.timer = setTimeout(function () { answerRow(key); }, LAT[SAVE_SPEED]);
     render();
