@@ -38,7 +38,11 @@
     { id: 'search',     label: 'Search',           icon: 'search',     action: 'global-search' },
     { id: 'home',       label: 'Home',             icon: 'home' },
     { id: 'documents',  label: 'Documents',        icon: 'documents' },
-    { id: 'workers',    label: 'Workers',          icon: 'workers',    href: 'workers/index.html' },
+    /* The Workers screen is index.html inside workers/. From a page in the
+       outer folder it is one level down; from a page inside workers/ (and on
+       the Vercel site, whose root is workers/) it sits right beside it. */
+    { id: 'workers',    label: 'Workers',          icon: 'workers',
+      href: (/\/workers\/[^\/]*$/.test(location.pathname) || /vercel\.app$/.test(location.hostname)) ? 'index.html' : 'workers/index.html' },
     { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
     { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
