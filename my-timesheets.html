@@ -331,6 +331,14 @@
      whole, and it sits above the list it would stand in for. */
   /* The same shape as a row in the list underneath it, because it is
      the row that stands for all of them. */
+  /* A week with nothing on it has one obvious answer, and a tickbox
+     makes the reader give it in two moves instead of one. */
+  .pick-all.is-btn {
+    justify-content: center; background: var(--primary); color: var(--white);
+    border-radius: 8px; font-weight: 500;
+  }
+  .pick-all.is-btn:hover { background: var(--primary-dark); }
+  .pick-all.is-btn .rr-tick { display: none; }
   .pick-all {
     display: flex; align-items: center; gap: 10px; cursor: pointer;
     padding: 8px 12px; border-radius: 10px; background: var(--grey-100);
@@ -368,7 +376,11 @@
      inside its card, so this page does not need .main to do any. */
   body[data-module="mytime"] .main { overflow-x: visible; }
   .page-header {
-    position: sticky; top: 0; z-index: 6;
+    /* Above the table's frozen heading row, which also pins and also
+       claimed 6 — and, coming later in the document, won. The date
+       panel hangs off this header, so the Total column was landing on
+       top of it. */
+    position: sticky; top: 0; z-index: 20;
     margin: 0 -4px; padding: 12px 4px 10px;
     background: var(--bg-page);
   }
@@ -654,10 +666,14 @@
   .tcell { display: flex; align-items: flex-start; gap: 8px; }
   .tcell .tname { flex: 1 1 auto; min-width: 0; }
   #grid td.col-task.shut .tname { opacity: 0.5; }
+  /* Same rule as the cells: the greyed name already says the row is
+     settled, and the padlock only answers "why", which is a question
+     asked by hovering. */
   .tn-lock {
     display: inline-flex; align-items: center; flex-shrink: 0;
-    margin-top: 2px; color: var(--grey-600);
+    margin-top: 2px; color: var(--grey-600); visibility: hidden;
   }
+  #grid tr:hover .tn-lock { visibility: visible; }
   /* A task on its way in, or refused. The row is already on the page —
      the person put it there — so the colour is on the name and on the
      days it is holding shut, not a second row somewhere saying the
@@ -785,6 +801,24 @@
      the first visit — four short notes, each pinned to the thing it is
      about, and a way back to them in the corner for anyone who waved
      them away too quickly. */
+  /* ─── Said at the keystroke ─────────────────────────────────────
+     A red outline is a signal, not a sentence: the reader knows
+     something is wrong and has to work out what. The practitioner
+     consensus on grids is to keep the message in the row rather than
+     in a toast that slides away while they are still fixing it — so
+     this hangs under the open cell, appears the moment the day goes
+     over, and leaves the moment it comes back. */
+  .cell-warn {
+    position: fixed; z-index: 600; max-width: 248px;
+    display: flex; align-items: flex-start; gap: 6px;
+    padding: 7px 10px; border-radius: 8px;
+    background: #fdf2f3; border: 1px solid var(--error);
+    font-size: 12px; line-height: 16px; color: var(--error);
+    box-shadow: 0 4px 16px rgba(16, 24, 40, 0.12);
+  }
+  .cell-warn[hidden] { display: none; }
+  .cell-warn svg { flex-shrink: 0; margin-top: 1px; }
+
   .coach-ring {
     position: fixed; z-index: 700; pointer-events: none; border-radius: 8px;
     box-shadow: 0 0 0 2px var(--primary), 0 0 0 9999px rgba(16, 24, 40, 0.45);
@@ -2053,6 +2087,12 @@
   <div class="cp-foot">
     <button class="btn-text" type="button" id="cp-clear">Clear</button>
   </div>
+</div>
+
+<!-- ── The one answer that arrives while the caret is still in ───── -->
+<div class="cell-warn" id="cell-warn" role="alert" hidden>
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.3v4M8 4.8v.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+  <span id="cell-warn-t"></span>
 </div>
 
 <!-- ── Said once, on the first visit ─────────────────────────────── -->
@@ -3427,9 +3467,11 @@
   var DD_CHEV = '<svg class="dd-chev" viewBox="0 0 12 12" fill="none"><path d="M4.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   /* A timesheet week is the unit people work in, so the quick ranges are
      weeks — anything else is a custom range. */
+  /* In the order the weeks themselves come, which is the order the
+     reader is holding in their head when they open the list. */
   var QUICK = [
-    { k: 'week',     label: 'Current week' },
     { k: 'lastweek', label: 'Last week' },
+    { k: 'week',     label: 'Current week' },
     /* Nothing is booked on it yet, which is the point: it is how the
        empty timesheet is reached without inventing a switch for it. */
     { k: 'nextweek', label: 'Next week' }
@@ -3563,6 +3605,8 @@
         syncDateLabel();
         Shell.closeAllDropdowns();
         render();
+        /* Landing on a week with nothing on it is its own first visit. */
+        maybeEmptyTips();
       });
       return;
     }
@@ -3733,6 +3777,7 @@
     if (v === sv.h) { next.s = sv.s; next.f = sv.f; }
     putCell(key, date, next);
     markOver(date, key);
+    syncCellWarn(date);
     /* ─── Where an error belongs ────────────────────────────────
        Of everything that can go wrong with a figure, exactly one goes
        wrong while the panel is still open: a day that will not hold
@@ -3746,6 +3791,25 @@
        the cell has colours and the panel does not need them. */
     redrawKeeping(key, date);
   });
+
+  /* Shown under the cell being typed into, and nowhere else: once the
+     cell is left, the colour and the hover carry it. */
+  var cellWarn = el('cell-warn');
+  function hideCellWarn() { cellWarn.hidden = true; }
+  function syncCellWarn(date) {
+    var inp = liveInput();
+    if (!inp || !overCap(date)) { hideCellWarn(); return; }
+    el('cell-warn-t').textContent = fmtDayLong(fromIso(date)) + ' would come to ' +
+      fmtHours(Math.round(dayTotal(date, false) * 100) / 100) + ' h. A day holds ' +
+      DAY_CAP + ', so this will not be saved.';
+    cellWarn.hidden = false;
+    var r = inp.getBoundingClientRect();
+    var top = r.bottom + 6, left = r.left;
+    if (top + cellWarn.offsetHeight > window.innerHeight - 8) top = r.top - cellWarn.offsetHeight - 6;
+    if (left + cellWarn.offsetWidth > window.innerWidth - 8) left = window.innerWidth - cellWarn.offsetWidth - 8;
+    cellWarn.style.top = Math.max(8, top) + 'px';
+    cellWarn.style.left = Math.max(8, left) + 'px';
+  }
 
   /* ─── Walking the grid ──────────────────────────────────────────
      With one cell open at a time, getting to the next one is the most
@@ -3962,10 +4026,18 @@
     if (!box) return;
     var bad = errCount(), fly = flyCount(), going = retryFlyCount();
     if (!bad && !fly) retryRound = 0;
-    box.setAttribute('data-state', bad ? 'error' : going ? 'error' : fly ? 'saving' : 'idle');
+    /* ─── Not saved yet is not saved ────────────────────────────
+       A figure counts towards the day the moment it is typed, which is
+       the point of inline editing — but it has not been sent, and a
+       line that says "All changes saved" over a figure still under the
+       caret is the page telling two stories at once. It waits. */
+    var open = liveCell && draft && (liveCell in draft);
+    box.setAttribute('data-state', bad ? 'error' : going ? 'error'
+      : (fly || open) ? 'saving' : 'idle');
     box.textContent = bad ? errNoun(bad) + ' not saved'
       : going ? 'Trying ' + going + (going === 1 ? ' cell again\u2026' : ' cells again\u2026')
-      : fly ? 'Saving\u2026' : 'All changes saved';
+      : fly ? 'Saving\u2026'
+      : open ? 'Not saved yet' : 'All changes saved';
     /* The button stays put while its own retry is running, switched
        off rather than taken away: a control that vanishes the moment
        it is pressed leaves the reader unsure whether it did anything. */
@@ -4162,6 +4234,7 @@
     renderGrid(); renderWeek(); syncEditBar();
     var inp = liveInput();
     if (inp) { inp.focus(); inp.select(); ensureVisible(inp.closest('tr')); ensureAcross(inp); }
+    syncCellWarn(date);
   }
   /* Escape keeps nothing: the cell goes back to the figure it held when
      it opened. */
@@ -4170,6 +4243,7 @@
     var date = liveCell.slice(liveCell.lastIndexOf('|') + 1);
     delete draft[liveCell];
     liveCell = null;
+    hideCellWarn();
     markOver(date, null);
     renderGrid(); renderWeek(); syncEditBar();
   }
@@ -4258,6 +4332,7 @@
     var dk = liveCell, at = dk.lastIndexOf('|');
     var key = dk.slice(0, at), date = dk.slice(at + 1);
     liveCell = null;
+    hideCellWarn();
     var typed = draft && (dk in draft);
     /* Opened, read, left alone: there is nothing to send — unless the
        cell was already red, in which case leaving it is the retry. */
@@ -5461,12 +5536,23 @@
      by coming back and finding the day empty. */
   function leavePeriod(go) {
     var n = errCount() + flyCount();
-    if (!n) { go(); return; }
+    /* Whatever did not save belonged to the week being left, so it does
+       not follow the reader into the next one and go on being counted
+       in a header about days they can no longer see. */
+    function clearAndGo() {
+      cellErr = Object.create(null);
+      rowErr = Object.create(null);
+      Object.keys(inFlight).forEach(clearFly);
+      retryRound = 0;
+      go();
+      syncEditBar();
+    }
+    if (!n) { clearAndGo(); return; }
     Shell.closeAllDropdowns();
     askConfirm('Remove changes?',
       'You have ' + n + ' unsaved change' + (n === 1 ? '' : 's') +
       '. Would you like to remove them?',
-      [], go, { ok: 'Yes, remove', cancel: 'Stay here' });
+      [], clearAndGo, { ok: 'Yes, remove', cancel: 'Stay here', danger: false });
   }
   el('confirm-ok').addEventListener('click', function () {
     var run = confirmAction;
@@ -5909,16 +5995,27 @@
         '</span></div>';
     }).join('') : '<div class="recent-empty">Everything you have booked before is already on this week.</div>';
 
-    /* Stijn wanted the whole of last period back in one press, and
-       kept it out of the dialog's way: the list is already only what
-       is not on the week, so ticking all of it is that press. */
+    /* ─── Two weeks, two answers ────────────────────────────────
+       A week with rows on it is being added to, so the line at the top
+       is a tickbox like every row under it: pick all, or pick some.
+       A week with nothing on it is almost always last week again, and
+       asking the reader to tick a box and then press Add is asking
+       them twice. There, the line is the press. */
     var all = el('pick-all');
     all.hidden = !list.length;
-    var every = list.length > 0 && list.every(function (r) { return picked[r.key]; });
-    all.classList.toggle('on', every);
-    all.innerHTML = '<span class="rr-tick">' + ICO_TICK + '</span><span>' +
-      (every ? 'Clear all' : 'Select all ' + list.length +
-        (list.length === 1 ? ' task' : ' tasks')) + '</span>';
+    var blank = weekKeys().length === 0;
+    all.classList.toggle('is-btn', blank);
+    if (blank) {
+      all.classList.remove('on');
+      all.innerHTML = '<span>Copy all ' + list.length +
+        (list.length === 1 ? ' task' : ' tasks') + ' to this week</span>';
+    } else {
+      var every = list.length > 0 && list.every(function (r) { return picked[r.key]; });
+      all.classList.toggle('on', every);
+      all.innerHTML = '<span class="rr-tick">' + ICO_TICK + '</span><span>' +
+        (every ? 'Clear all' : 'Select all ' + list.length +
+          (list.length === 1 ? ' task' : ' tasks')) + '</span>';
+    }
 
     var n = Object.keys(picked).filter(function (k) { return picked[k]; }).length;
     el('pick-go').disabled = !n;
@@ -5931,6 +6028,16 @@
   }
   el('pick-all').addEventListener('click', function () {
     var list = recentPool();
+    /* On an empty week this is the whole answer, so it is also the
+       whole gesture: pick them all and put them on. */
+    if (el('pick-all').classList.contains('is-btn')) {
+      picked = Object.create(null);
+      list.forEach(function (r) { picked[r.key] = 1; });
+      /* Straight to the act: the button cannot lean on Add, which is
+         still disabled until the dialog has been drawn again. */
+      addPicked();
+      return;
+    }
     var every = list.length > 0 && list.every(function (r) { return picked[r.key]; });
     picked = Object.create(null);
     if (!every) list.forEach(function (r) { picked[r.key] = 1; });
@@ -5946,7 +6053,8 @@
   pickModal.addEventListener('click', function (e) {
     if (e.target === pickModal || e.target.closest('[data-close]')) pickModal.classList.remove('open');
   });
-  el('pick-go').addEventListener('click', function () {
+  el('pick-go').addEventListener('click', addPicked);
+  function addPicked() {
     var keys = Object.keys(picked).filter(function (k) { return picked[k]; });
     if (!keys.length) return;
     if (!state.editing) enterEdit();
@@ -5965,7 +6073,7 @@
     ensureVisible(landed[0]);
     var cell = landed[0].querySelector('.hr-view[data-key], input.hr-cell:not([disabled])');
     if (cell) openCell(cell);
-  });
+  }
 
   /* ── Nothing booked yet ──────────────────────────────────────── */
   var ICO_EMPTY = '<svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -6254,30 +6362,53 @@
      than by holding a selector to a cell that may not be there: the
      week is mock data and the rows move. A step whose subject cannot
      be found is skipped rather than pointing at nothing. */
-  var COACH = [
+  /* ─── Said once, in the reader's words ──────────────────────────
+     Not a description of the machine — a sentence each about what to
+     do and what to expect. Short enough to be read standing up, which
+     is how a tour is read. */
+  var WEEK_TIPS = [
     { find: function () {
         return gridBody.querySelector('.hr-view[data-key]:not(.locked)');
       },
-      h: 'Type straight into the week',
-      p: 'Click a cell and it becomes a field. There is no Edit button any more, ' +
-         'and no mode to leave.' },
+      h: 'Just type',
+      p: 'Click a day and enter your hours. They are kept as you go.' },
     { find: function () { return document.getElementById('save-state'); },
-      h: 'Nothing to save',
-      p: 'Each figure goes off on its own the moment you leave the cell. This line ' +
-         'says whether the last one landed.' },
+      h: 'No Save button',
+      p: 'This line tells you if something did not go through, and lets you try again.' },
     { find: function () {
         return gridBody.querySelector('td.col-day .hr-view.locked');
       },
-      h: 'Some days are closed',
-      p: 'A day your supervisor has handed in cannot be changed. Hover one to see ' +
-         'the padlock and why.' },
+      h: 'Grey days are signed off',
+      p: 'Your supervisor has approved them, so they cannot be changed. Hover to see why.' },
     { find: function () { return gridHead.querySelector('th.col-day'); },
       h: 'A day holds 24 hours',
-      p: 'More than that is refused before it is sent anywhere — the figure and the ' +
-         'day turn red, and nothing is saved until it is fixed.' }
+      p: 'Go over and the day turns red. Nothing is kept until you bring it back down.' }
   ];
+  /* ─── And again, for a week with nothing on it ──────────────────
+     An empty timesheet is the one screen where there is nothing to
+     click and no clue what to do first. The answer is almost always
+     "the same tasks as last week", so that is what it points at. The
+     two it points at live inside a menu, so the tour opens it. */
+  var EMPTY_TIPS = [
+    { find: function () {
+        return gridBody.querySelector('[data-empty="recent"]') ||
+               addMenu.querySelector('[data-addmode="recent"]');
+      },
+      h: 'Start from last week',
+      p: 'Bring over the tasks you worked on before \u2014 all of them, or just a few. ' +
+         'The hours stay behind.' },
+    { find: function () {
+        return gridBody.querySelector('[data-empty="new"]') ||
+               addMenu.querySelector('[data-addmode="new"]');
+      },
+      h: 'Or start something new',
+      p: 'A job you have not booked before goes in here, and it is on your list from ' +
+         'then on.' }
+  ];
+  var COACH = WEEK_TIPS;
   var coach = el('coach'), coachRing = el('coach-ring'), coachAt = -1;
   var COACH_SEEN = 'opms-mytime-tips';
+  var EMPTY_SEEN = 'opms-mytime-tips-empty';
   function coachClose() {
     coach.classList.remove('open');
     coachRing.hidden = true;
@@ -6285,8 +6416,12 @@
     try { sessionStorage.setItem(COACH_SEEN, '1'); } catch (err) {}
   }
   function coachShow(i) {
-    /* Walk past anything this week happens not to have. */
-    while (i < COACH.length && !COACH[i].find()) i++;
+    /* A step may have to put the thing it points at on screen first. */
+    while (i < COACH.length) {
+      if (COACH[i].before) COACH[i].before();
+      if (COACH[i].find()) break;
+      i++;
+    }
     if (i >= COACH.length) { coachClose(); return; }
     coachAt = i;
     var step = COACH[i], node = step.find();
@@ -6323,16 +6458,30 @@
   }, true);
   el('tips-replay').addEventListener('click', function () {
     if (liveCell) commitHours();
+    COACH = weekKeys().length ? WEEK_TIPS : EMPTY_TIPS;
     coachShow(0);
   });
+  /* The empty week has its own first visit, because it is reached long
+     after the first one — the Monday of a week nobody has booked yet. */
+  function maybeEmptyTips() {
+    if (coachAt >= 0 || weekKeys().length) return;
+    var seen = false;
+    try { seen = !!sessionStorage.getItem(EMPTY_SEEN); } catch (err) {}
+    if (seen) return;
+    try { sessionStorage.setItem(EMPTY_SEEN, '1'); } catch (err) {}
+    COACH = EMPTY_TIPS;
+    setTimeout(function () { coachShow(0); }, 350);
+  }
 
   /* No Edit button to press: the sheet is open the moment the page is. */
   enterEdit();
   syncDateLock();
   render();
   /* The two releases are two pages, so the dock can step between them
-     without either having to carry the other's machinery. */
-  document.addEventListener('click', function (e) {
+     without either having to carry the other's machinery. Bound to the
+     switch and not to the document: the dock's own panel stops every
+     click from getting that far, to keep itself from closing. */
+  el('rel-switch').addEventListener('click', function (e) {
     var go = e.target.closest && e.target.closest('[data-go]');
     if (go) window.location.href = go.getAttribute('data-go');
   });
@@ -6343,7 +6492,7 @@
      nobody reads by the third one. The dock has the way back. */
   var coachSeen = false;
   try { coachSeen = !!sessionStorage.getItem(COACH_SEEN); } catch (err) {}
-  if (!coachSeen) setTimeout(function () { coachShow(0); }, 450);
+  if (!coachSeen) { COACH = WEEK_TIPS; setTimeout(function () { coachShow(0); }, 450); }
 })();
 </script>
 </body>
