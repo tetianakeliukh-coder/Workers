@@ -102,6 +102,19 @@
      about it. */
   #grid tbody td.col-day.c-err,
   #grid tbody td.col-day.c-cap { background: #f5e7e4; }
+  /* ─── Which of the two is wrong ─────────────────────────────────
+     A day that will not hold what was typed is wrong about the figure,
+     so the figure turns red and says so without being hovered. A save
+     that did not land says nothing about the figure at all — that one
+     stays black, and only the cell carries the colour. */
+  #grid tbody td.col-day.c-cap .cfig { color: var(--error); }
+  /* Hovered, the wash steps out of the way and the field appears as it
+     does on any other cell: this one can still be typed in, and the red
+     figure goes on saying which one it is. */
+  #grid tbody td.col-day.c-cap:hover { background: var(--white); }
+  #grid td.col-day.c-cap .hr-view:hover {
+    border-color: var(--grey-300); background: var(--white);
+  }
   /* ─── One error looks like one error ────────────────────────────
      A day that cannot hold what was typed used to be drawn twice: the
      wash on the cell and a red box inside it. But the wash already
@@ -685,14 +698,6 @@
   .hr-view.selected, .hr-view.selected:hover {
     border-color: var(--primary); background: var(--primary-hover-bg);
   }
-  /* Open — and the field is next door, not here. The cell keeps its
-     place in the column and goes on showing what is being typed, so
-     the day's total and the week's stay honest while the panel is up.
-     Two pixels, drawn inside, so nothing shifts as it opens. */
-  .hr-view.open, .hr-view.open:hover {
-    border-color: var(--primary); background: var(--white);
-    box-shadow: inset 0 0 0 1px var(--primary);
-  }
   /* Handed in: shown, not offered — and still legible. A figure the
      supervisor has signed off is the one figure on the row nobody may
      argue with, which is no reason to make it hard to read. */
@@ -725,6 +730,15 @@
   /* Lighter than the figure it sits beside: the figure is what the row
      is about, the padlock is only the reason it cannot be touched. */
   .hr-view.locked .hr-lock { color: var(--grey-600); }
+  /* ─── The padlock waits to be asked ─────────────────────────────
+     A padlock on every closed cell of a closed day is thirteen
+     padlocks saying one thing. The greyed figure already says the cell
+     is not for typing in; the padlock only has to answer "why not",
+     and that question is asked by hovering. Hidden rather than absent,
+     so the slot stays and nothing shifts when it appears. */
+  #grid .cm-lock.is-lock { visibility: hidden; }
+  #grid td:hover .cm-lock.is-lock,
+  #grid tr:hover .cm-lock.is-lock { visibility: visible; }
   /* Just written. Long enough to be caught out of the corner of an eye
      on the way to the next cell, and gone before it becomes furniture. */
   /* ─── Still in the air ──────────────────────────────────────────
@@ -763,78 +777,38 @@
   }
   .cell-pop.open { display: block; }
 
-  /* ─── The cell, opened ──────────────────────────────────────────
-     A comment belongs to one day of one task, which is exactly what a
-     cell is — so it is written where the figure is written, in a panel
-     the cell opens rather than on a screen of its own. The hours keep
-     the first field and the caret, because hours are what the cell is
-     opened for ninety-nine times out of a hundred; the comment sits
-     under them, already there and already filled in if there is one,
-     because a note behind a second click is a note nobody leaves. */
-  .cell-pop.note-pop { width: 272px; padding: 10px 12px 12px; }
-  .np-day {
-    margin-bottom: 10px; font-size: 12px; line-height: 16px;
-    font-weight: 500; color: var(--grey-600);
+  /* ─── Four things to say once ───────────────────────────────────
+     Inline editing with no Save is a different machine from the one
+     this page used to be, and the difference is invisible: the screen
+     that autosaves and the screen that does not look identical until
+     something has already happened. So it is said out loud, once, on
+     the first visit — four short notes, each pinned to the thing it is
+     about, and a way back to them in the corner for anyone who waved
+     them away too quickly. */
+  .coach-ring {
+    position: fixed; z-index: 700; pointer-events: none; border-radius: 8px;
+    box-shadow: 0 0 0 2px var(--primary), 0 0 0 9999px rgba(16, 24, 40, 0.45);
+    transition: top .18s ease, left .18s ease, width .18s ease, height .18s ease;
   }
-  .np-fld { display: block; margin-bottom: 10px; }
-  .np-lab {
-    display: block; margin-bottom: 4px;
-    font-size: 12px; line-height: 16px; color: var(--grey-600);
+  .coach {
+    display: none; position: fixed; z-index: 701; width: 296px; padding: 14px 16px 12px;
+    border-radius: 10px; background: var(--white);
+    box-shadow: 0 8px 28px rgba(16, 24, 40, 0.24);
   }
-  /* The figure's field here is the cell's field: it keeps the cell's
-     own rules, the red of a day that will not hold it included, and
-     only its size is restated for the panel. */
-  .note-pop input.hr-cell {
-    width: 100%; height: 34px; margin: 0; padding: 0 10px;
-    text-align: left; font-size: 14px;
+  .coach.open { display: block; }
+  .coach h4 {
+    margin: 0 0 6px; font-size: 14px; line-height: 20px; font-weight: 500;
+    color: var(--text-main);
   }
-  /* The count belongs to the field, so it sits in the field — bottom
-     right, clear of the first line and of the caret, with room kept
-     for it so the text never runs underneath. */
-  .np-box { position: relative; display: block; }
-  .np-box .np-count {
-    position: absolute; right: 9px; bottom: 6px; pointer-events: none;
-    font-size: 12px; line-height: 16px; color: var(--grey-500);
-    background: var(--white); padding-left: 4px;
+  .coach p { margin: 0; font-size: 12px; line-height: 18px; color: var(--grey-700); }
+  .coach-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-top: 12px;
   }
-  .note-pop textarea {
-    display: block; width: 100%; min-height: 64px; max-height: 120px;
-    padding: 7px 10px 24px; resize: vertical;
-    font-family: var(--fs-sans); font-size: 14px; line-height: 20px;
-    color: var(--text-main); background: var(--white);
-    border: 1px solid var(--grey-350); border-radius: 6px;
-  }
-  .note-pop textarea:focus {
-    outline: none; border-color: var(--primary);
-    box-shadow: inset 0 0 0 1px var(--primary);
-  }
-  .note-pop textarea::placeholder { color: var(--grey-400); }
-  /* ─── Two buttons that repeat two keys ──────────────────────────
-     Enter is Done and Escape is Cancel, and the panel worked with
-     neither button drawn. They are drawn anyway: a panel that can only
-     be left by a key the reader already has to know is a panel they
-     leave by clicking somewhere and hoping. The keys stay the fast way
-     out; the buttons are the way anyone finds. */
-  .np-foot {
-    display: flex; align-items: center; justify-content: flex-end; gap: 8px;
-  }
-  /* Counted quietly all the way along, and only worth reading near the
-     end — so it only darkens near the end. */
-  .np-count.near { color: var(--text-main); }
-  /* A day that will not take what was typed says so here, where the
-     typing is happening — not only in a message that slides away. */
-  .note-pop .cp-err { margin: 0 0 10px; }
-  .note-pop .cp-err[hidden] { display: none; }
-  /* The other thing the cell carries. It is not edited here, but a
-     panel that showed the hours and the note and said nothing about an
-     allowance would read as the whole of the cell, which it is not. */
-  .np-alw {
-    margin: -4px 0 10px; padding: 7px 10px; border-radius: 6px;
-    background: var(--grey-100);
-    font-size: 12px; line-height: 16px; color: var(--grey-700);
-  }
-  .np-alw[hidden] { display: none; }
-  .np-alw b { font-weight: 500; }
+  .coach-step { font-size: 12px; line-height: 16px; color: var(--grey-500); }
+  .coach-acts { display: flex; align-items: center; gap: 8px; }
+  .coach-acts .btn-ghost, .coach-acts .btn-primary { height: 32px; padding: 0 12px; }
+
   .cp-row {
     display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px;
     font-size: 13px; color: var(--text-main);
@@ -1858,26 +1832,30 @@
   <button type="button" data-iter="0">Off</button>
 </div>
 
-<!-- Six situations, each named by what the cell will do rather than by
-     what went wrong behind it. A row of six buttons was wider than the
-     dock and still not self-explanatory; a list has room to say what
-     each one is. -->
+<!-- Two error flows, which is all this release has: the day that
+     cannot hold what was typed, which the page works out itself, and
+     the save that did not land, whatever the reason behind it. The
+     cases that used to be here — a site closing mid-week, a day signed
+     off while you typed — are gone on purpose: live updates are
+     expected to make them impossible rather than rare. -->
 <div class="vp-switch vp-pick" id="case-switch" aria-label="Situation">
   <select id="case-pick" aria-label="Situation">
     <option value="ok">Saves straight away</option>
     <option value="slow">Saves slowly &mdash; spinner first</option>
-    <option value="timeout">Never answers &mdash; times out</option>
-    <option value="server">Server refuses the change</option>
-    <option value="blocked">Site closed to you mid-week</option>
-    <option value="finalised">Day signed off while you type</option>
+    <option value="server">The save does not land</option>
   </select>
 </div>
 
-<!-- What a cell can carry besides its figure, and how. Every variant
-     keeps the padlock in a slot of its own so it never shifts. -->
-<div class="vp-switch" id="marks-switch" role="group" aria-label="Marks in a cell">
-  <button type="button" data-marks="three" class="on">Three icons</button>
-  <button type="button" data-marks="corner">Corner mark</button>
+
+<!-- Two releases, two pages. This one is the first: a figure typed
+     straight into the grid, and nothing else in the cell. -->
+<div class="vp-switch" id="rel-switch" role="group" aria-label="Release">
+  <button type="button" class="on">First release</button>
+  <button type="button" data-go="my-timesheets-overlay.html">Later &mdash; the overlay</button>
+</div>
+
+<div class="vp-switch" id="tips-switch" role="group" aria-label="First-visit tips">
+  <button type="button" id="tips-replay">Show the tips again</button>
 </div>
 
 <div class="vp-switch" id="vp-switch" role="group" aria-label="Preview size">
@@ -2077,30 +2055,17 @@
   </div>
 </div>
 
-<!-- ── One cell, opened: the hours and the note that explains them ──
-     Two fields in the order they are used. The caret lands in the
-     hours, so the common week is unchanged: type, Enter, next. The
-     comment is underneath, visible, and costs nothing to walk past. -->
-<div class="cell-pop note-pop" id="note-pop" role="dialog" aria-label="Hours and comment for this day">
-  <div class="np-day" id="np-day"></div>
-  <label class="np-fld">
-    <span class="np-lab">Hours</span>
-    <input class="hr-cell" id="np-h" type="text" inputmode="decimal" autocomplete="off" placeholder="&ndash;" />
-  </label>
-  <p class="cp-err" id="np-err" hidden>
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/><path d="M8 7.3v4M8 4.8v.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    <span id="np-err-t"></span>
-  </p>
-  <label class="np-fld">
-    <span class="np-lab">Comment</span>
-    <span class="np-box">
-      <textarea id="np-note" rows="2" maxlength="255" placeholder="Type the comment"></textarea>
-      <span class="np-count" id="np-count">0/255</span>
+<!-- ── Said once, on the first visit ─────────────────────────────── -->
+<div class="coach-ring" id="coach-ring" hidden></div>
+<div class="coach" id="coach" role="dialog" aria-live="polite" aria-labelledby="coach-h">
+  <h4 id="coach-h"></h4>
+  <p id="coach-p"></p>
+  <div class="coach-foot">
+    <span class="coach-step" id="coach-step"></span>
+    <span class="coach-acts">
+      <button class="btn-ghost" type="button" id="coach-skip">Skip</button>
+      <button class="btn-primary" type="button" id="coach-next">Next</button>
     </span>
-  </label>
-  <div class="np-foot">
-    <button class="btn-ghost" type="button" id="np-cancel" tabindex="-1">Cancel</button>
-    <button class="btn-primary" type="button" id="np-done" tabindex="-1">Done</button>
   </div>
 </div>
 
@@ -2403,9 +2368,7 @@
      the marks that draw them, because the week below is seeded with
      them and a var assigned further down the file is still undefined
      when that runs. */
-  var cellNote = Object.create(null);
   /* What Stijn's team settles on for short free text. */
-  var NOTE_MAX = 255;
 
   function add(day, site, sup, levels, hours, start, finish, allow) {
     var k = keyOf(site, sup, levels);
@@ -2462,23 +2425,6 @@
      looks like when the day is handed in, carries an allowance and has
      a note on it all at once, and a sheet with two marks on it cannot
      answer that. */
-  function note(day, site, sup, levels, text) {
-    cellNote[keyOf(site, sup, levels) + '|' + iso(day)] = text.slice(0, NOTE_MAX);
-  }
-  note(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A,
-    'Started an hour late, crane was still on the other deck.');
-  note(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', B,
-    'Only got the first two plates done before the weather came in.');
-  note(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A,
-    'Short day, sent up to help Tom after crib.');
-  note(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Tom Halloran', H,
-    'Handrail on the port walkway, second section.');
-  note(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H,
-    'Rope access, signed off by Tom on the deck.');
-  note(addDays(THIS_MON, 2), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F,
-    'Drove in from Roxby, two hours each way.');
-  note(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D,
-    'Two dives, second one cut short on a thruster fault.');
 
   /* Older work, so the quick picks can say when each was last used —
      and enough of it that the list of recent tasks is a list. */
@@ -2878,21 +2824,6 @@
      the mark is or not. Nothing moves. The modes below differ only in
      how many slots there are and what fills them — the figure is in
      the same place in all three. */
-  var MARK_MODE = 'three';   // three | corner | dot
-  function noteOf(key, isoDate) {
-    return (key && cellNote[key + '|' + isoDate]) || '';
-  }
-  /* Empty is not a note. A cell whose note has been rubbed out carries
-     no mark, which is the only way the mark means anything. */
-  function setNote(key, isoDate, text) {
-    var k = key + '|' + isoDate;
-    text = (text || '').slice(0, NOTE_MAX).trim();
-    if (text) cellNote[k] = text; else delete cellNote[k];
-  }
-
-  var ICO_CMT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
-    '<path d="M13.5 9.2a1.8 1.8 0 0 1-1.8 1.8H5.2L2.5 13.5V3.8A1.8 1.8 0 0 1 4.3 2h7.4a1.8 1.8 0 0 1 1.8 1.8z" ' +
-    'stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   var ICO_LOCK = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
     '<rect x="3" y="7" width="10" height="6.5" rx="1.3" stroke="currentColor" stroke-width="1.3"/>' +
@@ -2949,19 +2880,14 @@
   /* Everything the cell has to say besides its figure, gathered once
      so the hover answers in one place rather than making the reader
      find three separate marks and hover each of them. */
+  /* The hover is where a cell says anything it has to say. In this
+     release the only thing it has to say is why it cannot be typed in.
+     The comment, and later the allowances and the start and finish
+     times, are listed here too rather than given marks of their own —
+     no extra clicks, and no read-only panel to open. */
   function cellSays(key, isoDate, lock) {
-    var n = noteOf(key, isoDate);
-    if (!lock && !n) return '';
-    var out = '';
-    /* The closed day first and on its own, because it is the one thing
-       here that changes what the reader may do rather than telling them
-       something about the hours. */
-    if (lock) {
-      out += '<em>' + lockWhy(key) + '</em>';
-      if (n) out += '<hr>';
-    }
-    if (n) out += '<b>Comment</b><span>' + Shell.esc(n) + '</span>';
-    return ' data-tip-html="' + out.replace(/"/g, '&quot;') + '"';
+    if (!lock) return '';
+    return ' data-tip-html="' + ('<em>' + lockWhy(key) + '</em>').replace(/"/g, '&quot;') + '"';
   }
   /* The slots. Every one of them is drawn whether it has a mark in it
      or not — an empty slot is the whole point, because it is what
@@ -2991,24 +2917,15 @@
      every row, which was the point of the slots to begin with. */
   function cellBody(fig, key, isoDate, lock, tail) {
     return '<span class="cnum">' + fig +
-      (lock ? '<span class="cm-lock">' + ICO_LOCK + '</span>' : '') + '</span>' +
+      (lock ? '<span class="cm-lock is-lock">' + ICO_LOCK + '</span>' : '') + '</span>' +
       (tail != null ? tail : cellMarksOnly(key, isoDate));
   }
-  function cellMarksOnly(key, isoDate) {
-    var n = noteOf(key, isoDate);
-    if (MARK_MODE !== 'three' || !n) return '';
-    /* The mark sits in a slot of its own and fills it from the right,
-       which is what keeps a column of marks running straight down the
-       week whether or not each cell carries one. */
-    return '<span class="cmarks">' +
-      (n ? '<span class="cm-cmt">' + ICO_CMT + '</span>' : '') +
-      '</span>';
-  }
-  function cellCorner(key, isoDate) {
-    if (MARK_MODE !== 'corner') return '';
-    if (!noteOf(key, isoDate)) return '';
-    return '<span class="cm-corner" aria-hidden="true"></span>';
-  }
+  /* Nothing hangs off a cell in this release: no comment, no
+     allowance, nothing to mark. The slot is kept all the same, at the
+     width the next release needs, so the week does not shift sideways
+     on the day the first comment arrives. */
+  function cellMarksOnly() { return ''; }
+  function cellCorner() { return ''; }
 
   function cellHtml(value, key, isoDate) {
     if (state.editing && key) {
@@ -3040,20 +2957,14 @@
          typed into — the rest of the week is read, not filled in, and a
          table of boxes would say the opposite. */
       if (PROTO.first) {
+        /* Hours alone, and no claim to carry, leaves nothing for a
+           panel to hold: the cell is the field. But only while it is
+           being typed into — the rest of the week is read, not filled
+           in, and a table of boxes would say the opposite. */
         if (liveCell === dk && !lock) {
-          /* The field moved into the panel the cell opens, so what is
-             left here is the cell: lit, and still counting. The figure
-             in it is whatever is being typed next door, which is what
-             keeps the day's total and the week's honest while the panel
-             is up — and what keeps the marks on the cell readable, which
-             a box with a caret in it could not do. */
-          var live = '<span class="cfig">' +
-            (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') +
-            '</span>';
           return '<td class="' + td + '">' +
-            cellCorner(key, isoDate) +
-            '<span class="hr-view open" data-key="' + Shell.esc(key) + '" data-date="' +
-            isoDate + '">' + cellBody(live, key, isoDate, false) + '</span></td>';
+            '<input class="' + cls + '" type="text" inputmode="decimal" autocomplete="off" ' +
+            'placeholder="&ndash;" ' + what + ' value="' + (value > 0 ? fmtHours(value) : '') + '" /></td>';
         }
         var fig = '<span class="cfig">' +
           (value > 0 ? fmtHours(value) : '<span class="cell-empty">&mdash;</span>') +
@@ -3822,7 +3733,6 @@
     if (v === sv.h) { next.s = sv.s; next.f = sv.f; }
     putCell(key, date, next);
     markOver(date, key);
-    inp.classList.toggle('over', cellOver(key, date, v));
     /* ─── Where an error belongs ────────────────────────────────
        Of everything that can go wrong with a figure, exactly one goes
        wrong while the panel is still open: a day that will not hold
@@ -3834,7 +3744,6 @@
        answering, the day being signed off, the site closing — arrives
        after the panel has gone, and lands on the cell, which is why
        the cell has colours and the panel does not need them. */
-    syncNoteErr(date);
     redrawKeeping(key, date);
   });
 
@@ -3937,15 +3846,7 @@
     var atEnd = inp.selectionStart === inp.value.length && inp.selectionEnd === inp.value.length;
     if (e.key === 'Escape') { e.stopPropagation(); cancelHours(); return; }
     if (e.key === 'Enter') { e.preventDefault(); step(key, date, 0, 1); return; }
-    /* ─── Tab, and what it costs ────────────────────────────────
-       The comment is the next field in the panel, so Tab goes to it:
-       a field in front of the reader that the keyboard cannot reach
-       is a field they conclude is decoration. The week is still
-       walked without the mouse — Enter goes down, and the right
-       arrow at the end of the figure goes on to the next day, which
-       is the move "twelve, tab, twelve" was really made of. */
-    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); focusNote(); return; }
-    if (e.key === 'Tab') { e.preventDefault(); step(key, date, -1, 0); return; }
+    if (e.key === 'Tab') { e.preventDefault(); step(key, date, e.shiftKey ? -1 : 1, 0); return; }
     if (e.key === 'ArrowUp') { e.preventDefault(); step(key, date, 0, -1); return; }
     if (e.key === 'ArrowDown') { e.preventDefault(); step(key, date, 0, 1); return; }
     if (e.key === 'ArrowLeft' && atStart) { e.preventDefault(); step(key, date, -1, 0); return; }
@@ -4100,7 +4001,6 @@
     draft = Object.create(null);
     overAt = Object.create(null); removedRows = [];
     liveCell = null;
-    closeNotePop();
     render();
   }
   /* ─── Saving ──────────────────────────────────────
@@ -4232,7 +4132,11 @@
      who lost two hundred people's hours to a failed Save lost them
      because a Save was ever that big. */
   function liveInput() {
-    return (liveCell && noteOpen()) ? el('np-h') : null;
+    var found = null;
+    [].forEach.call(gridBody.querySelectorAll('input.hr-cell'), function (x) {
+      if (!found && x.getAttribute('data-key') + '|' + x.getAttribute('data-date') === liveCell) found = x;
+    });
+    return found;
   }
   /* The first of two clicks. Nothing is committed and nothing opens —
      the cell is only named, so the second click has something to be
@@ -4248,17 +4152,16 @@
     selCell = null;
     renderGrid();
   }
-  function openHours(key, date, atNote) {
+  function openHours(key, date) {
     var dk = key + '|' + date;
     selCell = null;
     if (liveCell === dk) { var cur = liveInput(); if (cur) { cur.focus(); cur.select(); } return; }
     if (liveCell) commitHours();
     if (cellLocked(key, date)) return;
     liveCell = dk;
-    /* The mark on the cell just written is left alone: walking on to the
-       next one is exactly when it is worth seeing. */
     renderGrid(); renderWeek(); syncEditBar();
-    openNotePop(key, date, atNote);
+    var inp = liveInput();
+    if (inp) { inp.focus(); inp.select(); ensureVisible(inp.closest('tr')); ensureAcross(inp); }
   }
   /* Escape keeps nothing: the cell goes back to the figure it held when
      it opened. */
@@ -4267,7 +4170,6 @@
     var date = liveCell.slice(liveCell.lastIndexOf('|') + 1);
     delete draft[liveCell];
     liveCell = null;
-    closeNotePop();
     markOver(date, null);
     renderGrid(); renderWeek(); syncEditBar();
   }
@@ -4288,7 +4190,6 @@
     var dk = w.key + '|' + w.date;
     if (!draft) draft = Object.create(null);
     draft[dk] = w.prev;
-    if (w.note != null) setNote(w.key, w.date, w.note);
     writeCells([dk]);
     delete draft[dk];
     settleRows();
@@ -4356,28 +4257,16 @@
     if (!liveCell) return;
     var dk = liveCell, at = dk.lastIndexOf('|');
     var key = dk.slice(0, at), date = dk.slice(at + 1);
-    /* The note is part of what the cell says, so it is taken at the
-       moment the figure is and travels in the same write. Read before
-       the panel closes, because closing it is what loses it. */
-    var noteWas = noteOf(key, date);
-    var noteNow = noteOpen() ? el('np-note').value.slice(0, NOTE_MAX).trim() : noteWas;
-    var noteChanged = noteNow !== noteWas;
     liveCell = null;
-    closeNotePop();
     var typed = draft && (dk in draft);
     /* Opened, read, left alone: there is nothing to send — unless the
        cell was already red, in which case leaving it is the retry. */
-    if (!typed && !noteChanged && !cellErr[dk]) {
-      renderGrid(); renderWeek(); syncEditBar(); return;
-    }
+    if (!typed && !cellErr[dk]) { renderGrid(); renderWeek(); syncEditBar(); return; }
     /* The figure goes in whatever the back end is about to say about
        it. Everything the worker typed stays on the page; what changes
        is only whether the page claims it is safe. */
-    if (typed || noteChanged) {
-      lastWrite = { key: key, date: date, prev: savedCell(key, date), note: noteWas };
-    }
-    if (noteChanged) setNote(key, date, noteNow);
     if (typed) {
+      lastWrite = { key: key, date: date, prev: savedCell(key, date) };
       writeCells([dk]);
       delete draft[dk];
       settleRows();
@@ -4611,134 +4500,14 @@
   /* Each case is one thing to look at, so it sets both halves of what
      used to be two switches. */
   var CASES = {
-    ok:        { mode: 'clean',     speed: 'fast' },
-    slow:      { mode: 'clean',     speed: 'slow' },
-    timeout:   { mode: 'clean',     speed: 'timeout' },
-    server:    { mode: 'server',    speed: 'fast' },
-    blocked:   { mode: 'blocked',   speed: 'fast' },
-    finalised: { mode: 'finalised', speed: 'fast' }
+    ok:     { mode: 'clean',  speed: 'fast' },
+    slow:   { mode: 'clean',  speed: 'slow' },
+    server: { mode: 'server', speed: 'fast' }
   };
   el('case-pick').addEventListener('change', function (e) {
     var c = CASES[e.target.value];
     if (!c) return;
     SAVE_MODE = c.mode; SAVE_SPEED = c.speed;
-  });
-
-  var marksSwitch = el('marks-switch');
-  function syncMarks() {
-    document.body.classList.toggle('marks-corner', MARK_MODE === 'corner');
-    marksSwitch.querySelectorAll('[data-marks]').forEach(function (x) {
-      x.classList.toggle('on', x.getAttribute('data-marks') === MARK_MODE);
-    });
-  }
-  marksSwitch.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-marks]');
-    if (!b) return;
-    MARK_MODE = b.getAttribute('data-marks');
-    syncMarks();
-    if (liveCell) commitHours();
-    render();
-  });
-  syncMarks();
-
-  /* ─── One cell, opened ──────────────────────────────────────────
-     The figure and the note that explains it are the same fact about
-     the same day, so they are written together and saved together. The
-     panel is what makes that possible: a cell has room for a figure and
-     two marks and nothing else, and a comment typed into a column 129
-     pixels wide is a comment nobody finishes.
-
-     The caret lands in the hours. Everything about the common week is
-     unchanged — open, type, Enter, next — and the comment is simply
-     there, underneath, for the day that needs one. */
-  var notePop = el('note-pop');
-  function noteOpen() { return notePop.classList.contains('open'); }
-  function closeNotePop() {
-    /* Hiding a panel the caret is still in leaves the keyboard pointed
-       at nothing. The last cell of the last row is where that shows. */
-    if (notePop.contains(document.activeElement)) document.activeElement.blur();
-    notePop.classList.remove('open');
-  }
-  function focusNote() {
-    var n = el('np-note');
-    n.focus();
-    try { n.setSelectionRange(n.value.length, n.value.length); } catch (err) {}
-  }
-  function syncNoteErr(date) {
-    var box = el('np-err');
-    if (!noteOpen()) return;
-    var over = overCap(date);
-    box.hidden = !over;
-    if (over) {
-      el('np-err-t').textContent = 'This day comes to ' +
-        fmtHours(Math.round(dayTotal(date, false) * 100) / 100) + ' h. A day holds ' +
-        DAY_CAP + ', so this will not be saved.';
-    }
-  }
-  function syncNoteCount() {
-    var n = el('np-note'), c = el('np-count');
-    c.textContent = n.value.length + '/' + NOTE_MAX;
-    /* Counted all the way along and worth reading only near the end. */
-    c.classList.toggle('near', NOTE_MAX - n.value.length <= 20);
-  }
-  function openNotePop(key, date, atNote) {
-    var anchor = cellAt(key, date);
-    if (!anchor) return;
-    var c = cellOf(key, date);
-    el('np-day').textContent = fmtDayLong(fromIso(date));
-    var h = el('np-h');
-    h.setAttribute('data-key', key);
-    h.setAttribute('data-date', date);
-    h.value = c.h > 0 ? fmtHours(c.h) : '';
-    h.classList.toggle('over', cellOver(key, date, c.h));
-    el('np-err').hidden = true;
-    var n = el('np-note');
-    n.value = noteOf(key, date);
-    syncNoteCount();
-    /* Measured with the panel laid out but not yet shown, so the page
-       does not flicker through a first position on the way to the one
-       it keeps. */
-    /* The week is wider than the card and longer than the window. A
-       cell the keyboard has walked to and the table has not is a cell
-       being typed into blind — and blind is how a figure lands on a day
-       that already had twelve hours on it somewhere off screen. Both
-       scrolls happen before the panel is placed, so it is hung on the
-       cell where the cell ends up. */
-    notePop.style.visibility = 'hidden';
-    notePop.classList.add('open');
-    ensureVisible(anchor.closest('tr') || anchor, notePop.offsetHeight + 12);
-    ensureAcross(anchor);
-    placePop(notePop, anchor, false);
-    notePop.style.visibility = '';
-    syncNoteErr(date);
-    if (atNote) { focusNote(); return; }
-    h.focus(); h.select();
-  }
-  /* The two keys, with faces on. Out of the tab order on purpose: Tab
-     walks the two fields and then the week, which is the path a week of
-     hours is actually typed along — stopping it at a button twice per
-     cell would cost more than the buttons are worth. */
-  el('np-done').addEventListener('click', function () {
-    if (liveCell) commitHours();
-    clearSel();
-  });
-  el('np-cancel').addEventListener('click', function () { cancelHours(); });
-  el('np-note').addEventListener('input', syncNoteCount);
-  el('np-note').addEventListener('keydown', function (e) {
-    if (!liveCell) return;
-    var at = liveCell.lastIndexOf('|');
-    var key = liveCell.slice(0, at), date = liveCell.slice(at + 1);
-    if (e.key === 'Escape') { e.stopPropagation(); cancelHours(); return; }
-    /* Enter finishes the cell, the way it does in the figure above it.
-       A note that needs paragraphs is not what this field is for — but
-       Shift keeps the line break for the one that is. */
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); step(key, date, 0, 1); return; }
-    if (e.key === 'Tab' && e.shiftKey) {
-      e.preventDefault();
-      var h = el('np-h'); h.focus(); h.select();
-      return;
-    }
-    if (e.key === 'Tab') { e.preventDefault(); step(key, date, 1, 0); return; }
   });
 
   /* ─── One cell ──────────────────────────────────────────────────── */
@@ -4991,7 +4760,6 @@
        a click on Done would otherwise clear popKey before commitCell reads
        it — and the hours would never land. */
     if (pop.contains(e.target)) return;
-    if (notePop.contains(e.target)) return;
     var cell = e.target.closest('.hr-cell, .hr-view');
     /* In the first iteration the cell is the field, so a click on it is
        a click into a text box and there is nothing to open. */
@@ -5010,27 +4778,13 @@
          detached node by the time it would be opened — it is found
          again by what it was. */
       if (popKey) commitCell();
-      /* The cell that is already open answers a click by handing the
-         caret back, not by closing and opening again. */
-      if (liveCell === k + '|' + d) {
-        var back = liveInput();
-        if (back) { back.focus(); back.select(); }
-        return;
-      }
-      /* A click on the comment mark is a click on the comment: the
-         panel opens with the caret in the note rather than in the
-         figure, and without the first of the two clicks. The mark is
-         the only thing on a cell that names what it is, so it is the
-         only thing that can be aimed at. */
-      var atNote = !!(e.target.closest && e.target.closest('.cm-cmt'));
       /* One click picks, the second opens — unless the switch says the
          first click should open it. */
       if (PROTO.first && cell.classList.contains('hr-view')
-          && !atNote && selCell !== k + '|' + d) {
+          && selCell !== k + '|' + d) {
         selectHours(k, d);
         return;
       }
-      if (PROTO.first) { openHours(k, d, atNote); return; }
       openCell(cellAt(k, d) || cell);
       return;
     }
@@ -6049,7 +5803,7 @@
         delete bag[dk];
       });
     }
-    carry(draft); carry(lastWord); carry(cellNote);
+    carry(draft); carry(lastWord);
     /* Where the row sits on the week is the row's, not the name's. */
     var w = weekNow();
     w.pinned = w.pinned.map(function (p) { return p === oldKey ? k : p; });
@@ -6261,7 +6015,7 @@
      document is the re-render that put the row there, not a look away. */
   document.addEventListener('click', function (e) {
     if (!document.contains(e.target)) return;
-    if (e.target.closest('#task-pop, #cell-pop, #note-pop, #where-pop, #add-menu, .modal-backdrop')) return;
+    if (e.target.closest('#task-pop, #cell-pop, #where-pop, #add-menu, .modal-backdrop')) return;
     if (e.target.closest('tr.row-focus')) return;
     clearFocus();
   });
@@ -6495,12 +6249,101 @@
 
   el('add-hint-x').addEventListener('click', function () { el('add-hint').hidden = true; });
 
+  /* ─── Four things to say once ───────────────────────────────────
+     Each step names what it is about by finding it on the page rather
+     than by holding a selector to a cell that may not be there: the
+     week is mock data and the rows move. A step whose subject cannot
+     be found is skipped rather than pointing at nothing. */
+  var COACH = [
+    { find: function () {
+        return gridBody.querySelector('.hr-view[data-key]:not(.locked)');
+      },
+      h: 'Type straight into the week',
+      p: 'Click a cell and it becomes a field. There is no Edit button any more, ' +
+         'and no mode to leave.' },
+    { find: function () { return document.getElementById('save-state'); },
+      h: 'Nothing to save',
+      p: 'Each figure goes off on its own the moment you leave the cell. This line ' +
+         'says whether the last one landed.' },
+    { find: function () {
+        return gridBody.querySelector('td.col-day .hr-view.locked');
+      },
+      h: 'Some days are closed',
+      p: 'A day your supervisor has handed in cannot be changed. Hover one to see ' +
+         'the padlock and why.' },
+    { find: function () { return gridHead.querySelector('th.col-day'); },
+      h: 'A day holds 24 hours',
+      p: 'More than that is refused before it is sent anywhere — the figure and the ' +
+         'day turn red, and nothing is saved until it is fixed.' }
+  ];
+  var coach = el('coach'), coachRing = el('coach-ring'), coachAt = -1;
+  var COACH_SEEN = 'opms-mytime-tips';
+  function coachClose() {
+    coach.classList.remove('open');
+    coachRing.hidden = true;
+    coachAt = -1;
+    try { sessionStorage.setItem(COACH_SEEN, '1'); } catch (err) {}
+  }
+  function coachShow(i) {
+    /* Walk past anything this week happens not to have. */
+    while (i < COACH.length && !COACH[i].find()) i++;
+    if (i >= COACH.length) { coachClose(); return; }
+    coachAt = i;
+    var step = COACH[i], node = step.find();
+    el('coach-h').textContent = step.h;
+    el('coach-p').textContent = step.p;
+    el('coach-step').textContent = (i + 1) + ' of ' + COACH.length;
+    el('coach-next').textContent = i === COACH.length - 1 ? 'Got it' : 'Next';
+    el('coach-skip').hidden = i === COACH.length - 1;
+    ensureVisible(node.closest('tr') || node);
+    var r = node.getBoundingClientRect();
+    coachRing.hidden = false;
+    coachRing.style.top = (r.top - 4) + 'px';
+    coachRing.style.left = (r.left - 4) + 'px';
+    coachRing.style.width = (r.width + 8) + 'px';
+    coachRing.style.height = (r.height + 8) + 'px';
+    coach.classList.add('open');
+    /* Under the thing it is about, or over it when the page has run out
+       of room below — the same rule every other panel here follows. */
+    var top = r.bottom + 12, left = r.left - 8;
+    if (top + coach.offsetHeight > window.innerHeight - 12) top = r.top - coach.offsetHeight - 12;
+    if (left + coach.offsetWidth > window.innerWidth - 12) left = window.innerWidth - coach.offsetWidth - 12;
+    coach.style.top = Math.max(12, top) + 'px';
+    coach.style.left = Math.max(12, left) + 'px';
+  }
+  el('coach-next').addEventListener('click', function () {
+    if (coachAt >= COACH.length - 1) { coachClose(); return; }
+    coachShow(coachAt + 1);
+  });
+  el('coach-skip').addEventListener('click', coachClose);
+  document.addEventListener('keydown', function (e) {
+    if (coachAt < 0 || e.key !== 'Escape') return;
+    e.stopPropagation();
+    coachClose();
+  }, true);
+  el('tips-replay').addEventListener('click', function () {
+    if (liveCell) commitHours();
+    coachShow(0);
+  });
+
   /* No Edit button to press: the sheet is open the moment the page is. */
   enterEdit();
   syncDateLock();
   render();
+  /* The two releases are two pages, so the dock can step between them
+     without either having to carry the other's machinery. */
+  document.addEventListener('click', function (e) {
+    var go = e.target.closest && e.target.closest('[data-go]');
+    if (go) window.location.href = go.getAttribute('data-go');
+  });
   applyViewport();
   syncVariant();
+  /* Once per visit, not once per reload: a prototype is reloaded forty
+     times an afternoon, and a tour that opens every time is a tour
+     nobody reads by the third one. The dock has the way back. */
+  var coachSeen = false;
+  try { coachSeen = !!sessionStorage.getItem(COACH_SEEN); } catch (err) {}
+  if (!coachSeen) setTimeout(function () { coachShow(0); }, 450);
 })();
 </script>
 </body>
