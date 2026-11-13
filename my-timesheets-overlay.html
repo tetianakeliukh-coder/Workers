@@ -739,6 +739,14 @@
   /* Lighter than the figure it sits beside: the figure is what the row
      is about, the padlock is only the reason it cannot be touched. */
   .hr-view.locked .hr-lock { color: var(--grey-600); }
+  /* A padlock on every closed cell of a closed day is thirteen
+     padlocks saying one thing. The greyed figure already says the cell
+     is not for typing in; the padlock only answers "why not", and that
+     is a question asked by hovering. Hidden rather than absent, so the
+     slot stays and nothing shifts when it appears. */
+  #grid .cm-lock.is-lock { visibility: hidden; }
+  #grid td:hover .cm-lock.is-lock,
+  #grid tr:hover .cm-lock.is-lock { visibility: visible; }
   /* Just written. Long enough to be caught out of the corner of an eye
      on the way to the next cell, and gone before it becomes furniture. */
   /* ─── Still in the air ──────────────────────────────────────────
@@ -2463,9 +2471,9 @@
   function entryModeOf(key) { var m = taskMeta[key]; return entryModeFor(m && m.site); }
 
   var SUPS_BY_SITE = {
-    'MMA VIGILANT – 360': ['Grace Okafor', 'Tom Halloran'],
-    'MMA VIGILANT ROV':   ['Priya Nair'],
-    'SA BHP OLYMPIC DAM': ['Grace Okafor', 'Marcus Webb']
+    'MMA VIGILANT – 360': ['Okafor, Grace', 'Halloran, Tom'],
+    'MMA VIGILANT ROV':   ['Nair, Priya'],
+    'SA BHP OLYMPIC DAM': ['Okafor, Grace', 'Webb, Marcus']
   };
   /* 0 means the site's own list; anything else is the prototype being
      asked what the dialog looks like with that many. */
@@ -2535,11 +2543,11 @@
   var G  = ['WORK-00201', 'CC-1155', 'Labour', 'Night'];
   var lastMon = addDays(THIS_MON, -7);
   for (var i = 0; i < 5; i++) {
-    add(addDays(lastMon, i), 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
-    add(addDays(lastMon, i), 'MMA VIGILANT – 360', 'Grace Okafor', B, 4, '14:00', '18:00');
+    add(addDays(lastMon, i), 'MMA VIGILANT – 360', 'Okafor, Grace', A, 8, '06:00', '14:00');
+    add(addDays(lastMon, i), 'MMA VIGILANT – 360', 'Okafor, Grace', B, 4, '14:00', '18:00');
   }
-  add(addDays(lastMon, 3), 'MMA VIGILANT ROV', 'Priya Nair', C, 3, '07:00', '10:00');
-  add(addDays(lastMon, 4), 'MMA VIGILANT ROV', 'Priya Nair', C, 2.5, '07:00', '09:30');
+  add(addDays(lastMon, 3), 'MMA VIGILANT ROV', 'Nair, Priya', C, 3, '07:00', '10:00');
+  add(addDays(lastMon, 4), 'MMA VIGILANT ROV', 'Nair, Priya', C, 2.5, '07:00', '09:30');
 
   /* This week, spread over three sites and five supervisors, so the
      grouping has something to group. */
@@ -2551,20 +2559,20 @@
      against. Monday to Wednesday are in; today is half-entered, which
      is the state the page is opened in most often; the rest of the week
      has not happened yet. */
-  add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A, 8, '06:00', '14:00');
-  add(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', B, 2, '14:00', '16:00');
+  add(THIS_MON, 'MMA VIGILANT – 360', 'Okafor, Grace', A, 8, '06:00', '14:00');
+  add(THIS_MON, 'MMA VIGILANT – 360', 'Okafor, Grace', B, 2, '14:00', '16:00');
 
-  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A, 6, '06:00', '12:00');
-  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Tom Halloran', H, 2.5, '13:00', '15:30');
-  add(addDays(THIS_MON, 1), 'SA BHP OLYMPIC DAM', 'Grace Okafor', G, 2);
+  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Okafor, Grace', A, 6, '06:00', '12:00');
+  add(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Halloran, Tom', H, 2.5, '13:00', '15:30');
+  add(addDays(THIS_MON, 1), 'SA BHP OLYMPIC DAM', 'Okafor, Grace', G, 2);
 
-  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H, 6, '07:00', '13:00');
-  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', A2, 2, '13:30', '15:30');
-  add(addDays(THIS_MON, 2), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F, 2);
+  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Halloran, Tom', H, 6, '07:00', '13:00');
+  add(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Halloran, Tom', A2, 2, '13:30', '15:30');
+  add(addDays(THIS_MON, 2), 'SA BHP OLYMPIC DAM', 'Webb, Marcus', F, 2);
 
   /* Today, part done. */
-  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D, 5.5, '06:00', '11:30');
-  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', E, 2, '13:30', '15:30');
+  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Nair, Priya', D, 5.5, '06:00', '11:30');
+  add(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Nair, Priya', E, 2, '13:30', '15:30');
 
   /* Notes, written where a worker would actually leave one: the day
      that went wrong, the day somebody else needs to know about. Laid on
@@ -2575,35 +2583,35 @@
   function note(day, site, sup, levels, text) {
     cellNote[keyOf(site, sup, levels) + '|' + iso(day)] = text.slice(0, NOTE_MAX);
   }
-  note(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', A,
+  note(THIS_MON, 'MMA VIGILANT – 360', 'Okafor, Grace', A,
     'Started an hour late, crane was still on the other deck.');
-  note(THIS_MON, 'MMA VIGILANT – 360', 'Grace Okafor', B,
+  note(THIS_MON, 'MMA VIGILANT – 360', 'Okafor, Grace', B,
     'Only got the first two plates done before the weather came in.');
-  note(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Grace Okafor', A,
+  note(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Okafor, Grace', A,
     'Short day, sent up to help Tom after crib.');
-  note(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Tom Halloran', H,
+  note(addDays(THIS_MON, 1), 'MMA VIGILANT – 360', 'Halloran, Tom', H,
     'Handrail on the port walkway, second section.');
-  note(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Tom Halloran', H,
+  note(addDays(THIS_MON, 2), 'MMA VIGILANT – 360', 'Halloran, Tom', H,
     'Rope access, signed off by Tom on the deck.');
-  note(addDays(THIS_MON, 2), 'SA BHP OLYMPIC DAM', 'Marcus Webb', F,
+  note(addDays(THIS_MON, 2), 'SA BHP OLYMPIC DAM', 'Webb, Marcus', F,
     'Drove in from Roxby, two hours each way.');
-  note(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Priya Nair', D,
+  note(addDays(THIS_MON, 3), 'MMA VIGILANT ROV', 'Nair, Priya', D,
     'Two dives, second one cut short on a thruster fault.');
 
   /* Older work, so the quick picks can say when each was last used —
      and enough of it that the list of recent tasks is a list. */
-  add(addDays(THIS_MON, -24), 'MMA VIGILANT – 360', 'Tom Halloran', H, 10);
-  add(addDays(THIS_MON, -38), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1155', 'Labour', 'Day'], 7.5);
-  add(addDays(THIS_MON, -11), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00124', 'Replace hydraulic hose', 'Labour', 'Clean-up'], 6);
-  add(addDays(THIS_MON, -17), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00187', 'Weld handrail section', 'Weather standby', 'Preparation'], 4.5);
-  add(addDays(THIS_MON, -19), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00201', 'Deck plating repair', 'Weather standby', 'Clean-up'], 3);
-  add(addDays(THIS_MON, -26), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00123', 'Replace hydraulic hose', 'Labour', 'Clean-up'], 7);
-  add(addDays(THIS_MON, -31), 'MMA VIGILANT – 360', 'Grace Okafor', ['WORK-00124', 'Weld handrail section', 'Labour', 'Preparation'], 5.5);
-  add(addDays(THIS_MON, -13), 'MMA VIGILANT ROV', 'Priya Nair', ['JOB-00451', 'ROV dive', 'Labour'], 8);
-  add(addDays(THIS_MON, -21), 'MMA VIGILANT ROV', 'Priya Nair', ['JOB-00492', 'Deck handling', 'Weather standby'], 4);
-  add(addDays(THIS_MON, -29), 'MMA VIGILANT ROV', 'Priya Nair', ['JOB-00478', 'Tooling change', 'Labour'], 6.5);
-  add(addDays(THIS_MON, -15), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00123', 'CC-1163', 'Labour', 'Night'], 9);
-  add(addDays(THIS_MON, -22), 'SA BHP OLYMPIC DAM', 'Marcus Webb', ['WORK-00201', 'CC-1140', 'Waiting for materials', 'Day'], 5);
+  add(addDays(THIS_MON, -24), 'MMA VIGILANT – 360', 'Halloran, Tom', H, 10);
+  add(addDays(THIS_MON, -38), 'SA BHP OLYMPIC DAM', 'Webb, Marcus', ['WORK-00201', 'CC-1155', 'Labour', 'Day'], 7.5);
+  add(addDays(THIS_MON, -11), 'MMA VIGILANT – 360', 'Okafor, Grace', ['WORK-00124', 'Replace hydraulic hose', 'Labour', 'Clean-up'], 6);
+  add(addDays(THIS_MON, -17), 'MMA VIGILANT – 360', 'Okafor, Grace', ['WORK-00187', 'Weld handrail section', 'Weather standby', 'Preparation'], 4.5);
+  add(addDays(THIS_MON, -19), 'MMA VIGILANT – 360', 'Okafor, Grace', ['WORK-00201', 'Deck plating repair', 'Weather standby', 'Clean-up'], 3);
+  add(addDays(THIS_MON, -26), 'MMA VIGILANT – 360', 'Okafor, Grace', ['WORK-00123', 'Replace hydraulic hose', 'Labour', 'Clean-up'], 7);
+  add(addDays(THIS_MON, -31), 'MMA VIGILANT – 360', 'Okafor, Grace', ['WORK-00124', 'Weld handrail section', 'Labour', 'Preparation'], 5.5);
+  add(addDays(THIS_MON, -13), 'MMA VIGILANT ROV', 'Nair, Priya', ['JOB-00451', 'ROV dive', 'Labour'], 8);
+  add(addDays(THIS_MON, -21), 'MMA VIGILANT ROV', 'Nair, Priya', ['JOB-00492', 'Deck handling', 'Weather standby'], 4);
+  add(addDays(THIS_MON, -29), 'MMA VIGILANT ROV', 'Nair, Priya', ['JOB-00478', 'Tooling change', 'Labour'], 6.5);
+  add(addDays(THIS_MON, -15), 'SA BHP OLYMPIC DAM', 'Webb, Marcus', ['WORK-00123', 'CC-1163', 'Labour', 'Night'], 9);
+  add(addDays(THIS_MON, -22), 'SA BHP OLYMPIC DAM', 'Webb, Marcus', ['WORK-00201', 'CC-1140', 'Waiting for materials', 'Day'], 5);
 
   /* A site a worker has been on for months has a long history, and the
      dialog has to hold up against one. */
@@ -2614,28 +2622,28 @@
   var seed = 7;
   function pick(list) { seed = (seed * 97 + 41) % 9973; return list[seed % list.length]; }
   for (var h = 0; h < 22; h++) {
-    add(addDays(THIS_MON, -(12 + h * 3)), 'MMA VIGILANT – 360', 'Grace Okafor',
+    add(addDays(THIS_MON, -(12 + h * 3)), 'MMA VIGILANT – 360', 'Okafor, Grace',
       [pick(WO), pick(TSK), pick(TYP), pick(SUB)], 6);
-    add(addDays(THIS_MON, -(14 + h * 3)), 'MMA VIGILANT – 360', 'Tom Halloran',
+    add(addDays(THIS_MON, -(14 + h * 3)), 'MMA VIGILANT – 360', 'Halloran, Tom',
       [pick(WO), pick(TSK), pick(TYP), pick(SUB)], 5);
   }
   var JOB = ['JOB-00451', 'JOB-00478', 'JOB-00492'];
   var ACT = ['ROV dive', 'Deck handling', 'Tooling change'];
   for (var h2 = 0; h2 < 14; h2++) {
-    add(addDays(THIS_MON, -(13 + h2 * 4)), 'MMA VIGILANT ROV', 'Priya Nair',
+    add(addDays(THIS_MON, -(13 + h2 * 4)), 'MMA VIGILANT ROV', 'Nair, Priya',
       [pick(JOB), pick(ACT), pick(TYP)], 7);
   }
   var CC = ['CC-1140', 'CC-1155', 'CC-1163'];
   var SHIFT = ['Day', 'Night'];
   for (var h3 = 0; h3 < 14; h3++) {
-    add(addDays(THIS_MON, -(16 + h3 * 4)), 'SA BHP OLYMPIC DAM', 'Marcus Webb',
+    add(addDays(THIS_MON, -(16 + h3 * 4)), 'SA BHP OLYMPIC DAM', 'Webb, Marcus',
       [pick(WO), pick(CC), pick(['Labour', 'Waiting for materials']), pick(SHIFT)], 8);
   }
   /* A worker who moves between sites, so the list of recent tasks has
      more than one timesheet on it — which is the whole reason each card
      carries the site and the supervisor it belongs to. */
   for (var h4 = 0; h4 < 8; h4++) {
-    add(addDays(THIS_MON, -(9 + h4 * 5)), 'SA BHP OLYMPIC DAM', 'Grace Okafor',
+    add(addDays(THIS_MON, -(9 + h4 * 5)), 'SA BHP OLYMPIC DAM', 'Okafor, Grace',
       [pick(WO), pick(CC), pick(['Labour', 'Waiting for materials']), pick(SHIFT)], 6);
   }
 
@@ -3101,7 +3109,7 @@
      every row, which was the point of the slots to begin with. */
   function cellBody(fig, key, isoDate, lock, tail) {
     return '<span class="cnum">' + fig +
-      (lock ? '<span class="cm-lock">' + ICO_LOCK + '</span>' : '') + '</span>' +
+      (lock ? '<span class="cm-lock is-lock">' + ICO_LOCK + '</span>' : '') + '</span>' +
       (tail != null ? tail : cellMarksOnly(key, isoDate));
   }
   function cellMarksOnly(key, isoDate) {
@@ -4487,7 +4495,9 @@
       var kept = draftShifts.filter(function (x) { return x.start || x.finish; });
       if (PARTS.times) cellShift[dk] = kept;
       putCell(key, date, { h: panelHours(), s: '', f: '',
-        a: PARTS.alw ? draftAlw.slice() : (savedCell(key, date).a || []) });
+        a: PARTS.alw
+          ? draftAlw.filter(function (a) { return a.name; })
+          : (savedCell(key, date).a || []) });
     }
     liveCell = null;
     closeNotePop();
@@ -4825,10 +4835,13 @@
   function renderAlws(site) {
     var offered = allowancesFor(site), box = el('np-alw-list');
     el('np-alw-none').hidden = offered.length > 0;
-    el('np-alw-add').disabled = !offered.length || draftAlw.length >= offered.length;
+    el('np-alw-add').disabled = !offered.length || draftAlw.length >= offered.length ||
+      draftAlw.some(function (a) { return !a.name; });
     box.innerHTML = draftAlw.map(function (a, i) {
       var taken = draftAlw.map(function (x, j) { return j === i ? null : x.name; });
-      var opts = offered.filter(function (o) { return taken.indexOf(o.name) === -1; })
+      var opts = (a.name ? '' :
+        '<option value="" selected>Select an allowance</option>') +
+        offered.filter(function (o) { return taken.indexOf(o.name) === -1; })
         .map(function (o) {
           return '<option value="' + Shell.esc(o.name) + '"' +
             (o.name === a.name ? ' selected' : '') + '>' + Shell.esc(o.name) + '</option>';
@@ -4901,6 +4914,14 @@
     draftAlw = (c.a || []).map(function (a) {
       return { name: a.name, type: a.type, qty: a.qty };
     });
+    /* An empty row rather than a button: the field is the thing being
+       asked for, and making the reader press Add to be shown a field
+       they were always going to need is one click of nothing. The row
+       counts for nothing until a name is chosen. */
+    if (PARTS.alw && !draftAlw.length &&
+        allowancesFor(taskMeta[key] && taskMeta[key].site).length) {
+      draftAlw = [{ name: '', type: '' }];
+    }
     syncParts();
     renderShifts();
     renderAlws(taskMeta[key] && taskMeta[key].site);
@@ -4963,7 +4984,8 @@
     if (!d || !liveCell) return;
     var key = liveCell.slice(0, liveCell.lastIndexOf('|'));
     var sv = savedCell(key, d);
-    putCell(key, d, { h: panelHours(), s: '', f: '', a: draftAlw.slice() });
+    putCell(key, d, { h: panelHours(), s: '', f: '',
+      a: draftAlw.filter(function (a) { return a.name; }) });
     markOver(d, key);
     el('np-shift-tot').textContent = draftShifts.length ? fmtHours(totalOf(draftShifts)) + ' h' : '';
     renderGrid(); renderWeek(); syncEditBar();

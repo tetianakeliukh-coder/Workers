@@ -56,7 +56,7 @@
     { id: 'notifs',  label: 'Notifications', icon: 'notifs',  r4: true, badge: true }
   ];
 
-  var ACCOUNT = { initials: 'OR', name: 'Olivia Rhye', email: 'olivia@opms.com' };
+  var ACCOUNT = { initials: 'OR', name: 'Rhye, Olivia', email: 'olivia@opms.com' };
 
   /* ─── Structures ─────────────────────────────────────────────────────
      Two ways the same timesheet screens could be organised, kept side by

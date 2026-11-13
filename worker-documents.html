@@ -452,8 +452,8 @@
     { doc: 'Passport',            sub: 'Sub-type', expiry: '1 May 2025', level: MANDATORY,     who: 'E. Stone',            type: 'Upload',       reason: 'About to Expire',             action: 'Review' },
     { doc: 'Employer Feedback 1', sub: 'Sub-type', expiry: '',           level: 'HR',          who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',  linkable: true, links: [] },
     { doc: 'Employer Feedback 2', sub: 'Sub-type', expiry: '',           level: 'HR',          who: 'E. Stone',            type: 'External URL', reason: 'Complete Form',  linkable: true, links: [
-        { to: 'richard.referee@companyxyz.com', by: 'John Smith',  created: new Date(2026, 9, 8, 13, 1, 12),  until: new Date(2026, 9, 15) },
-        { to: 'hr@contractor-group.com',        by: 'Olivia Rhye', created: new Date(2026, 9, 12, 9, 24, 40), until: new Date(2026, 9, 19) }
+        { to: 'richard.referee@companyxyz.com', by: 'Smith, John',  created: new Date(2026, 9, 8, 13, 1, 12),  until: new Date(2026, 9, 15) },
+        { to: 'hr@contractor-group.com',        by: 'Rhye, Olivia', created: new Date(2026, 9, 12, 9, 24, 40), until: new Date(2026, 9, 19) }
       ] },
     { doc: 'HWRL',                sub: 'Sub-type', expiry: '1 May 2025', level: MANDATORY,     who: '',                    type: 'Upload',       reason: 'Expired',                     action: 'Upload' }
   ];
@@ -646,7 +646,7 @@
   function sameDay(a, b) { return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
 
   function defaultMessage(competency) {
-    var me = (Shell.account && Shell.account.name) || 'Olivia Rhye';
+    var me = (Shell.account && Shell.account.name) || 'Rhye, Olivia';
     return 'Hi,\n' +
       'Could you please complete the form ' + competency + ' for ' + WORKER + ', using the button below?\n' +
       'Kind regards,\n' + me;
@@ -800,7 +800,7 @@
   function recordLink(competency, to, until) {
     var row = rowFor(competency);
     if (!row) return;
-    row.links.push({ to: to, by: (Shell.account && Shell.account.name) || 'Olivia Rhye',
+    row.links.push({ to: to, by: (Shell.account && Shell.account.name) || 'Rhye, Olivia',
                      created: new Date(), until: until });
     render();
   }

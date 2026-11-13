@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<title>Add Worker to Site — Layout Options</title>
+<style>
+/* exact OPMS tokens */
+:root {
+  --primary:  #0033ff;
+  --plight:   #ecf1f8;
+  --white:    #ffffff;
+  --text:     #081115;
+  --tsub:     rgba(8,17,21,.55);
+  --g300:     #e0e0e0;
+  --g350:     #dddddd;
+  --g400:     #bdbdbd;
+  --g500:     #9e9e9e;
+  --g600:     #757575;
+  --g700:     #616161;
+  --g800:     #424242;
+  --success:  #17b26a;
+  --error:    #d42c40;
+  --sans:     'Segoe UI',ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --pbg:      #ffffff;
+  --cbg:      #ffffff;
+  --bdr:      #dddddd;
+  --stage-bg: #eaecf0;
+  --mbg:      #ffffff;
+  --shd:      0 8px 32px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.07);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100vh;background:var(--pbg);color:var(--text);
+  font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{padding:44px 32px 96px;border-top:3px solid var(--g300)}
+.wrap{max-width:1120px;margin:0 auto}
+
+.pg-head{margin-bottom:36px}
+.pg-eye{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--primary);margin-bottom:10px}
+.pg-h1{font-size:22px;font-weight:700;line-height:1.25;margin-bottom:8px}
+.pg-desc{font-size:14px;color:var(--tsub);line-height:1.6;max-width:580px}
+
+/* tabs */
+.tabs-nav{display:flex;border-bottom:1px solid var(--g350);margin-bottom:36px}
+.tab-btn{
+  padding:10px 24px;border:none;background:none;
+  font-family:var(--sans);font-size:14px;font-weight:500;
+  color:var(--g600);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;
+  transition:color .15s,border-color .15s;white-space:nowrap
+}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--primary);border-bottom-color:var(--primary)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* grid */
+.v-grid{display:grid;grid-template-columns:1fr 272px;gap:28px;align-items:start}
+.stage{
+  background:var(--stage-bg);border-radius:12px;
+  border:1px solid var(--g350);
+  padding:44px 36px;
+  display:flex;align-items:flex-start;justify-content:center;
+  min-height:520px
+}
+
+/* notes */
+.notes{position:sticky;top:24px;display:flex;flex-direction:column;gap:12px}
+.notes-lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g600);margin-bottom:2px}
+.note-card{background:var(--cbg);border:1px solid var(--g350);border-radius:10px;padding:14px 16px}
+.note-tag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px}
+.note-tag.pro{color:var(--success)}.note-tag.con{color:#d97706}.note-tag.info{color:var(--primary)}
+.note-ul{list-style:none;display:flex;flex-direction:column;gap:5px}
+.note-ul li{font-size:13px;line-height:1.5;color:var(--tsub);padding-left:14px;position:relative}
+.note-ul li::before{content:'–';position:absolute;left:0;color:var(--g400)}
+
+/* modal */
+.modal{background:var(--mbg);border-radius:12px;box-shadow:var(--shd);overflow:hidden;width:100%}
+.m-head{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 24px 16px}
+.m-title{font-size:16px;font-weight:600;line-height:1.25}
+.m-close{
+  width:28px;height:28px;border-radius:6px;border:none;background:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--g600);font-size:18px;line-height:1;
+  transition:background .1s;flex-shrink:0;margin-top:1px
+}
+.m-close:hover{background:var(--g300)}
+.m-hr{border:none;border-top:1px solid var(--g300)}
+.m-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;border-top:1px solid var(--g300)
+}
+
+/* step indicator */
+.step-ind{display:flex;align-items:center;gap:6px;margin-top:8px}
+.sdot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.sdot.done{background:var(--primary);color:#fff}
+.sdot.active{background:var(--plight);color:var(--primary);outline:2px solid var(--primary);outline-offset:-1px}
+.sdot.pend{background:var(--g300);color:var(--g600)}
+.sline{width:20px;height:1px;background:var(--g350)}
+.sline.done{background:var(--primary)}
+.slbl{font-size:12px;color:var(--g600);margin-left:4px}
+
+/* search */
+.srch{
+  display:flex;align-items:center;gap:8px;
+  background:var(--mbg);border:1px solid var(--g350);
+  border-radius:8px;height:36px;padding:0 12px;
+  transition:border-color .15s
+}
+.srch:focus-within{border-color:#aab6cc}
+.srch-ico{color:var(--g400);flex-shrink:0}
+.srch input{border:none;outline:none;background:transparent;font-size:14px;color:var(--text);width:100%;font-family:var(--sans)}
+.srch input::placeholder{color:var(--g400)}
+
+/* worker list rows */
+.w-row{display:flex;align-items:center;gap:12px;padding:9px 16px;cursor:pointer;transition:background .1s;user-select:none}
+.w-row:hover{background:var(--plight)}
+.w-row.sel{background:var(--plight)}
+.w-chk{
+  width:16px;height:16px;border-radius:4px;flex-shrink:0;
+  border:1.5px solid var(--g400);background:var(--mbg);
+  display:flex;align-items:center;justify-content:center;
+  transition:background .1s,border-color .1s
+}
+.w-row.sel .w-chk{background:var(--primary);border-color:var(--primary)}
+.w-row.sel .w-chk::after{content:'';width:9px;height:5px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px);display:block}
+.av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
+.w-info{flex:1;min-width:0}
+.w-name{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.w-meta{font-size:12px;color:var(--g600);margin-top:1px}
+
+/* buttons */
+.btn-p{height:32px;padding:0 16px;border-radius:10px;background:var(--primary);color:#fff;border:none;font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:opacity .15s}
+.btn-p:hover{opacity:.88}
+.btn-p:disabled{opacity:.38;cursor:default}
+.btn-s{height:32px;padding:0 14px;border-radius:10px;background:var(--mbg);color:var(--g700);border:1px solid var(--g350);font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;transition:background .1s,border-color .1s}
+.btn-s:hover{background:var(--plight);border-color:#aab6cc}
+.btn-ghost{height:28px;padding:0 8px;border-radius:6px;background:none;color:var(--g600);border:none;font-size:13px;font-family:var(--sans);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:color .1s,background .1s}
+.btn-ghost:hover{background:var(--plight);color:var(--text)}
+
+/* form elements */
+.fsel,.finp{height:32px;border:1px solid var(--g350);border-radius:6px;font-size:13px;font-family:var(--sans);color:var(--text);background:var(--mbg);padding:0 8px;outline:none;transition:border-color .15s;width:100%}
+.fsel{cursor:pointer}
+.fsel:focus,.finp:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(0,51,255,.1)}
+.fsel.empty,.finp.empty{color:var(--g500)}
+.req{color:var(--error)}
+
+/* ═══════════════════════════════════
+   CONFIG TABLE with BULK ACTION BAR
+   ═══════════════════════════════════ */
+
+.cfg-wrap{overflow-x:auto}
+.cfg-tbl{width:100%;border-collapse:collapse;font-size:13px}
+
+/* Column headers */
+.cfg-tbl thead tr.col-headers th{
+  text-align:left;padding:8px 10px 8px 12px;
+  border-bottom:1px solid var(--g300);
+  background:var(--mbg);white-space:nowrap
+}
+.th-label{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--g600)}
+
+/* Checkbox col */
+.col-chk{width:40px;padding-left:16px !important;padding-right:4px !important}
+
+/* ─── Bulk action bar (above table) ─── */
+.bulk-bar{
+  background:var(--plight);
+  border-bottom:1px solid rgba(0,51,255,.14);
+  padding:9px 16px;
+}
+.bulk-bar-inner{display:flex;align-items:center;gap:14px;flex-wrap:nowrap}
+
+.bulk-sel-label{
+  font-size:12px;font-weight:600;color:var(--primary);
+  white-space:nowrap;flex-shrink:0
+}
+
+.bulk-divider{width:1px;height:18px;background:rgba(0,51,255,.18);flex-shrink:0}
+
+.bulk-field{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.bulk-field-label{font-size:12px;color:var(--g700);white-space:nowrap;flex-shrink:0}
+.bulk-input,.bulk-select{
+  height:28px;border:1px solid rgba(0,51,255,.28);border-radius:6px;
+  font-size:12px;font-family:var(--sans);color:var(--text);
+  background:var(--mbg);padding:0 8px;outline:none;
+  transition:border-color .15s;
+}
+.bulk-input{min-width:118px}
+.bulk-select{min-width:100px;cursor:pointer}
+.bulk-input:focus,.bulk-select:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(0,51,255,.1)}
+.bulk-apply-btn{
+  height:28px;padding:0 10px;border-radius:6px;
+  background:var(--primary);color:#fff;border:none;
+  font-size:12px;font-weight:500;font-family:var(--sans);
+  cursor:pointer;white-space:nowrap;
+  transition:opacity .15s
+}
+.bulk-apply-btn:hover{opacity:.88}
+
+/* Deselect all / clear */
+.bulk-deselect{
+  margin-left:auto;flex-shrink:0;
+  height:26px;padding:0 8px;border-radius:5px;
+  background:none;color:var(--g600);border:none;
+  font-size:12px;font-family:var(--sans);cursor:pointer;
+  transition:color .1s,background .1s
+}
+.bulk-deselect:hover{color:var(--text);background:rgba(0,0,0,.06)}
+
+/* ─── Checkbox UI ─── */
+.row-chk-wrap{
+  width:16px;height:16px;border-radius:4px;flex-shrink:0;
+  border:1.5px solid var(--g400);background:var(--mbg);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .1s,border-color .1s
+}
+.row-chk-wrap.checked{background:var(--primary);border-color:var(--primary)}
+.row-chk-wrap.checked::after{content:'';width:9px;height:5px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px);display:block}
+
+/* All-checkbox in header */
+.all-chk-wrap{
+  width:16px;height:16px;border-radius:4px;flex-shrink:0;
+  border:1.5px solid var(--g400);background:var(--mbg);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .1s,border-color .1s
+}
+.all-chk-wrap.checked{background:var(--primary);border-color:var(--primary)}
+.all-chk-wrap.checked::after{content:'';width:9px;height:5px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translateY(-1px);display:block}
+.all-chk-wrap.indeterminate{background:var(--primary);border-color:var(--primary)}
+.all-chk-wrap.indeterminate::after{content:'';width:8px;height:1.5px;background:#fff;display:block}
+
+/* Data rows */
+.cfg-tbl tbody tr{transition:background .1s}
+.cfg-tbl tbody tr:hover td{background:var(--plight)}
+.cfg-tbl tbody tr.row-checked td{background:rgba(0,51,255,.04)}
+.cfg-tbl tbody td{padding:9px 12px;border-bottom:1px solid var(--g300);vertical-align:middle}
+.cfg-tbl tbody tr:last-child td{border-bottom:none}
+.cfg-tbl tbody td:first-child{padding-left:16px;width:40px;cursor:pointer}
+
+.cell-worker{display:flex;align-items:center;gap:10px}
+.cw-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff}
+.cw-name{font-size:13px;font-weight:500;white-space:nowrap}
+.cw-role{font-size:11px;color:var(--g600)}
+
+/* ═══════════════
+   SPLIT PANEL
+   ═══════════════ */
+.split-modal{display:flex;width:100%;overflow:hidden;border-radius:12px;box-shadow:var(--shd)}
+.sp-left{width:286px;flex-shrink:0;background:var(--mbg);border-right:1px solid var(--g300);display:flex;flex-direction:column;min-height:520px}
+.sp-right{flex:1;background:var(--mbg);display:flex;flex-direction:column;min-width:0}
+.sp-head{padding:18px 18px 14px;border-bottom:1px solid var(--g300)}
+.sp-title{font-size:14px;font-weight:600;margin-bottom:10px}
+.sp-list{flex:1;overflow-y:auto}
+.sp-status{padding:8px 14px;border-top:1px solid var(--g300);font-size:12px;color:var(--g600);display:flex;justify-content:space-between}
+.sp-rhead{padding:16px 20px 14px;border-bottom:1px solid var(--g300)}
+.sp-rtitle{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.sp-rbody{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.sp-foot{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 18px;border-top:1px solid var(--g300)}
+
+.badge{display:inline-flex;align-items:center;justify-content:center;height:20px;min-width:20px;padding:0 6px;border-radius:10px;background:var(--primary);color:#fff;font-size:11px;font-weight:600}
+
+.empty-st{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--g400);font-size:13px;text-align:center;padding:40px 24px;line-height:1.7}
+.empty-ico{font-size:28px;margin-bottom:10px;opacity:.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="pg-head">
+    <div class="pg-eye">OPMS · Add Worker to Site</div>
+    <h1 class="pg-h1">Bulk Actions Bar</h1>
+    <p class="pg-desc">Bulk bar з'являється над таблицею при виборі рядків. Обидва варіанти layout.</p>
+  </header>
+
+  <nav class="tabs-nav">
+    <button class="tab-btn active" data-tab="a">Option A — Wizard</button>
+    <button class="tab-btn" data-tab="b">Option B — Split Panel</button>
+  </nav>
+
+  <!-- ══════════ OPTION A ══════════ -->
+  <section class="tab-panel active" id="tab-a">
+    <div class="v-grid">
+      <div class="stage">
+
+        <!-- Step 1 -->
+        <div class="modal" id="a-s1" style="max-width:560px;width:100%">
+          <div class="m-head">
+            <div>
+              <div class="m-title">Add Worker to Site</div>
+              <div class="step-ind">
+                <div class="sdot active">1</div>
+                <div class="sline"></div>
+                <div class="sdot pend">2</div>
+                <span class="slbl">Select workers</span>
+              </div>
+            </div>
+            <button class="m-close">✕</button>
+          </div>
+          <hr class="m-hr">
+          <div style="padding:12px 16px 10px">
+            <div class="srch">
+              <span class="srch-ico"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              <input type="text" placeholder="Search by name or ID…" id="as-search">
+            </div>
+          </div>
+          <div id="as-list" style="overflow-y:auto;max-height:300px"></div>
+          <hr class="m-hr">
+          <div class="m-foot">
+            <div style="font-size:13px;color:var(--tsub)"><span id="as-count" style="font-weight:600;color:var(--text)">0</span> selected</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-s">Cancel</button>
+              <button class="btn-p" id="as-next" disabled>Next: Configure <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6h7M6.5 3l3 3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="modal" id="a-s2" style="max-width:720px;width:100%;display:none">
+          <div class="m-head">
+            <div>
+              <button class="btn-ghost" id="as-back" style="margin-bottom:4px;padding-left:2px">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9.5 6H2.5M5.5 9L2.5 6l3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Back to selection
+              </button>
+              <div class="m-title">Configure Workers</div>
+              <div class="step-ind">
+                <div class="sdot done"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l3 3 4-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                <div class="sline done"></div>
+                <div class="sdot active">2</div>
+                <span class="slbl">Set position &amp; dates</span>
+              </div>
+            </div>
+            <button class="m-close">✕</button>
+          </div>
+          <hr class="m-hr">
+          <div class="bulk-bar" id="a-bulk-bar" style="display:none">
+            <div class="bulk-bar-inner">
+              <span class="bulk-sel-label" id="a-bulk-count">0 selected</span>
+              <div class="bulk-divider"></div>
+              <div class="bulk-field">
+                <span class="bulk-field-label">Date:</span>
+                <input type="date" class="bulk-input" id="a-bulk-date" value="2026-08-10">
+                <button class="bulk-apply-btn" id="a-bulk-date-apply">Apply</button>
+              </div>
+              <div class="bulk-divider"></div>
+              <div class="bulk-field">
+                <span class="bulk-field-label">Team:</span>
+                <select class="bulk-select" id="a-bulk-team">
+                  <option value="">— select —</option>
+                  <option>Team A</option><option>Team B</option><option>Team C</option>
+                  <option>Night Shift</option><option>Day Shift</option>
+                </select>
+                <button class="bulk-apply-btn" id="a-bulk-team-apply">Apply</button>
+              </div>
+              <button class="bulk-deselect" id="a-bulk-deselect">Deselect all</button>
+            </div>
+          </div>
+          <div class="cfg-wrap">
+            <table class="cfg-tbl" id="a-cfg-tbl">
+              <thead>
+                <tr class="col-headers">
+                  <th class="col-chk"><div class="all-chk-wrap" id="a-all-chk"></div></th>
+                  <th style="min-width:160px"><span class="th-label">Worker</span></th>
+                  <th style="min-width:152px"><span class="th-label">Position <span class="req">*</span></span></th>
+                  <th style="min-width:130px"><span class="th-label">Effective Date</span></th>
+                  <th style="min-width:120px"><span class="th-label">Team</span></th>
+                </tr>
+              </thead>
+              <tbody id="a-cfg-body"></tbody>
+            </table>
+          </div>
+          <hr class="m-hr">
+          <div class="m-foot">
+            <div style="font-size:13px;color:var(--tsub)" id="a-s2-count"></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn-s">Cancel</button>
+              <button class="btn-p" id="a-save">
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Add Workers
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <aside class="notes">
+        <div class="notes-lbl">Option A · Bulk Bar</div>
+        <div class="note-card">
+          <div class="note-tag info">Як це працює</div>
+          <ul class="note-ul">
+            <li>Чекбоксами вибираєш рядки — bulk bar з'являється зверху таблиці.</li>
+            <li>Apply для Date або Team проставляє значення лише у вибрані рядки.</li>
+            <li>Зняв чекбокс з рядка — він виходить із bulk action.</li>
+            <li>Position завжди індивідуальне — bulk bar його не чіпає.</li>
+          </ul>
+        </div>
+        <div class="note-card">
+          <div class="note-tag pro">Переваги</div>
+          <ul class="note-ul">
+            <li>Консистентно з рештою апки — той самий паттерн.</li>
+            <li>Гнучко: можна bulk-апліцировати до підгрупи рядків.</li>
+            <li>Чекбокси дають чіткий візуальний зв'язок «вибрав → змінив».</li>
+          </ul>
+        </div>
+        <div class="note-card">
+          <div class="note-tag con">Варто перевірити</div>
+          <ul class="note-ul">
+            <li>Дефолтно — всі чи жодний чекнуті? Треба вирішити.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ══════════ OPTION B ══════════ -->
+  <section class="tab-panel" id="tab-b">
+    <div class="v-grid">
+      <div class="stage" style="padding:36px 28px">
+        <div class="split-modal" style="max-width:900px;width:100%;max-height:580px">
+
+          <!-- Left -->
+          <div class="sp-left">
+            <div class="sp-head">
+              <div class="sp-title">Select Workers</div>
+              <div class="srch">
+                <span class="srch-ico"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+                <input type="text" placeholder="Search…" id="bs-search">
+              </div>
+            </div>
+            <div class="sp-list" id="bs-list"></div>
+            <div class="sp-status">
+              <span id="bs-count">0 selected</span>
+              <span style="color:var(--g400)">50 workers</span>
+            </div>
+          </div>
+
+          <!-- Right -->
+          <div class="sp-right">
+            <div class="sp-rhead">
+              <div class="sp-rtitle">Configure <span class="badge" id="bs-badge" style="opacity:.3">0</span></div>
+            </div>
+            <div class="sp-rbody" id="bs-rbody">
+              <div class="empty-st" id="bs-empty">
+                <div class="empty-ico">☑</div>
+                Select workers on the left<br>to configure their details
+              </div>
+              <div id="bs-cfg" style="display:none;flex:1;flex-direction:column;overflow-y:auto">
+                <div class="bulk-bar" id="b-bulk-bar" style="display:none">
+                  <div class="bulk-bar-inner">
+                    <span class="bulk-sel-label" id="b-bulk-count">0 selected</span>
+                    <div class="bulk-divider"></div>
+                    <div class="bulk-field">
+                      <span class="bulk-field-label">Date:</span>
+                      <input type="date" class="bulk-input" id="b-bulk-date" value="2026-08-10" style="min-width:108px">
+                      <button class="bulk-apply-btn" id="b-bulk-date-apply">Apply</button>
+                    </div>
+                    <div class="bulk-divider"></div>
+                    <div class="bulk-field">
+                      <span class="bulk-field-label">Team:</span>
+                      <select class="bulk-select" id="b-bulk-team" style="min-width:90px">
+                        <option value="">— select —</option>
+                        <option>Team A</option><option>Team B</option><option>Team C</option>
+                        <option>Night Shift</option><option>Day Shift</option>
+                      </select>
+                      <button class="bulk-apply-btn" id="b-bulk-team-apply">Apply</button>
+                    </div>
+                    <button class="bulk-deselect" id="b-bulk-deselect">Deselect all</button>
+                  </div>
+                </div>
+                <div class="cfg-wrap">
+                  <table class="cfg-tbl" id="b-cfg-tbl" style="min-width:400px">
+                    <thead>
+                      <tr class="col-headers">
+                        <th class="col-chk"><div class="all-chk-wrap" id="b-all-chk"></div></th>
+                        <th style="min-width:130px"><span class="th-label">Worker</span></th>
+                        <th style="min-width:138px"><span class="th-label">Position <span class="req">*</span></span></th>
+                        <th style="min-width:116px"><span class="th-label">Date</span></th>
+                        <th style="min-width:108px"><span class="th-label">Team</span></th>
+                      </tr>
+                    </thead>
+                    <tbody id="bs-cfg-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="sp-foot">
+              <button class="btn-s">Cancel</button>
+              <button class="btn-p" id="bs-save" disabled>
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span id="bs-save-lbl">Add Workers</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <aside class="notes">
+        <div class="notes-lbl">Option B · Bulk Bar</div>
+        <div class="note-card">
+          <div class="note-tag info">Відмінність від A</div>
+          <ul class="note-ul">
+            <li>Той самий bulk bar паттерн, але в split-layout.</li>
+            <li>Ліворуч — живий список, вибір одразу відображається у таблиці.</li>
+            <li>Зміна вибору зліва скидає стан чекбоксів у таблиці.</li>
+          </ul>
+        </div>
+        <div class="note-card">
+          <div class="note-tag pro">Переваги</div>
+          <ul class="note-ul">
+            <li>Найшвидший флоу — без переходу між кроками.</li>
+            <li>Bulk bar з'являється природно поверх таблиці.</li>
+          </ul>
+        </div>
+        <div class="note-card">
+          <div class="note-tag con">Варто перевірити</div>
+          <ul class="note-ul">
+            <li>Ширший модал (~900px) — чи вписується в desktop app.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const WORKERS = [
+  {id:1,  name:'Mahmoud, Ahmad',     role:'Site Inspector',     ini:'AM', col:'#3b5ea6'},
+  {id:2,  name:'van der Berg, Brice',role:'Crane Operator',     ini:'BV', col:'#5a6473'},
+  {id:3,  name:'Mendes, Carlos',     role:'Foreman',            ini:'CM', col:'#7b4fbf'},
+  {id:4,  name:'O\'Brien, Daniel',   role:'Electrician',        ini:'DO', col:'#287a49'},
+  {id:5,  name:'Kozlov, Elena',      role:'Safety Officer',     ini:'EK', col:'#b84d1c'},
+  {id:6,  name:'Huang, Felix',       role:'Rigger',             ini:'FH', col:'#1878a8'},
+  {id:7,  name:'Osei, Grace',        role:'Welder',             ini:'GO', col:'#9e3b78'},
+  {id:8,  name:'Rahimi, Hamid',      role:'Equipment Operator', ini:'HR', col:'#8a6314'},
+];
+const POSITIONS = ['Site Inspector','Crane Operator','Foreman','Electrician',
+  'Safety Officer','Rigger','Welder','Equipment Operator','Site Manager'];
+const TEAMS = ['Team A','Team B','Team C','Night Shift','Day Shift'];
+
+/* tabs */
+document.querySelectorAll('.tab-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('tab-' + b.dataset.tab).classList.add('active');
+  });
+});
+
+function posOpts(){ return `<option value="" disabled selected>Select position…</option>` + POSITIONS.map(p=>`<option>${p}</option>`).join(''); }
+function teamOpts(){ return `<option value="">— select —</option>` + TEAMS.map(t=>`<option>${t}</option>`).join(''); }
+function watchEmpty(el){ el.addEventListener('change', () => el.classList.toggle('empty', !el.value)); }
+
+function makeCfgRow(w, small){
+  const sz = small ? 'width:26px;height:26px;font-size:10px' : '';
+  return `<tr data-wid="${w.id}">
+    <td><div class="row-chk-wrap" data-wid="${w.id}"></div></td>
+    <td>
+      <div class="cell-worker">
+        <div class="cw-av" style="background:${w.col};${sz}">${w.ini}</div>
+        <div><div class="cw-name">${w.name}</div><div class="cw-role">${w.role}</div></div>
+      </div>
+    </td>
+    <td><select class="fsel empty cfg-pos" style="font-size:12px">${posOpts()}</select></td>
+    <td><input type="date" class="finp cfg-date empty" value="" style="font-size:12px"></td>
+    <td><select class="fsel empty cfg-team" style="font-size:12px">${teamOpts()}</select></td>
+  </tr>`;
+}
+
+/* ─── Generic table controller ─── */
+function makeTableController({
+  bodyId, allChkId, bulkBarId, bulkCountId,
+  bulkDateId, bulkDateApplyId,
+  bulkTeamId, bulkTeamApplyId,
+  bulkDeselectId,
+  small = false
+}){
+  const getBody = () => document.getElementById(bodyId);
+  const getAllChk = () => document.getElementById(allChkId);
+  const getBulkBar = () => document.getElementById(bulkBarId);
+
+  function getChecked(){
+    return Array.from(getBody().querySelectorAll('.row-chk-wrap.checked'));
+  }
+  function getAllRows(){
+    return Array.from(getBody().querySelectorAll('tr[data-wid]'));
+  }
+
+  function updateBulkBar(){
+    const n = getChecked().length;
+    const total = getAllRows().length;
+    const bar = getBulkBar();
+    bar.style.display = n > 0 ? '' : 'none';
+    document.getElementById(bulkCountId).textContent = n + ' selected';
+
+    const allChk = getAllChk();
+    allChk.className = 'all-chk-wrap' + (n === 0 ? '' : n === total ? ' checked' : ' indeterminate');
+  }
+
+  function toggleRow(chkEl, tr){
+    const on = chkEl.classList.toggle('checked');
+    tr.classList.toggle('row-checked', on);
+    updateBulkBar();
+  }
+
+  function wireRow(tr){
+    const chk = tr.querySelector('.row-chk-wrap');
+    chk.addEventListener('click', e => { e.stopPropagation(); toggleRow(chk, tr); });
+    tr.querySelector('td:first-child').addEventListener('click', () => toggleRow(chk, tr));
+    tr.querySelectorAll('select, input').forEach(watchEmpty);
+  }
+
+  function build(workers){
+    getBody().innerHTML = workers.map(w => makeCfgRow(w, small)).join('');
+    getBody().querySelectorAll('tr[data-wid]').forEach(wireRow);
+    updateBulkBar();
+  }
+
+  /* all-checkbox */
+  getAllChk().addEventListener('click', () => {
+    const rows = getAllRows();
+    const allChecked = getChecked().length === rows.length;
+    rows.forEach(tr => {
+      const chk = tr.querySelector('.row-chk-wrap');
+      chk.classList.toggle('checked', !allChecked);
+      tr.classList.toggle('row-checked', !allChecked);
+    });
+    updateBulkBar();
+  });
+
+  /* bulk apply: date */
+  document.getElementById(bulkDateApplyId).addEventListener('click', () => {
+    const v = document.getElementById(bulkDateId).value;
+    getChecked().forEach(chk => {
+      const row = chk.closest('tr');
+      const inp = row.querySelector('.cfg-date');
+      inp.value = v; inp.classList.toggle('empty', !v);
+    });
+  });
+
+  /* bulk apply: team */
+  document.getElementById(bulkTeamApplyId).addEventListener('click', () => {
+    const v = document.getElementById(bulkTeamId).value;
+    if(!v) return;
+    getChecked().forEach(chk => {
+      const row = chk.closest('tr');
+      const sel = row.querySelector('.cfg-team');
+      sel.value = v; sel.classList.remove('empty');
+    });
+  });
+
+  /* deselect all */
+  document.getElementById(bulkDeselectId).addEventListener('click', () => {
+    getAllRows().forEach(tr => {
+      tr.querySelector('.row-chk-wrap').classList.remove('checked');
+      tr.classList.remove('row-checked');
+    });
+    updateBulkBar();
+  });
+
+  return { build };
+}
+
+/* ════════ OPTION A ════════ */
+(function(){
+  const sel = new Set();
+
+  /* step 1 list */
+  function renderList(q=''){
+    const list = document.getElementById('as-list');
+    list.innerHTML = '';
+    WORKERS.filter(w => !q || w.name.toLowerCase().includes(q.toLowerCase())).forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'w-row' + (sel.has(w.id) ? ' sel' : '');
+      row.innerHTML = `<div class="w-chk"></div>
+        <div class="av" style="background:${w.col}">${w.ini}</div>
+        <div class="w-info"><div class="w-name">${w.name}</div><div class="w-meta">${w.role}</div></div>`;
+      row.onclick = () => { sel.has(w.id) ? sel.delete(w.id) : sel.add(w.id); renderList(q); tick(); };
+      list.appendChild(row);
+    });
+  }
+  function tick(){
+    document.getElementById('as-count').textContent = sel.size;
+    document.getElementById('as-next').disabled = sel.size === 0;
+  }
+
+  const ctrl = makeTableController({
+    bodyId:'a-cfg-body', allChkId:'a-all-chk',
+    bulkBarId:'a-bulk-bar', bulkCountId:'a-bulk-count',
+    bulkDateId:'a-bulk-date', bulkDateApplyId:'a-bulk-date-apply',
+    bulkTeamId:'a-bulk-team', bulkTeamApplyId:'a-bulk-team-apply',
+    bulkDeselectId:'a-bulk-deselect'
+  });
+
+  document.getElementById('as-search').addEventListener('input', e => renderList(e.target.value));
+  document.getElementById('as-next').addEventListener('click', () => {
+    const ws = WORKERS.filter(w => sel.has(w.id));
+    ctrl.build(ws);
+    const n = ws.length;
+    document.getElementById('a-s2-count').textContent = n + ' worker' + (n>1?'s':'') + ' to add';
+    document.getElementById('a-save').innerHTML = `<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Add ${n} Worker${n>1?'s':''}`;
+    document.getElementById('a-s1').style.display = 'none';
+    document.getElementById('a-s2').style.display = '';
+  });
+  document.getElementById('as-back').addEventListener('click', () => {
+    document.getElementById('a-s2').style.display = 'none';
+    document.getElementById('a-s1').style.display = '';
+  });
+
+  renderList();
+})();
+
+/* ════════ OPTION B ════════ */
+(function(){
+  const sel = new Set([1,3,5]);
+
+  const ctrl = makeTableController({
+    bodyId:'bs-cfg-body', allChkId:'b-all-chk',
+    bulkBarId:'b-bulk-bar', bulkCountId:'b-bulk-count',
+    bulkDateId:'b-bulk-date', bulkDateApplyId:'b-bulk-date-apply',
+    bulkTeamId:'b-bulk-team', bulkTeamApplyId:'b-bulk-team-apply',
+    bulkDeselectId:'b-bulk-deselect',
+    small: true
+  });
+
+  function renderLeft(q=''){
+    const list = document.getElementById('bs-list');
+    list.innerHTML = '';
+    WORKERS.filter(w => !q || w.name.toLowerCase().includes(q.toLowerCase())).forEach(w => {
+      const row = document.createElement('div');
+      row.className = 'w-row' + (sel.has(w.id) ? ' sel' : '');
+      row.style.padding = '8px 14px';
+      row.innerHTML = `<div class="w-chk"></div>
+        <div class="av" style="background:${w.col};width:28px;height:28px;font-size:10px">${w.ini}</div>
+        <div class="w-info"><div class="w-name" style="font-size:13px">${w.name}</div><div class="w-meta" style="font-size:11px">${w.role}</div></div>`;
+      row.onclick = () => {
+        sel.has(w.id) ? sel.delete(w.id) : sel.add(w.id);
+        renderLeft(q); updateRight();
+      };
+      list.appendChild(row);
+    });
+    document.getElementById('bs-count').textContent = sel.size + ' selected';
+  }
+
+  function updateRight(){
+    const n = sel.size;
+    const badge = document.getElementById('bs-badge');
+    badge.textContent = n; badge.style.opacity = n > 0 ? '1' : '.3';
+    document.getElementById('bs-save').disabled = n === 0;
+    document.getElementById('bs-save-lbl').textContent = n > 0 ? `Add ${n} Worker${n>1?'s':''}` : 'Add Workers';
+
+    const empty = document.getElementById('bs-empty');
+    const cfg = document.getElementById('bs-cfg');
+    if(n === 0){ empty.style.display='flex'; cfg.style.display='none'; return; }
+    empty.style.display='none'; cfg.style.display='flex';
+
+    ctrl.build(WORKERS.filter(w => sel.has(w.id)));
+  }
+
+  document.getElementById('bs-search').addEventListener('input', e => renderLeft(e.target.value));
+  renderLeft(); updateRight();
+})();
+</script>
+</body>
+</html>

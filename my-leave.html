@@ -284,27 +284,27 @@
   var seq = 100;
   var REQUESTS = [
     { id: 1, site: 'GDR12 Tank Farm Shutdown', type: 'Unpaid Leave', from: '2026-11-02', to: '2026-11-06',
-      hours: null, approver: 'Grace Okafor', made: '2026-10-22', why: 'Moving house.', doc: null, state: 'pending' },
+      hours: null, approver: 'Okafor, Grace', made: '2026-10-22', why: 'Moving house.', doc: null, state: 'pending' },
     { id: 2, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-12-21', to: '2026-12-24',
-      hours: null, approver: 'Grace Okafor', made: '2026-10-25', why: 'Christmas with family in Adelaide.', doc: null, state: 'pending' },
+      hours: null, approver: 'Okafor, Grace', made: '2026-10-25', why: 'Christmas with family in Adelaide.', doc: null, state: 'pending' },
     { id: 3, site: 'GDR12 Tank Farm Shutdown', type: 'Sick Leave', from: '2026-11-18', to: '2026-11-18',
-      hours: 4, approver: 'Grace Okafor', made: '2026-10-28', why: 'Specialist appointment in the afternoon.',
+      hours: 4, approver: 'Okafor, Grace', made: '2026-10-28', why: 'Specialist appointment in the afternoon.',
       doc: 'Medical Certificate', state: 'pending' },
 
     { id: 4, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-10-12', to: '2026-10-16',
-      hours: null, approver: 'Grace Okafor', made: '2026-09-10', why: '', doc: null, state: 'approved' },
+      hours: null, approver: 'Okafor, Grace', made: '2026-09-10', why: '', doc: null, state: 'approved' },
     { id: 5, site: 'GDR12 Tank Farm Shutdown', type: 'Sick Leave', from: '2026-09-29', to: '2026-09-29',
-      hours: 4, approver: 'Grace Okafor', made: '2026-09-29', why: 'Dentist — back on site after lunch.',
+      hours: 4, approver: 'Okafor, Grace', made: '2026-09-29', why: 'Dentist — back on site after lunch.',
       doc: 'Medical Certificate', state: 'approved' },
     { id: 6, site: 'MMA VIGILANT – 360', type: 'Annual Leave', from: '2026-08-03', to: '2026-08-07',
-      hours: null, approver: 'Tom Halloran', made: '2026-07-02', why: 'Winter break.', doc: null, state: 'approved' },
+      hours: null, approver: 'Halloran, Tom', made: '2026-07-02', why: 'Winter break.', doc: null, state: 'approved' },
 
     { id: 7, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-08-24', to: '2026-08-28',
-      hours: null, approver: 'Grace Okafor', made: '2026-08-18', why: 'Visiting family.', doc: null,
+      hours: null, approver: 'Okafor, Grace', made: '2026-08-18', why: 'Visiting family.', doc: null,
       rejectNote: 'Crew is short that week — try the following swing.', state: 'rejected' },
 
     { id: 8, site: 'GDR12 Tank Farm Shutdown', type: 'Annual Leave', from: '2026-09-07', to: '2026-09-11',
-      hours: null, approver: 'Grace Okafor', made: '2026-09-01', why: 'No longer needed.', doc: null, state: 'cancelled' }
+      hours: null, approver: 'Okafor, Grace', made: '2026-09-01', why: 'No longer needed.', doc: null, state: 'cancelled' }
   ];
 
   var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -563,7 +563,7 @@
       hours: isNaN(h) || h <= 0 ? null : h,
       /* Who approves is a rule the system carries, not a choice made
          here — the worker submits and it finds its approver. */
-      approver: 'Grace Okafor',
+      approver: 'Okafor, Grace',
       made: TODAY_ISO, why: draft.why.trim(), doc: draft.doc, state: 'pending'
     });
     closeForm();
