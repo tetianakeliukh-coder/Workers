@@ -42,7 +42,10 @@
     { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
     { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
     { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
-    { id: 'timesheets', label: 'Supervisor Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets.html', only: 'current' },
+    /* Supervisor Timesheets opens the flat, approve-by-entry screen; My
+       Timesheets beside it stays the current one. The older grouped
+       supervisor screen (timesheets.html) is still there by its address. */
+    { id: 'timesheets', label: 'Supervisor Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets-flat-entry.html', only: 'current' },
     { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html', only: 'current' },
     { id: 'tsflat',   label: 'Supervisor Timesheets', icon: 'timesheets', r4: true, href: 'timesheets-flat.html', only: 'flat' },
     { id: 'mytsflat', label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'timesheets-flat.html#mine', only: 'flat' },
@@ -66,7 +69,7 @@
      screen, a tab each, one flat table underneath, and grouping chosen
      per view. The switch is a prototype device, not a product control. */
   var STRUCTURES = [
-    { k: 'current', label: 'Current', home: 'timesheets.html' },
+    { k: 'current', label: 'Current', home: 'timesheets-flat-entry.html' },
     { k: 'flat',    label: 'Flat',    home: 'timesheets-flat.html' }
   ];
   function structure() {

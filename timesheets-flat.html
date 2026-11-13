@@ -104,7 +104,9 @@
   /* ─── Table ───────────────────────────────────────────────────────── */
   /* A classic scrollbar reserves its own lane rather than being drawn
      over the frozen column at the right edge. */
-  .table-scroll { overflow: auto; max-height: calc(100vh - 290px); scrollbar-gutter: stable; }
+  /* The table takes the height that is there. What was left under it was
+     not breathing room, it was rows the supervisor had to scroll for. */
+  .table-scroll { overflow: auto; max-height: calc(100vh - 248px); scrollbar-gutter: stable; }
   #grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
   #grid thead th {
     position: sticky; top: 0; z-index: 3; background: var(--white); vertical-align: bottom;
@@ -153,6 +155,164 @@
   }
   .sx-right .col-hrs { overflow: visible; }
 
+  /* ─── Approving ─────────────────────────────────────────────────────
+     A worker's day is approved whole — never two tasks out of three — so
+     the tick stands for the pair, this worker and this date, whatever
+     the table is grouped by. Its column is frozen at the left edge,
+     ahead of the heading columns, because a tick you have to scroll back
+     to find is not a tick. */
+  /* The #grid prefix matters: the table's own cell padding is set with
+     one and would otherwise win, leaving this column 4px of room. */
+  #grid th.col-pick, #grid td.col-pick {
+    position: sticky; left: 0; z-index: 2; background: inherit;
+    padding: 0 0 0 16px; overflow: visible; text-overflow: clip;
+  }
+  #grid thead th.col-pick { z-index: 5; }
+  /* An approved day is read, not worked on. The tick replaces the box so
+     the row cannot be picked again, and the green is the same one the
+     status chips use. */
+  /* My Timesheets shares this file and has nothing to approve. */
+  body[data-module="mytsflat"] #approval-switch { display: none; }
+  .appr-tick { display: inline-flex; color: var(--sec-green); }
+  .chk.ghost { pointer-events: none; opacity: .4; }
+  /* Approved means settled: the hours cannot be changed any more, so the
+     row is drawn the way a locked thing is drawn — greyed, out of the
+     way — and the tick in the margin is what says it went through. A
+     green row said "good" when what it means is "closed". */
+  #grid tbody tr.appr, #grid tbody tr.appr:hover { background: var(--grey-100); }
+  #grid tbody tr.appr td { color: var(--grey-600); }
+  #grid tbody tr.appr .g-name { color: var(--grey-700); }
+  #grid tbody td.col-day.appr { background: var(--grey-100); color: var(--grey-600); }
+  /* What is picked has to be obvious at a glance — a tick 16px wide is
+     not enough to tell you what you are about to approve. The whole row
+     takes the tint, and a bar down the left edge groups the rows of one
+     day together where the table has them next to each other. */
+  #grid tbody tr.picked { background: var(--bg-blue-light); }
+  #grid tbody tr.picked:hover { background: var(--bg-blue-dark); }
+  #grid tbody tr.picked > td.col-pick::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--primary);
+  }
+  #grid tbody tr.picked > td.col-pick { position: sticky; }
+
+  /* ─── Review before approving ───────────────────────────────────── */
+  /* Wide, because the whole point is reading a week of somebody's hours
+     beside everything attached to them. */
+  #rv-modal .modal { max-width: 1400px; max-height: 92vh; }
+  .rv-body { display: flex; overflow: hidden; }
+  .rv-queue {
+    width: 276px; flex-shrink: 0; border-right: 1px solid var(--grey-300);
+    display: flex; flex-direction: column; min-height: 0;
+  }
+  .rv-q-foot { padding: 12px 16px; border-top: 1px solid var(--grey-300); margin-top: auto; }
+  .rv-q-foot .btn-primary { width: 100%; }
+  .rv-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 20px; margin-bottom: 4px;
+  }
+  .rv-head .btn-primary { flex-shrink: 0; }
+  .rv-q-head { padding: 14px 16px 8px; font-size: 13px; font-weight: 600; color: var(--grey-700); }
+  .rv-q-list { overflow: auto; padding: 0 8px 12px; }
+  .rv-q-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+    border: none; background: none; cursor: pointer; padding: 9px 12px; border-radius: 8px;
+  }
+  .rv-q-item:hover { background: var(--grey-100); }
+  .rv-q-item.on { background: var(--bg-blue-light); }
+  .rv-q-item .rv-q-txt { min-width: 0; flex: 1; }
+  .rv-q-item .t { display: block; font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .rv-q-item .s {
+    display: block; font-size: 12px; color: var(--grey-600); margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rv-q-item.done .t, .rv-q-item.done .s { color: var(--grey-500); }
+
+  /* The last comment must not sit under the footer's edge. */
+  .rv-main { flex: 1; overflow: auto; padding: 18px 24px 32px; min-width: 0; }
+  .rv-sec-n { font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--grey-500); margin-left: 8px; }
+  .rv-who { font-size: 16px; font-weight: 600; color: var(--text-main); }
+  .rv-meta { font-size: 13px; color: var(--grey-600); margin-top: 3px; }
+  .rv-shared {
+    margin: 12px 0 0; padding: 9px 12px; border-radius: 8px;
+    background: var(--status-yellow-bg); color: var(--text-main);
+    font-size: 13px; line-height: 18px;
+  }
+  .rv-sec {
+    font-size: 12px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase;
+    color: var(--grey-600); margin: 22px 0 8px;
+  }
+  /* The week, laid out the way Period lays it out — tasks down, days
+     across — because that is the shape the supervisor already reads. */
+  .rv-grid-wrap { overflow-x: auto; }
+  .rv-grid { border-collapse: collapse; width: 100%; }
+  .rv-grid th, .rv-grid td {
+    padding: 9px 10px; font-size: 14px; color: var(--text-main);
+    border-bottom: 1px solid var(--grey-200); vertical-align: top;
+  }
+  .rv-grid thead th {
+    font-size: 12px; font-weight: 500; color: var(--grey-600);
+    border-bottom: 1px solid var(--grey-300); padding-bottom: 7px; white-space: nowrap;
+  }
+  .rv-grid .rv-task { text-align: left; padding-left: 0; max-width: 250px; }
+  .rv-tn, .rv-ts { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The site is on the row, not in the heading: a day can run across two
+     of them and the hours have to say which is which. */
+  .rv-ts { font-size: 12px; color: var(--grey-600); margin-top: 2px; }
+  .rv-grid .rv-day.over { color: var(--error); font-weight: 600; }
+  .rv-grid .rv-day {
+    text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 74px;
+  }
+  /* Many days scroll sideways; the total they add up to does not. */
+  .rv-grid .rv-day:last-child {
+    padding-right: 0; position: sticky; right: 0; background: var(--white);
+    box-shadow: -8px 0 8px -8px rgba(16, 24, 40, .18);
+  }
+  .rv-grid .rv-task { position: sticky; left: 0; background: var(--white); z-index: 1; }
+  /* A day dropped from the selection stays on screen, greyed — you can
+     see what you left out and put it back. */
+  .rv-grid .rv-day.off { opacity: .32; }
+  .rv-grid thead .rv-day .chk { margin-right: 6px; vertical-align: -3px; }
+  .rv-grid thead .rv-day .appr-tick { margin-right: 4px; vertical-align: -3px; }
+  .rv-h { display: block; }
+  .rv-t { display: block; font-size: 11px; line-height: 14px; color: var(--grey-600); margin-top: 2px; }
+  .rv-grid tr.rv-total td { font-weight: 600; border-bottom: none; }
+  /* An allowance is a name and, when the site counts them, a number.
+     Written out, because that is the whole reason this view exists. */
+  .rv-alw, .rv-notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .rv-alw li { display: flex; align-items: baseline; gap: 10px; font-size: 14px; }
+  .rv-alw li.off, .rv-notes li.off { opacity: .32; }
+  .rv-alw-d {
+    flex-shrink: 0; width: 48px; color: var(--grey-600); font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .rv-alw-n { font-weight: 500; color: var(--text-main); }
+  .rv-alw-q { color: var(--grey-700); font-variant-numeric: tabular-nums; }
+  .rv-alw-t { color: var(--grey-500); font-size: 13px; margin-left: auto; min-width: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 44%; }
+  .rv-notes li { display: flex; gap: 10px; font-size: 14px; }
+  .rv-note-b { min-width: 0; }
+  .rv-note-t {
+    display: block; font-size: 12px; color: var(--grey-500);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .rv-note-c { display: block; color: var(--text-main); line-height: 20px; margin-top: 1px; }
+  .rv-none { margin: 0; font-size: 14px; color: var(--grey-500); }
+
+  /* The bar belongs to the selection, so it is not on screen until there
+     is one. It says what is in the selection before the button is
+     pressed, which is the whole point of approving from a table: the
+     allowances are not written in the cells and cannot be. */
+  .sel-bar {
+    position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 16px);
+    display: flex; align-items: center; gap: 16px; z-index: 60;
+    padding: 10px 12px 10px 20px; border-radius: var(--radius-md, 10px);
+    background: var(--white); border: 1px solid var(--grey-350);
+    box-shadow: 0 8px 28px rgba(16, 24, 40, .16);
+    opacity: 0; pointer-events: none; transition: opacity var(--t-fast), transform var(--t-fast);
+  }
+  .sel-bar.open { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  .sel-what { font-size: 14px; color: var(--text-main); font-weight: 500; }
+
   /* No tint on a heading row — the Supervisor screen has none either.
      A heading is told apart by having a value in a column the rows under
      it leave blank, by that value's weight, and by the counts beside it
@@ -199,25 +359,32 @@
 
   .empty { padding: 48px 16px; text-align: center; color: var(--grey-600); font-size: 14px; }
 
-  /* ─── Edit mode ───────────────────────────────────────────────────
-     Editing takes over the toolbar's right-hand side rather than opening
-     a bar of its own, so the search and the grouping stay put. */
-  /* Edit and the pair that replaces it stand in the same place, so the
-     page's main action never moves. */
-  .edit-actions { display: none; align-items: center; gap: 8px; }
-  body.editing .edit-actions { display: flex; }
-  body.editing #btn-edit, body.editing #gb-wrap, body.editing #cols-wrap { display: none; }
-  /* Add task is only a thing to do while editing, so it is only there
-     while editing. */
-  #btn-new-task { display: none; }
-  body.editing #btn-new-task { display: inline-flex; }
-  .edit-note { display: none; font-size: 13px; color: var(--grey-600); white-space: nowrap; }
-  body.editing .edit-note { display: inline; }
-  .edit-note.warn { color: var(--error); }
-  /* An edit is made against one week. Changing which week it is while
-     half of it is unsaved has no sound answer, so it is not offered at
-     all — the control goes rather than standing there greyed. */
-  body.editing #date-dd { display: none; }
+  /* ─── Always editing ──────────────────────────────────────────────
+     There is no edit mode in the product: every cell that is still open
+     can be typed in, and what is typed is saved as it goes. With Save
+     gone, a line in the header saying whether that happened is the only
+     reassurance left that the work is somewhere — the same line My
+     Timesheets carries. A change that cannot be saved yet says why there
+     instead: a new row still being filled in is grey, a day over 24
+     hours is red. */
+  .save-state {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; line-height: 18px; color: var(--grey-600); white-space: nowrap;
+  }
+  .save-state::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--success); flex-shrink: 0;
+  }
+  .save-state[data-state="saving"]::before,
+  .save-state[data-state="pending"]::before { background: var(--grey-400); }
+  .save-state[data-state="error"] { color: var(--error); }
+  .save-state[data-state="error"]::before { background: var(--error); }
+  /* The header now carries the save line as well as the page's controls,
+     and on a narrow window that is more than one row holds. It wraps
+     under the title rather than pushing Add task off the right edge. */
+  .page-header { flex-wrap: wrap; row-gap: 12px; }
+  .page-header .page-title { white-space: nowrap; }
+  .page-header .header-actions { flex-wrap: wrap; row-gap: 8px; }
   .btn-outline {
     height: 36px; padding: 0 16px; border-radius: 8px; cursor: pointer;
     display: inline-flex; align-items: center; gap: 6px;
@@ -427,18 +594,15 @@
             </button>
             <div class="dd-panel" id="date-dd-panel"></div>
           </div>
-          <!-- Adding a task is a change like any other, so it belongs
-               inside the edit it is part of — the page's main action is
-               therefore Edit, and Add task lives in the toolbar below
-               once editing has started. -->
-          <button class="btn-primary" type="button" id="btn-edit">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.2 2.8l2 2L6 12H4v-2l7.2-7.2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-            Edit
+          <!-- No Edit, Cancel or Save: cells are typed in where they are and
+               saved as they change. What is left in the header is whether
+               that worked, and the one thing the table cannot do in place
+               — start a task that is not on it yet. -->
+          <span class="save-state" id="save-state" data-state="idle">All changes saved</span>
+          <button class="btn-primary" type="button" id="btn-new-task">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Add task
           </button>
-          <div class="edit-actions" id="edit-actions">
-            <button class="btn-outline" type="button" id="btn-cancel">Cancel</button>
-            <span class="tip-wrap" id="save-wrap"><button class="btn-primary" type="button" id="btn-save">Save</button></span>
-          </div>
         </div>
       </div>
 
@@ -473,14 +637,21 @@
             </button>
             <div class="gb-panel" id="cols-panel"></div>
           </div>
-          <!-- The count of what is unsaved sits with the row of work,
-               not in the title, where it would push the page's own
-               heading onto a second line every time editing starts. -->
-          <span class="edit-note" id="edit-note"></span>
-          <button class="btn-ghost" type="button" id="btn-new-task">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-            Add task
-          </button>
+          <!-- A supervisor opens this screen to find what is waiting on
+               them, not to read forty rows from three sites. Status says
+               whether the worker has finished with it; Supervisor says
+               whose crew it is. -->
+          <div class="gb-wrap" id="flt-wrap">
+            <button class="gb-trigger" type="button" id="flt-trigger" aria-haspopup="true" aria-expanded="false">
+              <span>Filter</span>
+              <span class="gb-count is-off" id="flt-count">0</span>
+              <svg class="dd-caret" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="gb-clear is-off" type="button" id="flt-clear" aria-label="Clear filters">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>
+            <div class="gb-panel" id="flt-panel"></div>
+          </div>
         </div>
       </div>
 
@@ -500,6 +671,45 @@
 
     </div>
   </main>
+</div>
+
+<!-- ── What is selected, and the one thing to do with it ────────────
+     It counts days and people rather than rows, because a row is a task
+     and nobody approves a task: they approve somebody's day. -->
+<div class="sel-bar" id="sel-bar" role="region" aria-label="Selected time">
+  <span class="sel-what" id="sel-what"></span>
+  <button class="btn-text" type="button" id="sel-clear">Clear</button>
+  <button class="btn-primary" type="button" id="sel-approve">Review &amp; approve</button>
+</div>
+
+<!-- ── Everything in the selection, before any of it is approved ─────
+     The table has no room for allowances and never will have: each site
+     runs its own set and there can be hundreds of them. So nothing is
+     approved from the table. The queue on the left is what was picked,
+     the pane on the right is the whole of one worker's day on one site,
+     and approving happens there — the same shape as Documents and Leave
+     Requests, where the supervisor is made to open the thing first. -->
+<div class="modal-backdrop" id="rv-modal" role="dialog" aria-modal="true" aria-labelledby="rv-title">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-heading"><h2 class="modal-title" id="rv-title">Review before approving</h2></div>
+      <button class="modal-close" type="button" data-rv-close aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body rv-body">
+      <aside class="rv-queue">
+        <div class="rv-q-head" id="rv-q-head"></div>
+        <div class="rv-q-list" id="rv-q-list"></div>
+        <!-- The whole queue is dealt with from the queue; one person is
+             dealt with from that person's own pane. -->
+        <div class="rv-q-foot">
+          <button class="btn-primary" type="button" id="rv-all">Approve all</button>
+        </div>
+      </aside>
+      <section class="rv-main" id="rv-main"></section>
+    </div>
+  </div>
 </div>
 
 <!-- ── One cell's hours, and the times they came from ─────────────── -->
@@ -540,6 +750,17 @@
     <button class="btn-text" type="button" id="tp-clear">Clear</button>
     <button class="btn-text" type="button" id="tp-done">Done</button>
   </div>
+</div>
+
+<!-- ── Prototype device, not product ────────────────────────────────
+     The same screen built on two approval models, to be compared rather
+     than argued about: by day (a worker's whole day goes through) and by
+     entry (each line goes through, the day is worked out from them). The
+     shell gathers every .vp-switch into the Prototype options dock. -->
+<div class="vp-switch structure-switch" id="approval-switch" role="group" aria-label="Prototype approval model">
+  <span class="sw-label">Approval</span>
+  <button type="button" data-approval="timesheets-flat.html" class="on">By day</button>
+  <button type="button" data-approval="timesheets-flat-entry.html">By entry</button>
 </div>
 
 <script src="assets/shell.js"></script>
@@ -657,7 +878,8 @@
       Shell.highlight(st, state.q) + '</span>';
   }
   function statusOf(e) { return STATUS_META[e.status] || STATUS_META.Draft; }
-  function isLocked(e) { return statusOf(e).locked; }
+  /* Closed by its status, or by having been approved. */
+  function isLocked(e, isoDate) { return statusOf(e).locked || isApproved(e, isoDate); }
   var ALLOWANCES = [
     { name: 'Rope Allowance',   type: 'amount' },
     { name: 'Height Allowance', type: 'amount' },
@@ -666,9 +888,24 @@
     { name: 'Crib Break',       type: 'check' }
   ];
 
+  /* What a worker writes against a line when the hours alone do not tell
+     the story. The approver reads these before saying yes, which is why
+     they cannot live only in a tooltip on a 92px cell. */
+  var COMMENTS = [
+    'Crane was down most of the morning, waited on the fitter.',
+    'Stayed back to finish the tie-in before nightshift.',
+    'Swapped onto the ROV job after smoko.',
+    'Called out early — travel claimed separately.',
+    'Doubled up with day shift on the shutdown.'
+  ];
+
   var ENTRIES = (function () {
     var out = [], n = 0;
-    function pick(pool, i) { return pool[i % pool.length]; }
+    function pick(pool, i) { return pool[Math.abs(i) % pool.length]; }
+    function plusHours(t, h) {
+      var p = t.split(':'), m = (+p[0]) * 60 + (+p[1]) + Math.round(h * 60);
+      return pad2(Math.floor(m / 60) % 24) + ':' + pad2(m % 60);
+    }
 
     for (var d = -9; d <= 4; d++) {
       var day = addDays(THIS_MON, d);
@@ -685,6 +922,8 @@
           var fields = SITE_FIELDS[site];
           var levels = fields.map(function (f, i) { return pick(f.values, n + a + i * 2); });
           var hrs = [4, 6, 8, 10, 12][(n + a) % 5];
+          var periodSite = entryModeFor(site) === 'period';
+          var shiftStart = ['06:00', '07:00', '05:30', '08:00'][(n + a) % 4];
 
           out.push({
             id: 'e' + out.length,
@@ -696,7 +935,14 @@
             task: levels.join(' | '),
             status: pick(STATUSES, Math.floor((n + d) / 2)),
             allowances: [],
-            start: '', finish: '',
+            /* Some sites book a start and a finish and derive the hours;
+               others book the hours straight. Both shapes have to be on
+               screen, because the approver meets both. */
+            start: periodSite ? shiftStart : '',
+            finish: periodSite ? plusHours(shiftStart, hrs) : '',
+            /* A line the worker wanted to say something about. Not every
+               line has one, which is the point. */
+            comment: (n + a) % 5 === 2 ? pick(COMMENTS, n + a + d) : '',
             hours: hrs
           });
           n++;
@@ -769,13 +1015,16 @@
     mode: 'list',
     q: '',
     range: 'week',
-    editing: false,
+    editing: true,                       // always: there is no edit mode
     /* Nothing is grouped to begin with — the table is a flat list until
        somebody asks for it to be otherwise. */
-    groups: { mine: [], team: [] }
+    groups: { mine: [], team: [] },
+    /* Empty means every value, the way a filter with nothing ticked
+       always does. */
+    filters: { status: Object.create(null), sup: Object.create(null) }
   };
   var collapsed = Object.create(null);
-  var draft = null;        // 'entryId|date' -> hours, while editing
+  var draft = Object.create(null);   // 'entryId|date' -> hours typed and not yet saved
   var pending = [];        // rows added but not yet saved
   var justAdded = null;    // the row added last, so it can be found
   var addedOn = null;      // and the day it was added to
@@ -800,6 +1049,8 @@
     while (cur <= to && out.length < 60) { out.push(new Date(cur.getTime())); cur.setDate(cur.getDate() + 1); }
     return out;
   }
+
+  function anyOn(o) { for (var k in o) { if (o[k]) return true; } return false; }
 
   function groups() { return activeGroups(); }
   /* The worker's own tab has one worker in it, so grouping on worker
@@ -881,6 +1132,8 @@
       if (e.isNew) return true;
       if (state.tab === 'mine' && e.worker !== ME) return false;
       if (b && (e.date < b.from || e.date > b.to)) return false;
+      if (anyOn(state.filters.status) && !state.filters.status[e.status]) return false;
+      if (anyOn(state.filters.sup) && !state.filters.sup[e.sup]) return false;
       if (!q) return true;
       return columns().concat(groups().map(field)).some(function (f) {
         return String(f.get(e)).toLowerCase().indexOf(q) !== -1;
@@ -910,6 +1163,357 @@
   }
   function sumOf(list) {
     return list.reduce(function (n, e) { return n + (Number(hoursOf(e)) || 0); }, 0);
+  }
+
+  /* ─── Approving ─────────────────────────────────────────────────────
+     The unit is a worker and a day, every site of it together.
+
+     It was a worker's day on one site for a while, which reads better —
+     one timesheet, one supervisor — but it cannot be made to work: the
+     24-hour rule is a rule about a worker's day, not about a timesheet,
+     and `workerDayTotal` sums every site the worker booked to. Approve
+     one site's half of a day and the other half is still movable, so
+     the day can be pushed over the cap after the locked half is
+     already locked. In the week on screen, a fifth of the worker-days
+     run across two sites, and those run across two supervisors too.
+
+     So a day goes through whole. Which supervisor gets to approve a day
+     that two of them share is a question for Stijn, not for the table.
+
+     There is one way to pick: a tick on a row. Anything coarser is got
+     at by grouping — group by Worker and the worker's own row ticks
+     their week, group by Date and a day's row ticks everyone's day.
+     The grouping the table already has is the selection tool, so there
+     is nothing new to learn. */
+  var approved = Object.create(null);   // 'worker§date'
+  var picked = Object.create(null);
+  var pickSets = [];                    // rebuilt each render, so a heading can carry its own rows
+  var PICK_W = 44;                      // the tick column, ahead of the frozen heading columns
+
+  function keyOf(e, isoDate) {
+    return e.worker + '§' + (isoDate || e.date);
+  }
+  function isApproved(e, isoDate) { return approved[keyOf(e, isoDate)] === true; }
+
+  /* A row still being added has nothing to approve yet, and an approved
+     day is out of the running: it cannot be picked a second time. */
+  function unitsIn(list) {
+    var seen = Object.create(null), out = [];
+    list.forEach(function (e) {
+      if (e.isNew) return;
+      var k = keyOf(e);
+      if (seen[k] || approved[k]) return;
+      seen[k] = true;
+      out.push({ key: k, worker: e.worker, date: e.date });
+    });
+    return out;
+  }
+  function selected() {
+    return unitsIn(rows()).filter(function (u) { return picked[u.key] === true; });
+  }
+
+  /* none / some / all, for the box a heading row carries. */
+  function pickState(list) {
+    var all = unitsIn(list);
+    if (!all.length) return 'none';
+    var on = all.filter(function (u) { return picked[u.key] === true; }).length;
+    return !on ? 'none' : on === all.length ? 'all' : 'some';
+  }
+  function setPick(list, on) {
+    unitsIn(list).forEach(function (u) { picked[u.key] = on; });
+  }
+  function clearPick() { picked = Object.create(null); }
+
+  var ICO_TICK = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M3.5 8.4l2.9 2.9 6.1-6.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  function chkHtml(st, attrs) {
+    return '<span class="chk' + (st === 'all' ? ' checked' : st === 'some' ? ' indeterminate' : '') +
+      '" role="checkbox" tabindex="0" aria-checked="' +
+      (st === 'all' ? 'true' : st === 'some' ? 'mixed' : 'false') + '" ' + (attrs || '') + '></span>';
+  }
+  /* A row that follows its heading rather than being picked on its own
+     still shows a box — an empty cell where its neighbours have one
+     reads as a row you are not allowed to touch. It is drawn faint and
+     does not answer to the mouse: the heading above it is the control. */
+  function chkGhost(st) {
+    return '<span class="chk ghost' + (st === 'all' ? ' checked' : st === 'some' ? ' indeterminate' : '') +
+      '" aria-hidden="true"></span>';
+  }
+  /* A heading cannot name its rows in an attribute without writing them
+     all out, so the render keeps them and the row carries the index. */
+  function setRef(list) { pickSets.push(list); return pickSets.length - 1; }
+  /* Everything under this row already approved? Then there is nothing to
+     tick and the row says so, the same way a single row does. */
+  function allApproved(list) {
+    var seen = Object.create(null), n = 0, done = 0;
+    list.forEach(function (e) {
+      if (e.isNew) return;
+      var k = keyOf(e);
+      if (seen[k]) return;
+      seen[k] = true; n++;
+      if (approved[k]) done++;
+    });
+    return n > 0 && n === done;
+  }
+  function pickCellFor(list) {
+    if (allApproved(list)) return approvedCell();
+    return '<td class="col-pick">' + chkHtml(pickState(list), 'data-pickset="' + setRef(list) + '"') + '</td>';
+  }
+  function approvedCell() {
+    return '<td class="col-pick"><span class="appr-tick" title="Approved">' + ICO_TICK + '</span></td>';
+  }
+
+  function approveUnits(us) {
+    if (!us.length) return;
+    var who = Object.create(null);
+    us.forEach(function (u) { approved[u.key] = true; who[u.worker] = 1; delete picked[u.key]; });
+    var nw = Object.keys(who).length;
+    render();
+    Shell.snackbar('Approved ' + us.length + ' day' + (us.length === 1 ? '' : 's') +
+      ' for ' + nw + ' worker' + (nw === 1 ? '' : 's') + '.');
+  }
+
+  /* ─── Review before approving ───────────────────────────────────────
+     The queue is one entry per worker and site — their line on one
+     timesheet over the period — because that is what a supervisor sits
+     down to approve, not a day at a time. The pane beside it is the
+     Period view of exactly that: the tasks down the side, the days
+     across the top, the hours where they meet. What the table cannot
+     carry goes underneath, written out: the allowances with their
+     numbers, and whatever the worker wrote against a line.
+
+     A day can be dropped here without going back to the table — this is
+     the one place with the room to decide that having seen the detail. */
+  var rvSheets = [], rvAt = 0;
+
+  /* Nothing is picked or unpicked here. The table decided what is in the
+     queue; this is where it is read and approved, and a day that should
+     not be in it is taken out of the table where it was put in. */
+  function rvOn(u) { return !approved[u.key]; }
+  function rvLive(sheet) { return sheet.days.filter(rvOn); }
+  function rvRowsOf(u) {
+    return rows().filter(function (e) { return !e.isNew && keyOf(e) === u.key; });
+  }
+
+  function rvOpen() {
+    var sel = selected();
+    if (!sel.length) return;
+    var by = Object.create(null), order = [];
+    sel.forEach(function (u) {
+      var k = u.worker;
+      if (!by[k]) { by[k] = { key: k, worker: u.worker, days: [] }; order.push(k); }
+      by[k].days.push(u);
+    });
+    order.sort();
+    rvSheets = order.map(function (k) {
+      by[k].days.sort(function (a, b) { return a.date < b.date ? -1 : 1; });
+      return by[k];
+    });
+    rvAt = 0;
+    el('rv-modal').classList.add('open');
+    rvRender();
+  }
+  function rvClose() { el('rv-modal').classList.remove('open'); }
+
+  /* One cell of the week: the hours, and under them the times they came
+     from on a site that books times rather than hours. */
+  function rvCell(e) {
+    if (!e) return '<span class="cell-empty">&mdash;</span>';
+    var h = hoursOf(e);
+    var num = (h === '' || h == null) ? '<span class="cell-empty">&mdash;</span>' : fmtHours(h);
+    return '<span class="rv-h">' + num + '</span>' +
+      (e.start && e.finish ? '<span class="rv-t">' + Shell.esc(e.start) + '–' + Shell.esc(e.finish) + '</span>' : '');
+  }
+
+  function rvDetail(sheet) {
+    var days = sheet.days;
+    var all = [];
+    days.forEach(function (u) { all = all.concat(rvRowsOf(u)); });
+
+    /* A day can run across two sites, and then across two supervisors.
+       That is the reason the day is approved whole, so the heading says
+       so rather than leaving the second site to be discovered in a row
+       halfway down. */
+    function distinct(f) {
+      var seen = Object.create(null), out = [];
+      all.forEach(function (e) { var v = f(e); if (v && !seen[v]) { seen[v] = true; out.push(v); } });
+      return out.sort();
+    }
+    var sites = distinct(function (e) { return e.site; });
+    var sups = distinct(function (e) { return e.sup; });
+
+    /* An allowance is claimed on a line of its own with no hours, so it
+       is not a row of the grid — it is read off the same entries after. */
+    var work = all.filter(function (e) { return !(e.allowances && e.allowances.length); });
+    var tasks = [], seen = Object.create(null);
+    work.forEach(function (e) {
+      var k = e.site + '§' + e.task;
+      if (!seen[k]) { seen[k] = true; tasks.push({ k: k, site: e.site, task: e.task }); }
+    });
+    tasks.sort(function (a, b) { return a.k < b.k ? -1 : a.k > b.k ? 1 : 0; });
+
+    function cellFor(t, u) {
+      return work.filter(function (e) {
+        return e.task === t.task && e.site === t.site && keyOf(e) === u.key;
+      })[0];
+    }
+    function dayTot(u) {
+      return rvRowsOf(u).reduce(function (n, e) { return n + (Number(hoursOf(e)) || 0); }, 0);
+    }
+    var liveDays = days.filter(rvOn);
+    var total = liveDays.reduce(function (n, u) { return n + dayTot(u); }, 0);
+
+    /* Either supervisor may approve a day they share, so the one doing
+       it is told plainly that they are signing for the other's site
+       too — the day cannot be split, so the least we owe them is to say
+       whose work goes through with theirs. */
+    function siteCount(u) {
+      var seen = Object.create(null), c = 0;
+      rvRowsOf(u).forEach(function (e) { if (e.site && !seen[e.site]) { seen[e.site] = true; c++; } });
+      return c;
+    }
+    var shared = liveDays.filter(function (u) { return siteCount(u) > 1; });
+
+    var alw = [], notes = [];
+    days.forEach(function (u) {
+      rvRowsOf(u).forEach(function (e) {
+        (e.allowances || []).forEach(function (a) { alw.push({ a: a, e: e, u: u }); });
+        if (e.comment) notes.push({ e: e, u: u });
+      });
+    });
+
+    /* The action sits beside the name it applies to, the way it does in
+       the other approval pop-ups, not in a footer that could mean any
+       of the people in the list. */
+    return '<div class="rv-head">' +
+        '<div><div class="rv-who">' + Shell.esc(sheet.worker) + '</div>' +
+      /* Three sites and three supervisors spelled out wrap onto three
+         lines and say nothing a count would not. The names are a
+         tooltip away, and each row carries its own site anyway. */
+      '<div class="rv-meta">' + days.length + ' day' + (days.length === 1 ? '' : 's') + ' picked · ' +
+        (sites.length === 1
+          ? Shell.esc(sites[0])
+          : '<span data-tip="' + Shell.esc(sites.join(', ')) + '">' + sites.length + ' sites</span>') +
+        (sups.length
+          ? ' · ' + (sups.length === 1
+            ? Shell.esc(sups[0])
+            : '<span data-tip="' + Shell.esc(sups.join(', ')) + '">' + sups.length + ' supervisors</span>')
+          : '') + '</div></div>' +
+        '<button class="btn-primary" type="button" id="rv-one">Approve ' +
+          liveDays.length + ' day' + (liveDays.length === 1 ? '' : 's') + '</button>' +
+      '</div>' +
+      (shared.length
+        ? '<p class="rv-shared">' +
+          (shared.length === liveDays.length
+            ? 'Every day picked runs'
+            : shared.map(function (u) {
+                var d = fromIso(u.date); return DOW[d.getDay()] + ' ' + d.getDate();
+              }).join(', ') + (shared.length === 1 ? ' runs' : ' run')) +
+          ' across more than one site. A day goes through whole, so approving ' +
+          'takes the other supervisor’s hours with it.</p>'
+        : '') +
+
+      /* The day count is on the heading because the grid scrolls: the
+         Total stays pinned at the right, so a reader who sees three
+         columns and a bigger total needs to be told the rest are there. */
+      '<div class="rv-sec">Hours <span class="rv-sec-n">' + days.length + ' day' +
+        (days.length === 1 ? '' : 's') + (days.length > 3 ? ', scroll for the rest' : '') + '</span></div>' +
+      '<div class="rv-grid-wrap"><table class="rv-grid"><thead><tr><th class="rv-task">Task</th>' +
+      days.map(function (u) {
+        var done = approved[u.key] === true;
+        return '<th class="rv-day' + (done ? ' off' : '') + '">' +
+          (done ? '<span class="appr-tick">' + ICO_TICK + '</span>' : '') +
+          '<span class="rv-dn">' + DOW[fromIso(u.date).getDay()] + ' ' + fromIso(u.date).getDate() + '</span></th>';
+      }).join('') + '<th class="rv-day num">Total</th></tr></thead><tbody>' +
+      (tasks.length ? tasks.map(function (t) {
+        var rowTot = days.filter(rvOn).reduce(function (n, u) {
+          var e = cellFor(t, u); return n + (e ? (Number(hoursOf(e)) || 0) : 0);
+        }, 0);
+        return '<tr><td class="rv-task"><span class="rv-tn">' + Shell.esc(t.task) + '</span>' +
+          '<span class="rv-ts">' + Shell.esc(t.site) + '</span></td>' +
+          days.map(function (u) {
+            return '<td class="rv-day' + (rvOn(u) ? '' : ' off') + '">' + rvCell(cellFor(t, u)) + '</td>';
+          }).join('') +
+          '<td class="rv-day num">' + (rowTot ? fmtHours(rowTot) : '<span class="cell-empty">&mdash;</span>') + '</td></tr>';
+      }).join('') : '<tr><td colspan="' + (days.length + 2) + '"><span class="cell-empty">No hours booked.</span></td></tr>') +
+      '<tr class="rv-total"><td class="rv-task">Total</td>' +
+      days.map(function (u) {
+        var h = dayTot(u);
+        /* The figure the 24-hour rule actually watches: this worker's
+           whole day, every site of it. Splitting the day by site is
+           what would put this number out of anyone's reach. */
+        return '<td class="rv-day' + (rvOn(u) ? '' : ' off') + (h > DAY_CAP ? ' over' : '') + '">' +
+          (h ? fmtHours(h) : '—') + '</td>';
+      }).join('') +
+      '<td class="rv-day num">' + fmtHours(total) + ' h</td></tr></tbody></table></div>' +
+
+      '<div class="rv-sec">Allowances</div>' +
+      (alw.length
+        ? '<ul class="rv-alw">' + alw.map(function (x) {
+            return '<li' + (rvOn(x.u) ? '' : ' class="off"') + '>' +
+              '<span class="rv-alw-d">' + DOW[fromIso(x.u.date).getDay()] + ' ' + fromIso(x.u.date).getDate() + '</span>' +
+              '<span class="rv-alw-n">' + Shell.esc(x.a.name) + '</span>' +
+              '<span class="rv-alw-q">' + (x.a.qty != null ? '× ' + x.a.qty : 'claimed') + '</span>' +
+              '<span class="rv-alw-t">' + Shell.esc(x.e.task) + '</span></li>';
+          }).join('') + '</ul>'
+        : '<p class="rv-none">None claimed.</p>') +
+
+      '<div class="rv-sec">Comments</div>' +
+      (notes.length
+        ? '<ul class="rv-notes">' + notes.map(function (x) {
+            return '<li' + (rvOn(x.u) ? '' : ' class="off"') + '>' +
+              '<span class="rv-alw-d">' + DOW[fromIso(x.u.date).getDay()] + ' ' + fromIso(x.u.date).getDate() + '</span>' +
+              '<span class="rv-note-b"><span class="rv-note-t">' + Shell.esc(x.e.task) + '</span>' +
+              '<span class="rv-note-c">' + Shell.esc(x.e.comment) + '</span></span></li>';
+          }).join('') + '</ul>'
+        : '<p class="rv-none">Nothing written against these days.</p>');
+  }
+
+  function rvRender() {
+    var left = rvSheets.reduce(function (n, s) { return n + rvLive(s).length; }, 0);
+    el('rv-q-head').textContent = rvSheets.length + ' timesheet' + (rvSheets.length === 1 ? '' : 's') + ' to review';
+    el('rv-q-list').innerHTML = rvSheets.map(function (s, i) {
+      var live = rvLive(s).length;
+      return '<button class="rv-q-item' + (i === rvAt ? ' on' : '') + (live ? '' : ' done') +
+        '" type="button" data-rv="' + i + '">' +
+        '<span class="rv-q-txt"><span class="t">' + Shell.esc(s.worker) + '</span>' +
+        '<span class="s">' + (live ? live + ' day' + (live === 1 ? '' : 's') + ' to approve' : 'done') +
+          '</span></span>' +
+        (live ? '' : '<span class="appr-tick">' + ICO_TICK + '</span>') + '</button>';
+    }).join('');
+    var s = rvSheets[rvAt];
+    el('rv-main').innerHTML = s ? rvDetail(s) : '';
+    el('rv-all').disabled = !left;
+    el('rv-all').textContent = left ? 'Approve all (' + left + ')' : 'Approve all';
+  }
+
+  /* After approving, land on the next sheet that still needs a decision
+     rather than the next in line, which may already be done. */
+  function rvAdvance() {
+    for (var n = 1; n <= rvSheets.length; n++) {
+      var i = (rvAt + n) % rvSheets.length;
+      if (rvLive(rvSheets[i]).length) { rvAt = i; return true; }
+    }
+    return false;
+  }
+
+  /* What the bar says. The hours are the hours of the days picked, and
+     the allowances are counted because they are the thing the table has
+     no room to show and the supervisor still has to know about. */
+  function syncBar() {
+    var sel = selected();
+    el('sel-bar').classList.toggle('open', sel.length > 0);
+    if (!sel.length) return;
+    var keys = Object.create(null), who = Object.create(null), dys = Object.create(null);
+    sel.forEach(function (u) { keys[u.key] = 1; who[u.worker] = 1; dys[u.date] = 1; });
+    var list = rows().filter(function (e) { return keys[keyOf(e)] === 1; });
+    var nd = Object.keys(dys).length, nw = Object.keys(who).length;
+    var alw = allowTally(list);
+    el('sel-what').textContent =
+      nd + ' day' + (nd === 1 ? '' : 's') + ' · ' +
+      nw + ' worker' + (nw === 1 ? '' : 's') + ' · ' +
+      fmtHours(sumOf(list)) + ' h' + (alw ? ' · ' + alw : '');
   }
 
   /* ─── Render ──────────────────────────────────────────────────────── */
@@ -1022,11 +1626,11 @@
   function hrInput(e, isoDate) {
     var c = cellOf(e, isoDate), k = cellKey(e, isoDate);
     var changed = draft && k in draft;
-    var st = statusOf(e), lock = st.locked;
+    var st = statusOf(e), lock = isLocked(e, isoDate);
     var dayOver = overKey === k && workerDayTotal(e.worker, isoDate || e.date) > DAY_CAP;
     return '<button class="hr-cell' + (changed ? ' changed' : '') + (lock ? ' locked' : '') +
       (dayOver ? ' over' : '') +
-      '" type="button" data-cell="' + k + '"' + (lock ? ' disabled data-tip="' + e.status + ' — hours can no longer be changed"' : '') + '>' +
+      '" type="button" data-cell="' + k + '"' + (lock ? ' disabled data-tip="' + (isApproved(e, isoDate) ? 'Approved' : e.status) + ' — hours can no longer be changed"' : '') + '>' +
       alwMark(c) +
       (st.icon && !(state.mode === 'period' && dayHasStatus())
         ? '<span class="hr-st st-' + String(e.status).toLowerCase() + '">' + st.icon + '</span>' : '') +
@@ -1115,15 +1719,25 @@
 
   function renderPeriod(list, lead, ds) {
     var cols = lead.concat([field('task')]);
-    var offs = [], off = 0;
+    var offs = [], off = PICK_W;
     cols.forEach(function (c) { offs.push(off); off += c.w; });
 
-    el('grid-cols').innerHTML = cols.map(function (c) { return '<col style="width:' + c.w + 'px" />'; }).join('') +
+    /* A row here is a task over the whole period, so its tick stands for
+       that worker's week on that site — every day of it. Which days
+       actually go through is settled in the review dialog, where there
+       is room to see what each one holds. */
+    function sheetRows(e) {
+      return list.filter(function (x) { return !x.isNew && x.worker === e.worker; });
+    }
+
+    el('grid-cols').innerHTML = '<col style="width:' + PICK_W + 'px" />' +
+      cols.map(function (c) { return '<col style="width:' + c.w + 'px" />'; }).join('') +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />' +
       '<col style="width:64px" />';
 
     var overSet = badDays();
     el('grid-head').innerHTML = '<tr>' +
+      '<th class="col-pick">' + chkHtml(pickState(list), 'data-pickset="' + setRef(list) + '"') + '</th>' +
       cols.map(function (c, i) {
         return '<th class="col-lead' + (i === cols.length - 1 ? ' last' : '') +
           '" data-w="' + c.k + '" style="left:' + offs[i] + 'px">' +
@@ -1172,8 +1786,15 @@
     function dayCell(group, d) {
       var key = iso(d), hit = null;
       group.forEach(function (e) { if (e.date === key) hit = e; });
+      /* The day is the unit here, so the green sits on the cell. */
+      var ap = hit && isApproved(hit, key) ? ' appr' : '';
+      /* An approved day is closed: edit mode does not reopen it. */
+      if (ap) {
+        return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + ap + '">' +
+          (hit ? dayValue(hit, key) : '<span class="cell-empty">&mdash;</span>') + '</td>';
+      }
       if (state.editing && hit && hit.kind !== 'allow') {
-        return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' + hrInput(hit, key) + '</td>';
+        return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + ap + '">' + hrInput(hit, key) + '</td>';
       }
       if (state.editing && !hit) {
         /* An empty day on a row that exists: open it and the entry is
@@ -1190,7 +1811,7 @@
           (c.h === '' || c.h === 0 ? '<span class="cell-empty">&mdash;</span>' : fmtHours(c.h)) +
           '</button></td>';
       }
-      return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + '">' +
+      return '<td class="col-day' + (key === iso(TODAY) ? ' tdy' : '') + ap + '">' +
         (hit ? dayValue(hit, key) : '<span class="cell-empty">&mdash;</span>') + '</td>';
     }
 
@@ -1208,7 +1829,19 @@
         group.forEach(function (x) { if (x.date === iso(d)) h += Number(hoursOf(x, iso(d))) || 0; });
         return n + h;
       }, 0);
-      return '<tr class="' + (fresh ? 'new-row' : '') + (isJust ? ' just-added' : '') + '">' +
+      /* The tick belongs to the worker, not the task — a row here is one
+         of their tasks and ticking it would light up the others, which
+         reads as a fault. When there is a heading row it carries the
+         tick; without grouping there is nowhere else for it to go. */
+      var onRow = !groups().length && !fresh;
+      return '<tr class="' + (fresh ? 'new-row' : '') + (isJust ? ' just-added' : '') +
+          (allApproved(group) ? ' appr' : '') + '">' +
+        /* The ghost shows what is true of THIS row, not of the worker it
+           belongs to. It is how the rule becomes visible: pick a
+           supervisor's group and the other supervisor's lines on the
+           same days light up too, because a day is approved whole. */
+        (onRow ? pickCellFor(sheetRows(e))
+          : '<td class="col-pick">' + (fresh ? '' : chkGhost(pickState(group))) + '</td>') +
         cols.map(function (c, i) {
           var html = '';
           if (i === cols.length - 1) {
@@ -1227,8 +1860,10 @@
 
     function headRow(node, depth, key, open) {
       var total = sumOf(node.rows);
-      return '<tr class="g-row d' + depth + (open ? '' : ' collapsed') + '"' +
+      return '<tr class="g-row d' + depth + (open ? '' : ' collapsed') +
+          (allApproved(node.rows) ? ' appr' : '') + '"' +
           (depth === 1 ? ' data-key="' + Shell.esc(key) + '"' : '') + '>' +
+        pickCellFor(node.rows) +
         cols.map(function (c, i) {
           var html = '';
           if (i === depth - 1) {
@@ -1272,7 +1907,7 @@
     else walk(nest(settled, g), 1, '');
 
     el('grid-body').innerHTML = out.length ? out.join('')
-      : '<tr><td colspan="' + (cols.length + ds.length + 2) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
+      : '<tr><td colspan="' + (cols.length + ds.length + 3) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
     return { shown: shown, openKeys: openKeys };
   }
 
@@ -1303,22 +1938,30 @@
     var g = groups(), list = rows();
 
     document.body.classList.toggle('editing', state.editing);
+    pickSets = [];
 
     if (state.mode === 'period') {
+      /* Every day of the period, weekend or not: a seven-day roster is a
+         setting, not an exception, and a site that works Saturdays would
+         lose the column it books to. */
       var r = renderPeriod(list, lead, days());
       finish(r.shown, list, r.openKeys);
       return;
     }
 
     /* The heading columns stay put while the rest scrolls, so a row read
-       on the right still says whose it is. */
-    var off = 0, offsets = lead.map(function (c) { var at = off; off += c.w; return at; });
+       on the right still says whose it is. The tick column goes in front
+       of them and stays put too. */
+    var off = PICK_W, offsets = lead.map(function (c) { var at = off; off += c.w; return at; });
 
-    el('grid-cols').innerHTML = cols.map(function (c) {
-      return '<col style="width:' + c.w + 'px" />';
-    }).join('') + '<col style="width:64px" />';
+    el('grid-cols').innerHTML = '<col style="width:' + PICK_W + 'px" />' +
+      cols.map(function (c) {
+        return '<col style="width:' + c.w + 'px" />';
+      }).join('') + '<col style="width:64px" />';
 
-    el('grid-head').innerHTML = '<tr>' + cols.map(function (c, i) {
+    el('grid-head').innerHTML = '<tr>' +
+      '<th class="col-pick">' + chkHtml(pickState(list), 'data-pickset="' + setRef(list) + '"') + '</th>' +
+      cols.map(function (c, i) {
       var isLead = i < lead.length;
       return '<th class="' + (isLead ? 'col-lead' + (i === lead.length - 1 ? ' last' : '') : '') +
         (c.num ? ' num' : '') + (c.k === 'hours' ? ' col-hrs' : '') + '" data-w="' + c.k + '"' +
@@ -1335,8 +1978,14 @@
 
     function entryRow(e) {
       shown++;
+      var done = !e.isNew && isApproved(e);
+      /* Every row of this worker's day ticks together, so the box stands
+         for the pair and not for the row it happens to sit on. */
+      var mates = !e.isNew && list.filter(function (x) { return !x.isNew && keyOf(x) === keyOf(e); });
       return '<tr class="' + (e.isNew ? 'new-row' : '') +
-          (e.id === justAdded ? ' just-added' : '') + '">' +
+          (e.id === justAdded ? ' just-added' : '') + (done ? ' appr' : '') +
+          (!e.isNew && !done && picked[keyOf(e)] ? ' picked' : '') + '">' +
+        (e.isNew ? '<td class="col-pick"></td>' : done ? approvedCell() : pickCellFor(mates)) +
         lead.map(function (c, i) {
           /* A row still being added shows its grouped fields as pickers
              rather than blanks: those are what decide where it lands, so
@@ -1371,8 +2020,10 @@
         var open = !top || collapsed[key] !== true;
         if (top) openKeys.push(key);
 
-        out.push('<tr class="g-row d' + depth + (open ? '' : ' collapsed') + '"' +
+        out.push('<tr class="g-row d' + depth + (open ? '' : ' collapsed') +
+            (allApproved(node.rows) ? ' appr' : '') + '"' +
             (top ? ' data-key="' + Shell.esc(key) + '"' : '') + '>' +
+          pickCellFor(node.rows) +
           lead.map(function (c, i) {
             if (i < depth - 1) return leadCell(i, '');            // said already, above
             if (i === depth - 1) {
@@ -1399,10 +2050,10 @@
 
     el('grid-body').innerHTML = out.length
       ? out.join('')
-      : '<tr><td colspan="' + (cols.length + 1) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
+      : '<tr><td colspan="' + (cols.length + 2) + '"><div class="empty">Nothing booked in this period.</div></td></tr>';
 
     el('grid').style.minWidth =
-      (cols.reduce(function (n, c) { return n + c.w; }, 0) + 64) + 'px';
+      (cols.reduce(function (n, c) { return n + c.w; }, 0) + PICK_W + 64) + 'px';
     finish(shown, list, openKeys);
   }
 
@@ -1418,7 +2069,9 @@
     el('btn-collapse').dataset.keys = openKeys.join('\u0000');
     syncCollapseBtn(openKeys);
     renderGroupBy();
+    renderFilters();
     syncEditNote();
+    syncBar();
     syncScrollEdges();
   }
 
@@ -1439,11 +2092,71 @@
   });
 
   el('grid-body').addEventListener('click', function (e) {
+    /* A heading row folds when it is clicked, but its own tick is not a
+       fold — picking a group must not also close it. */
+    if (e.target.closest('.chk')) return;
     var row = e.target.closest('[data-key]');
     if (!row) return;
     var k = row.getAttribute('data-key');
     collapsed[k] = collapsed[k] !== true;
     render();
+  });
+
+  /* ─── Picking what to approve ───────────────────────────────────────
+     On the table rather than the body: the day columns are ticked in the
+     head, and this runs after the body's own handlers have passed. */
+  function togglePick(box) {
+    var ref = box.getAttribute('data-pickset');
+    if (ref == null) return;
+    var list = pickSets[+ref] || [];
+    setPick(list, pickState(list) !== 'all');
+    render();
+  }
+  el('grid').addEventListener('click', function (e) {
+    var box = e.target.closest('.chk');
+    if (box) togglePick(box);
+  });
+  el('grid').addEventListener('keydown', function (e) {
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    var box = e.target.closest('.chk');
+    if (!box) return;
+    e.preventDefault();
+    togglePick(box);
+  });
+  el('approval-switch').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-approval]');
+    if (!b || b.classList.contains('on')) return;
+    window.location.href = b.getAttribute('data-approval');
+  });
+  el('sel-approve').addEventListener('click', rvOpen);
+  el('sel-clear').addEventListener('click', function () { clearPick(); render(); });
+
+  el('rv-modal').addEventListener('click', function (e) {
+    if (e.target === this || e.target.closest('[data-rv-close]')) { rvClose(); return; }
+    if (e.target.closest('#rv-one')) {
+      var s = rvSheets[rvAt];
+      if (!s) return;
+      var live = rvLive(s);
+      if (!live.length) return;
+      approveUnits(live);
+      if (!rvAdvance()) { rvRender(); rvClose(); clearPick(); render(); return; }
+      rvRender();
+      return;
+    }
+    var pick = e.target.closest('[data-rv]');
+    if (pick) { rvAt = +pick.getAttribute('data-rv'); rvRender(); }
+  });
+  el('rv-all').addEventListener('click', function () {
+    var left = [];
+    rvSheets.forEach(function (s) { left = left.concat(rvLive(s)); });
+    approveUnits(left);
+    rvRender();
+    rvClose();
+    clearPick();
+    render();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && el('rv-modal').classList.contains('open')) rvClose();
   });
 
   /* ─── Group by ────────────────────────────────────────────────────── */
@@ -1452,6 +2165,40 @@
   /* Every field can be hidden except the one the table adds up and the
      ones it is grouped on — dropping those would leave headings with no
      column to sit in. */
+  /* Two lists in one panel: what state the entry is in, and whose crew
+     it belongs to. The supervisors offered are the ones actually in the
+     period, not every name in the system. */
+  function supsInPlay() {
+    var seen = Object.create(null), out = [];
+    ENTRIES.forEach(function (e) { if (e.sup && !seen[e.sup]) { seen[e.sup] = true; out.push(e.sup); } });
+    return out.sort();
+  }
+  function fltRow(group, v, label) {
+    var on = state.filters[group][v] === true;
+    return '<button class="gb-row' + (on ? ' on' : '') + '" type="button" data-flt="' + group +
+      '" data-v="' + Shell.esc(v) + '">' +
+      '<span class="cb-box">' + (on ? TICK : '') + '</span>' +
+      '<span>' + Shell.esc(label || v) + '</span></button>';
+  }
+  function fltCount() {
+    var n = 0;
+    ['status', 'sup'].forEach(function (g) {
+      for (var k in state.filters[g]) { if (state.filters[g][k]) n++; }
+    });
+    return n;
+  }
+  function renderFilters() {
+    el('flt-panel').innerHTML =
+      '<div class="gb-head">Status</div>' +
+      STATUSES.map(function (s) { return fltRow('status', s); }).join('') +
+      '<div class="gb-head">Supervisor</div>' +
+      supsInPlay().map(function (s) { return fltRow('sup', s); }).join('');
+    var n = fltCount();
+    el('flt-count').textContent = n;
+    el('flt-count').classList.toggle('is-off', !n);
+    el('flt-clear').classList.toggle('is-off', !n);
+  }
+
   function renderCols() {
     el('cols-panel').innerHTML =
       '<div class="gb-head">Show columns</div>' +
@@ -1491,9 +2238,9 @@
     renderCols();
   }
 
-  var gbWrap = el('gb-wrap'), colsWrap = el('cols-wrap');
+  var gbWrap = el('gb-wrap'), colsWrap = el('cols-wrap'), fltWrap = el('flt-wrap');
   function openOnly(w) {
-    [gbWrap, colsWrap].forEach(function (x) {
+    [gbWrap, colsWrap, fltWrap].forEach(function (x) {
       var on = x === w && !x.classList.contains('open');
       x.classList.toggle('open', on);
       x.querySelector('.gb-trigger').setAttribute('aria-expanded', on ? 'true' : 'false');
@@ -1501,6 +2248,20 @@
   }
   el('gb-trigger').addEventListener('click', function (e) { e.stopPropagation(); openOnly(gbWrap); });
   el('cols-trigger').addEventListener('click', function (e) { e.stopPropagation(); openOnly(colsWrap); });
+  el('flt-trigger').addEventListener('click', function (e) { e.stopPropagation(); openOnly(fltWrap); });
+  el('flt-clear').addEventListener('click', function (e) {
+    e.stopPropagation();
+    state.filters = { status: Object.create(null), sup: Object.create(null) };
+    render();
+  });
+  el('flt-panel').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var b = e.target.closest('[data-flt]');
+    if (!b) return;
+    var g = b.getAttribute('data-flt'), v = b.getAttribute('data-v');
+    if (state.filters[g][v]) delete state.filters[g][v]; else state.filters[g][v] = true;
+    render();
+  });
 
   el('gb-clear').addEventListener('click', function (e) {
     e.stopPropagation();
@@ -1527,7 +2288,7 @@
     render();
   });
   document.addEventListener('click', function () {
-    [gbWrap, colsWrap].forEach(function (x) {
+    [gbWrap, colsWrap, fltWrap].forEach(function (x) {
       x.classList.remove('open');
       x.querySelector('.gb-trigger').setAttribute('aria-expanded', 'false');
     });
@@ -1615,67 +2376,67 @@
     });
   }
 
+  /* ─── Saving as you go ─────────────────────────────────────────────
+     What is typed is saved as soon as it can be. It cannot be while a day
+     is over 24 hours, while a copied row still matches the row it came
+     from, or while a new row is still being filled in — and the header
+     says which, in the place Save used to stand. One reason at a time,
+     the most specific first: a list of everything wrong is a list nobody
+     reads. A row being filled in is not an error, so it is said in grey. */
+  var saveTimer = null;
+  function saveState(st, text, tip) {
+    var box = el('save-state');
+    box.setAttribute('data-state', st);
+    box.textContent = text;
+    if (tip) box.setAttribute('data-tip', tip); else box.removeAttribute('data-tip');
+  }
   function syncEditNote() {
-    var n = (draft ? Object.keys(draft).length : 0) + pending.length;
+    var n = Object.keys(draft).length + pending.length;
     var bad = incomplete(), over = badDays(), clash = clashRows(), blank = emptyRows();
-    /* One reason at a time, the most specific first — a list of
-       everything wrong at once is a list nobody reads. */
-    var stop = '', tip = '';
+    clearTimeout(saveTimer);
+    saveTimer = null;
     if (over.length) {
-      stop = over.length === 1
-        ? fmtDay(fromIso(over[0].date)) + ' is over ' + DAY_CAP + ' hours'
-        : over.length + ' days are over ' + DAY_CAP + ' hours';
-      tip = over.length === 1
-        ? 'Resolve the error on ' + fmtDay(fromIso(over[0].date)) +
-          ' \u2014 a day holds ' + DAY_CAP + ' hours.'
-        : 'Resolve the errors on ' + over.length + ' days \u2014 a day holds ' +
-          DAY_CAP + ' hours.';
-    } else if (bad.length) {
-      stop = bad.length + ' row' + (bad.length === 1 ? '' : 's') + ' still to fill in';
-      tip = 'Finish the new row' + (bad.length === 1 ? '' : 's') + ' before saving.';
+      saveState('error',
+        over.length === 1
+          ? fmtDay(fromIso(over[0].date)) + ' is over ' + DAY_CAP + ' hours — not saved'
+          : over.length + ' days are over ' + DAY_CAP + ' hours — not saved',
+        'A day holds ' + DAY_CAP + ' hours. Bring it down and the change saves itself.');
     } else if (clash.length) {
-      stop = clash.length === 1 ? 'That row is already on the timesheet'
-        : clash.length + ' rows are already on the timesheet';
-      tip = 'A copy is the row it was copied from until something on it changes ' +
-        '\u2014 book it to another day, or name another task.';
+      saveState('error',
+        clash.length === 1 ? 'That row is already on the timesheet — not saved'
+          : clash.length + ' rows are already on the timesheet — not saved',
+        'A copy is the row it was copied from until something on it changes — ' +
+        'book it to another day, or name another task.');
+    } else if (bad.length) {
+      saveState('pending', 'Finish the new row to save it',
+        'A new row is saved once it has its site, supervisor, project, task and hours.');
     } else if (blank.length) {
-      stop = blank.length === 1 ? 'The new row has no hours'
-        : blank.length + ' new rows have no hours';
-      tip = 'A row with no hours on it is not saved, so there would be nothing to save.';
+      saveState('pending', 'Add hours to the new row to save it',
+        'A row with no hours on it is not saved, so there would be nothing to save.');
+    } else if (n) {
+      saveState('saving', 'Saving…');
+      saveTimer = setTimeout(saveNow, 450);
+    } else {
+      saveState('idle', 'All changes saved');
     }
-    el('edit-note').textContent = stop ||
-      (n ? n + ' unsaved change' + (n === 1 ? '' : 's') : 'No changes yet');
-    el('edit-note').classList.toggle('warn', !!stop);
-    /* Refusing out loud beats filing something wrong, or dropping it
-       silently on the way through. */
-    el('btn-save').disabled = !n || !!stop;
-    var wrap = el('save-wrap');
-    if (tip) wrap.setAttribute('data-tip', tip); else wrap.removeAttribute('data-tip');
   }
-  function enterEdit() {
-    state.editing = true; draft = Object.create(null); pending = [];
-    Shell.closeAllDropdowns();
-    render();
-  }
-  function exitEdit() {
-    state.editing = false; draft = null; pending = []; justAdded = null;
-    closeTaskPop();
-    render();
-  }
-  el('btn-edit').addEventListener('click', enterEdit);
-  el('btn-cancel').addEventListener('click', exitEdit);
-  el('btn-save').addEventListener('click', function () {
-    var n = (draft ? Object.keys(draft).length : 0) + pending.length;
-    /* A pending row with no hours on it never became an entry. */
+
+  /* Writing what was typed into the entries. Not while a cell or a task
+     is open — the table redraws on save, and the field somebody is typing
+     into would be pulled out from under them. */
+  function saveNow() {
+    saveTimer = null;
+    if (popKey || tpId) { saveTimer = setTimeout(saveNow, 450); return; }
+    /* A pending row with no hours on it never becomes an entry. */
     pending.forEach(function (row) {
-      var any = Object.keys(draft || {}).some(function (k) {
+      var any = Object.keys(draft).some(function (k) {
         return k.indexOf(row.id + '|') === 0 && draft[k].h > 0;
       });
       if (!any) return;
       delete row.isNew;
       ENTRIES.push(row);
     });
-    Object.keys(draft || {}).forEach(function (k) {
+    Object.keys(draft).forEach(function (k) {
       var id = k.slice(0, k.indexOf('|')), date = k.slice(k.indexOf('|') + 1);
       var e = ENTRIES.concat(pending).filter(function (x) { return x.id === id; })[0];
       if (!e) return;
@@ -1691,10 +2452,10 @@
         hours: c.h, start: c.s, finish: c.f, allowances: c.a || []
       }));
     });
-    state.editing = false; draft = null; pending = []; justAdded = null;
+    draft = Object.create(null); pending = []; justAdded = null;
     render();
-    Shell.snackbar(n + ' change' + (n === 1 ? '' : 's') + ' saved.');
-  });
+  }
+
 
   /* ─── One cell ──────────────────────────────────────────────────────
      Hours, or the times they were worked. Both are recorded because
@@ -2009,7 +2770,6 @@
   /* A seed is whatever is already settled: the group the add was started
      from, or the row being copied. */
   function addInlineRow(seed) {
-    if (!state.editing) enterEdit();
     if (popKey) commitCell();
     closeTaskPop();
     var row = {
