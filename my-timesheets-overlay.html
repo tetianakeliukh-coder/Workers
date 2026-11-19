@@ -822,10 +822,12 @@
      lines that tell this task from the one under it are quieter again,
      and the second quieter than the first, since a work order is what
      you look for and a site is what you already know. */
+  /* No capitals. The product sets nothing in capitals except the site
+     names, which arrive that way from the data — a label shouting at
+     13 characters is a habit, not a hierarchy. */
   body.is-narrow .note-pop .np-day {
     margin-bottom: 3px;
-    font-size: 11px; font-weight: 600; line-height: 15px;
-    letter-spacing: 0.6px; text-transform: uppercase; color: var(--grey-600);
+    font-size: 13px; font-weight: 500; line-height: 18px; color: var(--grey-600);
   }
   body.is-narrow .np-task {
     display: block; margin: 0 0 22px;
@@ -849,8 +851,7 @@
   body.is-narrow .np-fld { margin-bottom: 18px; }
   body.is-narrow .np-head,
   body.is-narrow .np-lab {
-    margin-bottom: 8px; font-size: 12px; font-weight: 500;
-    letter-spacing: 0.4px; text-transform: uppercase; color: var(--grey-600);
+    margin-bottom: 8px; font-size: 13px; font-weight: 500; color: var(--grey-600);
   }
   body.is-narrow .np-head b {
     font-size: 17px; font-weight: 600; letter-spacing: 0;
@@ -1569,8 +1570,7 @@
      thing there and not a rule and a heading. */
   .or-rule {
     display: flex; align-items: center; gap: 10px; flex: 0 0 auto; margin: 4px 0 -2px;
-    font-size: 12px; font-weight: 500; color: var(--grey-600);
-    text-transform: uppercase; letter-spacing: 0.5px;
+    font-size: 13px; font-weight: 500; color: var(--grey-600);
   }
   .or-rule span { flex: 0 0 auto; }
   .or-rule::before, .or-rule::after {
