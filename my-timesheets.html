@@ -333,12 +333,31 @@
      the row that stands for all of them. */
   /* A week with nothing on it has one obvious answer, and a tickbox
      makes the reader give it in two moves instead of one. */
+  /* ─── The empty week is offered, not shouted at ────────────────
+     A bar the width of the dialog, filled with the brand colour, is the
+     loudest thing on a screen whose whole job is to let the reader
+     read a list and choose from it. So the shortcut takes the shape
+     the rest of the product uses to offer something: a quiet note that
+     says why, with the act as an outline button inside it. Same words,
+     same single press — it just stops competing with the list. */
   .pick-all.is-btn {
-    justify-content: center; background: var(--primary); color: var(--white);
-    border-radius: 8px; font-weight: 500;
+    justify-content: flex-start; gap: 8px; cursor: default;
+    background: var(--grey-100); border: 1px solid var(--grey-350);
+    border-radius: 8px; padding: 9px 9px 9px 14px;
   }
-  .pick-all.is-btn:hover { background: var(--primary-dark); }
+  .pick-all.is-btn:hover { background: var(--grey-100); }
   .pick-all.is-btn .rr-tick { display: none; }
+  .pick-all.is-btn .pa-ico { flex-shrink: 0; color: var(--grey-600); display: flex; }
+  .pick-all.is-btn .pa-say { font-weight: 400; color: var(--text-main); }
+  .pick-all.is-btn .pa-say b { font-weight: 500; }
+  .pick-all.is-btn .pa-do {
+    flex-shrink: 0; margin-left: auto; height: 32px; padding: 0 14px;
+    display: inline-flex; align-items: center; border-radius: 8px; cursor: pointer;
+    background: var(--white); border: 1px solid var(--primary); color: var(--primary);
+    font-family: var(--fs-sans); font-size: 13px; font-weight: 500; line-height: 18px;
+    white-space: nowrap; transition: background var(--t-fast);
+  }
+  .pick-all.is-btn .pa-do:hover { background: var(--bg-blue-light); }
   .pick-all {
     display: flex; align-items: center; gap: 10px; cursor: pointer;
     padding: 8px 12px; border-radius: 10px; background: var(--grey-100);
@@ -1350,9 +1369,42 @@
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
   body.is-narrow .m-date .dd-panel { left: 0; right: 0; }
-  body.is-narrow .week-view { order: 6; margin-top: 12px; }
+  /* ─── A week on a phone ─────────────────────────────────────────
+     Seven columns of 112 do not fit 375, and a timesheet scrolled
+     sideways is not a timesheet anyone reads. So the week keeps being
+     the week — it is simply turned on its side: a card per day, that
+     day's tasks inside it, and the same totals down the right. */
+  body.is-narrow .grid-card { display: none; }
+  body.is-narrow .week-view { display: block; order: 6; margin-top: 12px; }
   body.is-narrow .day-list { gap: 8px; }
-  body.is-narrow .week-total { display: none; }
+  body.is-narrow .week-total { display: block; }
+  .dgroup-head .dlock { display: inline-flex; color: var(--grey-600); }
+  /* A day that will not hold what is on it says so on its total, the
+     same way the column head does on the desktop. */
+  .dgroup-head .tot.over { color: var(--error); }
+  .day-group.shut .dgroup-head .dt { color: var(--grey-600); }
+  .entry .m-marks { display: inline-flex; align-items: center; gap: 6px; color: var(--grey-600); flex-shrink: 0; }
+  .entry.locked { opacity: 0.55; }
+  .entry.c-cap .entry-hrs { color: var(--error); }
+  .entry.c-err { border-color: var(--error); }
+  .day-add { width: 100%; justify-content: center; }
+  /* ─── Typing into the row ───────────────────────────────────────
+     This release has nothing in a cell but its figure, so there is
+     nothing for a panel to hold: the row is the field, which is what
+     inline editing means here. */
+  .entry.live { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+  .entry input.hr-cell {
+    width: 76px; height: 38px; margin: 0; padding: 0 10px;
+    text-align: right; font-size: 16px;
+  }
+  /* The same two ways in as the desktop, as a sheet — there is no
+     button on screen to hang a menu off. */
+  body.is-narrow .add-menu {
+    position: fixed; top: auto; left: 8px; right: 8px; bottom: 8px;
+    width: auto; min-width: 0; padding: 6px; border-radius: 14px;
+    box-shadow: 0 -10px 44px rgba(16, 24, 40, 0.3), 0 0 0 100vmax rgba(16, 24, 40, 0.38);
+  }
+  body.is-narrow .add-menu button { height: 48px; font-size: 15px; gap: 10px; }
   .m-actions, .m-date { display: none; }
 
   /* A sheet, not a box: flush to the bottom with a grabber on top. */
@@ -3420,41 +3472,79 @@
     });
     weekTotalEl.innerHTML = 'Total <b>' + fmtHours(weekTotal) + ' h</b>';
 
-    /* Most recent first — you fill in the day you just worked. */
-    var shown = ds.slice().reverse().filter(function (d) {
-      return entriesOn(iso(d)).length || iso(d) === iso(TODAY);
-    });
+    /* The week in the order the week happens, the same as the columns
+       on the desktop. Every day is drawn, the empty ones included: a
+       missing Thursday reads as a Thursday nobody worked, which is
+       what it is and what has to be fixable. */
+    dayList.innerHTML = ds.map(function (d) {
+      var key = iso(d), today = key === iso(TODAY);
+      var shownTot = dayTotal(key, true), allTot = dayTotal(key, false);
+      var over = allTot > DAY_CAP;
+      var wk = weekKeys();
+      var shut = wk.length > 0 && wk.every(function (k) { return cellLocked(k, key); });
 
-    dayList.innerHTML = shown.map(function (d) {
-      var key = iso(d), rows = entriesOn(key);
-      var total = rows.reduce(function (n, r) { return n + r.hours; }, 0);
-      var closed = dayClosed[key] === true;
+      /* With hours on this day, or just put there, or being typed into
+         right now — a phone cannot carry every task under every day. */
+      var keys = wk.filter(function (k) {
+        return hoursFor(k, key) > 0 || liveCell === k + '|' + key ||
+          (addFromDay === key && isJustAdded(k));
+      });
 
-      var body = rows.length ? rows.map(function (r) {
-        return '<button class="entry" type="button" data-entry="' + Shell.esc(r.task.key) + '" data-date="' + key + '">' +
+      var body = keys.length ? keys.map(function (k) {
+        var m = taskMeta[k], dk = k + '|' + key;
+        var v = hoursFor(k, key), lock = cellLocked(k, key), live = liveCell === dk;
+        var cls = 'entry' + (lock ? ' locked' : '') + (live ? ' live' : '') +
+          (cellOver(k, key, v) ? ' c-cap' : cellErr[dk] ? ' c-err' : '');
+        /* Open: the figure is a field, right where the figure was. */
+        var right = live
+          ? '<input class="hr-cell" type="text" inputmode="decimal" autocomplete="off" ' +
+            'placeholder="&ndash;" data-key="' + Shell.esc(k) + '" data-date="' + key + '" ' +
+            'value="' + (v > 0 ? fmtHours(v) : '') + '" />'
+          : '<span class="entry-hrs">' + (v > 0 ? fmtHours(v) + ' h' : '\u2014') + '</span>' +
+            (lock ? '' : CHEV);
+        var tag = live ? 'div' : 'button';
+        return '<' + tag + ' class="' + cls + '"' + (live ? '' : ' type="button"') +
+          ' data-mrow="' + Shell.esc(k) + '" data-date="' + key + '"' +
+          (lock ? ' disabled' : '') + '>' +
           '<span class="entry-main">' +
-            '<span class="entry-code">' + Shell.esc(taskTitle(r.task.meta)) + '</span>' +
-            '<span class="entry-sub">' + Shell.esc(taskRest(r.task.meta)) + '</span>' +
-            '<span class="entry-where">' + Shell.esc(r.task.meta.sup) + ' · ' + Shell.esc(r.task.meta.site) + '</span>' +
+            '<span class="entry-code">' + Shell.esc(taskTitle(m)) + '</span>' +
+            (taskRest(m) ? '<span class="entry-sub">' + Shell.esc(taskRest(m)) + '</span>' : '') +
+            '<span class="entry-where">' + Shell.esc(m.sup) + ' \u00b7 ' + Shell.esc(m.site) + '</span>' +
           '</span>' +
-          '<span class="entry-hrs">' + fmtHours(r.hours) + ' h</span>' + CHEV +
-        '</button>';
-      }).join('') : '<div class="day-empty">No hours recorded.</div>';
+          (lock ? '<span class="m-marks">' + ICO_LOCK + '</span>' : '') +
+          right +
+        '</' + tag + '>';
+      }).join('') : '<div class="day-empty">Nothing booked on this day.</div>';
 
-      return '<div class="day-group' + (closed ? ' closed' : '') + '">' +
+      return '<div class="day-group' + (dayClosed[key] === true ? ' closed' : '') +
+        (shut ? ' shut' : '') + '">' +
         '<button class="dgroup-head" type="button" data-dayhead="' + key + '">' +
           '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
           '<span class="dt">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
-          (key === iso(TODAY) ? '<span class="today-chip">Today</span>' : '') +
-          '<span class="tot">' + fmtHours(total) + ' h</span>' +
+          (today ? '<span class="today-chip">Today</span>' : '') +
+          (shut ? '<span class="dlock">' + ICO_LOCK + '</span>' : '') +
+          '<span class="tot' + (over ? ' over' : '') + '">' +
+            (shownTot > 0 ? fmtHours(shownTot) + ' h' : '\u2014') + '</span>' +
         '</button>' +
         '<div class="day-rows">' + body +
+          (shut ? '' :
           '<button class="btn-ghost day-add" type="button" data-card-add="' + key + '">' +
             '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
-            'Add task</button>' +
+            'Add task</button>') +
         '</div>' +
       '</div>';
     }).join('');
+
+    /* The field the phone types into lives in a row that is rebuilt on
+       every keystroke, so handing it the caret belongs here — to the
+       drawing — rather than to whichever click happened to start it.
+       Only when nothing else already holds it: re-focusing a field that
+       is being typed into would throw the caret back to the end. */
+    if (liveCell && document.body.classList.contains('is-narrow')) {
+      var f = dayList.querySelector('input.hr-cell');
+      var act = document.activeElement;
+      if (f && (!act || act.tagName !== 'INPUT')) { f.focus(); f.select(); }
+    }
   }
 
   /* ─── Date filter ─────────────────────────────────────────────────
@@ -3650,7 +3740,23 @@
     renderWeek();
     syncMobileActions();
   });
-  document.getElementById('m-add').addEventListener('click', function () { openAdd(null); });
+  /* The same menu the desktop opens, from the same two words. Which
+     day it was started from is remembered, so the row lands there. */
+  var addFromDay = null;
+  function openAddWays(dayIso) {
+    addFromDay = dayIso || null;
+    if (!isInline()) { openAdd(dayIso, null); return; }
+    var host = document.getElementById('device-frame') || document.body;
+    if (addMenu.parentNode !== host) host.appendChild(addMenu);
+    /* Opened on the next tick, so the click that opened it has finished
+       travelling to the document first — where the handler that closes
+       this menu on a click elsewhere is waiting. */
+    setTimeout(function () { addMenu.classList.add('open'); }, 0);
+  }
+  document.getElementById('m-add').addEventListener('click', function (e) {
+    e.stopPropagation();
+    openAddWays(null);
+  });
 
   /* ─── Search ──────────────────────────────────────────────────── */
   var searchEl = document.getElementById('search');
@@ -3732,7 +3838,11 @@
        so there is nothing to find and nothing to hand the caret back to.
        It never left. */
     if (a && document.contains(a)) return;
-    var again = [].slice.call(gridBody.querySelectorAll('input.hr-cell')).filter(function (x) {
+    /* The phone's field is in the row that renderWeek just rebuilt, so
+       it is looked for in both places. */
+    var again = [].slice.call(
+      document.querySelectorAll('#grid-body input.hr-cell, #day-list input.hr-cell')
+    ).filter(function (x) {
       return x.getAttribute('data-key') === key && x.getAttribute('data-date') === isoDate;
     })[0];
     if (!again) return;
@@ -3777,7 +3887,6 @@
     if (v === sv.h) { next.s = sv.s; next.f = sv.f; }
     putCell(key, date, next);
     markOver(date, key);
-    syncCellWarn(date);
     /* ─── Where an error belongs ────────────────────────────────
        Of everything that can go wrong with a figure, exactly one goes
        wrong while the panel is still open: a day that will not hold
@@ -3790,6 +3899,10 @@
        after the panel has gone, and lands on the cell, which is why
        the cell has colours and the panel does not need them. */
     redrawKeeping(key, date);
+    /* After the redraw, not before it: the field this is hung on is
+       replaced by the redraw, and a rectangle measured off the old one
+       is a rectangle of nothing. */
+    syncCellWarn(date);
   });
 
   /* Shown under the cell being typed into, and nowhere else: once the
@@ -3799,14 +3912,31 @@
   function syncCellWarn(date) {
     var inp = liveInput();
     if (!inp || !overCap(date)) { hideCellWarn(); return; }
+    if (!inp.offsetParent && !inp.getClientRects().length) { hideCellWarn(); return; }
     el('cell-warn-t').textContent = fmtDayLong(fromIso(date)) + ' would come to ' +
       fmtHours(Math.round(dayTotal(date, false) * 100) / 100) + ' h. A day holds ' +
       DAY_CAP + ', so this will not be saved.';
     cellWarn.hidden = false;
     var r = inp.getBoundingClientRect();
-    var top = r.bottom + 6, left = r.left;
-    if (top + cellWarn.offsetHeight > window.innerHeight - 8) top = r.top - cellWarn.offsetHeight - 6;
-    if (left + cellWarn.offsetWidth > window.innerWidth - 8) left = window.innerWidth - cellWarn.offsetWidth - 8;
+    /* Inside a phone frame the edges that matter are the phone's, not
+       the window's — measured the same way the field was, so the two
+       agree however the frame is scaled. */
+    /* Inside a phone frame, a fixed element measures itself against the
+       frame, not the window — and the frame is scaled to fit the desk.
+       So the field's screen rectangle is converted back into the
+       phone's own pixels before anything is placed against it. */
+    var frame = document.getElementById('device-frame');
+    var ox = 0, oy = 0, k = 1, maxW = window.innerWidth, maxH = window.innerHeight;
+    if (frame) {
+      var fr = frame.getBoundingClientRect();
+      k = fr.width / frame.offsetWidth || 1;
+      ox = fr.left; oy = fr.top;
+      maxW = frame.offsetWidth; maxH = frame.offsetHeight;
+    }
+    var rb = (r.bottom - oy) / k, rt = (r.top - oy) / k, rl = (r.left - ox) / k;
+    var top = rb + 6, left = rl;
+    if (top + cellWarn.offsetHeight > maxH - 8) top = rt - cellWarn.offsetHeight - 6;
+    if (left + cellWarn.offsetWidth > maxW - 8) left = maxW - cellWarn.offsetWidth - 8;
     cellWarn.style.top = Math.max(8, top) + 'px';
     cellWarn.style.left = Math.max(8, left) + 'px';
   }
@@ -4203,12 +4333,20 @@
      than on a week's worth of work — which is the point. The client
      who lost two hundred people's hours to a failed Save lost them
      because a Save was ever that big. */
+  /* On a phone the grid is not drawn and the field is in the row, so
+     both places are asked. */
+  /* Both the grid and the day list draw the open cell, and on a phone
+     the grid is drawn but not shown — so the one that is actually on
+     screen is the one meant, and a field with no rectangle is a field
+     nobody can type into or hang a message under. */
   function liveInput() {
-    var found = null;
-    [].forEach.call(gridBody.querySelectorAll('input.hr-cell'), function (x) {
-      if (!found && x.getAttribute('data-key') + '|' + x.getAttribute('data-date') === liveCell) found = x;
+    var found = null, any = null;
+    [].forEach.call(document.querySelectorAll('#grid-body input.hr-cell, #day-list input.hr-cell'), function (x) {
+      if (x.getAttribute('data-key') + '|' + x.getAttribute('data-date') !== liveCell) return;
+      if (!any) any = x;
+      if (!found && x.getClientRects().length) found = x;
     });
-    return found;
+    return found || any;
   }
   /* The first of two clicks. Nothing is committed and nothing opens —
      the cell is only named, so the second click has something to be
@@ -4232,8 +4370,20 @@
     if (cellLocked(key, date)) return;
     liveCell = dk;
     renderGrid(); renderWeek(); syncEditBar();
-    var inp = liveInput();
-    if (inp) { inp.focus(); inp.select(); ensureVisible(inp.closest('tr')); ensureAcross(inp); }
+    /* On a phone the field is in a row that was just rebuilt, and the
+       click that opened it is still travelling — so the caret is given
+       on the next tick, after everything else has had its turn. There
+       is no table row to scroll into view there, and nothing sideways
+       to scroll either. */
+    var give = function () {
+      var inp = liveInput();
+      if (!inp) return;
+      inp.focus(); inp.select();
+      var tr = inp.closest('tr');
+      if (tr) { ensureVisible(tr); ensureAcross(inp); }
+      else { ensureVisible(inp.closest('[data-mrow]') || inp); }
+    };
+    give();
     syncCellWarn(date);
   }
   /* Escape keeps nothing: the cell goes back to the figure it held when
@@ -4893,10 +5043,18 @@
       syncMobileActions();
       return;
     }
+    /* The row is the cell: tapping it hands the caret to the figure,
+       which is the whole of what this release keeps in a cell. */
+    var mrow = e.target.closest('[data-mrow]');
+    if (mrow) {
+      if (e.target.closest('input.hr-cell')) return;
+      openHours(mrow.getAttribute('data-mrow'), mrow.getAttribute('data-date'));
+      return;
+    }
     var entry = e.target.closest('[data-entry]');
     if (entry) { openEdit(entry.getAttribute('data-entry'), entry.getAttribute('data-date')); return; }
     var cardAdd = e.target.closest('[data-card-add]');
-    if (cardAdd) openAdd(cardAdd.getAttribute('data-card-add'));
+    if (cardAdd) { e.stopPropagation(); openAddWays(cardAdd.getAttribute('data-card-add')); }
   });
 
   /* ─── Add a task ──────────────────────────────────────────────────
@@ -5615,6 +5773,10 @@
   function isInline() { return document.body.classList.contains('addlayout-inline'); }
 
   var addMenu = el('add-menu'), wherePop = el('where-pop'), taskPop = el('task-pop');
+  /* The menu lives in the header, and the header is not on screen on a
+     phone — so there it is moved out, and put back when the header
+     comes back. */
+  var addMenuHome = addMenu.parentNode;
   var pickModal = el('recent-modal');
 
   /* A scroll this code performs is not the reader scrolling away, so
@@ -6007,8 +6169,16 @@
     all.classList.toggle('is-btn', blank);
     if (blank) {
       all.classList.remove('on');
-      all.innerHTML = '<span>Copy all ' + list.length +
-        (list.length === 1 ? ' task' : ' tasks') + ' to this week</span>';
+      var word = list.length === 1 ? ' task' : ' tasks';
+      all.innerHTML =
+        '<span class="pa-ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none">' +
+          '<circle cx="8" cy="8" r="6.3" stroke="currentColor" stroke-width="1.3"/>' +
+          '<path d="M8 7.3v4M8 4.8v.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+        '</svg></span>' +
+        '<span class="pa-say"><b>Most weeks repeat.</b> Bring the tasks over \u2014 ' +
+          'the hours stay behind.</span>' +
+        '<button class="pa-do" type="button" data-copyall>Copy all ' +
+          list.length + word + '</button>';
     } else {
       var every = list.length > 0 && list.every(function (r) { return picked[r.key]; });
       all.classList.toggle('on', every);
@@ -6026,11 +6196,14 @@
     renderPick();
     pickModal.classList.add('open');
   }
-  el('pick-all').addEventListener('click', function () {
+  el('pick-all').addEventListener('click', function (e) {
     var list = recentPool();
     /* On an empty week this is the whole answer, so it is also the
-       whole gesture: pick them all and put them on. */
+       whole gesture: pick them all and put them on. The note around
+       the button is not a target \u2014 only the button is, or a reader
+       aiming at the sentence would copy a week by accident. */
     if (el('pick-all').classList.contains('is-btn')) {
+      if (!e.target.closest('[data-copyall]')) return;
       picked = Object.create(null);
       list.forEach(function (r) { picked[r.key] = 1; });
       /* Straight to the act: the button cannot lean on Add, which is
@@ -6065,6 +6238,11 @@
     });
     justAdded = keys[keys.length - 1];
     justAddedSet = keys.slice();
+    var onPhone = document.body.classList.contains('is-narrow') && addFromDay;
+    if (onPhone) {
+      var landDay = addFromDay, landKey = keys[keys.length - 1];
+      setTimeout(function () { openHours(landKey, landDay); }, 60);
+    }
     pickModal.classList.remove('open');
     render(); syncEditBar();
     if (keys.length > 1) Shell.snackbar(keys.length + ' tasks added to this week.');
@@ -6107,6 +6285,7 @@
   el('btn-new-task').addEventListener('click', function (e) {
     if (!isInline()) { openAdd(null, null); return; }
     e.stopPropagation();
+    if (addMenu.parentNode !== addMenuHome) addMenuHome.appendChild(addMenu);
     var open = addMenu.classList.toggle('open');
     this.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
