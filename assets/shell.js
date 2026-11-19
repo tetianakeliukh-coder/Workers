@@ -179,10 +179,22 @@
     frame.style.transform = 'translate(-50%, -50%) scale(' + (Math.round(s * 1000) / 1000) + ')';
   }
 
+  /* Floating UI belongs inside the phone when there is one: a fixed
+     element only measures itself against the frame when the frame is
+     its parent, because the frame's transform is what it measures. */
+  function uiHost() { return document.getElementById('device-frame') || document.body; }
+
   function setViewport(mode) {
     viewportMode = mode;
     syncResponsive();
     deviceFrame(mode === 'mobile');
+    /* Anything already drawn against the window has to follow the app
+       into the phone, or it hangs off the desk behind it. */
+    var frame = document.getElementById('device-frame');
+    [].forEach.call(document.querySelectorAll('.snackbar, .row-tip'), function (n) {
+      var want = frame || document.body;
+      if (n.parentNode !== want) want.appendChild(n);
+    });
   }
 
   function initResponsive(host) {
@@ -378,7 +390,7 @@
         '<button class="snackbar-close" type="button" aria-label="Dismiss">' +
           '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
         '</button>';
-      document.body.appendChild(el);
+      uiHost().appendChild(el);
       el.querySelector('.snackbar-close').addEventListener('click', function () {
         el.classList.remove('visible');
       });
@@ -438,7 +450,7 @@
     if (!tipEl) {
       tipEl = document.createElement('div');
       tipEl.className = 'row-tip';
-      document.body.appendChild(tipEl);
+      uiHost().appendChild(tipEl);
     }
     host.addEventListener('mouseover', function (e) {
       var t = e.target.closest ? e.target.closest('[data-tip], [data-tip-html]') : null;

@@ -1406,6 +1406,38 @@
   }
   body.is-narrow .add-menu button { height: 48px; font-size: 15px; gap: 10px; }
 
+  /* ─── Stepping a week ───────────────────────────────────────────
+     The date list is three taps for the thing people do most, which is
+     go back one week. The arrows are that in one, and the list stays
+     for everything else. */
+  body.is-narrow .m-date { display: flex; align-items: center; gap: 8px; }
+  body.is-narrow .m-date .dd-wrap { order: 2; flex: 1 1 auto; min-width: 0; }
+  body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
+  .wk-step {
+    display: none; width: 32px; height: 32px; flex-shrink: 0;
+    align-items: center; justify-content: center;
+    background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
+    color: var(--grey-700); cursor: pointer;
+  }
+  body.is-narrow .wk-step { display: inline-flex; }
+  body.is-narrow #m-prev { order: 1; }
+  body.is-narrow #m-next { order: 3; }
+  .wk-step:active { background: var(--grey-100); }
+
+  /* ─── Whether it landed ─────────────────────────────────────────
+     This line is the whole of what replaced Save, and on a phone it
+     was in the header the phone does not draw — so a figure could
+     fail to save and nothing on screen would ever say so. It sits
+     with the week's total, because both are facts about the week. */
+  body.is-narrow .week-total {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    text-align: left;
+  }
+  body.is-narrow .week-total .wk-sum { margin-left: auto; }
+  body.is-narrow .week-total .save-state { font-size: 13px; }
+  body.is-narrow .week-total .save-retry { flex-shrink: 0; }
+
+
   /* ─── No pointer, no hover ──────────────────────────────────────
      A phone has nothing to hover with, so a row that lights up under
      an invisible cursor is a row lying about what it is. The frame is
@@ -1882,7 +1914,14 @@
           Add timesheet
         </button>
       </div>
-      <div class="m-date" id="m-date"></div>
+      <div class="m-date" id="m-date">
+        <button class="wk-step" type="button" id="m-prev" aria-label="Week before">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="wk-step" type="button" id="m-next" aria-label="Week after">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3.5L10.5 8 6 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
 
       <div class="period-bar">
         <div class="search-wrap">
@@ -3510,7 +3549,15 @@
     ds.forEach(function (d) {
       Object.keys(taskMeta).forEach(function (k) { weekTotal += hoursFor(k, iso(d)); });
     });
-    weekTotalEl.innerHTML = 'Total <b>' + fmtHours(weekTotal) + ' h</b>';
+    /* Written into its own span, because the save line has been moved
+       in beside it and replacing the whole row would throw it away. */
+    var sum = weekTotalEl.querySelector('.wk-sum');
+    if (!sum) {
+      sum = document.createElement('span');
+      sum.className = 'wk-sum';
+      weekTotalEl.appendChild(sum);
+    }
+    sum.innerHTML = 'Total <b>' + fmtHours(weekTotal) + ' h</b>';
 
     /* The week in the order the week happens, the same as the columns
        on the desktop. Every day is drawn, the empty ones included: a
@@ -3773,6 +3820,32 @@
   }
   /* The phone shows a list of days, so this folds the days — the grid it
      used to drive is not even on screen here. */
+
+  /* ─── A week either side ────────────────────────────────────────
+     Stepping from whatever is on screen, not from today: a reader two
+     weeks back who presses back again means three weeks back. When the
+     week it lands on is one the list already names, it takes that name,
+     so the label goes on reading "Last week" rather than a date range. */
+  function stepWeek(dir) {
+    leavePeriod(function () {
+      var b = rangeBounds();
+      var from = (b && b.from) ? fromIso(b.from) : mondayOf(TODAY);
+      var nf = addDays(from, dir * 7), nt = addDays(nf, 6);
+      var named = null;
+      [['lastweek', 1], ['week', 0], ['nextweek', -1]].forEach(function (pair) {
+        if (iso(nf) === weekStartIso(pair[1])) named = pair[0];
+      });
+      if (named) state.range = named;
+      else { state.range = 'custom'; state.from = iso(nf); state.to = iso(nt); }
+      markRange(state.range);
+      syncDateLabel();
+      render();
+      if (typeof maybeEmptyTips === 'function') maybeEmptyTips();
+    });
+  }
+  document.getElementById('m-prev').addEventListener('click', function () { stepWeek(-1); });
+  document.getElementById('m-next').addEventListener('click', function () { stepWeek(1); });
+
   document.getElementById('m-collapse').addEventListener('click', function () {
     var keys = shownDayKeys();
     var anyOpen = keys.some(function (k) { return dayClosed[k] !== true; });
@@ -3830,6 +3903,21 @@
     document.body.classList.toggle('force-mobile', vpMode === 'mobile');
     if (narrow && dateDD.parentNode !== mDate) mDate.appendChild(dateDD);
     if (!narrow && dateDD.parentNode !== headerActions) headerActions.insertBefore(dateDD, headerActions.firstChild);
+    /* The line that says whether the last figure landed lives in the
+       header, and the phone does not draw the header — so on a phone it
+       moves down to the week's total, which is the other fact about the
+       week. Moved rather than copied: there is one of it. */
+    var sState = document.getElementById('save-state');
+    var sRetry = document.getElementById('save-retry');
+    var wTot = document.getElementById('week-total');
+    if (narrow && sState && wTot && sState.parentNode !== wTot) {
+      wTot.insertBefore(sState, wTot.firstChild);
+      if (sRetry) wTot.insertBefore(sRetry, sState.nextSibling);
+    }
+    if (!narrow && sState && sState.parentNode !== headerActions) {
+      headerActions.insertBefore(sState, headerActions.firstChild);
+      if (sRetry) headerActions.insertBefore(sRetry, sState.nextSibling);
+    }
     syncMobileActions();
     if (Shell.setViewport) Shell.setViewport(vpMode === 'mobile' ? 'mobile' : vpMode === 'desktop' ? 'desktop' : 'auto');
     vp.querySelectorAll('[data-vp]').forEach(function (b) {
