@@ -579,6 +579,10 @@
      row is one answer, so there is nothing to confirm and no footer. */
   body.iter-first .cell-pop.task-pop { width: auto; max-width: min(92vw, 900px); padding: 8px; }
   body.iter-first .task-pop .tp-foot { display: none; }
+  /* On a desktop the first iteration finishes by clicking a row, so
+     there is nothing left to confirm. A phone asks by level, and a
+     set of four selects with no button is a form with no way out. */
+  body.iter-first.is-narrow .task-pop .tp-foot { display: flex; }
   .tp-table { max-height: 340px; overflow-y: auto; }
   .tp-head, .tp-row { display: grid; gap: 14px; align-items: baseline; padding: 8px 10px; }
   .tp-head {
@@ -2519,11 +2523,11 @@
 
 <!-- ── What the row is: between one and four fields, the site's own ── -->
 <div class="cell-pop task-pop" id="task-pop" role="dialog" aria-label="Name this task">
-  <div class="pop-title">Which task is it?</div>
+  <div class="pop-title">Pick the task</div>
   <div class="tp-fields" id="tp-fields"></div>
   <div class="tp-foot">
     <button class="btn-ghost" type="button" data-tpclose>Cancel</button>
-    <button class="btn-primary" type="button" id="tp-done" disabled>Done</button>
+    <button class="btn-primary" type="button" id="tp-done" disabled>Add task</button>
   </div>
 </div>
 
@@ -3935,8 +3939,14 @@
     var html = '';
     tree.forEach(function (site) {
       site.sups.forEach(function (sup) {
+        /* A row still being named is not a task yet: it has no key, so
+           every figure it would carry is a lookup into nothing. It is
+           left out until the sheet asking for its name is answered —
+           before this, it threw and took the whole view with it. */
+        var tasks = sup.tasks.filter(function (t) { return !t.pend && taskMeta[t.key]; });
+        if (!tasks.length) return;
         var gTot = 0;
-        sup.tasks.forEach(function (t) {
+        tasks.forEach(function (t) {
           ds.forEach(function (d) { gTot += hoursFor(t.key, iso(d)); });
         });
         /* The site was a line of 12px capitals with the supervisor run
@@ -3949,7 +3959,7 @@
             '<span class="tg-sup">' + Shell.esc(sup.name) + '</span>' +
           '</span>' +
           '<span class="tg-tot">' + fmtHours(gTot) + ' h</span></div>';
-        sup.tasks.forEach(function (t) {
+        tasks.forEach(function (t) {
           var m = taskMeta[t.key];
           var tot = ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0);
           var shutRow = rowLocked(t.key);
@@ -6497,7 +6507,14 @@
     delete collapsed[flatKey(site, sup)];
     render();
     var row = document.querySelector('[data-pendrow="' + x.id + '"]');
-    if (!row) return;
+    if (!row) {
+      /* By task draws tasks, not pending rows, so there is nothing in
+         the list to hang the panel on — and on a phone the panel is a
+         sheet that needs no anchor anyway. Without this, adding a task
+         from By task did nothing at all. */
+      if (document.body.classList.contains('is-narrow')) { openTaskPop(document.body, x.id); return; }
+      return;
+    }
     var btn = row.querySelector('[data-pendpick], [data-pendsel]');
     if (btn && btn.hasAttribute('data-pendpick')) { openTaskPop(btn, x.id); return; }
     ensureVisible(row);
@@ -6563,7 +6580,15 @@
     var x = tpSubject();
     if (!x) return;
     var fields = fieldsFor(x.site);
-    if (PROTO.first) { renderTaskTable(x, fields); return; }
+    /* The table is a desktop device: the site's whole catalogue laid
+       out in columns, which is readable at 900px and unreadable at 390.
+       A phone asks the same question the way the data is actually
+       shaped — one field per level, one to four of them depending on
+       the site — because nobody picks a task out of a list that long
+       by scrolling it. */
+    if (PROTO.first && !document.body.classList.contains('is-narrow')) {
+      renderTaskTable(x, fields); return;
+    }
     el('tp-fields').innerHTML = fields.map(function (f, i) {
       return '<div class="fld"><label class="fld-label" for="tp' + i + '">' +
         Shell.esc(f.name) + '<span class="req">*</span></label>' +
