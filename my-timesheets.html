@@ -1364,9 +1364,13 @@
   }
   body.is-narrow .page-header { display: block; margin-bottom: 4px; order: 1; }
   body.is-narrow .page-header .header-actions { display: none; }
-  body.is-narrow .m-actions { order: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 0; }
-  body.is-narrow .m-actions .btn-ghost, body.is-narrow .m-actions .btn-primary {
-    width: 100%; justify-content: center; height: 32px;
+  /* The one thing a worker opened this screen to do, alone at the top
+     and the full width of the glass. It used to share a row with
+     Collapse all, which made a secondary control look like half the
+     answer to "what do I do here". */
+  body.is-narrow .m-actions { order: 2; display: block; margin-top: 0; }
+  body.is-narrow .m-actions .btn-primary {
+    width: 100%; justify-content: center; height: 40px; font-size: 15px;
   }
   /* The toolbar keeps its search on a phone; the grid-only controls go. */
   body.is-narrow .period-bar { order: 3; display: block; margin: 0; }
@@ -1468,11 +1472,29 @@
      spread over a week, and the question is how much went where. The
      same two the supervisor screen is being cut along, so the product
      has one vocabulary for this rather than two. */
-  .wk-mode { display: none; }
+  .wk-mode, .wk-bar { display: none; }
+  /* One line about how to look at the week: which way it is cut, and
+     how much of it is open. The switch takes the width — it is the
+     choice — and Collapse all keeps only what its words need. */
+  body.is-narrow .wk-bar {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
   body.is-narrow .wk-mode {
-    display: inline-flex; padding: 3px; margin-bottom: 10px;
+    display: flex; flex: 1 1 auto; padding: 3px;
     background: var(--grey-100); border-radius: 9px;
   }
+  body.is-narrow .wk-mode button { flex: 1 1 0; padding: 0; }
+  /* No box: beside a segmented control, a bordered button reads as a
+     third segment — as if "Collapse all" were a third way to look at
+     the week rather than something you do to it. */
+  body.is-narrow #m-collapse {
+    flex: 0 0 auto; height: 36px; padding: 0 4px 0 10px; font-size: 13px;
+    border: none; background: none; color: var(--primary);
+  }
+  body.is-narrow #m-collapse:hover { background: none; }
+  /* The words say it on their own at this size, and the icon was the
+     widest part of a button that had to give its width away. */
+  body.is-narrow #m-collapse svg { display: none; }
   .wk-mode button {
     height: 30px; padding: 0 14px; border: none; border-radius: 7px;
     background: none; color: var(--grey-700); cursor: pointer;
@@ -2065,7 +2087,6 @@
       </div>
 
       <div class="m-actions">
-        <button class="btn-ghost" type="button" id="m-collapse"></button>
         <button class="btn-primary" type="button" id="m-add" aria-haspopup="true">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
           Add task
@@ -2125,9 +2146,16 @@
 
       <!-- ── Mobile: week strip + a card per day ── -->
       <div class="week-view">
-        <div class="wk-mode" id="wk-mode" role="group" aria-label="How to read the week">
-          <button type="button" data-wkmode="day" class="on">By day</button>
-          <button type="button" data-wkmode="task">By task</button>
+        <!-- How the week is read, and how much of it is unfolded: two
+             questions about the same thing, so they share a line. Add
+             task is on its own at the top, where the one thing a worker
+             came to do belongs. -->
+        <div class="wk-bar">
+          <div class="wk-mode" id="wk-mode" role="group" aria-label="How to read the week">
+            <button type="button" data-wkmode="day" class="on">By day</button>
+            <button type="button" data-wkmode="task">By task</button>
+          </div>
+          <button class="btn-ghost" type="button" id="m-collapse"></button>
         </div>
         <div class="week-total" id="week-total"></div>
         <div class="day-list" id="day-list"></div>
@@ -4079,7 +4107,6 @@
           .some(function (b) { return taskClosed[b.getAttribute('data-taskhead')] === false; })
       : shownDayKeys().some(function (k) { return dayClosed[k] !== true; });
     collapse.innerHTML = anyOpen ? ICO_COLLAPSE + 'Collapse all' : ICO_EXPAND + 'Expand all';
-    document.querySelector('.m-actions').style.gridTemplateColumns = '1fr 1fr';
   }
   /* The phone shows a list of days, so this folds the days — the grid it
      used to drive is not even on screen here. */
