@@ -812,24 +812,39 @@
   /* On a desktop the task is written across the row the cell sits in.
      On a phone the sheet covers the list, so it has to carry its own
      subject — otherwise it is a panel of hours about nothing. */
-  body.is-narrow .note-pop .np-day { font-size: 14px; margin-bottom: 14px; }
   .np-task { display: none; }
+  /* ─── The head of the sheet ──────────────────────────────
+     Four lines a point or two apart read as one grey block: the eye has
+     to start at the top and work down to find out what it is looking
+     at. They step properly now. The day is an eyebrow — it says which
+     square of the week this is and then gets out of the way. The task
+     is the heading, because that is what the sheet is about. The two
+     lines that tell this task from the one under it are quieter again,
+     and the second quieter than the first, since a work order is what
+     you look for and a site is what you already know. */
+  body.is-narrow .note-pop .np-day {
+    margin-bottom: 3px;
+    font-size: 11px; font-weight: 600; line-height: 15px;
+    letter-spacing: 0.6px; text-transform: uppercase; color: var(--grey-600);
+  }
   body.is-narrow .np-task {
-    display: block; margin: -8px 0 14px;
-    font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main);
+    display: block; margin: 0 0 22px;
+    font-size: 20px; font-weight: 600; line-height: 26px; color: var(--text-main);
   }
   body.is-narrow .np-task .np-where {
-    display: block; margin-top: 2px;
-    font-size: 13px; font-weight: 400; line-height: 18px; color: var(--grey-600);
+    display: block; margin-top: 5px;
+    font-size: 13px; font-weight: 400; line-height: 18px;
+    letter-spacing: 0; text-transform: none; color: var(--grey-600);
   }
-  body.is-narrow .note-pop .np-day { margin-bottom: 6px; color: var(--grey-600); }
+  body.is-narrow .np-task .np-where + .np-where {
+    margin-top: 1px; font-size: 12px; line-height: 17px; color: var(--grey-500);
+  }
   /* ─── Reading the sheet ─────────────────────────────────────────
      Everything in it was the same size and the same grey, so the eye
      had nothing to land on. Three sizes now carry it: the task it is
      about, the three things it holds, and the values. The figure the
      shifts add up to is the answer the sheet exists for, so it is the
      one number drawn as a number. */
-  body.is-narrow .np-task { font-size: 17px; line-height: 23px; margin-bottom: 18px; }
   body.is-narrow .np-sec,
   body.is-narrow .np-fld { margin-bottom: 18px; }
   body.is-narrow .np-head,
@@ -867,6 +882,64 @@
     box-shadow: 0 -10px 44px rgba(16, 24, 40, 0.3), 0 0 0 100vmax rgba(16, 24, 40, 0.38);
   }
   body.is-narrow .add-menu button { height: 48px; font-size: 15px; gap: 10px; }
+
+  /* ─── The other two panels ───────────────────────────────
+     Where a new row goes, and what it is. On a desktop both hang off
+     the Add button in the header — and the narrow layout does not draw
+     that header, so a panel hung off it was being placed against a
+     button that is not on screen: top left corner, under the notch,
+     half of it off the glass. There is nothing to hang them off here
+     and no room beside anything anyway, so they arrive where every
+     other panel on this screen arrives. */
+  body.is-narrow .cell-pop.where-pop,
+  body.is-narrow .cell-pop.task-pop {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    width: auto; max-width: none; max-height: 86%; overflow-y: auto;
+    padding: 22px 16px 24px;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -10px 44px rgba(16, 24, 40, 0.3), 0 0 0 100vmax rgba(16, 24, 40, 0.38);
+  }
+  /* A sheet is dragged up on a phone, so it says so, even where this
+     one cannot be dragged. Without it the panel reads as a card that
+     happens to be sitting on the bottom edge. */
+  body.is-narrow .cell-pop.note-pop { padding-top: 22px; }
+  body.is-narrow .cell-pop.note-pop::before,
+  body.is-narrow .cell-pop.where-pop::before,
+  body.is-narrow .cell-pop.task-pop::before {
+    content: ''; position: absolute; top: 8px; left: 50%;
+    width: 36px; height: 4px; margin-left: -18px;
+    border-radius: 2px; background: var(--grey-300);
+  }
+  /* The panels carry no title on a desktop because the button that
+     opened them is still on screen saying what they are. Here it is
+     not. */
+  .pop-title { display: none; }
+  body.is-narrow .pop-title {
+    display: block; margin: 0 0 16px;
+    font-size: 18px; font-weight: 600; line-height: 24px; color: var(--text-main);
+  }
+  body.is-narrow .where-pop select, body.is-narrow .task-pop select { height: 44px; font-size: 15px; }
+  body.is-narrow .where-pop .fld, body.is-narrow .task-pop .fld { margin-bottom: 14px; }
+  body.is-narrow .where-pop .tp-foot, body.is-narrow .task-pop .tp-foot { margin-top: 18px; }
+  body.is-narrow .where-pop .tp-foot .btn-ghost,
+  body.is-narrow .where-pop .tp-foot .btn-primary,
+  body.is-narrow .task-pop .tp-foot .btn-ghost,
+  body.is-narrow .task-pop .tp-foot .btn-primary { height: 44px; flex: 1 1 0; justify-content: center; }
+  /* The picker is a table as wide as the page allows. "As wide as the
+     page allows" was measured against the window, which on a phone
+     preview is the desk behind it. */
+  body.iter-first.is-narrow .cell-pop.task-pop { width: auto; max-width: none; padding: 22px 12px 20px; }
+  /* No room to the side for a scrollbar's worth of table either, so the
+     columns stop insisting on 128px each and the whole thing fits. */
+  body.is-narrow .tp-table { font-size: 13px; }
+  body.is-narrow .tp-row, body.is-narrow .tp-head { grid-template-columns: 1fr !important; gap: 2px; }
+  body.is-narrow .tp-head { display: none; }
+  body.is-narrow .tp-row {
+    padding: 12px 10px; text-align: left;
+    border-radius: 0; border-bottom: 1px solid var(--grey-200);
+  }
+  body.is-narrow .tp-row:last-child { border-bottom: none; }
+  body.is-narrow .tp-row .tp-main { font-weight: 600; }
 
   /* ─── Two ways to read a week ───────────────────────────────────
      By day is how it is filled in: one site, one supervisor, the
@@ -1271,6 +1344,10 @@
      the page behind it moved the page and left the dialog where it was,
      which read as the dialog refusing to scroll. */
   body:has(.modal-backdrop.open) { overflow: hidden; }
+  /* The open-questions marker is a prototype device, and on a phone
+     it is parked in the one corner every sheet puts its Done button
+     in. It stands down while anything is open over the screen. */
+  body.is-narrow:has(.modal-backdrop.open, .cell-pop.open, .add-menu.open) .q-fab { display: none; }
 
   /* ─── Add task ─────────────────────────────────────────────────── */
   .modal.add-modal { max-width: 820px; width: 100%; height: min(660px, 88vh); }
@@ -2121,9 +2198,9 @@
 
       <div class="m-actions">
         <button class="btn-ghost" type="button" id="m-collapse"></button>
-        <button class="btn-primary" type="button" id="m-add">
+        <button class="btn-primary" type="button" id="m-add" aria-haspopup="true">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          Add timesheet
+          Add task
         </button>
       </div>
       <div class="m-date" id="m-date">
@@ -2501,6 +2578,7 @@
 
 <!-- ── Where a new row goes: the two answers that make a timesheet ── -->
 <div class="cell-pop where-pop" id="where-pop" role="dialog" aria-label="Where this task goes">
+  <div class="pop-title">Add a task</div>
   <div class="fld">
     <label class="fld-label" for="wp-site">Site<span class="req">*</span></label>
     <select id="wp-site"></select>
@@ -2517,6 +2595,7 @@
 
 <!-- ── What the row is: between one and four fields, the site's own ── -->
 <div class="cell-pop task-pop" id="task-pop" role="dialog" aria-label="Name this task">
+  <div class="pop-title">Which task is it?</div>
   <div class="tp-fields" id="tp-fields"></div>
   <div class="tp-foot">
     <button class="btn-ghost" type="button" data-tpclose>Cancel</button>
@@ -4301,8 +4380,22 @@
   /* The same menu the desktop opens, from the same two words. Which
      day it was started from is remembered, so the row lands there. */
   var addFromDay = null;
+  /* ─── Where an added task lands on a phone ──────────────────
+     The desktop week is a grid, so a task with no hours on it is still
+     a row — it is on screen, empty, waiting. The phone week is a list
+     of days, and a task with no hours is on none of them: added from
+     the button in the header it went through three sheets and then
+     disappeared, which reads as nothing having happened at all. So the
+     day is decided when the add starts. The one it was started from if
+     there was one, and otherwise today — or the first day of the week
+     being looked at, when today is not in it. */
+  function landingDay() {
+    var ds = days().map(iso), t = iso(TODAY);
+    return ds.indexOf(t) !== -1 ? t : (ds[0] || t);
+  }
   function openAddWays(dayIso) {
-    addFromDay = dayIso || null;
+    addFromDay = dayIso ||
+      (document.body.classList.contains('is-narrow') ? landingDay() : null);
     if (!isInline()) { openAdd(dayIso, null); return; }
     /* Into the phone, not into the window behind it: a fixed element
        only sits inside the frame when the frame is its parent, because
@@ -4311,8 +4404,13 @@
     if (addMenu.parentNode !== host) host.appendChild(addMenu);
     /* Opened on the next tick, so the click that opened it has finished
        travelling to the document first — where the handler that
-       closes this menu on a click elsewhere is waiting. */
-    setTimeout(function () { addMenu.classList.add('open'); }, 0);
+       closes this menu on a click elsewhere is waiting. A close that
+       arrives before the tick does has to take the tick with it, or
+       the menu opens again behind whatever the close was for. */
+    addMenuTick = setTimeout(function () {
+      addMenuTick = null;
+      addMenu.classList.add('open');
+    }, 0);
   }
   document.getElementById('m-add').addEventListener('click', function (e) {
     e.stopPropagation();
@@ -5149,6 +5247,12 @@
     render();
     /* In, and the week carries on where it left off: the first day of
        the new row, open and waiting. */
+    /* On a phone there is no row to carry on along — the week is a list
+       of days, and the grid this reads from is rendered but never
+       shown. The cell that matters was opened on the day the task was
+       added to, and reopening "the first cell of the row" moved the
+       sheet to Monday a second later, behind the reader. */
+    if (document.body.classList.contains('is-narrow')) return;
     var row = document.querySelector('tr.row-focus');
     if (!row) return;
     ensureVisible(row);
@@ -5634,9 +5738,49 @@
     }
     PARTS[k] = !PARTS[k];
     b.classList.toggle('on', PARTS[k]);
+    /* The whole use of this switch is to flick it with the panel open
+       and watch the panel change. Committing the cell and redrawing the
+       week closed it every time, so the answer arrived after the thing
+       it was an answer to had gone, and seeing the next combination
+       cost two clicks back into a cell. The panel is rebuilt where it
+       stands instead, with nothing committed and nothing lost. */
+    if (liveCell && noteOpen()) {
+      var at = liveCell.lastIndexOf('|');
+      var key = liveCell.slice(0, at), date = liveCell.slice(at + 1);
+      var site = taskMeta[key] && taskMeta[key].site;
+      /* Turning start and finish off hands the figure back to the
+         field, so the field is handed the figure the shifts came to. */
+      if (!PARTS.times) {
+        var hv = Math.round(totalOf(draftShifts) * 1000) / 1000;
+        if (hv > 0) el('np-h').value = fmtHours(hv);
+      }
+      if (PARTS.times && !draftShifts.length) draftShifts = [{ start: '', finish: '', hours: '' }];
+      if (PARTS.alw && !draftAlw.length && allowancesFor(site).length) {
+        draftAlw = [{ name: '', type: '' }];
+      }
+      syncParts(); renderShifts(); renderAlws(site);
+      renderGrid(); renderWeek();
+      var a = cellAt(key, date);
+      if (a) placePop(notePop, a, false);
+      return;
+    }
     if (liveCell) commitHours();
     render();
   });
+
+  /* The dock opening or closing moves what the panel has to stay clear
+     of, and the panel is not told about it by anything else. */
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest || !e.target.closest('.proto-fab')) return;
+    if (!liveCell || !noteOpen()) return;
+    if (document.body.classList.contains('is-narrow')) return;
+    var at = liveCell.lastIndexOf('|');
+    var a = cellAt(liveCell.slice(0, at), liveCell.slice(at + 1));
+    /* On the next tick, because the dock toggles its own class after
+       this, and it stops the click travelling — so this listens on the
+       way down rather than on the way up. */
+    if (a) setTimeout(function () { placePop(notePop, a, false); }, 0);
+  }, true);
 
   el('np-note').addEventListener('input', syncNoteCount);
   el('np-note').addEventListener('keydown', function (e) {
@@ -5907,6 +6051,11 @@
        it — and the hours would never land. */
     if (pop.contains(e.target)) return;
     if (notePop.contains(e.target)) return;
+    /* The dock is the prototype's own furniture, not the screen. A
+       switch flicked there asks a question about what is on screen —
+       so it must not count as having looked away from the cell that is
+       open, which was the whole use of flicking it. */
+    if (e.target.closest && e.target.closest('#proto-dock')) return;
     var cell = e.target.closest('.hr-cell, .hr-view');
     /* In the first iteration the cell is the field, so a click on it is
        a click into a text box and there is nothing to open. */
@@ -6727,15 +6876,46 @@
   }
   function placePop(node, anchor, toRight) {
     node.classList.add('open');
+    /* A phone has no room to the side of anything, and half the things
+       a panel is anchored to here — the Add button, a cell of the grid
+       — are not drawn in the narrow layout at all. Measuring against
+       one of those puts the panel in the top left corner of the glass,
+       under the notch. The stylesheet makes it a sheet off the bottom
+       edge instead; all this has to do is stop placing it, and clear
+       whatever a desktop placement left behind. */
+    if (document.body.classList.contains('is-narrow')) {
+      node.style.top = ''; node.style.left = '';
+      return;
+    }
     var r = anchor.getBoundingClientRect();
     var top = r.bottom + 6, left = toRight ? r.right - node.offsetWidth : r.left;
     if (top + node.offsetHeight > window.innerHeight - 8) top = r.top - node.offsetHeight - 6;
     if (left + node.offsetWidth > window.innerWidth - 8) left = window.innerWidth - node.offsetWidth - 8;
     node.style.top = Math.max(8, top) + 'px';
     node.style.left = Math.max(8, left) + 'px';
+    clearOfDock(node);
   }
+  /* ─── Out from behind the dock ─────────────────────────────
+     The prototype dock opens in the bottom right corner, which is
+     where a panel hung off a cell in the middle of the week lands.
+     The one thing on that dock worth flicking with a panel open is
+     what the panel holds — and it was being flicked behind the dock.
+     So the panel steps out of the way: left of the dock if there is
+     room, above it if there is not. */
+  function clearOfDock(node) {
+    var dock = document.querySelector('#proto-dock.open .proto-panel');
+    if (!dock) return;
+    var d = dock.getBoundingClientRect(), n = node.getBoundingClientRect();
+    if (!(n.right > d.left - 10 && n.left < d.right + 10 &&
+          n.bottom > d.top - 10 && n.top < d.bottom + 10)) return;
+    var toLeft = d.left - 10 - node.offsetWidth;
+    if (toLeft >= 8) { node.style.left = toLeft + 'px'; return; }
+    node.style.top = Math.max(8, d.top - 10 - node.offsetHeight) + 'px';
+  }
+  var addMenuTick = null;
   function closeAddMenu() {
     if (!addMenu) return;
+    if (addMenuTick) { clearTimeout(addMenuTick); addMenuTick = null; }
     addMenu.classList.remove('open');
     el('btn-new-task').setAttribute('aria-expanded', 'false');
   }
@@ -6959,6 +7139,14 @@
     /* The row appears at once, because the person put it there — but
        it is not a place hours can go until the back end says it is. */
     sendRow(k);
+    /* On a phone the new task has nowhere to be until it has an hour
+       on it, so its cell is opened on the day the add was started
+       from — which is the thing it was added for. */
+    if (document.body.classList.contains('is-narrow') && addFromDay) {
+      var landDay = addFromDay;
+      setTimeout(function () { openHours(k, landDay); }, 60);
+      return;
+    }
     var row = document.querySelector('tr.row-focus');
     if (row) ensureVisible(row);
   }
