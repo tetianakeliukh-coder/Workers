@@ -1407,6 +1407,93 @@
   }
   body.is-narrow .add-menu button { height: 48px; font-size: 15px; gap: 10px; }
 
+  /* ─── Two ways to read a week ───────────────────────────────────
+     By day is how it is filled in: one site, one supervisor, the
+     evening it was worked. By task is how it is checked: forty hours
+     spread over a week, and the question is how much went where. The
+     same two the supervisor screen is being cut along, so the product
+     has one vocabulary for this rather than two. */
+  .wk-mode { display: none; }
+  body.is-narrow .wk-mode {
+    display: inline-flex; padding: 3px; margin-bottom: 10px;
+    background: var(--grey-100); border-radius: 9px;
+  }
+  .wk-mode button {
+    height: 30px; padding: 0 14px; border: none; border-radius: 7px;
+    background: none; color: var(--grey-700); cursor: pointer;
+    font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+  }
+  .wk-mode button.on { background: var(--white); color: var(--text-main); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1); }
+
+  /* A group of tasks that share a site and a supervisor. */
+  .tgroup-head {
+    display: flex; align-items: baseline; gap: 8px;
+    margin: 14px 2px 8px; font-size: 12px; font-weight: 500;
+    letter-spacing: 0.3px; text-transform: uppercase; color: var(--grey-600);
+  }
+  .tgroup-head:first-child { margin-top: 0; }
+  .tgroup-head .tg-tot {
+    margin-left: auto; font-size: 13px; letter-spacing: 0;
+    text-transform: none; color: var(--text-main);
+  }
+  /* The heading and its menu are one line; the days are the next.
+     A row, wrapped, rather than three stacked blocks. */
+  .task-card {
+    display: flex; flex-wrap: wrap; align-items: center;
+    background: var(--white); border: 1px solid var(--grey-300);
+    border-radius: 12px; overflow: hidden;
+  }
+  .task-card > .tcard-head { flex: 1 1 auto; min-width: 0; }
+  .task-card > .tcard-menu { flex: 0 0 auto; margin-right: 6px; }
+  .task-card > .tcard-days { flex: 0 0 100%; }
+  .task-card + .task-card { margin-top: 8px; }
+  .tcard-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 6px 12px 14px; background: none; border: none; cursor: pointer;
+    font-family: var(--fs-sans); text-align: left;
+  }
+  .tcard-head .caret {
+    width: 16px; height: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--grey-600); transition: transform var(--t-fast);
+  }
+  .task-card.closed .caret { transform: rotate(-90deg); }
+  .tcard-main { min-width: 0; flex: 1; }
+  .tcard-name { display: block; font-size: 14px; font-weight: 600; line-height: 19px; color: var(--text-main); }
+  .tcard-sub {
+    display: block; font-size: 13px; line-height: 18px; color: var(--grey-600);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /* The number this view exists to show. */
+  .tcard-tot { font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap; }
+  .tcard-menu {
+    width: 32px; height: 32px; flex-shrink: 0; display: inline-flex;
+    align-items: center; justify-content: center; border: none; border-radius: 8px;
+    background: none; color: var(--grey-500); cursor: pointer;
+  }
+  .tcard-menu[disabled] { color: var(--grey-350); cursor: default; }
+  .task-card.closed .tcard-days { display: none; }
+  .tcard-days { padding: 0 10px 10px; }
+  .tday {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 10px; border: none; border-radius: 8px; background: none;
+    font-family: var(--fs-sans); text-align: left; cursor: pointer;
+  }
+  .tday + .tday { border-top: 1px solid var(--grey-200); border-radius: 0; }
+  .tday .td-name { font-size: 14px; color: var(--grey-700); }
+  .tday .td-today { color: var(--primary); font-weight: 500; }
+  .tday .td-marks { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; color: var(--grey-600); }
+  .tday .td-hrs { font-size: 14px; font-weight: 500; color: var(--text-main); white-space: nowrap; }
+  .tday[aria-disabled] { cursor: default; }
+  .tday[aria-disabled] .td-name, .tday[aria-disabled] .td-hrs { color: var(--grey-500); }
+  .tday.c-cap .td-hrs { color: var(--error); }
+  .tday.c-err { box-shadow: inset 0 0 0 1px var(--error); }
+  .tday.live { box-shadow: inset 0 0 0 1px var(--primary); }
+  .tday input.hr-cell { width: 76px; height: 36px; margin: 0; padding: 0 10px; text-align: right; font-size: 16px; }
+  .tcard-add {
+    width: 100%; justify-content: center; margin-top: 2px;
+  }
+
+
   /* ─── Why a day is shut ─────────────────────────────────────────
      On a desktop the padlock answers that on hover. A thumb has
      nothing to hover with, so a closed day has to say it out loud —
@@ -1983,6 +2070,10 @@
 
       <!-- ── Mobile: week strip + a card per day ── -->
       <div class="week-view">
+        <div class="wk-mode" id="wk-mode" role="group" aria-label="How to read the week">
+          <button type="button" data-wkmode="day" class="on">By day</button>
+          <button type="button" data-wkmode="task">By task</button>
+        </div>
         <div class="week-total" id="week-total"></div>
         <div class="day-list" id="day-list"></div>
       </div>
@@ -3574,6 +3665,8 @@
     }
     sum.innerHTML = 'Total <b>' + fmtHours(weekTotal) + ' h</b>';
 
+    if (weekMode === 'task') { renderByTask(); giveCaretIfPhone(); return; }
+
     /* The week in the order the week happens, the same as the columns
        on the desktop. Every day is drawn, the empty ones included: a
        missing Thursday reads as a Thursday nobody worked, which is
@@ -3638,16 +3731,101 @@
       '</div>';
     }).join('');
 
-    /* The field the phone types into lives in a row that is rebuilt on
-       every keystroke, so handing it the caret belongs here — to the
-       drawing — rather than to whichever click happened to start it.
-       Only when nothing else already holds it: re-focusing a field that
-       is being typed into would throw the caret back to the end. */
-    if (liveCell && document.body.classList.contains('is-narrow')) {
-      var f = dayList.querySelector('input.hr-cell');
-      var act = document.activeElement;
-      if (f && (!act || act.tagName !== 'INPUT')) { f.focus(); f.select(); }
-    }
+    giveCaretIfPhone();
+  }
+  /* The field the phone types into lives in a row that is rebuilt on
+     every keystroke, so handing it the caret belongs to the drawing
+     rather than to whichever tap happened to start it. Only when
+     nothing else already holds it: re-focusing a field being typed
+     into would throw the caret back to the end. */
+  function giveCaretIfPhone() {
+    if (!liveCell || !document.body.classList.contains('is-narrow')) return;
+    var f = dayList.querySelector('input.hr-cell');
+    var act = document.activeElement;
+    if (f && (!act || act.tagName !== 'INPUT')) { f.focus(); f.select(); }
+  }
+
+  /* This release keeps nothing in a cell but its figure, so the row
+     is the field; the next one opens a sheet instead. And only the
+     next one has anything to hang a mark on. */
+  var MOBILE_FIELD_IN_ROW = true, HAS_CELL_MARKS = false;
+
+  /* ─── The week, read by task ────────────────────────────────────
+     The day view is how a week is filled in. This is how it is
+     checked: what each task came to, grouped by the site and the
+     supervisor it was worked for. It is also the only honest place to
+     remove a task from, because removing takes it off the whole week
+     and a day row cannot say that.
+
+     Cards are closed to start with. The figure in the heading is what
+     this view is for, and seven day rows under every one of them would
+     bury it. */
+  var taskClosed = Object.create(null);
+  function renderByTask() {
+    var ds = days();
+    var tree = weekTree();
+    var html = '';
+    tree.forEach(function (site) {
+      site.sups.forEach(function (sup) {
+        var gTot = 0;
+        sup.tasks.forEach(function (t) {
+          ds.forEach(function (d) { gTot += hoursFor(t.key, iso(d)); });
+        });
+        html += '<div class="tgroup-head"><span>' + Shell.esc(site.name) + ' · ' +
+          Shell.esc(sup.name) + '</span><span class="tg-tot">' + fmtHours(gTot) + ' h</span></div>';
+        sup.tasks.forEach(function (t) {
+          var m = taskMeta[t.key];
+          var tot = ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0);
+          var shutRow = rowLocked(t.key);
+          var closed = taskClosed[t.key] !== false;
+          var daysHtml = ds.map(function (d) {
+            var k = iso(d), dk = t.key + '|' + k;
+            var v = hoursFor(t.key, k), lock = cellLocked(t.key, k);
+            var live = liveCell === dk, today = k === iso(TODAY);
+            var cls = 'tday' + (live ? ' live' : '') +
+              (cellOver(t.key, k, v) ? ' c-cap' : cellErr[dk] ? ' c-err' : '');
+            var right = live && MOBILE_FIELD_IN_ROW
+              ? '<input class="hr-cell" type="text" inputmode="decimal" autocomplete="off" ' +
+                'placeholder="&ndash;" data-key="' + Shell.esc(t.key) + '" data-date="' + k + '" ' +
+                'value="' + (v > 0 ? fmtHours(v) : '') + '" />'
+              : '<span class="td-hrs">' + (v > 0 ? fmtHours(v) + ' h' : '—') + '</span>';
+            var tag = (live && MOBILE_FIELD_IN_ROW) ? 'div' : 'button';
+            return '<' + tag + ' class="' + cls + '"' + (tag === 'button' ? ' type="button"' : '') +
+              ' data-mrow="' + Shell.esc(t.key) + '" data-date="' + k + '"' +
+              (lock ? ' aria-disabled="true"' : '') + '>' +
+              '<span class="td-name' + (today ? ' td-today' : '') + '">' +
+                DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
+              '<span class="td-marks">' +
+                (HAS_CELL_MARKS && noteOf(t.key, k) ? ICO_CMT : '') +
+                (HAS_CELL_MARKS && (cellOf(t.key, k).a || []).length ? ALW_MARK : '') +
+                (lock ? ICO_LOCK : '') +
+              '</span>' + right +
+            '</' + tag + '>';
+          }).join('');
+
+          html += '<div class="task-card' + (closed ? ' closed' : '') + '">' +
+            '<button class="tcard-head" type="button" data-taskhead="' + Shell.esc(t.key) + '">' +
+              '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+              '<span class="tcard-main">' +
+                '<span class="tcard-name">' + Shell.esc(taskTitle(m)) + '</span>' +
+                (taskRest(m) ? '<span class="tcard-sub">' + Shell.esc(taskRest(m)) + '</span>' : '') +
+              '</span>' +
+              '<span class="tcard-tot">' + fmtHours(tot) + ' h</span>' +
+            '</button>' +
+            '<button class="tcard-menu" type="button" data-taskmenu="' + Shell.esc(t.key) + '"' +
+              (shutRow ? ' disabled' : '') + ' aria-label="What else this task offers">' +
+              '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
+            '</button>' +
+            '<div class="tcard-days">' + daysHtml + '</div>' +
+          '</div>';
+        });
+      });
+    });
+    if (!html) html = '<div class="day-empty">Nothing booked this week.</div>';
+    html += '<button class="btn-ghost day-add tcard-add" type="button" data-card-add="">' +
+      '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+      'Add task</button>';
+    dayList.innerHTML = html;
   }
 
   /* ─── Date filter ─────────────────────────────────────────────────
@@ -3830,7 +4008,10 @@
   }
   function syncMobileActions() {
     var collapse = document.getElementById('m-collapse');
-    var anyOpen = shownDayKeys().some(function (k) { return dayClosed[k] !== true; });
+    var anyOpen = weekMode === 'task'
+      ? [].slice.call(dayList.querySelectorAll('[data-taskhead]'))
+          .some(function (b) { return taskClosed[b.getAttribute('data-taskhead')] === false; })
+      : shownDayKeys().some(function (k) { return dayClosed[k] !== true; });
     collapse.innerHTML = anyOpen ? ICO_COLLAPSE + 'Collapse all' : ICO_EXPAND + 'Expand all';
     document.querySelector('.m-actions').style.gridTemplateColumns = '1fr 1fr';
   }
@@ -3862,10 +4043,60 @@
   document.getElementById('m-prev').addEventListener('click', function () { stepWeek(-1); });
   document.getElementById('m-next').addEventListener('click', function () { stepWeek(1); });
 
+
+  /* Which of the two is on screen, remembered for the visit — the
+     reader is one kind of worker or the other, and asking them to say
+     so again every time they come back is asking them to do the
+     product's filing. */
+  var weekMode = 'day';
+  try { weekMode = sessionStorage.getItem('opms-mytime-weekmode') || 'day'; } catch (err) {}
+  var wkMode = document.getElementById('wk-mode');
+  function syncWeekMode() {
+    wkMode.querySelectorAll('[data-wkmode]').forEach(function (b) {
+      b.classList.toggle('on', b.getAttribute('data-wkmode') === weekMode);
+    });
+  }
+  wkMode.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-wkmode]');
+    if (!b) return;
+    var want = b.getAttribute('data-wkmode');
+    if (want === weekMode) return;
+    if (liveCell) commitHours();
+    weekMode = want;
+    try { sessionStorage.setItem('opms-mytime-weekmode', weekMode); } catch (err) {}
+    syncWeekMode();
+    renderWeek();
+  });
+  syncWeekMode();
+
+  /* Opening a task card, and the one thing the card offers. */
+  dayList.addEventListener('click', function (e) {
+    var th = e.target.closest('[data-taskhead]');
+    if (th) {
+      var tk = th.getAttribute('data-taskhead');
+      taskClosed[tk] = taskClosed[tk] === false;
+      renderWeek();
+      return;
+    }
+    var tm = e.target.closest('[data-taskmenu]');
+    if (tm) {
+      e.stopPropagation();
+      askRemoveRow(tm.getAttribute('data-taskmenu'));
+    }
+  });
+
   document.getElementById('m-collapse').addEventListener('click', function () {
-    var keys = shownDayKeys();
-    var anyOpen = keys.some(function (k) { return dayClosed[k] !== true; });
-    keys.forEach(function (k) { dayClosed[k] = anyOpen; });
+    /* Whatever the week is currently broken into is what folds. */
+    if (weekMode === 'task') {
+      var tks = [].slice.call(dayList.querySelectorAll('[data-taskhead]'))
+        .map(function (b) { return b.getAttribute('data-taskhead'); });
+      var openNow = tks.some(function (k) { return taskClosed[k] === false; });
+      tks.forEach(function (k) { taskClosed[k] = openNow ? true : false; });
+    } else {
+      var keys = shownDayKeys();
+      var anyOpen = keys.some(function (k) { return dayClosed[k] !== true; });
+      keys.forEach(function (k) { dayClosed[k] = anyOpen; });
+    }
     renderWeek();
     syncMobileActions();
   });
