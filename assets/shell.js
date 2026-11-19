@@ -134,7 +134,48 @@
      the window — the prototype's viewport switcher uses this. */
   var viewportMode = 'auto';
   var syncResponsive = function () {};
-  function setViewport(mode) { viewportMode = mode; syncResponsive(); }
+  /* ─── The phone ───────────────────────────────────────────────────
+     Narrowing the layout is not the same as showing it on a phone: on a
+     wide monitor it just makes a very tall, very wide phone screen. So
+     Mobile puts the whole app inside a device frame and leaves only the
+     prototype dock outside it, where the hand holding the phone is.
+
+     Everything moves rather than being cloned, so listeners, state and
+     open panels survive the switch. */
+  function deviceFrame(on) {
+    var frame = document.getElementById('device-frame');
+    if (on) {
+      if (!frame) {
+        frame = document.createElement('div');
+        frame.id = 'device-frame';
+        document.body.appendChild(frame);
+      }
+      [].slice.call(document.body.children).forEach(function (n) {
+        if (n === frame || n.id === 'proto-dock' || n.tagName === 'SCRIPT') return;
+        frame.appendChild(n);
+      });
+      fitFrame();
+      window.addEventListener('resize', fitFrame);
+    } else if (frame) {
+      window.removeEventListener('resize', fitFrame);
+      [].slice.call(frame.children).forEach(function (n) { document.body.appendChild(n); });
+      frame.parentNode.removeChild(frame);
+    }
+  }
+  /* A 844px phone does not fit a laptop with a browser chrome on it, so
+     it is scaled down rather than cropped. */
+  function fitFrame() {
+    var frame = document.getElementById('device-frame');
+    if (!frame) return;
+    var s = Math.min(1, (window.innerHeight - 56) / 844, (window.innerWidth - 56) / 390);
+    frame.style.transform = 'translate(-50%, -50%) scale(' + (Math.round(s * 1000) / 1000) + ')';
+  }
+
+  function setViewport(mode) {
+    viewportMode = mode;
+    syncResponsive();
+    deviceFrame(mode === 'mobile');
+  }
 
   function initResponsive(host) {
     var bar = document.createElement('header');

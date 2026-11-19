@@ -1,0 +1,777 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   OPMS — Shared app shell
+   Renders the sidebar into <div id="shell-sidebar"> and marks the active
+   module from <body data-module="...">. Also provides the small behaviours
+   every module screen needs: dropdowns, checkboxes, search highlight,
+   snackbar.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+
+  /* ─── Icons ─────────────────────────────────────────────────────────── */
+  var S = 'stroke="currentColor" stroke-width="1.3"';
+  var ICONS = {
+    search:     '<circle cx="7" cy="7" r="4.5" ' + S + '/><path d="M10.5 10.5l3 3" ' + S + ' stroke-linecap="round"/>',
+    home:       '<path d="M1.5 7.6 8 2l6.5 5.6" ' + S + ' stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6.7V14h3.6v-3.6h2.8V14H13V6.7" ' + S + ' stroke-linecap="round" stroke-linejoin="round"/>',
+    documents:  '<path d="M3.5 2h6L13 5.5V14h-9.5V2z" ' + S + ' stroke-linejoin="round"/><path d="M9.5 2v3.5H13" ' + S + ' stroke-linejoin="round"/><path d="M5.5 8.5h5M5.5 11h5" ' + S + ' stroke-linecap="round"/>',
+    workers:    '<circle cx="8" cy="5.5" r="2.5" ' + S + '/><path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" ' + S + ' stroke-linecap="round"/>',
+    vacancies:  '<rect x="2" y="3" width="12" height="10" rx="1.5" ' + S + '/><path d="M2 7h12" ' + S + '/><path d="M6.5 3v10" ' + S + '/>',
+    rostering:  '<rect x="2" y="2" width="12" height="12" rx="1.5" ' + S + '/><path d="M5 2v2M11 2v2" ' + S + ' stroke-linecap="round"/><path d="M2 6h12" ' + S + '/><path d="M6 6v8M10 6v8" ' + S + '/><path d="M2 10h12" ' + S + '/>',
+    travel:     '<path d="M13 3.5 10 8h2L8.5 14 4 8.5H6L3 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    timesheets: '<circle cx="8" cy="8.5" r="5.5" ' + S + '/><path d="M8 5.5v3.3l2.2 2" ' + S + ' stroke-linecap="round" stroke-linejoin="round"/>',
+    mytime:     '<circle cx="6.5" cy="5" r="2.5" ' + S + '/><path d="M2 13.2c0-2.2 2-4 4.5-4" ' + S + ' stroke-linecap="round"/>' +
+                '<circle cx="11" cy="10.5" r="3.8" ' + S + '/><path d="M11 8.8v1.9l1.3.9" ' + S + ' stroke-linecap="round" stroke-linejoin="round"/>',
+    leave:      '<rect x="2" y="3" width="12" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M2 6.5h12M5.5 1.8v2.4M10.5 1.8v2.4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M6 10.3l1.4 1.4L10.4 8.7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    reports:    '<rect x="1.5" y="8.5" width="3" height="5.5" rx="0.6" stroke="currentColor" stroke-width="1.2"/><rect x="6" y="6" width="3" height="8" rx="0.6" stroke="currentColor" stroke-width="1.2"/><rect x="10.5" y="2.5" width="3" height="11.5" rx="0.6" stroke="currentColor" stroke-width="1.2"/>',
+    orgdocs:    '<path d="M2 5.5c0-.8.7-1.5 1.5-1.5H7l1.5 2H13c.8 0 1.5.7 1.5 1.5V13c0 .8-.7 1.5-1.5 1.5H3.5C2.7 14.5 2 13.8 2 13V5.5z" ' + S + '/>',
+    notifs:     '<path d="M8 2a4.5 4.5 0 0 1 4.5 4.5V9l1.5 2H2l1.5-2V6.5A4.5 4.5 0 0 1 8 2z" ' + S + ' stroke-linejoin="round"/><path d="M6.5 11c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5" ' + S + ' stroke-linecap="round"/>'
+  };
+
+  function icon(name, cls) {
+    return '<svg class="' + (cls || 'nav-icon') + '" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+  }
+
+  /* ─── Navigation model ──────────────────────────────────────────────────
+     `href` present  → screen exists, link is live.
+     `href` absent   → module not designed yet, rendered dimmed + inert.     */
+  var NAV = [
+    { id: 'search',     label: 'Search',           icon: 'search',     action: 'global-search' },
+    { id: 'home',       label: 'Home',             icon: 'home' },
+    { id: 'documents',  label: 'Documents',        icon: 'documents' },
+    /* The Workers screen is index.html inside workers/. From a page in the
+       outer folder it is one level down; from a page inside workers/ (and on
+       the Vercel site, whose root is workers/) it sits right beside it. */
+    { id: 'workers',    label: 'Workers',          icon: 'workers',
+      href: (/\/workers\/[^\/]*$/.test(location.pathname) || /vercel\.app$/.test(location.hostname)) ? 'index.html' : 'workers/index.html' },
+    { id: 'vacancies',  label: 'Manage Vacancies', icon: 'vacancies',  r4: true },
+    { id: 'rostering',  label: 'Rostering',        icon: 'rostering' },
+    { id: 'travel',     label: 'Travel',           icon: 'travel',     r4: true },
+    /* Supervisor Timesheets opens the flat, approve-by-entry screen; My
+       Timesheets beside it stays the current one. The older grouped
+       supervisor screen (timesheets.html) is still there by its address. */
+    { id: 'timesheets', label: 'Supervisor Timesheets',  icon: 'timesheets', r4: true, href: 'timesheets-flat-entry.html', only: 'current' },
+    { id: 'mytime',     label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'my-timesheets.html', only: 'current' },
+    { id: 'tsflat',   label: 'Supervisor Timesheets', icon: 'timesheets', r4: true, href: 'timesheets-flat.html', only: 'flat' },
+    { id: 'mytsflat', label: 'My Timesheets',    icon: 'mytime',     r4: true, href: 'timesheets-flat.html#mine', only: 'flat' },
+    { id: 'myleave',    label: 'My Leave',         icon: 'leave',      r4: true, href: 'my-leave.html' },
+    { id: 'leave',      label: 'Leave Requests',   icon: 'leave',      r4: true, href: 'leave-requests.html' },
+    { id: 'reports',    label: 'Reports',          icon: 'reports',    r4: true }
+  ];
+
+  var FOOTER_NAV = [
+    { id: 'orgdocs', label: 'Org Documents', icon: 'orgdocs', r4: true },
+    { id: 'notifs',  label: 'Notifications', icon: 'notifs',  r4: true, badge: true }
+  ];
+
+  var ACCOUNT = { initials: 'OR', name: 'Rhye, Olivia', email: 'olivia@opms.com' };
+
+  /* ─── Structures ─────────────────────────────────────────────────────
+     Two ways the same timesheet screens could be organised, kept side by
+     side so they can be compared rather than argued about. "current" is
+     what exists: a screen each for the supervisor and the worker.
+     "flat" is the one the client is heading towards: a single Timesheets
+     screen, a tab each, one flat table underneath, and grouping chosen
+     per view. The switch is a prototype device, not a product control. */
+  var STRUCTURES = [
+    { k: 'current', label: 'Current', home: 'timesheets-flat-entry.html' },
+    { k: 'flat',    label: 'Flat',    home: 'timesheets-flat.html' }
+  ];
+  function structure() {
+    try { return localStorage.getItem('opms-structure') === 'flat' ? 'flat' : 'current'; }
+    catch (e) { return 'current'; }
+  }
+  function setStructure(k) {
+    try { localStorage.setItem('opms-structure', k); } catch (e) {}
+  }
+
+  var LOGO =
+    '<svg width="87" height="19" viewBox="0 0 87 19" fill="none" aria-label="OPMS">' +
+      '<rect x="0" y="0" width="19" height="19" rx="3.5" fill="#0033ff"/>' +
+      '<path d="M5 9.5C5 7.015 7.015 5 9.5 5S14 7.015 14 9.5 11.985 14 9.5 14 5 11.985 5 9.5z" stroke="white" stroke-width="1.6" fill="none"/>' +
+      '<circle cx="9.5" cy="9.5" r="2" fill="white"/>' +
+      '<text x="25" y="14.5" fill="#0033ff" font-family="system-ui,\'Segoe UI\',sans-serif" font-weight="700" font-size="13.5" letter-spacing="0.8">pms</text>' +
+    '</svg>';
+
+  var TOGGLE_ICON =
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+      '<path d="M9.5 4L5.5 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>';
+
+  /* ─── Sidebar collapse ──────────────────────────────────────────────────
+     Remembered per browser so the choice survives navigating between
+     modules — every screen renders its own copy of the sidebar.          */
+  var SIDEBAR_KEY = 'opms-sidebar-collapsed';
+  function readCollapsed() {
+    try { return localStorage.getItem(SIDEBAR_KEY) === '1'; } catch (e) { return false; }
+  }
+  function writeCollapsed(v) {
+    try { localStorage.setItem(SIDEBAR_KEY, v ? '1' : '0'); } catch (e) {}
+  }
+
+  /* Collapsed items are icons only, so the label moves into a tooltip. */
+  function syncSidebarTitles(host) {
+    var collapsed = host.classList.contains('collapsed');
+    host.querySelectorAll('.nav-item').forEach(function (el) {
+      var label = el.querySelector('.nav-label');
+      if (!label) return;
+      if (collapsed) el.setAttribute('title', label.textContent);
+      else if (el.classList.contains('is-todo')) el.setAttribute('title', 'Not designed yet');
+      else el.removeAttribute('title');
+    });
+    var btn = host.querySelector('.sidebar-toggle');
+    if (!btn) return;
+    var text = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    btn.setAttribute('title', text);
+    btn.setAttribute('aria-label', text);
+    btn.setAttribute('aria-expanded', String(!collapsed));
+  }
+
+  /* ─── Responsive shell ──────────────────────────────────────────────
+     > 900px: the user's own collapsed/expanded choice.
+     641–900px: forced to the icon rail, choice remembered for later.
+     <= 640px: off-canvas behind a top bar. */
+  /* Screens can force the shell into phone or desktop chrome regardless of
+     the window — the prototype's viewport switcher uses this. */
+  var viewportMode = 'auto';
+  var syncResponsive = function () {};
+  /* ─── The phone ───────────────────────────────────────────────────
+     Narrowing the layout is not the same as showing it on a phone: on a
+     wide monitor it just makes a very tall, very wide phone screen. So
+     Mobile puts the whole app inside a device frame and leaves only the
+     prototype dock outside it, where the hand holding the phone is.
+
+     Everything moves rather than being cloned, so listeners, state and
+     open panels survive the switch. */
+  function deviceFrame(on) {
+    var frame = document.getElementById('device-frame');
+    if (on) {
+      if (!frame) {
+        frame = document.createElement('div');
+        frame.id = 'device-frame';
+        document.body.appendChild(frame);
+      }
+      [].slice.call(document.body.children).forEach(function (n) {
+        if (n === frame || n.id === 'proto-dock' || n.tagName === 'SCRIPT') return;
+        frame.appendChild(n);
+      });
+      fitFrame();
+      window.addEventListener('resize', fitFrame);
+    } else if (frame) {
+      window.removeEventListener('resize', fitFrame);
+      [].slice.call(frame.children).forEach(function (n) { document.body.appendChild(n); });
+      frame.parentNode.removeChild(frame);
+    }
+  }
+  /* A 844px phone does not fit a laptop with a browser chrome on it, so
+     it is scaled down rather than cropped. */
+  function fitFrame() {
+    var frame = document.getElementById('device-frame');
+    if (!frame) return;
+    var s = Math.min(1, (window.innerHeight - 56) / 844, (window.innerWidth - 56) / 390);
+    frame.style.transform = 'translate(-50%, -50%) scale(' + (Math.round(s * 1000) / 1000) + ')';
+  }
+
+  function setViewport(mode) {
+    viewportMode = mode;
+    syncResponsive();
+    deviceFrame(mode === 'mobile');
+  }
+
+  function initResponsive(host) {
+    var bar = document.createElement('header');
+    bar.className = 'shell-topbar';
+    bar.innerHTML =
+      '<button class="topbar-menu" type="button" aria-label="Open menu" aria-expanded="false">' +
+        '<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+      '</button>' +
+      '<span class="logo-mark">' + LOGO + '</span>';
+    var scrim = document.createElement('div');
+    scrim.className = 'shell-scrim';
+    document.body.appendChild(bar);
+    document.body.appendChild(scrim);
+
+    function closeDrawer() {
+      host.classList.remove('open');
+      scrim.classList.remove('open');
+      bar.querySelector('.topbar-menu').setAttribute('aria-expanded', 'false');
+    }
+    bar.querySelector('.topbar-menu').addEventListener('click', function () {
+      var open = host.classList.toggle('open');
+      scrim.classList.toggle('open', open);
+      this.setAttribute('aria-expanded', String(open));
+    });
+    scrim.addEventListener('click', closeDrawer);
+    host.addEventListener('click', function (e) {
+      if (e.target.closest('a[href]')) closeDrawer();
+    });
+
+    function sync() {
+      var w = window.innerWidth;
+      var mobile = viewportMode === 'mobile' ? true
+                 : viewportMode === 'desktop' ? false
+                 : w <= 640;
+      document.body.classList.toggle('shell-mobile', mobile);
+      if (!mobile) closeDrawer();
+      if (viewportMode === 'desktop') {
+        host.classList.toggle('collapsed', readCollapsed());
+      } else if (w <= 900 || mobile) {
+        host.classList.toggle('collapsed', !mobile);
+      } else {
+        host.classList.toggle('collapsed', readCollapsed());
+      }
+      syncSidebarTitles(host);
+    }
+    syncResponsive = sync;
+    window.addEventListener('resize', sync);
+    sync();
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { document.body.classList.add('shell-animate'); });
+    });
+  }
+
+  function initSidebarToggle(host) {
+    var btn = host.querySelector('.sidebar-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      writeCollapsed(host.classList.toggle('collapsed'));
+      syncSidebarTitles(host);
+      /* Screens size things off the viewport (frozen-column edges, table
+         scroll state); the width change needs the same nudge a resize gives,
+         once now and once after the transition settles. */
+      window.dispatchEvent(new Event('resize'));
+      setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 200);
+    });
+    syncSidebarTitles(host);
+  }
+
+  function navItem(item, current) {
+    var cls = 'nav-item';
+    if (item.r4) cls += ' r4';
+    if (item.id === current) cls += ' active';
+
+    var body;
+    if (item.badge) {
+      body = '<div class="notif-wrap">' + icon(item.icon, '') + '<div class="notif-dot"></div></div>';
+    } else {
+      body = icon(item.icon);
+    }
+    body += '<span class="nav-label">' + item.label + '</span>';
+
+    if (item.action) {
+      return '<li><button class="' + cls + '" data-action="' + item.action + '" aria-label="' + item.label + '">' + body + '</button></li>';
+    }
+    if (item.href) {
+      return '<li><a class="' + cls + '" href="' + item.href + '">' + body + '</a></li>';
+    }
+    // No screen yet — inert and dimmed rather than a dead link.
+    return '<li><span class="' + cls + ' is-todo" title="Not designed yet">' + body + '</span></li>';
+  }
+
+  function renderSidebar(current) {
+    var host = document.getElementById('shell-sidebar');
+    if (!host) return;
+
+    host.className = 'sidebar' + (readCollapsed() ? ' collapsed' : '');
+    host.innerHTML =
+      '<div class="sidebar-top">' +
+        '<div class="logo-area">' +
+          '<span class="logo-mark">' + LOGO + '</span>' +
+          '<button class="sidebar-toggle" type="button">' + TOGGLE_ICON + '</button>' +
+        '</div>' +
+        '<nav><ul class="nav-list">' + NAV.filter(function (i) {
+          return !i.only || i.only === structure();
+        }).map(function (i) { return navItem(i, current); }).join('') + '</ul></nav>' +
+      '</div>' +
+      '<div class="sidebar-footer">' +
+        '<ul class="footer-nav">' + FOOTER_NAV.map(function (i) { return navItem(i, current); }).join('') + '</ul>' +
+        '<div class="account-block"><div class="account-row">' +
+          '<div class="av-wrap"><div class="av">' + ACCOUNT.initials + '</div><div class="av-online"></div></div>' +
+          '<div class="ac-info">' +
+            '<div class="ac-name-row"><span class="ac-name">' + ACCOUNT.name + '</span>' +
+              '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" style="flex-shrink:0"><path d="M3 4.5l3 3 3-3" stroke="#757575" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+            '</div>' +
+            '<div class="ac-email">' + ACCOUNT.email + '</div>' +
+          '</div>' +
+        '</div></div>' +
+      '</div>';
+
+    initSidebarToggle(host);
+    initResponsive(host);
+  }
+
+  /* ─── Shared behaviours ─────────────────────────────────────────────── */
+
+  // Any .dd-wrap with a .dd-trigger toggles its .dd-panel; one open at a time.
+  function initDropdowns(root) {
+    (root || document).querySelectorAll('.dd-wrap').forEach(function (wrap) {
+      var trigger = wrap.querySelector('.dd-trigger');
+      var panel = wrap.querySelector('.dd-panel');
+      if (!trigger || !panel) return;
+      trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var wasOpen = panel.classList.contains('open');
+        closeAllDropdowns();
+        if (!wasOpen) { panel.classList.add('open'); trigger.classList.add('open'); }
+      });
+    });
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll('.dd-panel.open').forEach(function (p) { p.classList.remove('open'); });
+    document.querySelectorAll('.dd-trigger.open').forEach(function (t) { t.classList.remove('open'); });
+  }
+
+  document.addEventListener('click', closeAllDropdowns);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeAllDropdowns(); });
+
+  // Escape a string for safe insertion as HTML text.
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  // Wrap every case-insensitive occurrence of `term` in <mark class="hl">.
+  function highlight(text, term) {
+    if (!term) return esc(text);
+    var out = '', lower = String(text).toLowerCase(), t = term.toLowerCase(), i = 0;
+    while (true) {
+      var at = lower.indexOf(t, i);
+      if (at === -1) { out += esc(text.slice(i)); break; }
+      out += esc(text.slice(i, at)) + '<mark class="hl">' + esc(text.slice(at, at + t.length)) + '</mark>';
+      i = at + t.length;
+    }
+    return out;
+  }
+
+  // "Smith, John" and "Smith John" both give "SJ".
+  function initials(name) {
+    return String(name).split(/[,\s]+/).filter(Boolean).slice(0, 2)
+      .map(function (part) { return part.charAt(0).toUpperCase(); }).join('');
+  }
+
+  /* snackbar(msg) auto-dismisses. snackbar(msg, { variant: 'error',
+     persistent: true }) stays until the user dismisses it — a failure the
+     user has to act on shouldn't vanish while they are reading it.
+     { title: '...' } puts a line above the message naming what the
+     message is about. */
+  var snackTimer;
+  function snackbar(msg, opts) {
+    opts = opts || {};
+    var el = document.getElementById('shell-snackbar');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'shell-snackbar';
+      el.innerHTML = '<span class="snackbar-body">' +
+          '<span class="snackbar-title" hidden></span>' +
+          '<span class="snackbar-msg"></span>' +
+        '</span>' +
+        '<button class="snackbar-action" type="button" hidden></button>' +
+        '<button class="snackbar-close" type="button" aria-label="Dismiss">' +
+          '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
+        '</button>';
+      document.body.appendChild(el);
+      el.querySelector('.snackbar-close').addEventListener('click', function () {
+        el.classList.remove('visible');
+      });
+    }
+    el.className = 'snackbar' + (opts.variant ? ' ' + opts.variant : '');
+    var title = el.querySelector('.snackbar-title');
+    title.textContent = opts.title || '';
+    title.hidden = !opts.title;
+    el.querySelector('.snackbar-msg').textContent = msg;
+    /* One way back from something that has already happened. It lives on
+       the message rather than on the page, because by the time it is
+       wanted the thing it undoes is no longer on screen. */
+    var act = el.querySelector('.snackbar-action');
+    act.hidden = !opts.action;
+    act.onclick = null;
+    if (opts.action) {
+      act.textContent = opts.action.label || 'Undo';
+      act.onclick = function () {
+        el.classList.remove('visible');
+        clearTimeout(snackTimer);
+        opts.action.onClick();
+      };
+    }
+    el.querySelector('.snackbar-close').classList.toggle('visible', !!opts.persistent);
+    el.classList.add('visible');
+    clearTimeout(snackTimer);
+    if (!opts.persistent) {
+      /* A message that explains a refusal needs longer on screen than
+         one that confirms something went as expected. */
+      snackTimer = setTimeout(function () { el.classList.remove('visible'); }, opts.ms || 2600);
+    }
+  }
+
+  /* ─── Instant tooltip ────────────────────────────────────────────────
+     Shows data-tip the moment the pointer enters, rather than after the
+     browser's own ~1s delay on title. */
+  var tipEl = null, tipFor = null;
+
+  function hideTip() {
+    if (tipEl) tipEl.classList.remove('on');
+    tipFor = null;
+  }
+
+  function placeTip(target) {
+    var r = target.getBoundingClientRect();
+    var x = r.left, y = r.top - tipEl.offsetHeight - 6;
+    if (y < 4) y = r.bottom + 6;
+    var max = window.innerWidth - tipEl.offsetWidth - 8;
+    if (x > max) x = max;
+    if (x < 8) x = 8;
+    tipEl.style.left = Math.round(x) + 'px';
+    tipEl.style.top = Math.round(y) + 'px';
+  }
+
+  function initTips(host) {
+    host = host || document;
+    if (!tipEl) {
+      tipEl = document.createElement('div');
+      tipEl.className = 'row-tip';
+      document.body.appendChild(tipEl);
+    }
+    host.addEventListener('mouseover', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-tip], [data-tip-html]') : null;
+      if (!t) return;
+      /* A tip carrying several separate facts reads as one run-on
+         sentence when it is one line of text. data-tip-html lets the
+         caller lay them out — headings and values — and the markup is
+         the caller's to escape. data-tip stays plain text. */
+      var rich = t.getAttribute('data-tip-html');
+      if (rich) {
+        tipEl.innerHTML = rich;
+        tipEl.classList.add('rich');
+      } else {
+        if (!t.getAttribute('data-tip')) return;
+        tipEl.textContent = t.getAttribute('data-tip');
+        tipEl.classList.remove('rich');
+      }
+      tipEl.classList.add('on');
+      tipFor = t;
+      placeTip(t);
+    });
+    /* A re-render can take the hovered element away without ever firing
+       mouseout, which would leave the tip stranded on screen. */
+    document.addEventListener('mouseover', function () {
+      if (tipFor && !tipFor.isConnected) hideTip();
+    }, true);
+    document.addEventListener('click', hideTip, true);
+    host.addEventListener('mouseout', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-tip], [data-tip-html]') : null;
+      if (!t) return;
+      if (e.relatedTarget && t.contains(e.relatedTarget)) return;
+      hideTip();
+    });
+    window.addEventListener('scroll', hideTip, true);
+  }
+
+  /* ─── Resizable columns ──────────────────────────────────────────────
+     A grip on the right edge of a header cell drags its <col> wider or
+     narrower. The header must carry data-w="<key>" and the table a
+     <colgroup> whose children line up with the header cells. */
+  function colGrip() {
+    return '<span class="col-rs" aria-hidden="true"></span>';
+  }
+
+  function initColResize(table, opts) {
+    opts = opts || {};
+    /* A single minimum for the table, or one per column when some of them
+       genuinely need more room than others. */
+    function minFor(k) {
+      return typeof opts.min === 'function' ? (opts.min(k) || 60) : (opts.min || 90);
+    }
+
+    table.addEventListener('mousedown', function (e) {
+      var grip = e.target.closest ? e.target.closest('.col-rs') : null;
+      if (!grip) return;
+      var th = grip.closest('th');
+      var group = table.querySelector('colgroup');
+      var col = group && group.children[th.cellIndex];
+      if (!col) return;
+
+      e.preventDefault();
+      var startX = e.pageX, startW = th.getBoundingClientRect().width;
+      var key = th.getAttribute('data-w');
+      var min = minFor(key);
+      document.body.classList.add('col-resizing');
+
+      function move(ev) {
+        var w = Math.max(min, Math.round(startW + (ev.pageX - startX)));
+        col.style.width = w + 'px';
+        if (opts.onResize) opts.onResize(key, w);
+      }
+      function up() {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        document.body.classList.remove('col-resizing');
+        /* Re-rendering on every mousemove is wasteful; tables that compute
+           frozen offsets from live widths catch up once the drag ends. */
+        if (opts.onDone) opts.onDone(key);
+      }
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+
+    /* A drag that starts on the grip must not also sort or collapse. */
+    table.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('.col-rs')) e.stopPropagation();
+    }, true);
+  }
+
+  /* ─── Open questions ─────────────────────────────────────────────────
+     The prototype carries its own list of what is still undecided, so a
+     reviewer can read the questions on the screen they are about, rather
+     than waiting for them to come up on a call. Read-only on purpose —
+     answers come back as comments or in the call, not typed in here. */
+  var QUESTIONS = [
+    {
+      screen: 'My Timesheets',
+      q: 'A worker sees whether a day is locked, not which status locked it \u2014 is that right?',
+      why: 'Draft, Submitted, Revised and Finalised are the supervisor\u2019s words for what they ' +
+           'are doing to a timesheet. The worker is not the one doing it, and on their own week the ' +
+           'only thing any of it changes is whether a day will still take hours. Four marks to tell ' +
+           'apart at 13px, to say one thing the worker can act on.',
+      now: 'A padlock on the day, and the cells under it are read-only, worded as handed in. Which ' +
+           'status shut it is not named anywhere on this screen. The statuses themselves are still ' +
+           'on Supervisor Timesheets, where someone is acting on them.'
+    },
+    {
+      screen: 'Leave Requests',
+      q: 'What happens to the shift when leave is approved?',
+      why: 'The calendar says the person is rostered on every day they are asking off, and then ' +
+           'approving does nothing to the roster. Deputy asks at this point: release the shift so ' +
+           'someone else can pick it up, or approve and leave it flagged. Doing neither means the ' +
+           'roster still says they are coming.',
+      now: 'Approving settles the request and leaves the roster untouched. The clash is stated and ' +
+           'nothing is offered about it.'
+    },
+    {
+      screen: 'Leave Requests',
+      q: 'Should a part-day request say which part of the day?',
+      why: 'Hours are only asked for on a single day, and four hours is as far as it goes \u2014 not ' +
+           'whether it is the morning or the afternoon. For covering a shift that is the whole ' +
+           'question. Adding it means one more field on the agreed set.',
+      now: 'The request carries the number of hours and nothing about when in the day they fall.'
+    },
+    {
+      screen: 'Leave Requests',
+      q: 'Can several requests be approved at once, without opening each one?',
+      why: 'Settling a Monday pile one at a time is most of the job, so the list carries ' +
+           'checkboxes and an Approve and a Reject for whatever is ticked. But an expense claim ' +
+           'cannot be approved until the claim and its attachment have been opened, and the same ' +
+           'rule may well apply here \u2014 the roster calendar that says whether the person is on ' +
+           'shift those days is only in the request itself.',
+      now: 'Bulk approve and reject are live on the Pending tab and ask nothing first. If the ' +
+           'rule applies, the buttons become \u201creviewed only\u201d \u2014 a request stays ticked but ' +
+           'unapprovable until it has been opened once.'
+    },
+    {
+      screen: 'Leave Requests',
+      q: 'Does the approver need to see who else from the crew is off those days?',
+      why: 'Every HR tool shows one \u2014 BambooHR calls it Who\u2019s Out, HiBob and Deputy have the ' +
+           'same thing. On a crew the risk is usually not that this person is rostered, but that ' +
+           'they are the third scaffolder asking for the same week. It has not been asked for, ' +
+           'and it is a second calendar on a dialog that already has one.',
+      now: 'Not shown. The roster in the request answers only what this one worker is on.'
+    },
+    {
+      screen: 'Supervisor Timesheets',
+      q: 'Should allowance lines show in the Period view?',
+      why: 'Period is a day-by-day grid of hours. An allowance is claimed on a line of its own ' +
+           'and carries no hours, so including it adds a row of zeroes across the whole week for ' +
+           'every allowance claimed.',
+      now: 'They are left out. Allowances are read on the Timesheets tab, where the Allowance column lives.'
+    }
+  ];
+
+  var ICO_Q = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+    '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>' +
+    '<path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<circle cx="12" cy="17" r="1" fill="currentColor"/></svg>';
+
+  function renderQuestions() {
+    if (!QUESTIONS.length || document.getElementById('q-fab')) return;
+
+    var fab = document.createElement('button');
+    fab.id = 'q-fab';
+    fab.className = 'q-fab';
+    fab.type = 'button';
+    fab.setAttribute('aria-label', 'Open questions');
+    fab.innerHTML = ICO_Q + '<span class="q-count">' + QUESTIONS.length + '</span>';
+
+    var back = document.createElement('div');
+    back.className = 'modal-backdrop';
+    back.id = 'q-modal';
+    back.setAttribute('role', 'dialog');
+    back.setAttribute('aria-modal', 'true');
+    back.innerHTML =
+      '<div class="modal modal-md q-modal">' +
+        '<div class="modal-header">' +
+          '<div class="modal-heading">' +
+            '<span class="modal-title">Open questions</span>' +
+            '<span class="modal-meta"><span class="meta-item">' + QUESTIONS.length +
+              ' still to decide — the prototype takes a position on each one meanwhile</span></span>' +
+          '</div>' +
+          '<button class="modal-close" type="button" data-close aria-label="Close">' +
+            '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body q-body">' +
+          QUESTIONS.map(function (x, i) {
+            return '<div class="q-item">' +
+              '<div class="q-top"><span class="q-n">' + (i + 1) + '</span>' +
+                '<span class="q-q">' + esc(x.q) + '</span></div>' +
+              '<span class="q-where">' + esc(x.screen) + '</span>' +
+              '<p class="q-why">' + esc(x.why) + '</p>' +
+              '<p class="q-now"><b>Today:</b> ' + esc(x.now) + '</p>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(fab);
+    document.body.appendChild(back);
+
+    fab.addEventListener('click', function () { back.classList.add('open'); });
+    back.addEventListener('click', function (e) {
+      if (e.target === back || e.target.closest('[data-close]')) back.classList.remove('open');
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') back.classList.remove('open');
+    });
+  }
+
+  /* The structure switch itself: moves between the two and lands on the
+     matching screen, since the screens differ between them. */
+  function renderStructureSwitch() {
+    if (document.getElementById('structure-switch')) return;
+    var box = document.createElement('div');
+    box.className = 'vp-switch structure-switch';
+    box.id = 'structure-switch';
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', 'Prototype structure');
+    box.innerHTML = '<span class="sw-label">Structure</span>' +
+      STRUCTURES.map(function (x) {
+        return '<button type="button" data-structure="' + x.k + '"' +
+          (x.k === structure() ? ' class="on"' : '') + '>' + x.label + '</button>';
+      }).join('');
+    document.body.appendChild(box);
+
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-structure]');
+      if (!b) return;
+      var k = b.getAttribute('data-structure');
+      if (k === structure()) return;
+      setStructure(k);
+      var to = STRUCTURES.filter(function (x) { return x.k === k; })[0].home;
+      window.location.href = to;
+    });
+  }
+
+  /* ─── Boot ──────────────────────────────────────────────────────────── */
+  function init() {
+    /* A page belongs to one structure, so opening it directly is enough
+       to switch into that structure — otherwise a pasted link shows the
+       flat screen with the old sidebar beside it. */
+    var mod = document.body.getAttribute('data-module');
+    var owner = NAV.filter(function (i) { return i.id === mod && i.only; })[0];
+    if (owner) setStructure(owner.only);
+
+    renderSidebar(mod);
+    initDropdowns(document);
+    initTips(document);
+    renderQuestions();
+    renderStructureSwitch();
+    initProtoDock();
+  }
+
+  /* ─── The prototype dock ───────────────────────────────────────────
+     Every switcher on a screen is a prototype device, not product, and
+     four of them laid along the bottom edge take a third of it. They are
+     gathered behind one small button and labelled, so the screen under
+     them is the thing on show. */
+  var ICO_SLIDERS = '<svg width="18" height="18" viewBox="0 0 20 20" fill="none">' +
+    '<path d="M3 6h9M15 6h2M3 14h2M8 14h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>' +
+    '<circle cx="13.5" cy="6" r="2" stroke="currentColor" stroke-width="1.6"/>' +
+    '<circle cx="6.5" cy="14" r="2" stroke="currentColor" stroke-width="1.6"/></svg>';
+
+  function initProtoDock() {
+    var items = [].slice.call(document.querySelectorAll('.vp-switch'));
+    if (!items.length || document.getElementById('proto-dock')) return;
+
+    var dock = document.createElement('div');
+    dock.className = 'proto-dock';
+    dock.id = 'proto-dock';
+
+    var panel = document.createElement('div');
+    panel.className = 'proto-panel';
+    items.forEach(function (sw) {
+      var row = document.createElement('div');
+      row.className = 'proto-row';
+      var lab = document.createElement('span');
+      lab.className = 'proto-lab';
+      /* The structure switcher carries its own label inside itself; the
+         rest name themselves to a screen reader. */
+      var own = sw.querySelector('.sw-label');
+      if (own) { lab.textContent = own.textContent.trim(); own.parentNode.removeChild(own); }
+      else lab.textContent = (sw.getAttribute('aria-label') || 'Option').replace(/^Prototype /, '');
+      sw.classList.add('in-dock');
+      row.appendChild(lab);
+      row.appendChild(sw);
+      panel.appendChild(row);
+    });
+
+    var btn = document.createElement('button');
+    btn.className = 'proto-fab';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Prototype options');
+    btn.setAttribute('data-tip', 'Prototype options');
+    btn.innerHTML = ICO_SLIDERS;
+
+    dock.appendChild(panel);
+    dock.appendChild(btn);
+    document.body.appendChild(dock);
+
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      /* A switcher the screen has hidden for this width should not leave
+         an empty row behind it. */
+      [].forEach.call(panel.querySelectorAll('.proto-row'), function (r) {
+        var sw = r.querySelector('.vp-switch');
+        r.hidden = !sw || getComputedStyle(sw).display === 'none';
+      });
+      dock.classList.toggle('open');
+      btn.classList.toggle('on', dock.classList.contains('open'));
+    });
+    panel.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', function () {
+      dock.classList.remove('open');
+      btn.classList.remove('on');
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  window.Shell = {
+    nav: NAV,
+    account: ACCOUNT,
+    icon: icon,
+    esc: esc,
+    highlight: highlight,
+    initials: initials,
+    snackbar: snackbar,
+    initDropdowns: initDropdowns,
+    initTips: initTips,
+    initColResize: initColResize,
+    structure: structure,
+    colGrip: colGrip,
+    setViewport: setViewport,
+    closeAllDropdowns: closeAllDropdowns
+  };
+})();

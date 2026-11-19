@@ -643,7 +643,7 @@
   var APPROVERS = ['Okafor, Grace', 'Halloran, Tom', 'Nair, Priya', 'Webb, Marcus', 'Rhye, Olivia'];
 
   var WORKERS = [
-    { name: 'Sith, John',    colour: '#3b7dd8' },
+    { name: 'Smith, John',    colour: '#3b7dd8' },
     { name: 'Stone, Emma',   colour: '#c4845c' },
     { name: 'Adams, Sophia', colour: '#7b6c9e' },
     { name: 'Brown, Olivia', colour: '#4a9b6f' },
@@ -720,7 +720,7 @@
      is whole days by definition, and someone wanting two half-days
      raises two requests — which is how the client's own payroll works. */
   var REQUESTS = [
-    { id: 1,  who: 'Sith, John',    site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-12-21', to: '2026-12-31', hours: null, approver: 'Okafor, Grace', made: '2026-10-14', why: 'Booked flights to Perth over Christmas.', doc: null, state: 'pending' },
+    { id: 1,  who: 'Smith, John',    site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-12-21', to: '2026-12-31', hours: null, approver: 'Okafor, Grace', made: '2026-10-14', why: 'Booked flights to Perth over Christmas.', doc: null, state: 'pending' },
     { id: 2,  who: 'Stone, Emma',   site: 'MMA VIGILANT ROV',         type: 'Sick Leave',     from: '2026-10-27', to: '2026-10-29', hours: null, approver: 'Nair, Priya',   made: '2026-10-26', why: 'Flu \u2014 certificate attached.', doc: 'Medical Certificate', state: 'pending' },
     { id: 3,  who: 'Adams, Sophia', site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-11-09', to: '2026-11-13', hours: null, approver: 'Halloran, Tom', made: '2026-10-20', why: 'Wedding \u2014 invitation attached.', doc: 'Invitation', state: 'pending' },
     { id: 4,  who: 'Brown, Olivia', site: 'SA BHP OLYMPIC DAM',       type: 'Parental Leave', from: '2027-01-11', to: '2027-04-02', hours: null, approver: 'Webb, Marcus',  made: '2026-10-02', why: 'First child, due early January.', doc: 'Birth Certificate', state: 'pending' },
@@ -728,7 +728,7 @@
     { id: 6,  who: 'Baker, Liam',   site: 'MMA VIGILANT \u2013 360',    type: 'Annual Leave',   from: '2026-11-23', to: '2026-11-27', hours: null, approver: 'Okafor, Grace', made: '2026-10-25', why: '', doc: null, state: 'pending' },
     { id: 7,  who: 'Davis, Noah',   site: 'SA BHP OLYMPIC DAM',       type: 'Unpaid Leave',   from: '2026-10-29', to: '2026-10-30', hours: null, approver: 'Webb, Marcus',  made: '2026-10-26', why: 'Family funeral interstate.', doc: null, state: 'pending' },
     { id: 8,  who: 'Miller, Ava',   site: 'GDR09 Factory Shutdown',   type: 'Sick Leave',     from: '2026-10-26', to: '2026-10-26', hours: 4,    approver: 'Halloran, Tom', made: '2026-10-26', why: 'Migraine \u2014 went home after the crib break.', doc: 'Medical Certificate', state: 'pending' },
-    { id: 9,  who: 'Sith, John',    site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-11-16', to: '2026-11-20', hours: null, approver: 'Okafor, Grace', made: '2026-10-19', why: '', doc: null, state: 'pending' },
+    { id: 9,  who: 'Smith, John',    site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-11-16', to: '2026-11-20', hours: null, approver: 'Okafor, Grace', made: '2026-10-19', why: '', doc: null, state: 'pending' },
     { id: 10, who: 'Stone, Emma',   site: 'MMA VIGILANT ROV',         type: 'Annual Leave',   from: '2027-02-01', to: '2027-02-12', hours: null, approver: 'Nair, Priya',   made: '2026-10-23', why: 'Wedding and honeymoon.', doc: null, state: 'pending' },
 
     /* Two more of Emma's, close enough to the October one to land in the
@@ -745,7 +745,7 @@
     { id: 18, who: 'Baker, Liam',   site: 'MMA VIGILANT \u2013 360',    type: 'Sick Leave',     from: '2026-10-20', to: '2026-10-20', hours: 3,    approver: 'Okafor, Grace', made: '2026-10-20', why: 'Specialist appointment.', doc: null, state: 'approved' },
 
     { id: 15, who: 'Adams, Sophia', site: 'GDR09 Factory Shutdown',   type: 'Annual Leave',   from: '2026-10-05', to: '2026-10-23', hours: null, approver: 'Halloran, Tom', made: '2026-09-15', why: 'Three weeks over the shutdown.', doc: null, state: 'rejected' },
-    { id: 16, who: 'Sith, John',    site: 'GDR09 Factory Shutdown',   type: 'Unpaid Leave',   from: '2026-09-14', to: '2026-09-18', hours: null, approver: 'Okafor, Grace', made: '2026-09-10', why: '', doc: null, state: 'rejected' },
+    { id: 16, who: 'Smith, John',    site: 'GDR09 Factory Shutdown',   type: 'Unpaid Leave',   from: '2026-09-14', to: '2026-09-18', hours: null, approver: 'Okafor, Grace', made: '2026-09-10', why: '', doc: null, state: 'rejected' },
 
     { id: 17, who: 'Stone, Emma',   site: 'MMA VIGILANT ROV',         type: 'Annual Leave',   from: '2026-10-19', to: '2026-10-23', hours: null, approver: 'Nair, Priya',   made: '2026-09-20', why: 'No longer needed.', doc: null, state: 'cancelled' }
   ];
@@ -755,7 +755,7 @@
      per worker rather than a single shift: a project, the shift within
      it, and the pattern of days it runs. */
   var ROSTER = {
-    'Sith, John': [
+    'Smith, John': [
       { project: 'GDR09 Factory Shutdown', work: 'Boilermaker', shift: 'Day Shift', kind: 'day',
         from: '2026-11-30', to: '2027-01-15', pattern: 'weekdays' },
       { project: 'GDR12 Tank Farm Shutdown', work: 'Mechanical Fitter', shift: 'Day Shift', kind: 'day',

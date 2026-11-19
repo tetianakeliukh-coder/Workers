@@ -643,3 +643,34 @@ body.shell-mobile .q-fab { bottom: 20px; right: 20px; }
 .structure-switch button:hover { background: var(--grey-100); }
 .structure-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
 body.shell-mobile .structure-switch { display: none; }
+
+/* ─── The phone, when the dock asks for one ────────────────────────────
+   Picking Mobile used to do nothing but narrow the layout, so a phone
+   screen was drawn across a 27-inch monitor and nobody could tell what
+   it would really look like. Now it is drawn in a phone.
+
+   The frame carries a transform, which is what makes every fixed-
+   position thing inside it — sheets, popovers, the top bar — position
+   against the phone instead of the window. */
+body.force-mobile { background: #161a22; overflow: hidden; }
+#device-frame {
+  position: fixed; top: 50%; left: 50%;
+  width: 390px; height: 844px;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  background: var(--white);
+  border-radius: 40px;
+  box-shadow: 0 0 0 11px #0a0d13, 0 0 0 13px #2b313d, 0 30px 70px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Inside the frame, full height means the phone's, not the window's. */
+#device-frame .page { min-height: 100%; height: 100%; }
+#device-frame .content { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* The notch, so the thing reads as a phone at a glance. */
+#device-frame::before {
+  content: ''; position: absolute; z-index: 9999; top: 9px; left: 50%;
+  width: 112px; height: 26px; border-radius: 14px;
+  background: #0a0d13; transform: translateX(-50%); pointer-events: none;
+}
+body.force-mobile .shell-topbar { padding-top: 34px; }

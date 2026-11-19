@@ -794,6 +794,31 @@
      under them, already there and already filled in if there is one,
      because a note behind a second click is a note nobody leaves. */
   .cell-pop.note-pop { width: 320px; padding: 10px 12px 12px; }
+  /* On a phone there is no cell under it to point at, and nothing to
+     the side of it either — so it stops being a popover and becomes
+     what a phone already uses for this: a sheet off the bottom edge. */
+  body.is-narrow .cell-pop.note-pop {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto;
+    width: auto; max-height: 88%; overflow-y: auto;
+    padding: 16px 16px 24px;
+    border-radius: 16px 16px 0 0;
+    /* The second shadow is the scrim: a sheet with the week still
+       bright behind it reads as a panel that happens to be low down,
+       not as the one thing on screen. Drawn as a shadow rather than a
+       layer, so a tap outside still lands on the page and closes it,
+       which is what a tap outside should do. */
+    box-shadow: 0 -10px 44px rgba(16, 24, 40, 0.3), 0 0 0 100vmax rgba(16, 24, 40, 0.38);
+  }
+  body.is-narrow .note-pop .np-day { font-size: 14px; margin-bottom: 14px; }
+  body.is-narrow .note-pop .np-foot { margin-top: 16px; }
+  body.is-narrow .note-pop .np-foot .btn-ghost,
+  body.is-narrow .note-pop .np-foot .btn-primary { height: 40px; flex: 1 1 0; justify-content: center; }
+  body.is-narrow .np-line input, body.is-narrow .np-line select { height: 40px; font-size: 15px; }
+  body.is-narrow .np-line .np-t { width: 88px; }
+  body.is-narrow .note-pop input.hr-cell { height: 40px; font-size: 15px; }
+  /* The cross is a 28px target on a desktop. A thumb needs more, and
+     has nothing to hover with, so it is simply always there. */
+  body.is-narrow .np-x { opacity: 1; width: 36px; height: 36px; }
   /* ─── What a cell can actually hold ─────────────────────────────
      A day of one task is not one number. A worker can be on and off
      the job twice in a day, claim two allowances for it and leave a
@@ -1419,9 +1444,27 @@
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
   body.is-narrow .m-date .dd-panel { left: 0; right: 0; }
-  body.is-narrow .week-view { order: 6; margin-top: 12px; }
+  /* ─── A week on a phone ─────────────────────────────────────────
+     Seven columns of 112 do not fit 375, and a timesheet scrolled
+     sideways is not a timesheet anyone reads. So the week keeps being
+     the week — it is simply turned on its side: a card per day, the
+     day's tasks inside it, and the same totals down the right. */
+  body.is-narrow .grid-card { display: none; }
+  body.is-narrow .week-view { display: block; order: 6; margin-top: 12px; }
   body.is-narrow .day-list { gap: 8px; }
-  body.is-narrow .week-total { display: none; }
+  body.is-narrow .week-total { display: block; }
+  .dgroup-head .dlock { display: inline-flex; color: var(--grey-600); }
+  /* A day that will not hold what is on it says so on its total, the
+     same way the column head does on the desktop. */
+  .dgroup-head .tot.over { color: var(--error); }
+  .day-group.shut .dgroup-head .dt { color: var(--grey-600); }
+  /* What a row carries besides its figure, in the slot the desktop
+     cell keeps for the same marks. */
+  .entry .m-marks { display: inline-flex; align-items: center; gap: 6px; color: var(--grey-600); flex-shrink: 0; }
+  .entry.locked { opacity: 0.55; }
+  .entry.c-cap .entry-hrs { color: var(--error); }
+  .entry.c-err { border-color: var(--error); }
+  .day-add { width: 100%; justify-content: center; }
   .m-actions, .m-date { display: none; }
 
   /* A sheet, not a box: flush to the bottom with a grabber on top. */
@@ -3008,6 +3051,9 @@
     if (text) cellNote[k] = text; else delete cellNote[k];
   }
 
+  var ALW_MARK = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+    '<path d="M8 2.2l1.8 3.7 4 .6-2.9 2.8.7 4L8 11.4l-3.6 1.9.7-4L2.2 6.5l4-.6z" ' +
+    'stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
   var ICO_CMT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
     '<path d="M13.5 9.2a1.8 1.8 0 0 1-1.8 1.8H5.2L2.5 13.5V3.8A1.8 1.8 0 0 1 4.3 2h7.4a1.8 1.8 0 0 1 1.8 1.8z" ' +
     'stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -3587,38 +3633,59 @@
     });
     weekTotalEl.innerHTML = 'Total <b>' + fmtHours(weekTotal) + ' h</b>';
 
-    /* Most recent first — you fill in the day you just worked. */
-    var shown = ds.slice().reverse().filter(function (d) {
-      return entriesOn(iso(d)).length || iso(d) === iso(TODAY);
-    });
+    /* The week in the order the week happens, the same as the columns
+       on the desktop. Every day is drawn, including the empty ones:
+       a missing Thursday reads as a Thursday that was never worked,
+       which is exactly what it is and what has to be fixable. */
+    dayList.innerHTML = ds.map(function (d) {
+      var key = iso(d), today = key === iso(TODAY);
+      var shownTot = dayTotal(key, true), allTot = dayTotal(key, false);
+      var over = allTot > DAY_CAP;
+      var shut = weekKeys().length > 0 && weekKeys().every(function (k) { return cellLocked(k, key); });
 
-    dayList.innerHTML = shown.map(function (d) {
-      var key = iso(d), rows = entriesOn(key);
-      var total = rows.reduce(function (n, r) { return n + r.hours; }, 0);
-      var closed = dayClosed[key] === true;
+      /* Only the tasks that have hours on this day, plus whichever one
+         is open — a phone cannot carry every task under every day. */
+      var keys = weekKeys().filter(function (k) {
+        return hoursFor(k, key) > 0 || liveCell === k + '|' + key;
+      });
 
-      var body = rows.length ? rows.map(function (r) {
-        return '<button class="entry" type="button" data-entry="' + Shell.esc(r.task.key) + '" data-date="' + key + '">' +
+      var body = keys.length ? keys.map(function (k) {
+        var m = taskMeta[k], dk = k + '|' + key;
+        var v = hoursFor(k, key), lock = cellLocked(k, key);
+        var c = cellOf(k, key), n = noteOf(k, key);
+        var alw = (c.a || []).length;
+        var cls = 'entry' + (lock ? ' locked' : '') +
+          (cellOver(k, key, v) ? ' c-cap' : cellErr[dk] ? ' c-err' : '');
+        return '<button class="' + cls + '" type="button" data-mrow="' + Shell.esc(k) +
+          '" data-date="' + key + '"' + (lock ? ' disabled' : '') + '>' +
           '<span class="entry-main">' +
-            '<span class="entry-code">' + Shell.esc(taskTitle(r.task.meta)) + '</span>' +
-            '<span class="entry-sub">' + Shell.esc(taskRest(r.task.meta)) + '</span>' +
-            '<span class="entry-where">' + Shell.esc(r.task.meta.sup) + ' · ' + Shell.esc(r.task.meta.site) + '</span>' +
+            '<span class="entry-code">' + Shell.esc(taskTitle(m)) + '</span>' +
+            (taskRest(m) ? '<span class="entry-sub">' + Shell.esc(taskRest(m)) + '</span>' : '') +
+            '<span class="entry-where">' + Shell.esc(m.sup) + ' \u00b7 ' + Shell.esc(m.site) + '</span>' +
           '</span>' +
-          '<span class="entry-hrs">' + fmtHours(r.hours) + ' h</span>' + CHEV +
+          '<span class="m-marks">' +
+            (n ? ICO_CMT : '') +
+            (alw ? ALW_MARK : '') +
+            (lock ? ICO_LOCK : '') +
+          '</span>' +
+          '<span class="entry-hrs">' + fmtHours(v) + ' h</span>' +
         '</button>';
-      }).join('') : '<div class="day-empty">No hours recorded.</div>';
+      }).join('') : '<div class="day-empty">Nothing booked on this day.</div>';
 
-      return '<div class="day-group' + (closed ? ' closed' : '') + '">' +
+      return '<div class="day-group' + (shut ? ' shut' : '') + '">' +
         '<button class="dgroup-head" type="button" data-dayhead="' + key + '">' +
           '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
           '<span class="dt">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
-          (key === iso(TODAY) ? '<span class="today-chip">Today</span>' : '') +
-          '<span class="tot">' + fmtHours(total) + ' h</span>' +
+          (today ? '<span class="today-chip">Today</span>' : '') +
+          (shut ? '<span class="dlock">' + ICO_LOCK + '</span>' : '') +
+          '<span class="tot' + (over ? ' over' : '') + '">' +
+            (shownTot > 0 ? fmtHours(shownTot) + ' h' : '\u2014') + '</span>' +
         '</button>' +
         '<div class="day-rows">' + body +
+          (shut ? '' :
           '<button class="btn-ghost day-add" type="button" data-card-add="' + key + '">' +
             '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
-            'Add task</button>' +
+            'Add task</button>') +
         '</div>' +
       '</div>';
     }).join('');
@@ -4899,8 +4966,12 @@
     c.classList.toggle('near', NOTE_MAX - n.value.length <= 20);
   }
   function openNotePop(key, date, atNote) {
+    /* On a phone the grid is not drawn, so there is no cell to measure
+       against — and none is needed: the panel is a sheet off the
+       bottom edge, which is the same place every time. */
+    var narrow = document.body.classList.contains('is-narrow');
     var anchor = cellAt(key, date);
-    if (!anchor) return;
+    if (!anchor && !narrow) return;
     var c = cellOf(key, date);
     el('np-day').textContent = fmtDayLong(fromIso(date));
     var h = el('np-h');
@@ -4939,9 +5010,13 @@
        cell where the cell ends up. */
     notePop.style.visibility = 'hidden';
     notePop.classList.add('open');
-    ensureVisible(anchor.closest('tr') || anchor, notePop.offsetHeight + 12);
-    ensureAcross(anchor);
-    placePop(notePop, anchor, false);
+    if (anchor && !narrow) {
+      ensureVisible(anchor.closest('tr') || anchor, notePop.offsetHeight + 12);
+      ensureAcross(anchor);
+      placePop(notePop, anchor, false);
+    } else {
+      notePop.style.top = ''; notePop.style.left = '';
+    }
     notePop.style.visibility = '';
     syncNoteErr(date);
     if (atNote) { focusNote(); return; }
@@ -5052,7 +5127,10 @@
     renderShifts();
     var all = notePop.querySelectorAll('[data-sf="start"]');
     if (all.length) all[all.length - 1].focus();
-    placePop(notePop, cellAt(liveCell.slice(0, liveCell.lastIndexOf('|')), panelDate()) || notePop, false);
+    if (!document.body.classList.contains('is-narrow')) {
+      var a = cellAt(liveCell.slice(0, liveCell.lastIndexOf('|')), panelDate());
+      if (a) placePop(notePop, a, false);
+    }
   });
   el('np-alw-add').addEventListener('click', function () {
     var site = taskMeta[liveCell.slice(0, liveCell.lastIndexOf('|'))].site;
@@ -5065,7 +5143,10 @@
       qty: next.type === 'amount' ? 1 : undefined });
     renderAlws(site);
     syncPanelTotal();
-    placePop(notePop, cellAt(liveCell.slice(0, liveCell.lastIndexOf('|')), panelDate()) || notePop, false);
+    if (!document.body.classList.contains('is-narrow')) {
+      var a = cellAt(liveCell.slice(0, liveCell.lastIndexOf('|')), panelDate());
+      if (a) placePop(notePop, a, false);
+    }
   });
 
   var partsSwitch = el('parts-switch');
@@ -5423,6 +5504,10 @@
       syncMobileActions();
       return;
     }
+    /* The row is the cell. Tapping it opens what a desktop click on
+       the cell opens — the same panel, the same write. */
+    var mrow = e.target.closest('[data-mrow]');
+    if (mrow) { openHours(mrow.getAttribute('data-mrow'), mrow.getAttribute('data-date')); return; }
     var entry = e.target.closest('[data-entry]');
     if (entry) { openEdit(entry.getAttribute('data-entry'), entry.getAttribute('data-date')); return; }
     var cardAdd = e.target.closest('[data-card-add]');

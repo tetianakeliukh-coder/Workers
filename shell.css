@@ -1,0 +1,676 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   OPMS — Shared app shell
+   Sidebar, page layout, and the controls every module screen reuses.
+   Lifted from workers/index.html so module pages stay thin.
+   Requires assets/tokens.css to be loaded first.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; background: var(--white); color: var(--text-main); }
+body { font-family: var(--fs-sans); -webkit-font-smoothing: antialiased; }
+
+.page { display: flex; min-height: 100vh; }
+
+/* ─── Sidebar ─────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 222px; flex-shrink: 0;
+  display: flex; flex-direction: column; justify-content: space-between;
+  border-right: 1px solid var(--grey-350);
+  min-height: 100vh; background: var(--white);
+  position: sticky; top: 0; height: 100vh;
+}
+.sidebar-top { padding: 8px; }
+.logo-area { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 20px 16px 24px; }
+.nav-list, .footer-nav { list-style: none; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 8px 16px; border-radius: 8px;
+  text-decoration: none; color: var(--text-main); cursor: pointer;
+  background: none; border: none; font-family: inherit; text-align: left;
+  transition: background var(--t-fast);
+}
+.nav-item.r4 { border-radius: 4px; }
+.nav-item:hover { background: var(--grey-100); }
+.nav-item.active { background: var(--bg-blue-light); }
+.nav-item.active:hover { background: var(--bg-blue-light); }
+.nav-icon { flex-shrink: 0; color: var(--text-main); }
+.nav-label {
+  font-size: 14px; line-height: 18px; letter-spacing: 0.14px;
+  font-weight: 400; padding: 4px 0; white-space: nowrap;
+}
+
+/* Modules that have no screen designed yet — dimmed, not dead-linked. */
+.nav-item.is-todo { cursor: default; }
+.nav-item.is-todo .nav-label,
+.nav-item.is-todo .nav-icon { opacity: 0.45; }
+.nav-item.is-todo:hover { background: transparent; }
+
+.sidebar-footer { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 24px; }
+.footer-nav { display: flex; flex-direction: column; }
+
+.account-block { border-top: 1px solid var(--grey-300); padding: 12px 16px 0; }
+.account-row { display: flex; align-items: center; gap: 10px; }
+.av-wrap { position: relative; flex-shrink: 0; }
+.av {
+  width: 36px; height: 36px; border-radius: 50%; background: #cdd4ea;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: #3a4b8c;
+  border: 0.5px solid #fafafa; overflow: hidden;
+}
+.av-online {
+  position: absolute; bottom: 0; right: 0;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--online); border: 1.5px solid var(--white);
+}
+.ac-info { display: flex; flex-direction: column; gap: 2px; }
+.ac-name-row { display: flex; align-items: center; gap: 6px; }
+.ac-name { font-weight: 500; font-size: 14px; line-height: 18px; color: var(--grey-800); letter-spacing: 0.14px; white-space: nowrap; }
+.ac-email { font-size: 12px; line-height: 16px; color: var(--grey-600); letter-spacing: 0.12px; white-space: nowrap; }
+
+/* ─── Collapsed sidebar ───────────────────────────────────────────────── */
+.sidebar { transition: width var(--t-fast); }
+/* The wordmark sits to the right of the 19px square inside one SVG, so the
+   collapsed rail clips it rather than swapping in a second asset. */
+.logo-mark { display: block; overflow: hidden; width: 87px; height: 19px; transition: width var(--t-fast); }
+.sidebar-toggle {
+  width: 28px; height: 28px; flex-shrink: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--grey-350); border-radius: 8px; background: var(--white);
+  color: var(--grey-600); cursor: pointer;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.sidebar-toggle:hover { background: var(--grey-100); border-color: var(--border-hover); color: var(--text-main); }
+.sidebar-toggle svg { transition: transform var(--t-fast); }
+
+.sidebar.collapsed { width: 68px; }
+.sidebar.collapsed .logo-area { flex-direction: column; gap: 14px; padding: 20px 8px; }
+.sidebar.collapsed .logo-mark { width: 19px; }
+.sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+/* Fixed height keeps the icon rail on the same rhythm as the labelled rows. */
+.sidebar.collapsed .nav-item { justify-content: center; padding: 0; height: 42px; }
+.sidebar.collapsed .nav-label,
+.sidebar.collapsed .ac-info { display: none; }
+.sidebar.collapsed .account-block { padding: 12px 8px 0; }
+.sidebar.collapsed .account-row { justify-content: center; }
+
+.notif-wrap { position: relative; width: 16px; height: 16px; flex-shrink: 0; }
+.notif-dot {
+  position: absolute; top: -2px; right: -2px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #d42c40; border: 1.125px solid var(--white);
+}
+
+/* ─── Narrow screens ──────────────────────────────────────────────────
+   Workers fill in their own hours on a phone, so the shell has to give
+   the content the screen. Tablet width drops the sidebar to its icon
+   rail; phone width takes it off-canvas behind a top bar. */
+.shell-topbar { display: none; }
+
+body.shell-mobile .shell-topbar {
+  display: flex; align-items: center; gap: 12px;
+  position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 120;
+  padding: 0 12px; background: var(--white); border-bottom: 1px solid var(--grey-350);
+}
+.topbar-menu {
+  width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: 8px; color: var(--text-main); cursor: pointer;
+}
+.topbar-menu:hover { background: var(--grey-100); }
+
+body.shell-mobile .main { padding-top: 72px; }
+body.shell-mobile .sidebar {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 140;
+  width: 264px; height: 100%; transform: translateX(-100%);
+  box-shadow: var(--shadow-dialog);
+}
+/* The slide is added a frame after boot, so the drawer doesn't animate
+   itself off-screen on first paint. */
+body.shell-mobile.shell-animate .sidebar { transition: transform var(--t-normal); }
+body.shell-mobile .sidebar.open { transform: translateX(0); }
+body.shell-mobile .sidebar.collapsed { width: 264px; }
+body.shell-mobile .sidebar.collapsed .nav-label,
+body.shell-mobile .sidebar.collapsed .ac-info { display: block; }
+body.shell-mobile .sidebar.collapsed .nav-item { justify-content: flex-start; padding: 8px 16px; height: auto; }
+body.shell-mobile .sidebar.collapsed .logo-mark { width: 87px; }
+body.shell-mobile .sidebar .sidebar-toggle { display: none; }
+
+.shell-scrim {
+  display: none; position: fixed; inset: 0; z-index: 130;
+  background: rgba(8, 17, 21, 0.45);
+}
+body.shell-mobile .shell-scrim.open { display: block; }
+
+/* ─── Main / page header ──────────────────────────────────────────────── */
+.main { flex: 1; padding: 24px; overflow-x: auto; min-width: 0; }
+.content { display: flex; flex-direction: column; gap: 12px; }
+
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.page-title {
+  font-family: var(--fs-roboto); font-weight: 700; font-size: 20px;
+  line-height: 24px; color: var(--black); letter-spacing: 0.24px;
+}
+.header-actions { display: flex; align-items: center; gap: 12px; }
+
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.toolbar-right { display: flex; align-items: center; gap: 12px; }
+
+/* ─── Buttons ─────────────────────────────────────────────────────────── */
+.btn-primary {
+  background: var(--primary); color: var(--white); border: none;
+  height: 36px; padding: 0 16px; border-radius: 8px;   /* same corner, and the same height, as every other control */
+  font-size: 14px; font-weight: 500; line-height: 18px;
+  cursor: pointer; white-space: nowrap; font-family: var(--fs-sans);
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: background var(--t-fast);
+}
+.btn-primary:hover { background: var(--primary-dark); }
+/* A disabled action has to look unavailable, not merely refuse the click. */
+.btn-primary:disabled, .btn-primary:disabled:hover {
+  background: var(--grey-300); color: var(--grey-600); cursor: default;
+}
+/* The outline button had only a disabled rule and no rule of its own, so
+   every one of them was rendering as a raw browser button. */
+.btn-outline {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 16px; border-radius: 8px;
+  background: var(--white); border: 1px solid var(--grey-400);
+  font-size: 14px; font-weight: 500; line-height: 18px;
+  color: var(--text-main); cursor: pointer; font-family: var(--fs-sans);
+  white-space: nowrap; transition: border-color var(--t-fast), background var(--t-fast);
+}
+.btn-outline svg { flex-shrink: 0; }
+.btn-outline:hover { border-color: var(--text-main); }
+.btn-ghost:disabled { opacity: 0.5; cursor: default; }
+/* Half-opacity washed out the border too, and an outline button is its
+   border — it greys instead. */
+.btn-outline:disabled, .btn-outline:disabled:hover {
+  background: var(--white); border-color: var(--grey-300);
+  color: var(--grey-500); cursor: default;
+}
+.btn-ghost:disabled:hover { border-color: var(--grey-350); background: var(--white); }
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 12px; border-radius: 8px;
+  background: var(--white); border: 1px solid var(--grey-350);
+  font-size: 14px; font-weight: 500; line-height: 18px;
+  color: var(--grey-800); cursor: pointer; font-family: var(--fs-sans);
+  white-space: nowrap; transition: border-color var(--t-fast), background var(--t-fast);
+}
+.btn-ghost svg, .btn-primary svg { flex-shrink: 0; }
+.btn-ghost:hover { border-color: var(--border-hover); background: var(--bg-blue-light); }
+.btn-ghost.active { background: var(--bg-blue-light); border-color: var(--primary); color: var(--primary); }
+
+.btn-text {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 18px;
+  color: var(--primary); white-space: nowrap;
+}
+.btn-text:hover { text-decoration: underline; }
+
+/* ─── Search ──────────────────────────────────────────────────────────── */
+.search-wrap { position: relative; width: 370px; }
+.search-bar {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--white); border: 1px solid var(--grey-350);
+  border-radius: 8px; height: 36px; padding: 10px 12px;
+  width: 100%; font-size: 14px; transition: border-color var(--t-fast);
+}
+.search-bar:focus-within { border-color: var(--border-hover); }
+.search-icon { flex-shrink: 0; color: var(--grey-400); }
+.search-input-el {
+  border: none; outline: none; background: transparent;
+  font-size: 14px; color: var(--text-main); width: 100%;
+  font-family: var(--fs-sans); line-height: 20px; padding: 0;
+}
+.search-input-el::placeholder { color: var(--grey-400); }
+.search-clear {
+  display: none; background: none; border: none; cursor: pointer; padding: 0;
+  width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0;
+  align-items: center; justify-content: center; color: var(--grey-600);
+}
+.search-clear.visible { display: flex; }
+.search-clear:hover { background: var(--grey-200); color: var(--grey-800); }
+mark.hl { background: #fff2a8; color: inherit; border-radius: 2px; padding: 0 1px; }
+
+/* ─── Dropdown (select-style trigger + panel) ─────────────────────────── */
+.dd-wrap { position: relative; }
+.dd-trigger {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 36px; min-width: 132px; padding: 0 12px; border-radius: 8px;
+  background: var(--white); border: 1px solid var(--grey-350);
+  font-size: 14px; font-weight: 400; color: var(--text-main);
+  cursor: pointer; font-family: var(--fs-sans); white-space: nowrap;
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.dd-trigger:hover { border-color: var(--border-hover); }
+.dd-trigger.open { border-color: var(--primary); }
+.dd-caret { flex-shrink: 0; color: var(--grey-600); transition: transform var(--t-fast); }
+.dd-trigger.open .dd-caret { transform: rotate(180deg); }
+
+.dd-panel {
+  display: none; position: absolute; top: calc(100% + 6px); right: 0;
+  min-width: 190px; background: var(--white);
+  border: 1px solid var(--grey-350); border-radius: 10px;
+  box-shadow: var(--shadow-dropdown); z-index: 100; padding: 4px 0;
+}
+.dd-panel.open { display: block; }
+.dd-panel.align-left { left: 0; right: auto; }
+.dd-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 12px; height: 36px; cursor: pointer;
+  font-size: 14px; color: var(--text-main);
+  background: none; border: none; width: 100%; font-family: var(--fs-sans);
+  text-align: left; transition: background 0.1s;
+}
+.dd-item:hover { background: var(--bg-blue-light); }
+.dd-item.active { color: var(--primary); font-weight: 500; }
+.dd-check { width: 14px; height: 14px; flex-shrink: 0; color: var(--primary); visibility: hidden; }
+.dd-item.active .dd-check { visibility: visible; }
+.dd-divider { border: none; border-top: 1px solid var(--grey-300); margin: 4px 0; }
+
+/* ─── Segmented control ───────────────────────────────────────────────── */
+.seg-label { font-size: 14px; color: var(--grey-600); white-space: nowrap; }
+.seg {
+  display: inline-flex; align-items: center;
+  border: 1px solid var(--grey-350); border-radius: 8px;
+  background: var(--white); overflow: hidden; height: 36px;
+}
+.seg-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer; font-family: var(--fs-sans);
+  height: 100%; padding: 0 12px; font-size: 14px; font-weight: 400;
+  color: var(--grey-800); white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.seg-btn svg { flex-shrink: 0; color: var(--grey-600); }
+.seg-btn.active svg { color: var(--primary); }
+.seg-btn + .seg-btn { border-left: 1px solid var(--grey-350); }
+.seg-btn:hover { background: var(--grey-100); }
+.seg-btn.active { background: var(--bg-blue-light); color: var(--primary); font-weight: 500; }
+
+/* ─── Table ───────────────────────────────────────────────────────────── */
+.table-card {
+  background: var(--white); border: 1px solid var(--grey-350);
+  border-radius: 12px; overflow: hidden;
+}
+.table-scroll { overflow-x: auto; }
+.table-card table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+thead tr { height: 44px; }
+thead th {
+  text-align: left; padding: 6px 24px 6px 16px;
+  font-weight: 500; font-size: 14px; line-height: 24px;
+  color: var(--text-87); letter-spacing: 0.17px; white-space: nowrap;
+  border-bottom: 1px solid var(--row-divider); background: var(--white);
+}
+thead th:last-child { padding: 6px 16px; }
+
+tbody tr { height: 52px; }
+tbody tr:not(:last-child) td { border-bottom: 1px solid var(--row-divider); }
+tbody tr.hidden { display: none; }
+tbody tr:hover { background: #fafbfe; }
+tbody tr.selected { background: var(--bg-blue-light); }
+
+tbody td {
+  padding: 6px 16px; font-size: 14px; line-height: 20px;
+  letter-spacing: 0.15px; font-weight: 400; vertical-align: middle;
+  color: var(--text-87);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+
+.action-cell { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.kebab {
+  background: none; border: none; cursor: pointer; padding: 0;
+  width: 24px; height: 24px; border-radius: 4px; color: var(--grey-600);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.kebab:hover { background: var(--grey-200); color: var(--grey-800); }
+
+/* Checkbox cell */
+.chk {
+  width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0;
+  border: 1.5px solid var(--grey-400); background: var(--white);
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background var(--t-fast), border-color var(--t-fast);
+  vertical-align: middle;
+}
+.chk input { display: none; }
+.chk.checked { background: var(--primary); border-color: var(--primary); }
+.chk.checked::after {
+  content: ''; width: 9px; height: 5px;
+  border-left: 1.5px solid #fff; border-bottom: 1.5px solid #fff;
+  transform: rotate(-45deg) translateY(-1px);
+}
+.chk.indeterminate { background: var(--primary); border-color: var(--primary); }
+.chk.indeterminate::after {
+  content: ''; width: 8px; height: 1.5px; background: #fff; transform: none;
+  border: none;
+}
+
+/* ─── Status chips (secondary / dot style, from the component library) ─── */
+.status-sec {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 20px; padding: 0 8px; border-radius: var(--radius-xs);
+  font-size: 12px; font-weight: 500; line-height: 16px;
+  letter-spacing: 0.12px; white-space: nowrap;
+}
+.status-sec::before { content: ''; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.status-sec-amber  { background: rgba(180,116,37,0.2);  color: #b47425; } .status-sec-amber::before  { background: #b47425; }
+.status-sec-yellow { background: rgba(204,160,51,0.2);  color: #cca033; } .status-sec-yellow::before { background: #cca033; }
+.status-sec-lime   { background: rgba(120,184,24,0.2);  color: #78b818; } .status-sec-lime::before   { background: #78b818; }
+.status-sec-green  { background: rgba(40,158,26,0.2);   color: #289e1a; } .status-sec-green::before  { background: #289e1a; }
+.status-sec-blue   { background: rgba(26,133,205,0.2);  color: #1a85cd; } .status-sec-blue::before   { background: #1a85cd; }
+.status-sec-indigo { background: rgba(74,46,200,0.2);   color: #4a2ec8; } .status-sec-indigo::before { background: #4a2ec8; }
+.status-sec-violet { background: rgba(144,32,188,0.2);  color: #9020bc; } .status-sec-violet::before { background: #9020bc; }
+.status-sec-purple { background: rgba(228,13,199,0.2);  color: #e40dc7; } .status-sec-purple::before { background: #e40dc7; }
+.status-sec-grey   { background: rgba(117,117,117,0.2); color: #757575; } .status-sec-grey::before   { background: #757575; }
+
+/* ─── Avatar ──────────────────────────────────────────────────────────── */
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; color: var(--white);
+  letter-spacing: 0.3px; overflow: hidden; user-select: none;
+}
+
+/* ─── Empty state ─────────────────────────────────────────────────────── */
+.empty-state {
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 56px 24px; text-align: center;
+}
+.empty-state.visible { display: flex; }
+.empty-title { font-size: 16px; font-weight: 500; color: var(--grey-800); }
+.empty-sub { font-size: 14px; color: var(--grey-600); }
+
+/* ─── Snackbar ──────────────────────────────────────────────────────────
+   Material's own: a dark slab in the bottom-left corner, out of the way
+   of everything the page puts on the right. A title is optional and sets
+   the subject; the line under it says what happened to it. */
+.snackbar {
+  position: fixed; left: 24px; bottom: 24px; transform: translateY(16px);
+  display: flex; align-items: flex-start; gap: 12px;
+  min-width: 288px; max-width: 568px; padding: 10px 16px;
+  background: #323232; color: var(--white);
+  border-radius: 4px;
+  box-shadow: 0 3px 5px -1px rgba(0, 0, 0, .2), 0 6px 10px rgba(0, 0, 0, .14),
+              0 1px 18px rgba(0, 0, 0, .12);
+  font-family: var(--fs-sans); font-size: 14px; line-height: 20px; z-index: 500;
+  opacity: 0; pointer-events: none; transition: opacity var(--t-normal), transform var(--t-normal);
+}
+.snackbar.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.snackbar-body { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.snackbar-title { font-weight: 500; }
+.snackbar-title[hidden] { display: none; }
+.snackbar-msg { color: rgba(255, 255, 255, .82); }
+.snackbar-title + .snackbar-msg:empty { display: none; }
+
+.snackbar-action {
+  flex-shrink: 0; align-self: center; padding: 4px 8px; margin: -4px -8px -4px 0;
+  background: none; border: none; border-radius: 4px;
+  font-family: var(--fs-sans); font-size: 14px; font-weight: 500; line-height: 20px;
+  color: #a8c7fa; cursor: pointer; white-space: nowrap;
+}
+.snackbar-action:hover { background: rgba(255, 255, 255, .12); }
+.snackbar-action[hidden] { display: none; }
+
+/* A failure has to stay put until it is read, so it carries a dismiss. */
+.snackbar.error { padding-left: 13px; border-left: 3px solid #f0808c; }
+.snackbar-close {
+  display: none; flex-shrink: 0; width: 24px; height: 24px; padding: 0; margin-top: -1px;
+  align-items: center; justify-content: center;
+  background: none; border: none; border-radius: 4px;
+  color: rgba(255, 255, 255, .72); cursor: pointer;
+}
+.snackbar-close:hover { background: rgba(255, 255, 255, .12); color: var(--white); }
+.snackbar-close.visible { display: flex; }
+
+body.shell-mobile .snackbar { left: 16px; right: 16px; max-width: none; }
+
+/* ─── Modal ───────────────────────────────────────────────────────────── */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 300;
+  background: rgba(8, 17, 21, 0.45);
+  align-items: center; justify-content: center; padding: 24px;
+}
+.modal-backdrop.open { display: flex; }
+
+.modal {
+  background: var(--white); border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(5, 23, 95, 0.25);
+  display: flex; flex-direction: column;
+  width: 100%; max-width: 1040px; max-height: 88vh; overflow: hidden;
+}
+.modal-sm { max-width: 416px; }
+.modal-md { max-width: 600px; }
+
+.modal-header {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 20px 24px 16px; border-bottom: 1px solid var(--grey-300); flex-shrink: 0;
+}
+.modal-heading { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.modal-title {
+  font-family: var(--fs-roboto); font-size: 18px; font-weight: 700;
+  line-height: 22px; letter-spacing: 0.22px; color: var(--black);
+}
+.modal-meta {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
+  font-size: 13px; line-height: 18px; color: var(--grey-600);
+}
+.modal-meta .meta-item { display: inline-flex; align-items: center; gap: 6px; }
+.modal-meta .meta-label { color: var(--grey-500); }
+.modal-meta .meta-value { color: var(--text-87); }
+
+.modal-close {
+  width: 28px; height: 28px; border-radius: 6px; border: none; flex-shrink: 0;
+  background: none; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; color: var(--grey-600);
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.modal-close:hover { background: var(--bg-blue-light); color: var(--text-main); }
+
+.modal-body { flex: 1; overflow: auto; min-height: 0; }
+.modal-body .modal-table-wrap { overflow-x: auto; }
+/* Header stays put while the body scrolls. */
+.modal-body thead th { position: sticky; top: 0; z-index: 1; }
+
+.modal-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 16px 24px; border-top: 1px solid var(--grey-300); flex-shrink: 0;
+}
+.modal-footer-info { font-size: 14px; color: var(--grey-600); }
+.modal-footer-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+/* A value the record genuinely doesn't carry — shown, not hidden. */
+.cell-empty { color: var(--grey-400); }
+
+/* ─── Instant tooltip ───────────────────────────────────────────────────
+   `title` waits about a second before the browser shows it; a table of
+   truncated labels needs the text the moment the pointer lands. Any
+   element carrying data-tip gets one. */
+.row-tip {
+  position: fixed; z-index: 600; display: none; pointer-events: none;
+  max-width: 360px; padding: 5px 9px; border-radius: 6px;
+  background: var(--text-main); color: var(--white);
+  font-family: var(--fs-sans); font-size: 12px; line-height: 16px;
+  box-shadow: 0 4px 12px rgba(8, 17, 21, 0.2);
+  /* A tip that is cut off is worse than no tip: a long one wraps rather
+     than ending in an ellipsis the pointer cannot open. */
+  white-space: normal; overflow-wrap: break-word;
+}
+.row-tip.on { display: block; }
+/* ─── A tip with more than one thing to say ────────────────────────────
+   Three facts about a cell — the day is closed, there is an allowance,
+   somebody left a note — run together into one unreadable line when the
+   tip is a single string. Each gets a label and a line of its own, and
+   the labels are quieter than the things they label. */
+.row-tip.rich { max-width: 272px; padding: 9px 11px; }
+.row-tip.rich b {
+  display: block; margin: 10px 0 1px;
+  font-size: 10.5px; line-height: 14px; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+.row-tip.rich b:first-child { margin-top: 0; }
+.row-tip.rich span, .row-tip.rich em {
+  display: block; font-style: normal; font-size: 12.5px; line-height: 17px;
+}
+/* The closed day is a condition of the cell rather than something in
+   it, so it sits above the rule, not under a heading of its own. */
+.row-tip.rich em + hr { margin-top: 8px; }
+.row-tip.rich hr {
+  border: 0; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 8px 0 0;
+}
+
+/* ─── Resizable columns ─────────────────────────────────────────────────
+   A grip sitting on the header cell's right edge. It only shows when the
+   pointer is over that header, so the row stays quiet otherwise. */
+.col-rs {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 9px;
+  cursor: col-resize; user-select: none; z-index: 3;
+}
+.col-rs::after {
+  content: ''; position: absolute; top: 6px; bottom: 6px; right: 4px; width: 1px;
+  background: var(--grey-400); opacity: 0; transition: opacity var(--t-fast);
+}
+th:hover > .col-rs::after, .col-rs:hover::after { opacity: 1; }
+.col-rs:hover::after { background: var(--primary); width: 2px; }
+body.col-resizing { cursor: col-resize; user-select: none; }
+body.col-resizing .col-rs::after { opacity: 1; background: var(--primary); width: 2px; }
+
+/* ─── Open questions ───────────────────────────────────────────────────
+   A prototype device, not part of the product: a quiet marker that this
+   screen still has something undecided on it. It sits above the other
+   floating controls in the same corner. */
+.q-fab {
+  position: fixed; right: 20px; bottom: 70px; z-index: 401;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+  background: var(--white); border: 1px solid var(--grey-350);
+  color: var(--grey-700); box-shadow: var(--shadow-dropdown);
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.q-fab:hover { color: var(--primary); border-color: var(--primary); }
+.q-count {
+  position: absolute; top: -4px; right: -4px;
+  min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--error); color: var(--white);
+  font-family: var(--fs-sans); font-size: 11px; font-weight: 600; line-height: 17px;
+}
+
+.q-modal .modal-body { flex: 0 1 auto; max-height: 68vh; padding: 4px 24px 20px; }
+.q-item { padding: 16px 0; }
+.q-item + .q-item { border-top: 1px solid var(--grey-200); }
+.q-top { display: flex; align-items: baseline; gap: 10px; }
+.q-n {
+  flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--bg-blue-light); color: var(--primary);
+  font-size: 11px; font-weight: 600; line-height: 20px;
+}
+.q-q { font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main); }
+.q-where {
+  display: inline-block; margin: 6px 0 0 30px; padding: 0 7px; height: 20px;
+  border-radius: 5px; background: var(--grey-100); color: var(--grey-700);
+  font-size: 12px; font-weight: 500; line-height: 20px;
+}
+.q-why, .q-now {
+  margin: 8px 0 0 30px; font-size: 13px; line-height: 19px; color: var(--grey-700);
+}
+.q-now { color: var(--grey-600); }
+.q-now b { color: var(--text-main); font-weight: 500; }
+
+body.shell-mobile .q-fab { bottom: 20px; right: 20px; }
+
+/* ─── Structure switch ─────────────────────────────────────────────────
+   A prototype device: the same screens, organised two ways, so the two
+   can be compared rather than argued about. */
+/* ─── The prototype dock ──────────────────────────────────────────────
+   One small button in the corner holding every switcher a screen offers,
+   so the prototype's own controls stop taking a third of the bottom
+   edge from the screen they are there to show. */
+.proto-dock {
+  position: fixed; right: 20px; bottom: 20px; z-index: 402;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.proto-fab {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--white); border: 1px solid var(--grey-350);
+  box-shadow: var(--shadow-dropdown); cursor: pointer; color: var(--grey-700);
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.proto-fab:hover { color: var(--text-main); border-color: var(--grey-400); }
+.proto-fab.on { color: var(--primary); border-color: var(--primary); }
+.proto-panel {
+  display: none; flex-direction: column; gap: 10px; padding: 12px;
+  background: var(--white); border: 1px solid var(--grey-350); border-radius: 12px;
+  box-shadow: var(--shadow-dropdown);
+}
+.proto-dock.open .proto-panel { display: flex; }
+.proto-row { display: flex; align-items: center; gap: 16px; justify-content: space-between; }
+.proto-row[hidden] { display: none; }
+.proto-lab { font-size: 12px; font-weight: 500; color: var(--grey-600); white-space: nowrap; }
+/* Three classes, to outrank the per-screen rules that pin each switcher
+   to its own corner — those live in the page, which is loaded after. */
+.proto-panel .proto-row .vp-switch {
+  position: static; left: auto; right: auto; bottom: auto; top: auto;
+  box-shadow: none; border: 1px solid var(--grey-350);
+}
+
+/* It is built with the .vp-switch class for its looks, which pins a
+   right edge too — and a fixed box given both edges stretches across the
+   window, laying an invisible bar over every other switcher down there.
+   Two classes, because a page that defines .vp-switch of its own defines
+   it after this file. */
+.vp-switch.structure-switch, .structure-switch { right: auto; }
+.structure-switch {
+  position: fixed; left: 20px; bottom: 20px; z-index: 401;
+  display: inline-flex; align-items: center; padding: 4px; gap: 2px; border-radius: 10px;
+  background: var(--white); border: 1px solid var(--grey-350); box-shadow: var(--shadow-dropdown);
+}
+.structure-switch .sw-label {
+  padding: 0 8px 0 6px; font-size: 12px; font-weight: 500; color: var(--grey-600);
+}
+.structure-switch button {
+  height: 28px; padding: 0 12px; border: none; border-radius: 7px; cursor: pointer;
+  background: none; color: var(--grey-700);
+  font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+}
+.structure-switch button:hover { background: var(--grey-100); }
+.structure-switch button.on { background: var(--bg-blue-light); color: var(--primary); }
+body.shell-mobile .structure-switch { display: none; }
+
+/* ─── The phone, when the dock asks for one ────────────────────────────
+   Picking Mobile used to do nothing but narrow the layout, so a phone
+   screen was drawn across a 27-inch monitor and nobody could tell what
+   it would really look like. Now it is drawn in a phone.
+
+   The frame carries a transform, which is what makes every fixed-
+   position thing inside it — sheets, popovers, the top bar — position
+   against the phone instead of the window. */
+body.force-mobile { background: #161a22; overflow: hidden; }
+#device-frame {
+  position: fixed; top: 50%; left: 50%;
+  width: 390px; height: 844px;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  background: var(--white);
+  border-radius: 40px;
+  box-shadow: 0 0 0 11px #0a0d13, 0 0 0 13px #2b313d, 0 30px 70px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  isolation: isolate;
+}
+/* Inside the frame, full height means the phone's, not the window's. */
+#device-frame .page { min-height: 100%; height: 100%; }
+#device-frame .content { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* The notch, so the thing reads as a phone at a glance. */
+#device-frame::before {
+  content: ''; position: absolute; z-index: 9999; top: 9px; left: 50%;
+  width: 112px; height: 26px; border-radius: 14px;
+  background: #0a0d13; transform: translateX(-50%); pointer-events: none;
+}
+body.force-mobile .shell-topbar { padding-top: 34px; }
