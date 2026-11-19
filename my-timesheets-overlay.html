@@ -1060,12 +1060,16 @@
   /* The one thing the three dots used to hold, as the last row of the
      card it removes. Red says what it does; it is not a primary, so it
      is not a button sitting in a box. */
+  /* Quiet: the rarest thing anybody does here, and the sheet it opens
+     is where the warning belongs. Red on the row itself made removal
+     the loudest thing in a card about hours. */
   .tcard-drop {
-    display: block; width: 100%; padding: 12px 14px;
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 14px;
     border: none; border-top: 1px solid var(--grey-200); background: none;
-    font-family: var(--fs-sans); font-size: 14px; font-weight: 500;
-    color: var(--error); text-align: left; cursor: pointer;
+    font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+    color: var(--grey-600); text-align: left; cursor: pointer;
   }
+  .tcard-drop svg { flex-shrink: 0; }
   .tcard-drop[aria-disabled="true"] { color: var(--grey-400); cursor: default; }
   .tday .td-name { font-size: 14px; color: var(--grey-700); }
   .tday .td-today { color: var(--primary); font-weight: 500; }
@@ -4242,7 +4246,10 @@
                the card is open — which is also when anybody wants it. */
             '<div class="tcard-days">' + daysHtml +
               '<button class="tcard-drop" type="button" data-taskmenu="' + Shell.esc(t.key) + '"' +
-                (shutRow ? ' aria-disabled="true"' : '') + '>Remove this task</button>' +
+                (shutRow ? ' aria-disabled="true"' : '') + '>' +
+                '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">' +
+                '<path d="M3 4.5h10M6.5 4.5V3.2h3v1.3M5 4.5l.6 8.1h4.8L11 4.5" stroke="currentColor" ' + 'stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+                'Remove this task' + '</button>' +
             '</div>' +
           '</div>';
         });
