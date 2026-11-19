@@ -980,16 +980,7 @@
     background: var(--grey-100); border-radius: 10px;
   }
   body.is-narrow .wk-mode button { flex: 1 1 0; height: 34px; padding: 0; font-size: 14px; }
-  /* Collapse all is not a third way of reading the week, so it is not
-     on the switch. It belongs with the other facts about the week as a
-     whole, quietly, at the end of their line. */
-  body.is-narrow #m-collapse {
-    order: 3; flex: 0 0 auto; height: auto; padding: 0;
-    border: none; background: none; color: var(--primary);
-    font-size: 13px; font-weight: 500;
-  }
-  body.is-narrow #m-collapse:hover { background: none; }
-  body.is-narrow #m-collapse svg { display: none; }
+
   .wk-mode button {
     height: 30px; padding: 0 14px; border: none; border-radius: 7px;
     background: none; color: var(--grey-700); cursor: pointer;
@@ -1088,15 +1079,24 @@
   body.is-narrow #m-date { display: flex; align-items: center; gap: 8px; }
   body.is-narrow #m-date .dd-wrap { order: 2; flex: 1 1 auto; min-width: 0; width: auto; }
   body.is-narrow #m-date .dd-trigger { width: 100%; }
+  /* The arrows are gone. A phone reads this week, and the list behind
+     the trigger still holds the others — two buttons for the rarer
+     half of that were taking the room Collapse all needed. */
+  body.is-narrow .wk-step { display: none; }
+  body.is-narrow #m-collapse {
+    order: 3; flex: 0 0 104px; height: 40px; justify-content: center;
+    padding: 0; border: 1px solid var(--grey-350); border-radius: 8px;
+    background: var(--white); color: var(--primary);
+    font-size: 14px; font-weight: 500;
+  }
+  body.is-narrow #m-collapse:hover { background: var(--white); }
+  body.is-narrow #m-collapse svg { display: none; }
   .wk-step {
     display: none; width: 40px; height: 40px; flex-shrink: 0;
     align-items: center; justify-content: center;
     background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
     color: var(--grey-700); cursor: pointer;
   }
-  body.is-narrow .wk-step { display: inline-flex; }
-  body.is-narrow #m-prev { order: 1; }
-  body.is-narrow #m-next { order: 3; }
   .wk-step:active { background: var(--grey-100); }
 
   /* ─── Whether it landed ─────────────────────────────────────────
@@ -1108,8 +1108,7 @@
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     text-align: left;
   }
-  body.is-narrow #week-total .wk-sum { order: 2; margin-left: auto; }
-  body.is-narrow #week-total #m-collapse { margin-left: 4px; }
+  body.is-narrow #week-total .wk-sum { margin-left: auto; }
   body.is-narrow #week-total .save-state { font-size: 13px; }
   body.is-narrow #week-total .save-retry { flex-shrink: 0; }
 
@@ -1345,18 +1344,42 @@
     color: var(--grey-600); transition: transform var(--t-fast);
   }
   .day-group.closed .caret { transform: rotate(-90deg); }
-  .dgroup-head .dt { font-size: 15px; font-weight: 600; color: var(--text-main); }
+  .dgroup-head .dt { font-size: 16px; font-weight: 600; letter-spacing: -0.1px; color: var(--text-main); }
   .dgroup-head .today-chip {
     height: 20px; display: inline-flex; align-items: center; padding: 0 7px; border-radius: 5px;
     background: var(--bg-blue-light); color: var(--primary); font-size: 11px; font-weight: 500;
   }
-  .dgroup-head .tot { margin-left: auto; font-size: 14px; font-weight: 500; color: var(--text-main); }
+  .dgroup-head .tot { margin-left: auto; font-size: 15px; font-weight: 600; color: var(--text-main); }
   .day-group.closed .day-rows { display: none; }
   /* Each task is its own card, the same object as a recent task in the
      Add dialog — no dividers, the gaps do that work. */
   .day-rows {
     padding: 0 10px 10px; display: flex; flex-direction: column; gap: 8px;
   }
+  /* ─── Rows, not cards inside a card ──────────────────────
+     A bordered white card sitting inside a bordered white card is two
+     outlines a pixel apart saying nothing to each other. The day is the
+     card; what is in it is a list, told apart by hairlines — which is
+     what By task has always done, so the two views now agree. */
+  body.is-narrow .day-rows { padding: 0; display: block; }
+  body.is-narrow .entry {
+    gap: 10px; padding: 12px 14px;
+    border: none; border-radius: 0; border-top: 1px solid var(--grey-200);
+  }
+  body.is-narrow .entry:hover,
+  body.is-narrow .entry:hover:not(.live) { border-color: transparent; border-top-color: var(--grey-200); }
+  body.is-narrow .entry.locked { border-top: 1px solid var(--grey-200); }
+  body.is-narrow .day-empty { padding: 14px; border-top: 1px solid var(--grey-200); }
+  body.is-narrow .day-add {
+    height: 44px; border: none; border-radius: 0;
+    border-top: 1px solid var(--grey-200);
+  }
+  /* Three sizes, three jobs: what the task is, what names it, and where
+     it was worked. They were 14/13/13 — one step, then none at all. */
+  body.is-narrow .entry-code { font-size: 15px; line-height: 20px; }
+  body.is-narrow .entry-sub { font-size: 13px; line-height: 18px; color: var(--grey-600); }
+  body.is-narrow .entry-where { font-size: 12px; line-height: 17px; color: var(--grey-500); }
+  body.is-narrow .entry-hrs { font-size: 15px; font-weight: 600; }
 
   .entry {
     display: flex; align-items: center; gap: 12px; width: 100%;
@@ -1763,10 +1786,14 @@
      Three bands, told apart by the space between them: the page title
      stands alone, the controls sit 12px apart as one group, and the list
      of days starts 16px below them with 8px between cards. */
+  /* Four controls in a row of their own, 8px apart so they read as one
+     set of controls, and then a real gap before the week starts. At 12
+     all the way down, the title, the buttons and the list were all the
+     same distance from each other and nothing grouped with anything. */
   body.is-narrow .content {
-    display: flex; flex-direction: column; gap: 12px;
+    display: flex; flex-direction: column; gap: 8px;
   }
-  body.is-narrow .page-header { display: block; margin-bottom: 4px; order: 1; }
+  body.is-narrow .page-header { display: block; margin-bottom: 2px; order: 1; }
   body.is-narrow .page-header .header-actions { display: none; }
   /* The one thing a worker opened this screen to do, alone at the top
      and the full width of the glass. It used to share a row with
@@ -1791,8 +1818,8 @@
      the week — it is simply turned on its side: a card per day, the
      day's tasks inside it, and the same totals down the right. */
   body.is-narrow .grid-card { display: none; }
-  body.is-narrow .week-view { display: block; order: 6; margin-top: 12px; }
-  body.is-narrow .day-list { gap: 8px; }
+  body.is-narrow .week-view { display: block; order: 6; margin-top: 20px; }
+  body.is-narrow .day-list { gap: 10px; }
   body.is-narrow .week-total { display: block; }
   .dgroup-head .dlock { display: inline-flex; color: var(--grey-600); }
   /* A day that will not hold what is on it says so on its total, the
@@ -2250,6 +2277,9 @@
         </button>
       </div>
       <div class="m-date" id="m-date">
+        <!-- Beside the period, not beside the total: both are "which
+             part of the week am I looking at". -->
+        <button class="btn-ghost" type="button" id="m-collapse"></button>
         <button class="wk-step" type="button" id="m-prev" aria-label="Week before">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3.5L5.5 8l4.5 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -2316,9 +2346,7 @@
         <!-- Whether it landed, what the week comes to, and how much of
              it is unfolded: three quiet facts about the week, on the
              week's own line. -->
-        <div class="week-total" id="week-total">
-          <button class="btn-ghost" type="button" id="m-collapse"></button>
-        </div>
+        <div class="week-total" id="week-total"></div>
         <div class="day-list" id="day-list"></div>
       </div>
 
