@@ -977,6 +977,7 @@
      rather than one set of controls. */
   body.is-narrow .wk-mode {
     display: flex; width: 100%; height: 40px; padding: 3px;
+    margin-bottom: 16px;
     background: var(--grey-100); border-radius: 10px;
   }
   body.is-narrow .wk-mode button { flex: 1 1 0; height: 34px; padding: 0; font-size: 14px; }
@@ -989,15 +990,22 @@
   .wk-mode button.on { background: var(--white); color: var(--text-main); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1); }
 
   /* A group of tasks that share a site and a supervisor. */
+  /* Inset to the cards' own gutter, so the group's total stands in the
+     same column as every total under it. */
   .tgroup-head {
-    display: flex; align-items: baseline; gap: 8px;
-    margin: 14px 2px 8px; font-size: 12px; font-weight: 500;
-    letter-spacing: 0.3px; text-transform: uppercase; color: var(--grey-600);
+    display: flex; align-items: baseline; gap: 10px; margin: 22px 14px 8px;
   }
-  .tgroup-head:first-child { margin-top: 0; }
-  .tgroup-head .tg-tot {
-    margin-left: auto; font-size: 13px; letter-spacing: 0;
-    text-transform: none; color: var(--text-main);
+  .tgroup-head:first-child { margin-top: 2px; }
+  .tg-main { min-width: 0; flex: 1; }
+  .tg-site {
+    display: block; font-size: 16px; font-weight: 600; line-height: 21px;
+    letter-spacing: -0.1px; color: var(--text-main);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tg-sup { display: block; font-size: 13px; line-height: 18px; color: var(--grey-600); }
+  .tg-tot {
+    flex-shrink: 0; min-width: 54px; text-align: right;
+    font-size: 15px; font-weight: 600; color: var(--text-main);
   }
   /* The heading and its menu are one line; the days are the next.
      A row, wrapped, rather than three stacked blocks. */
@@ -1006,13 +1014,12 @@
     background: var(--white); border: 1px solid var(--grey-300);
     border-radius: 12px; overflow: hidden;
   }
-  .task-card > .tcard-head { flex: 1 1 auto; min-width: 0; }
-  .task-card > .tcard-menu { flex: 0 0 auto; margin-right: 6px; }
+  .task-card > .tcard-head { flex: 1 1 100%; min-width: 0; }
   .task-card > .tcard-days { flex: 0 0 100%; }
   .task-card + .task-card { margin-top: 8px; }
   .tcard-head {
     display: flex; align-items: center; gap: 10px;
-    padding: 12px 6px 12px 14px; background: none; border: none; cursor: pointer;
+    padding: 12px 14px; background: none; border: none; cursor: pointer;
     font-family: var(--fs-sans); text-align: left;
   }
   .tcard-head .caret {
@@ -1026,8 +1033,15 @@
     display: block; font-size: 13px; line-height: 18px; color: var(--grey-600);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  /* The number this view exists to show. */
-  .tcard-tot { font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap; }
+  /* The number this view exists to show — and it sits in the same
+     right-hand slot as the seven figures under it, so a column of hours
+     can be read down rather than hunted for. */
+  .tcard-tot {
+    min-width: 54px; text-align: right;
+    font-size: 15px; font-weight: 600; color: var(--text-main); white-space: nowrap;
+  }
+  .tcard-name { font-size: 15px; line-height: 20px; }
+  .tcard-sub { font-size: 13px; }
   .tcard-menu {
     width: 32px; height: 32px; flex-shrink: 0; display: inline-flex;
     align-items: center; justify-content: center; border: none; border-radius: 8px;
@@ -1036,17 +1050,30 @@
   .tcard-menu[disabled],
   .tcard-menu[aria-disabled="true"] { color: var(--grey-350); cursor: default; }
   .task-card.closed .tcard-days { display: none; }
-  .tcard-days { padding: 0 10px 10px; }
+  .tcard-days { padding: 0; }
   .tday {
     display: flex; align-items: center; gap: 10px; width: 100%;
-    padding: 9px 10px; border: none; border-radius: 8px; background: none;
+    padding: 11px 14px; border: none; border-radius: 0; background: none;
+    border-top: 1px solid var(--grey-200);
     font-family: var(--fs-sans); text-align: left; cursor: pointer;
   }
-  .tday + .tday { border-top: 1px solid var(--grey-200); border-radius: 0; }
+  /* The one thing the three dots used to hold, as the last row of the
+     card it removes. Red says what it does; it is not a primary, so it
+     is not a button sitting in a box. */
+  .tcard-drop {
+    display: block; width: 100%; padding: 12px 14px;
+    border: none; border-top: 1px solid var(--grey-200); background: none;
+    font-family: var(--fs-sans); font-size: 14px; font-weight: 500;
+    color: var(--error); text-align: left; cursor: pointer;
+  }
+  .tcard-drop[aria-disabled="true"] { color: var(--grey-400); cursor: default; }
   .tday .td-name { font-size: 14px; color: var(--grey-700); }
   .tday .td-today { color: var(--primary); font-weight: 500; }
   .tday .td-marks { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; color: var(--grey-600); }
-  .tday .td-hrs { font-size: 14px; font-weight: 500; color: var(--text-main); white-space: nowrap; }
+  .tday .td-hrs {
+    min-width: 54px; text-align: right;
+    font-size: 14px; font-weight: 500; color: var(--text-main); white-space: nowrap;
+  }
   .tday[aria-disabled] { cursor: default; }
   .tday[aria-disabled] .td-name, .tday[aria-disabled] .td-hrs { color: var(--grey-500); }
   .tday.c-cap .td-hrs { color: var(--error); }
@@ -1329,7 +1356,10 @@
      One list for the whole week, broken by date. A day is a timesheet,
      so the date is the heading and it collapses to its total. */
   .week-view { display: none; }
-  .week-total { text-align: right; font-size: 13px; color: var(--grey-600); margin: 2px 0 10px; }
+  /* This line belongs to the list below it, not to the switch above:
+     a clear step down from the switch, and barely a gap to the week it
+     is describing. Both were 10 and it floated between the two. */
+  .week-total { text-align: right; font-size: 13px; color: var(--grey-600); margin: 0 0 8px; }
   .week-total b { color: var(--text-main); }
 
   .day-list { display: flex; flex-direction: column; gap: 10px; }
@@ -1379,7 +1409,10 @@
   body.is-narrow .entry-code { font-size: 15px; line-height: 20px; }
   body.is-narrow .entry-sub { font-size: 13px; line-height: 18px; color: var(--grey-600); }
   body.is-narrow .entry-where { font-size: 12px; line-height: 17px; color: var(--grey-500); }
-  body.is-narrow .entry-hrs { font-size: 15px; font-weight: 600; }
+  /* A comment mark pushed the figure left, so a column of hours read as
+     a scatter. The figure keeps a slot of its own and the marks take
+     whatever is left of the line. */
+  body.is-narrow .entry-hrs { min-width: 54px; text-align: right; font-size: 15px; font-weight: 600; }
 
   .entry {
     display: flex; align-items: center; gap: 12px; width: 100%;
@@ -4152,8 +4185,16 @@
         sup.tasks.forEach(function (t) {
           ds.forEach(function (d) { gTot += hoursFor(t.key, iso(d)); });
         });
-        html += '<div class="tgroup-head"><span>' + Shell.esc(site.name) + ' · ' +
-          Shell.esc(sup.name) + '</span><span class="tg-tot">' + fmtHours(gTot) + ' h</span></div>';
+        /* The site was a line of 12px capitals with the supervisor run
+           into it behind a middot, and the one question this view is
+           opened with — whose site am I looking at — could not be
+           answered from it. Two lines, the site first. */
+        html += '<div class="tgroup-head">' +
+          '<span class="tg-main">' +
+            '<span class="tg-site">' + Shell.esc(site.name) + '</span>' +
+            '<span class="tg-sup">' + Shell.esc(sup.name) + '</span>' +
+          '</span>' +
+          '<span class="tg-tot">' + fmtHours(gTot) + ' h</span></div>';
         sup.tasks.forEach(function (t) {
           var m = taskMeta[t.key];
           var tot = ds.reduce(function (n, d) { return n + hoursFor(t.key, iso(d)); }, 0);
@@ -4193,12 +4234,16 @@
               '</span>' +
               '<span class="tcard-tot">' + fmtHours(tot) + ' h</span>' +
             '</button>' +
-            '<button class="tcard-menu" type="button" data-taskmenu="' + Shell.esc(t.key) + '"' +
-              (shutRow ? ' aria-disabled="true"' : '') +
-              ' aria-label="What else this task offers">' +
-              '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="3.5" r="1.3" fill="currentColor"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="8" cy="12.5" r="1.3" fill="currentColor"/></svg>' +
-            '</button>' +
-            '<div class="tcard-days">' + daysHtml + '</div>' +
+            /* The three dots used to sit beside the figure, which left a
+               number and a menu fighting over the right edge and knocked
+               the total out of line with the seven under it. The one
+               thing the menu held is a row of its own now, at the foot
+               of the card it belongs to, where it is only reachable once
+               the card is open — which is also when anybody wants it. */
+            '<div class="tcard-days">' + daysHtml +
+              '<button class="tcard-drop" type="button" data-taskmenu="' + Shell.esc(t.key) + '"' +
+                (shutRow ? ' aria-disabled="true"' : '') + '>Remove this task</button>' +
+            '</div>' +
           '</div>';
         });
       });
@@ -5816,7 +5861,12 @@
       box.classList.add('knock');
       return;
     }
-    sheetWas = { dk: liveCell, key: key, date: date };
+    /* Kept so that walking away from a refusal can put the row back to
+       the figure the server actually holds. */
+    sheetWas = { dk: liveCell, key: key, date: date,
+      prev: savedCell(key, date),
+      prevShift: cellShift[liveCell] ? cellShift[liveCell].slice() : null,
+      prevNote: noteOf(key, date) };
     sheetHold = liveCell;
     sheetSay(null); setSheetBusy(true);
     commitHours(true);
@@ -5826,12 +5876,39 @@
       closeNotePop(); clearSel();
     }
   });
+  /* ─── Walking away from a refusal ─────────────────────────
+     The desktop would leave the figure on the cell, red, to be retried
+     from the header. A phone has no such row: once the sheet owns the
+     write, "not saved" is not a state a row can rest in — either the
+     write landed or it did not happen. Cancel means nothing is kept,
+     so the row goes back to the figure the server holds. */
+  function sheetRevert(w) {
+    if (!w || !draft) return;
+    clearFly(w.dk);
+    delete cellErr[w.dk];
+    if (w.prevShift) cellShift[w.dk] = w.prevShift; else delete cellShift[w.dk];
+    setNote(w.key, w.date, w.prevNote);
+    /* Written all the way back, not just dropped from the draft: the
+       figure went into the week before the server was asked, so taking
+       it out again is a write of its own. */
+    draft[w.dk] = w.prev;
+    writeCells([w.dk]);
+    delete draft[w.dk];
+    settleRows();
+    markOver(w.date, null);
+  }
   el('np-cancel').addEventListener('click', function () {
-    /* Walking away from a refusal leaves the figure where the desktop
-       leaves it: on the card, red, and retried from the top. */
-    sheetHold = null; sheetFail = null; sheetWas = null;
+    var failed = sheetFail && sheetWas && cellErr[sheetWas.dk];
+    sheetHold = null; sheetFail = null;
     setSheetBusy(false);
-    if (!liveCell) { closeNotePop(); clearSel(); renderWeek(); return; }
+    if (!liveCell) {
+      if (failed) sheetRevert(sheetWas);
+      sheetWas = null;
+      closeNotePop(); clearSel();
+      renderGrid(); renderWeek(); syncEditBar();
+      return;
+    }
+    sheetWas = null;
     cancelHours();
   });
   /* A list being edited redraws itself, so the control that was being
