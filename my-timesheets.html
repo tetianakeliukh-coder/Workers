@@ -1426,7 +1426,11 @@
   .entry .m-marks { display: inline-flex; align-items: center; gap: 6px; color: var(--grey-600); flex-shrink: 0; }
   .entry.locked { opacity: 0.55; }
   .entry.c-cap .entry-hrs { color: var(--error); }
+  /* Without a card to go red, the figure carries it: the hairline above
+     the row turns red too, but one line is not a state anybody notices. */
   .entry.c-err { border-color: var(--error); }
+  body.is-narrow .entry.c-err { border-top-color: var(--error); }
+  body.is-narrow .entry.c-err .entry-hrs { color: var(--error); }
   .day-add { width: 100%; justify-content: center; }
   /* ─── Typing into the row ───────────────────────────────────────
      This release has nothing in a cell but its figure, so there is
