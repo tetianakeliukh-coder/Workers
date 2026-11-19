@@ -854,6 +854,7 @@
   #grid tbody tr:hover .row-act { border-color: var(--grey-350); background: var(--white); }
   #grid .row-act:hover { border-color: var(--primary); background: var(--bg-blue-light); color: var(--primary); }
   #grid .row-act.row-drop { color: var(--grey-500); }
+  #grid .row-acts { display: inline-flex; gap: 4px; }
   #grid tbody tr:hover .row-act.row-drop { color: var(--grey-600); }
   #grid .row-act.row-drop:hover { border-color: var(--error); background: var(--white); color: var(--error); }
 
@@ -2453,7 +2454,7 @@
     el('grid-cols').innerHTML = '<col style="width:' + PICK_W + 'px" />' +
       cols.map(function (c) { return '<col style="width:' + c.w + 'px" />'; }).join('') +
       ds.map(function () { return '<col style="width:92px" />'; }).join('') + '<col style="width:92px" />' +
-      '<col style="width:64px" />';
+      '<col style="width:96px" />';
 
     var overSet = badDays();
     el('grid-head').innerHTML = '<tr>' +
@@ -2489,7 +2490,7 @@
       '</span>' + Shell.colGrip() + '</th>' +
       '<th class="col-act"></th></tr>';
 
-    el('grid').style.minWidth = (off + ds.length * 92 + 92 + 64) + 'px';
+    el('grid').style.minWidth = (off + ds.length * 92 + 92 + 96) + 'px';
 
     var out = [], shown = 0, openKeys = [];
 
@@ -2547,7 +2548,7 @@
             '" style="left:' + offs[i] + 'px">' + html + '</td>';
         }).join('') +
         ds.map(function (d) { return dayCell(group, d); }).join('') +
-        '<td class="num col-hrs">' + fmtHours(total) + '</td>' + actCell(fresh || e) + '</tr>';
+        '<td class="num col-hrs">' + fmtHours(total) + '</td>' + actCell(fresh || e, null, fresh ? null : group) + '</tr>';
     }
 
     function headRow(node, depth, key, open) {
@@ -2635,7 +2636,20 @@
   /* One column at the end of every row, in both modes. A row that exists
      can be copied; a row being added can be thrown away; a heading can
      start another row under itself, already knowing what it groups by. */
-  function actCell(e, addKey) {
+  /* `group` is what the row stands for: one entry in Entries, a task's
+     week in Period. Deleting takes all of it. Hours already approved
+     cannot be deleted — that would undo an approval by the back door. */
+  function delBtn(group, off) {
+    if (!group || !group.length) return '';
+    var shut = group.some(function (x) { return isClosed(x); });
+    var what = state.mode === 'period' ? 'this task' : 'this entry';
+    return '<button class="row-act row-drop" type="button" data-del="' +
+      group.map(function (x) { return x.id; }).join(',') + '" aria-label="Delete ' + what + '"' +
+      (shut ? ' data-tip="Has approved hours — cannot be deleted" disabled'
+            : ' data-tip="Delete ' + what + '"' + off) + '>' + ICO_BIN + '</button>';
+  }
+
+  function actCell(e, addKey, group) {
     var out = '';
     /* While something is picked, approving is the one thing to do — every
        other button on the page steps back, these with them. */
@@ -2644,8 +2658,9 @@
       out = '<button class="row-act row-drop" type="button" data-drop="' + e.id +
         '" aria-label="Remove this row" data-tip="Remove this row"' + off + '>' + ICO_BIN + '</button>';
     } else if (e) {
-      out = '<button class="row-act" type="button" data-dup="' + e.id +
-        '" aria-label="Duplicate this row" data-tip="Duplicate this row"' + off + '>' + ICO_DUP + '</button>';
+      out = '<span class="row-acts"><button class="row-act" type="button" data-dup="' + e.id +
+        '" aria-label="Duplicate this row" data-tip="Duplicate this row"' + off + '>' + ICO_DUP + '</button>' +
+        delBtn(group || [e], off) + '</span>';
     } else if (state.editing && addKey != null && canAddUnder(addKey)) {
       out = '<button class="row-act" type="button" data-addhere="' + Shell.esc(addKey) +
         '" aria-label="Add a task here" data-tip="Add a task here"' + off + '>' + ICO_PLUS + '</button>';
@@ -2677,7 +2692,7 @@
     el('grid-cols').innerHTML = '<col style="width:' + PICK_W + 'px" />' +
       cols.map(function (c) {
         return '<col style="width:' + c.w + 'px" />';
-      }).join('') + '<col style="width:64px" />';
+      }).join('') + '<col style="width:96px" />';
 
     el('grid-head').innerHTML = '<tr>' +
       '<th class="col-pick">' + chkHtml(pickState(list), 'data-pickset="' + setRef(list) + '"') + '</th>' +
@@ -3517,6 +3532,33 @@
     render();
   });
 
+  /* Deleting a saved task. No confirm dialog: it is taken back from the
+     message that says it happened, the way an approval is. */
+  el('grid-body').addEventListener('click', function (e) {
+    var del = e.target.closest('[data-del]');
+    if (!del || del.disabled) return;
+    e.stopPropagation();
+    var ids = Object.create(null);
+    del.getAttribute('data-del').split(',').forEach(function (id) { ids[id] = true; });
+    var gone = [];
+    for (var i = ENTRIES.length - 1; i >= 0; i--) {
+      if (ids[ENTRIES[i].id]) gone.unshift({ at: i, e: ENTRIES.splice(i, 1)[0] });
+    }
+    if (!gone.length) return;
+    gone.forEach(function (g) { delete picked[keyOf(g.e)]; });
+    var hrs = gone.reduce(function (n, g) { return n + (Number(g.e.hours) || 0); }, 0);
+    var e0 = gone[0].e, code = String(e0.task || '').split(' | ')[0] || 'Task';
+    render();
+    Shell.snackbar('Deleted ' + code + (hrs ? ' · ' + fmtHours(hrs) + ' h' : '') + ' for ' + e0.worker + '.', {
+      ms: 6000,
+      action: { label: 'Undo', onClick: function () {
+        gone.forEach(function (g) { ENTRIES.splice(g.at, 0, g.e); });
+        render();
+        Shell.snackbar('Restored.');
+      } }
+    });
+  });
+
   /* ─── Add a task ────────────────────────────────────────────────────
      Not a dialog. Add task drops an empty row at the top of the table and
      the row itself is the form: every answer is a cell, on the line the
@@ -3557,6 +3599,15 @@
     };
     Object.keys(seed || {}).forEach(function (k) { if (seed[k]) row[k] = seed[k]; });
     pending.unshift(row);
+    /* Add task in the header has no heading to start from, but the row
+       already knows what the view groups by when the view groups by
+       something it was given — Entries by date: so it goes straight
+       under its own date rather than above everything (19 Nov). Period
+       groups by worker, which a new row does not have yet: top. */
+    if (anchor == null) {
+      var gk = groups();
+      anchor = gk.length && gk.every(function (k) { return row[k]; }) ? groupKeyOf(row) : '';
+    }
     pinnedAt[row.id] = anchor || '';
     /* A row added under a folded heading would be added out of sight. */
     if (anchor) collapsed['\u00a7' + String(anchor).split('\u00a7')[1]] = false;
@@ -3582,7 +3633,7 @@
       if (first) first.focus();
     }, 0);
   }
-  el('btn-new-task').addEventListener('click', function () { addInlineRow(null, ''); });
+  el('btn-new-task').addEventListener('click', function () { addInlineRow(null, null); });
 
   /* A heading already says what it groups by, so a row started from one
      is asked only for what is left. */
@@ -3595,7 +3646,13 @@
     });
     /* The date is a value in Entries and a column in Period; either way
        it is a date, not a field the row has to be told twice. */
-    if (seed.date) { var d = fromIso(seed.date); if (isNaN(d)) delete seed.date; }
+    /* A date heading is labelled "Mon 16 Nov"; the row wants the day
+       itself, or a + under Monday made a row for today. */
+    if (seed.date) {
+      var hit = days().filter(function (d) { return fmtDay(d) === seed.date; })[0];
+      if (hit) seed.date = iso(hit);
+      else { var d = fromIso(seed.date); if (isNaN(d)) delete seed.date; }
+    }
     return seed;
   }
 
@@ -3739,7 +3796,16 @@
   el('modeswitch').addEventListener('click', function (e) {
     var b = e.target.closest('[data-mode]');
     if (!b) return;
+    var was = state.mode;
     setMode(b.getAttribute('data-mode'));
+    /* 19 Nov: what sits below the switch — search and filters — starts
+       clean in the other view. The date and Add task sit beside the
+       switch, belong to both views, and stay. */
+    if (state.mode !== was) {
+      state.filters = { status: Object.create(null), sup: Object.create(null) };
+      state.q = '';
+      el('search').value = '';
+    }
     collapsed = Object.create(null);
     unpinAll();
     render();
