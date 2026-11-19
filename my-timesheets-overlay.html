@@ -886,9 +886,9 @@
      The date list is three taps for the thing people do most, which is
      go back one week. The arrows are that in one, and the list stays
      for everything else. */
-  body.is-narrow .m-date { display: flex; align-items: center; gap: 8px; }
-  body.is-narrow .m-date .dd-wrap { order: 2; flex: 1 1 auto; min-width: 0; }
-  body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
+  body.is-narrow #m-date { display: flex; align-items: center; gap: 8px; }
+  body.is-narrow #m-date .dd-wrap { order: 2; flex: 1 1 auto; min-width: 0; width: auto; }
+  body.is-narrow #m-date .dd-trigger { width: 100%; }
   .wk-step {
     display: none; width: 32px; height: 32px; flex-shrink: 0;
     align-items: center; justify-content: center;
@@ -905,13 +905,13 @@
      was in the header the phone does not draw — so a figure could
      fail to save and nothing on screen would ever say so. It sits
      with the week's total, because both are facts about the week. */
-  body.is-narrow .week-total {
+  body.is-narrow #week-total {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     text-align: left;
   }
-  body.is-narrow .week-total .wk-sum { margin-left: auto; }
-  body.is-narrow .week-total .save-state { font-size: 13px; }
-  body.is-narrow .week-total .save-retry { flex-shrink: 0; }
+  body.is-narrow #week-total .wk-sum { margin-left: auto; }
+  body.is-narrow #week-total .save-state { font-size: 13px; }
+  body.is-narrow #week-total .save-retry { flex-shrink: 0; }
 
 
   /* ─── No pointer, no hover ──────────────────────────────────────
