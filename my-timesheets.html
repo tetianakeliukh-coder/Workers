@@ -1405,6 +1405,39 @@
     box-shadow: 0 -10px 44px rgba(16, 24, 40, 0.3), 0 0 0 100vmax rgba(16, 24, 40, 0.38);
   }
   body.is-narrow .add-menu button { height: 48px; font-size: 15px; gap: 10px; }
+
+  /* ─── No pointer, no hover ──────────────────────────────────────
+     A phone has nothing to hover with, so a row that lights up under
+     an invisible cursor is a row lying about what it is. The frame is
+     driven by a mouse on this desk, which is exactly why this has to
+     be turned off by hand rather than left to a media query. */
+  body.is-narrow .entry:hover,
+  body.is-narrow .entry:hover:not(.live) {
+    border-color: var(--grey-200); background: var(--white);
+  }
+  body.is-narrow .dgroup-head:hover,
+  body.is-narrow .day-add:hover { background: none; }
+  body.is-narrow .np-x:hover { background: none; color: var(--grey-500); }
+
+  /* ─── A day already handed in ───────────────────────────────────
+     Half opacity made the row faint, not finished: faint reads as a
+     rendering problem, and the text stops being legible on the way.
+     A settled row keeps its contrast and loses its card — no white,
+     no border, nothing to press — which is what "not for you any
+     more" looks like. */
+  body.is-narrow .entry.locked {
+    opacity: 1; background: var(--grey-100); border-color: transparent;
+    cursor: default;
+  }
+  body.is-narrow .entry.locked .entry-code { color: var(--grey-700); font-weight: 500; }
+  body.is-narrow .entry.locked .entry-sub,
+  body.is-narrow .entry.locked .entry-where { color: var(--grey-500); }
+  body.is-narrow .entry.locked .entry-hrs { color: var(--grey-600); }
+  body.is-narrow .entry.locked .m-marks { color: var(--grey-500); }
+  body.is-narrow .day-group.shut { background: var(--grey-100); }
+  body.is-narrow .day-group.shut .dgroup-head .dt,
+  body.is-narrow .day-group.shut .dgroup-head .tot { color: var(--grey-600); }
+
   .m-actions, .m-date { display: none; }
 
   /* A sheet, not a box: flush to the bottom with a grabber on top. */
@@ -1936,9 +1969,15 @@
 
 <!-- Two releases, two pages. This one is the first: a figure typed
      straight into the grid, and nothing else in the cell. -->
-<div class="vp-switch" id="rel-switch" role="group" aria-label="Release">
-  <button type="button" class="on">First release</button>
-  <button type="button" data-go="my-timesheets-overlay.html">Later &mdash; the overlay</button>
+<!-- What the cell holds (19 Nov), in place of the Release switch. Hours
+     alone is the first release, this page. Anything more is the overlay
+     page, opened with that field already on. The id stays rel-switch so
+     the handler below still steps between the two pages. -->
+<div class="vp-switch" id="rel-switch" role="group" aria-label="What the cell holds">
+  <button type="button" class="on" disabled>Hours</button>
+  <button type="button" data-go="my-timesheets-overlay.html?parts=times">Start &amp; finish</button>
+  <button type="button" data-go="my-timesheets-overlay.html?parts=alw">Allowances</button>
+  <button type="button" data-go="my-timesheets-overlay.html?parts=note">Comment</button>
 </div>
 
 <div class="vp-switch" id="tips-switch" role="group" aria-label="First-visit tips">

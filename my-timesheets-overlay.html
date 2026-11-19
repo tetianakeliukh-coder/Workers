@@ -822,7 +822,33 @@
     display: block; margin-top: 2px;
     font-size: 13px; font-weight: 400; line-height: 18px; color: var(--grey-600);
   }
-  body.is-narrow .note-pop .np-day { margin-bottom: 8px; color: var(--grey-600); }
+  body.is-narrow .note-pop .np-day { margin-bottom: 6px; color: var(--grey-600); }
+  /* ─── Reading the sheet ─────────────────────────────────────────
+     Everything in it was the same size and the same grey, so the eye
+     had nothing to land on. Three sizes now carry it: the task it is
+     about, the three things it holds, and the values. The figure the
+     shifts add up to is the answer the sheet exists for, so it is the
+     one number drawn as a number. */
+  body.is-narrow .np-task { font-size: 17px; line-height: 23px; margin-bottom: 18px; }
+  body.is-narrow .np-sec,
+  body.is-narrow .np-fld { margin-bottom: 18px; }
+  body.is-narrow .np-head,
+  body.is-narrow .np-lab {
+    margin-bottom: 8px; font-size: 12px; font-weight: 500;
+    letter-spacing: 0.4px; text-transform: uppercase; color: var(--grey-600);
+  }
+  body.is-narrow .np-head b {
+    font-size: 17px; font-weight: 600; letter-spacing: 0;
+    text-transform: none; color: var(--text-main);
+  }
+  /* A line between the three, because they are three separate things
+     and the gaps alone were not saying so. */
+  body.is-narrow #np-alws, body.is-narrow #np-crow {
+    padding-top: 18px; border-top: 1px solid var(--grey-200);
+  }
+  body.is-narrow .note-pop textarea { font-size: 15px; line-height: 21px; min-height: 76px; }
+  body.is-narrow .np-add { font-size: 14px; padding: 8px 8px 8px 4px; }
+  body.is-narrow .np-line { gap: 8px; margin-bottom: 8px; }
   body.is-narrow .note-pop .np-foot { margin-top: 16px; }
   body.is-narrow .note-pop .np-foot .btn-ghost,
   body.is-narrow .note-pop .np-foot .btn-primary { height: 40px; flex: 1 1 0; justify-content: center; }
@@ -841,6 +867,39 @@
     box-shadow: 0 -10px 44px rgba(16, 24, 40, 0.3), 0 0 0 100vmax rgba(16, 24, 40, 0.38);
   }
   body.is-narrow .add-menu button { height: 48px; font-size: 15px; gap: 10px; }
+
+  /* ─── No pointer, no hover ──────────────────────────────────────
+     A phone has nothing to hover with, so a row that lights up under
+     an invisible cursor is a row lying about what it is. The frame is
+     driven by a mouse on this desk, which is exactly why this has to
+     be turned off by hand rather than left to a media query. */
+  body.is-narrow .entry:hover,
+  body.is-narrow .entry:hover:not(.live) {
+    border-color: var(--grey-200); background: var(--white);
+  }
+  body.is-narrow .dgroup-head:hover,
+  body.is-narrow .day-add:hover { background: none; }
+  body.is-narrow .np-x:hover { background: none; color: var(--grey-500); }
+
+  /* ─── A day already handed in ───────────────────────────────────
+     Half opacity made the row faint, not finished: faint reads as a
+     rendering problem, and the text stops being legible on the way.
+     A settled row keeps its contrast and loses its card — no white,
+     no border, nothing to press — which is what "not for you any
+     more" looks like. */
+  body.is-narrow .entry.locked {
+    opacity: 1; background: var(--grey-100); border-color: transparent;
+    cursor: default;
+  }
+  body.is-narrow .entry.locked .entry-code { color: var(--grey-700); font-weight: 500; }
+  body.is-narrow .entry.locked .entry-sub,
+  body.is-narrow .entry.locked .entry-where { color: var(--grey-500); }
+  body.is-narrow .entry.locked .entry-hrs { color: var(--grey-600); }
+  body.is-narrow .entry.locked .m-marks { color: var(--grey-500); }
+  body.is-narrow .day-group.shut { background: var(--grey-100); }
+  body.is-narrow .day-group.shut .dgroup-head .dt,
+  body.is-narrow .day-group.shut .dgroup-head .tot { color: var(--grey-600); }
+
   /* A row that opens something says so, the way every other list on a
      phone says it. */
   .entry .entry-go { margin-left: 2px; }
@@ -2021,9 +2080,10 @@
 
 <!-- What a cell can carry besides its figure, and how. Every variant
      keeps the padlock in a slot of its own so it never shifts. -->
-<div class="vp-switch" id="marks-switch" role="group" aria-label="Marks in a cell">
+<!-- Three icons it is (19 Nov): Corner mark is gone, and with one
+     option left the switch stays out of the dock. -->
+<div class="vp-switch" id="marks-switch" role="group" aria-label="Marks in a cell" data-dock="off">
   <button type="button" data-marks="three" class="on">Three icons</button>
-  <button type="button" data-marks="corner">Corner mark</button>
 </div>
 
 <!-- Two releases, two pages. This one is what comes after the first:
@@ -2031,13 +2091,19 @@
 <!-- Each of the three is a site setting, not a choice made on the
      screen. All three are on by default, because that is the version
      that has never been drawn and the one every demo trips over. -->
-<div class="vp-switch" id="parts-switch" role="group" aria-label="What the cell holds">
+<!-- Hours is always there and cannot be turned off. Turning off the
+     last of the other three goes back to the first release, which is
+     the cell that holds hours alone. data-proto-id: a new name for what
+     the dock remembers, since the buttons moved along by one. -->
+<div class="vp-switch" id="parts-switch" role="group" aria-label="What the cell holds" data-proto-id="cell-holds">
+  <button type="button" class="on" disabled>Hours</button>
   <button type="button" data-part="times" class="on">Start &amp; finish</button>
   <button type="button" data-part="alw" class="on">Allowances</button>
   <button type="button" data-part="note" class="on">Comment</button>
 </div>
 
-<div class="vp-switch" id="rel-switch" role="group" aria-label="Release">
+<!-- Replaced by What the cell holds; kept out of the dock. -->
+<div class="vp-switch" id="rel-switch" role="group" aria-label="Release" data-dock="off">
   <button type="button" data-go="my-timesheets.html">First release</button>
   <button type="button" class="on">Later &mdash; the overlay</button>
 </div>
@@ -4915,6 +4981,20 @@
      by Escape. So the panel works on a copy and writes it back on the
      way out, which is also what makes Cancel mean anything. */
   var PARTS = { times: true, alw: true, note: true };
+  /* Arriving from the first release with one field picked
+     (?parts=alw): write it where the dock keeps this switch, and the
+     dock puts the buttons that way as the page opens. Hours is index 0. */
+  (function () {
+    var want = new URLSearchParams(location.search).get('parts');
+    if (!want) return;
+    var at = { times: 1, alw: 2, note: 3 }, on = ['0'];
+    want.split(',').forEach(function (k) { if (at[k]) on.push(String(at[k])); });
+    try {
+      localStorage.setItem('opms-proto:' + (location.pathname.split('/').pop() || 'index.html') +
+        ':cell-holds', on.join(','));
+    } catch (err) {}
+    history.replaceState(null, '', location.pathname + location.hash);
+  })();
   var cellShift = Object.create(null);   // 'key|date' -> [{ s, f }]
   var draftShifts = [], draftAlw = [];
   /* The shape the mobile sheet already uses, so the two agree and
@@ -5211,9 +5291,12 @@
     var b = e.target.closest('[data-part]');
     if (!b) return;
     var k = b.getAttribute('data-part');
-    /* Something has to be on: a cell with no fields at all is not a
-       setting any site has. */
-    if (PARTS[k] && !Object.keys(PARTS).filter(function (x) { return x !== k && PARTS[x]; }).length) return;
+    /* Turning off the last field besides Hours leaves a cell of hours
+       alone — the first release, which is the other page. */
+    if (PARTS[k] && !Object.keys(PARTS).filter(function (x) { return x !== k && PARTS[x]; }).length) {
+      window.location.href = 'my-timesheets.html';
+      return;
+    }
     PARTS[k] = !PARTS[k];
     b.classList.toggle('on', PARTS[k]);
     if (liveCell) commitHours();
