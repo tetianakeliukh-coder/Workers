@@ -1406,6 +1406,20 @@
   }
   body.is-narrow .add-menu button { height: 48px; font-size: 15px; gap: 10px; }
 
+  /* ─── Why a day is shut ─────────────────────────────────────────
+     On a desktop the padlock answers that on hover. A thumb has
+     nothing to hover with, so a closed day has to say it out loud —
+     once, at the top of the card, rather than on every row in it. */
+  .day-why {
+    display: none; align-items: flex-start; gap: 8px;
+    margin: 0 10px 10px; padding: 8px 10px; border-radius: 8px;
+    background: var(--grey-200);
+    font-size: 12px; line-height: 17px; color: var(--grey-700);
+  }
+  body.is-narrow .day-group.shut .day-why { display: flex; }
+  .day-why svg { flex-shrink: 0; margin-top: 1px; color: var(--grey-600); }
+
+
   /* ─── Stepping a week ───────────────────────────────────────────
      The date list is three taps for the thing people do most, which is
      go back one week. The arrows are that in one, and the list stays
@@ -3592,7 +3606,7 @@
         var tag = live ? 'div' : 'button';
         return '<' + tag + ' class="' + cls + '"' + (live ? '' : ' type="button"') +
           ' data-mrow="' + Shell.esc(k) + '" data-date="' + key + '"' +
-          (lock ? ' disabled' : '') + '>' +
+          (lock ? ' aria-disabled="true"' : '') + '>' +
           '<span class="entry-main">' +
             '<span class="entry-code">' + Shell.esc(taskTitle(m)) + '</span>' +
             (taskRest(m) ? '<span class="entry-sub">' + Shell.esc(taskRest(m)) + '</span>' : '') +
@@ -3613,6 +3627,7 @@
           '<span class="tot' + (over ? ' over' : '') + '">' +
             (shownTot > 0 ? fmtHours(shownTot) + ' h' : '\u2014') + '</span>' +
         '</button>' +
+        (shut ? '<div class="day-why">' + ICO_LOCK + '<span>' + lockWhy(keys[0] || wk[0]) + '</span></div>' : '') +
         '<div class="day-rows">' + body +
           (shut ? '' :
           '<button class="btn-ghost day-add" type="button" data-card-add="' + key + '">' +
@@ -5174,6 +5189,13 @@
     /* The row is the cell: tapping it hands the caret to the figure,
        which is the whole of what this release keeps in a cell. */
     var mrow = e.target.closest('[data-mrow]');
+    if (mrow && mrow.getAttribute('aria-disabled') === 'true') {
+      /* Tapped something that cannot be typed into: say why rather
+         than do nothing, which reads as the tap not registering. */
+      Shell.snackbar(String(lockWhy(mrow.getAttribute('data-mrow')))
+        .replace(/&mdash;/g, '\u2014').replace(/&amp;/g, '&'));
+      return;
+    }
     if (mrow) {
       if (e.target.closest('input.hr-cell')) return;
       openHours(mrow.getAttribute('data-mrow'), mrow.getAttribute('data-date'));
