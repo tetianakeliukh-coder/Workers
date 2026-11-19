@@ -809,7 +809,20 @@
        which is what a tap outside should do. */
     box-shadow: 0 -10px 44px rgba(16, 24, 40, 0.3), 0 0 0 100vmax rgba(16, 24, 40, 0.38);
   }
+  /* On a desktop the task is written across the row the cell sits in.
+     On a phone the sheet covers the list, so it has to carry its own
+     subject — otherwise it is a panel of hours about nothing. */
   body.is-narrow .note-pop .np-day { font-size: 14px; margin-bottom: 14px; }
+  .np-task { display: none; }
+  body.is-narrow .np-task {
+    display: block; margin: -8px 0 14px;
+    font-size: 15px; font-weight: 600; line-height: 20px; color: var(--text-main);
+  }
+  body.is-narrow .np-task .np-where {
+    display: block; margin-top: 2px;
+    font-size: 13px; font-weight: 400; line-height: 18px; color: var(--grey-600);
+  }
+  body.is-narrow .note-pop .np-day { margin-bottom: 8px; color: var(--grey-600); }
   body.is-narrow .note-pop .np-foot { margin-top: 16px; }
   body.is-narrow .note-pop .np-foot .btn-ghost,
   body.is-narrow .note-pop .np-foot .btn-primary { height: 40px; flex: 1 1 0; justify-content: center; }
@@ -819,6 +832,18 @@
   /* The cross is a 28px target on a desktop. A thumb needs more, and
      has nothing to hover with, so it is simply always there. */
   body.is-narrow .np-x { opacity: 1; width: 36px; height: 36px; }
+  /* Adding a task offers the same two ways here as on the desktop —
+     the week before it, or a job never booked. It arrives as a sheet
+     because there is no button on screen to hang a menu off. */
+  body.is-narrow .add-menu {
+    position: fixed; top: auto; left: 8px; right: 8px; bottom: 8px;
+    width: auto; min-width: 0; padding: 6px; border-radius: 14px;
+    box-shadow: 0 -10px 44px rgba(16, 24, 40, 0.3), 0 0 0 100vmax rgba(16, 24, 40, 0.38);
+  }
+  body.is-narrow .add-menu button { height: 48px; font-size: 15px; gap: 10px; }
+  /* A row that opens something says so, the way every other list on a
+     phone says it. */
+  .entry .entry-go { margin-left: 2px; }
   /* ─── What a cell can actually hold ─────────────────────────────
      A day of one task is not one number. A worker can be on and off
      the job twice in a day, claim two allowances for it and leave a
@@ -2219,6 +2244,7 @@
      comment is underneath, visible, and costs nothing to walk past. -->
 <div class="cell-pop note-pop" id="note-pop" role="dialog" aria-label="Hours and comment for this day">
   <div class="np-day" id="np-day"></div>
+  <div class="np-task" id="np-task"></div>
 
   <!-- When the site books start and finish, the hours are worked out
        rather than typed, and a day can hold more than one shift. -->
@@ -3645,8 +3671,11 @@
 
       /* Only the tasks that have hours on this day, plus whichever one
          is open — a phone cannot carry every task under every day. */
+      /* With hours on this day — or just put there, which is a row
+         with no hours yet and the whole reason it was added. */
       var keys = weekKeys().filter(function (k) {
-        return hoursFor(k, key) > 0 || liveCell === k + '|' + key;
+        return hoursFor(k, key) > 0 || liveCell === k + '|' + key ||
+          (addFromDay === key && isJustAdded(k));
       });
 
       var body = keys.length ? keys.map(function (k) {
@@ -3668,11 +3697,13 @@
             (alw ? ALW_MARK : '') +
             (lock ? ICO_LOCK : '') +
           '</span>' +
-          '<span class="entry-hrs">' + fmtHours(v) + ' h</span>' +
+          '<span class="entry-hrs">' + (v > 0 ? fmtHours(v) + ' h' : '\u2014') + '</span>' +
+          (lock ? '' : CHEV) +
         '</button>';
       }).join('') : '<div class="day-empty">Nothing booked on this day.</div>';
 
-      return '<div class="day-group' + (shut ? ' shut' : '') + '">' +
+      return '<div class="day-group' + (dayClosed[key] === true ? ' closed' : '') +
+        (shut ? ' shut' : '') + '">' +
         '<button class="dgroup-head" type="button" data-dayhead="' + key + '">' +
           '<span class="caret"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
           '<span class="dt">' + DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
@@ -3882,7 +3913,26 @@
     renderWeek();
     syncMobileActions();
   });
-  document.getElementById('m-add').addEventListener('click', function () { openAdd(null); });
+  /* The same menu the desktop opens, from the same two words. Which
+     day it was started from is remembered, so the row lands there. */
+  var addFromDay = null;
+  function openAddWays(dayIso) {
+    addFromDay = dayIso || null;
+    if (!isInline()) { openAdd(dayIso, null); return; }
+    /* Into the phone, not into the window behind it: a fixed element
+       only sits inside the frame when the frame is its parent, because
+       the frame's transform is what it measures itself against. */
+    var host = document.getElementById('device-frame') || document.body;
+    if (addMenu.parentNode !== host) host.appendChild(addMenu);
+    /* Opened on the next tick, so the click that opened it has finished
+       travelling to the document first — where the handler that
+       closes this menu on a click elsewhere is waiting. */
+    setTimeout(function () { addMenu.classList.add('open'); }, 0);
+  }
+  document.getElementById('m-add').addEventListener('click', function (e) {
+    e.stopPropagation();
+    openAddWays(null);
+  });
 
   /* ─── Search ──────────────────────────────────────────────────── */
   var searchEl = document.getElementById('search');
@@ -4974,6 +5024,12 @@
     if (!anchor && !narrow) return;
     var c = cellOf(key, date);
     el('np-day').textContent = fmtDayLong(fromIso(date));
+    var tm = taskMeta[key];
+    el('np-task').innerHTML = tm
+      ? Shell.esc(taskTitle(tm)) +
+        (taskRest(tm) ? '<span class="np-where">' + Shell.esc(taskRest(tm)) + '</span>' : '') +
+        '<span class="np-where">' + Shell.esc(tm.sup) + ' \u00b7 ' + Shell.esc(tm.site) + '</span>'
+      : '';
     var h = el('np-h');
     h.setAttribute('data-key', key);
     h.setAttribute('data-date', date);
@@ -5511,7 +5567,7 @@
     var entry = e.target.closest('[data-entry]');
     if (entry) { openEdit(entry.getAttribute('data-entry'), entry.getAttribute('data-date')); return; }
     var cardAdd = e.target.closest('[data-card-add]');
-    if (cardAdd) openAdd(cardAdd.getAttribute('data-card-add'));
+    if (cardAdd) { e.stopPropagation(); openAddWays(cardAdd.getAttribute('data-card-add')); }
   });
 
   /* ─── Add a task ──────────────────────────────────────────────────
@@ -6227,6 +6283,10 @@
   function isInline() { return document.body.classList.contains('addlayout-inline'); }
 
   var addMenu = el('add-menu'), wherePop = el('where-pop'), taskPop = el('task-pop');
+  /* The menu lives in the header, and the header is not on screen on a
+     phone — so on a phone it is moved out to the page and put back
+     when the header returns. */
+  var addMenuHome = addMenu.parentNode;
   var pickModal = el('recent-modal');
 
   /* A scroll this code performs is not the reader scrolling away, so
@@ -6672,6 +6732,14 @@
     });
     justAdded = keys[keys.length - 1];
     justAddedSet = keys.slice();
+    /* On a phone the row lands on the day it was added from, with
+       nothing in it — so the thing it was added for is opened
+       rather than left to be found. */
+    var onPhone = document.body.classList.contains('is-narrow') && addFromDay;
+    if (onPhone) {
+      var landDay = addFromDay, landKey = keys[keys.length - 1];
+      setTimeout(function () { openHours(landKey, landDay); }, 60);
+    }
     pickModal.classList.remove('open');
     render(); syncEditBar();
     if (keys.length > 1) Shell.snackbar(keys.length + ' tasks added to this week.');
@@ -6714,6 +6782,7 @@
   el('btn-new-task').addEventListener('click', function (e) {
     if (!isInline()) { openAdd(null, null); return; }
     e.stopPropagation();
+    if (addMenu.parentNode !== addMenuHome) addMenuHome.appendChild(addMenu);
     var open = addMenu.classList.toggle('open');
     this.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
@@ -6723,7 +6792,7 @@
     e.stopPropagation();
     closeAddMenu();
     if (b.getAttribute('data-addmode') === 'recent') openPick();
-    else openWherePop(el('btn-new-task'));
+    else openWherePop(el('btn-new-task') || document.body);
   });
   /* The light goes out when the reader looks somewhere else — not on a
      timer, and not on the click that lit it. A target no longer in the

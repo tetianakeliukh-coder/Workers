@@ -664,9 +664,15 @@ body.force-mobile { background: #161a22; overflow: hidden; }
   overflow: hidden;
   isolation: isolate;
 }
-/* Inside the frame, full height means the phone's, not the window's. */
-#device-frame .page { min-height: 100%; height: 100%; }
-#device-frame .content { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* Inside the frame, full height means the phone's, not the window's —
+   and the column that holds the screen is the one that scrolls, because
+   the frame itself must not: a phone does not grow. */
+#device-frame .page { height: 100%; max-height: 100%; min-height: 0; overflow: hidden; }
+#device-frame .content {
+  height: 100%; max-height: 100%; min-height: 0;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
 /* The notch, so the thing reads as a phone at a glance. */
 #device-frame::before {
   content: ''; position: absolute; z-index: 9999; top: 9px; left: 50%;
