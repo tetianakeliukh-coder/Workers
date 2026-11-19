@@ -864,7 +864,14 @@
   body.is-narrow .note-pop textarea { font-size: 15px; line-height: 21px; min-height: 76px; }
   body.is-narrow .np-add { font-size: 14px; padding: 8px 8px 8px 4px; }
   body.is-narrow .np-line { gap: 8px; margin-bottom: 8px; }
-  body.is-narrow .note-pop .np-foot { margin-top: 16px; }
+  /* A sheet taller than the glass put Save below the fold, and a
+     primary action you have to go looking for is one people do not
+     find. It rides the bottom edge instead. */
+  body.is-narrow .note-pop .np-foot {
+    position: sticky; bottom: -24px; z-index: 1;
+    margin: 16px -16px -24px; padding: 12px 16px 24px;
+    background: var(--white); border-top: 1px solid var(--grey-200);
+  }
   body.is-narrow .note-pop .np-foot .btn-ghost,
   body.is-narrow .note-pop .np-foot .btn-primary { height: 40px; flex: 1 1 0; justify-content: center; }
   body.is-narrow .np-line input, body.is-narrow .np-line select { height: 40px; font-size: 15px; }
@@ -873,6 +880,23 @@
   /* The cross is a 28px target on a desktop. A thumb needs more, and
      has nothing to hover with, so it is simply always there. */
   body.is-narrow .np-x { opacity: 1; width: 36px; height: 36px; }
+  /* While the write is in the air the sheet is not a form any more:
+     it is a receipt being waited on. Nothing in it moves, and Cancel
+     is the one thing still live — walking away is always allowed. */
+  .note-pop.busy .np-sec,
+  .note-pop.busy .np-fld,
+  .note-pop.busy .np-task { opacity: 0.5; pointer-events: none; }
+  .note-pop.busy .np-foot .btn-primary { opacity: 0.6; pointer-events: none; }
+  /* One blink, for a line that was already on screen before the button
+     was pressed and so has nothing new about it to catch the eye. */
+  @keyframes np-knock {
+    0%, 100% { background: none; }
+    30% { background: var(--bg-red-light, rgba(166, 13, 31, 0.1)); }
+  }
+  #np-err.knock {
+    border-radius: 6px; margin-left: -6px; padding-left: 6px;
+    animation: np-knock 0.55s ease-out 2;
+  }
   /* Adding a task offers the same two ways here as on the desktop —
      the week before it, or a job never booked. It arrives as a sheet
      because there is no button on screen to hang a menu off. */
@@ -947,28 +971,24 @@
      spread over a week, and the question is how much went where. The
      same two the supervisor screen is being cut along, so the product
      has one vocabulary for this rather than two. */
-  .wk-mode, .wk-bar { display: none; }
-  /* One line about how to look at the week: which way it is cut, and
-     how much of it is open. The switch takes the width — it is the
-     choice — and Collapse all keeps only what its words need. */
-  body.is-narrow .wk-bar {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-  }
+  .wk-mode { display: none; }
+  /* Every control above the list is the same height. They were 32, 36
+     and 40 and the column of them read as a stack of different things
+     rather than one set of controls. */
   body.is-narrow .wk-mode {
-    display: flex; flex: 1 1 auto; padding: 3px;
-    background: var(--grey-100); border-radius: 9px;
+    display: flex; width: 100%; height: 40px; padding: 3px;
+    background: var(--grey-100); border-radius: 10px;
   }
-  body.is-narrow .wk-mode button { flex: 1 1 0; padding: 0; }
-  /* No box: beside a segmented control, a bordered button reads as a
-     third segment — as if "Collapse all" were a third way to look at
-     the week rather than something you do to it. */
+  body.is-narrow .wk-mode button { flex: 1 1 0; height: 34px; padding: 0; font-size: 14px; }
+  /* Collapse all is not a third way of reading the week, so it is not
+     on the switch. It belongs with the other facts about the week as a
+     whole, quietly, at the end of their line. */
   body.is-narrow #m-collapse {
-    flex: 0 0 auto; height: 36px; padding: 0 4px 0 10px; font-size: 13px;
+    order: 3; flex: 0 0 auto; height: auto; padding: 0;
     border: none; background: none; color: var(--primary);
+    font-size: 13px; font-weight: 500;
   }
   body.is-narrow #m-collapse:hover { background: none; }
-  /* The words say it on their own at this size, and the icon was the
-     widest part of a button that had to give its width away. */
   body.is-narrow #m-collapse svg { display: none; }
   .wk-mode button {
     height: 30px; padding: 0 14px; border: none; border-radius: 7px;
@@ -1069,7 +1089,7 @@
   body.is-narrow #m-date .dd-wrap { order: 2; flex: 1 1 auto; min-width: 0; width: auto; }
   body.is-narrow #m-date .dd-trigger { width: 100%; }
   .wk-step {
-    display: none; width: 32px; height: 32px; flex-shrink: 0;
+    display: none; width: 40px; height: 40px; flex-shrink: 0;
     align-items: center; justify-content: center;
     background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
     color: var(--grey-700); cursor: pointer;
@@ -1088,7 +1108,8 @@
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     text-align: left;
   }
-  body.is-narrow #week-total .wk-sum { margin-left: auto; }
+  body.is-narrow #week-total .wk-sum { order: 2; margin-left: auto; }
+  body.is-narrow #week-total #m-collapse { margin-left: 4px; }
   body.is-narrow #week-total .save-state { font-size: 13px; }
   body.is-narrow #week-total .save-retry { flex-shrink: 0; }
 
@@ -1758,8 +1779,8 @@
   /* The toolbar keeps its search on a phone; the grid-only controls go. */
   body.is-narrow .period-bar { order: 3; display: block; margin: 0; }
   body.is-narrow .period-bar .search-wrap { width: 100%; }
-  body.is-narrow .period-bar .search-bar { height: 32px; }
-  body.is-narrow .m-date .dd-trigger { height: 32px; }
+  body.is-narrow .period-bar .search-bar { height: 40px; }
+  body.is-narrow .m-date .dd-trigger { height: 40px; }
   body.is-narrow .period-bar .period-actions { display: none; }
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
@@ -2286,14 +2307,18 @@
              questions about the same thing, so they share a line. Add
              task is on its own at the top, where the one thing a worker
              came to do belongs. -->
-        <div class="wk-bar">
-          <div class="wk-mode" id="wk-mode" role="group" aria-label="How to read the week">
-            <button type="button" data-wkmode="day" class="on">By day</button>
-            <button type="button" data-wkmode="task">By task</button>
-          </div>
+        <!-- A switch on a phone is a row of its own: two halves, the
+             whole width, nothing else on the line. -->
+        <div class="wk-mode" id="wk-mode" role="group" aria-label="How to read the week">
+          <button type="button" data-wkmode="day" class="on">By day</button>
+          <button type="button" data-wkmode="task">By task</button>
+        </div>
+        <!-- Whether it landed, what the week comes to, and how much of
+             it is unfolded: three quiet facts about the week, on the
+             week's own line. -->
+        <div class="week-total" id="week-total">
           <button class="btn-ghost" type="button" id="m-collapse"></button>
         </div>
-        <div class="week-total" id="week-total"></div>
         <div class="day-list" id="day-list"></div>
       </div>
 
@@ -2604,7 +2629,7 @@
   </label>
   <div class="np-foot">
     <button class="btn-ghost" type="button" id="np-cancel" tabindex="-1">Cancel</button>
-    <button class="btn-primary" type="button" id="np-done" tabindex="-1">Done</button>
+    <button class="btn-primary" type="button" id="np-done" tabindex="-1">Save</button>
   </div>
 </div>
 
@@ -4029,10 +4054,14 @@
             (taskRest(m) ? '<span class="entry-sub">' + Shell.esc(taskRest(m)) + '</span>' : '') +
             '<span class="entry-where">' + Shell.esc(m.sup) + ' \u00b7 ' + Shell.esc(m.site) + '</span>' +
           '</span>' +
+          /* No padlock here. On a desktop it answers "why can I not type
+             in this cell", asked by hovering; a phone cannot hover, the
+             card is already at half strength, and tapping it says the
+             reason out loud. A third grey mark on a 320px row is one
+             mark too many. */
           '<span class="m-marks">' +
             (n ? ICO_CMT : '') +
             (alw ? ALW_MARK : '') +
-            (lock ? ICO_LOCK : '') +
           '</span>' +
           '<span class="entry-hrs">' + (v > 0 ? fmtHours(v) + ' h' : '\u2014') + '</span>' +
           (lock ? '' : CHEV) +
@@ -5140,7 +5169,7 @@
       delete justSaved[dk]; delete savedTimer[dk]; renderGrid();
     }, 1600);
   }
-  function commitHours() {
+  function commitHours(hold) {
     if (!liveCell) return;
     var dk = liveCell, at = dk.lastIndexOf('|');
     var key = dk.slice(0, at), date = dk.slice(at + 1);
@@ -5162,7 +5191,9 @@
           : (savedCell(key, date).a || []) });
     }
     liveCell = null;
-    closeNotePop();
+    /* On a phone the panel is the transaction: it stays up until the
+       write has landed, so a refusal has something to be refused in. */
+    if (!hold) closeNotePop();
     var typed = draft && (dk in draft);
     /* Opened, read, left alone: there is nothing to send — unless the
        cell was already red, in which case leaving it is the retry. */
@@ -5231,6 +5262,10 @@
      nowhere earlier: it means the database has it, not that the
      browser sent it. */
   function answerCell(dk, key, date) {
+    answerCellInner(dk, key, date);
+    if (sheetHold === dk) sheetSettled(dk);
+  }
+  function answerCellInner(dk, key, date) {
     clearFly(dk);
     if (retryRound < 2 && SAVE_SPEED === 'timeout') {
       cellErr[dk] = { kind: 'timeout', msg: 'The server did not answer, so this was not ' +
@@ -5315,6 +5350,10 @@
     cellErr[dk] = { kind: 'server', msg: 'The server refused this change, so it was not ' +
       'saved. Press Retry at the top of the page, or refresh and try again.' };
     renderGrid(); renderWeek(); syncEditBar();
+    /* On a phone the sheet is still up and about to say this itself.
+       Two of the same sentence, one of them sitting on the button that
+       answers it, is worse than none. */
+    if (sheetHold === dk) return;
     Shell.snackbar('Your changes could not be saved. Please refresh the page and try again.',
       { title: 'Not saved', variant: 'error' });
   }
@@ -5568,6 +5607,9 @@
   function syncNoteErr(date) {
     var box = el('np-err');
     if (!noteOpen()) return;
+    /* A server's refusal is showing in this slot and is not a thing the
+       next keystroke knows better about. */
+    if (sheetFail) return;
     var over = overCap(date);
     box.hidden = !over;
     if (over) {
@@ -5597,6 +5639,11 @@
         (taskRest(tm) ? '<span class="np-where">' + Shell.esc(taskRest(tm)) + '</span>' : '') +
         '<span class="np-where">' + Shell.esc(tm.sup) + ' \u00b7 ' + Shell.esc(tm.site) + '</span>'
       : '';
+    /* A new cell starts clean: the last cell's refusal is not this
+       cell's problem. */
+    sheetHold = null; sheetFail = null; sheetWas = null;
+    notePop.classList.remove('busy');
+    el('np-done').textContent = 'Save';
     var h = el('np-h');
     h.setAttribute('data-key', key);
     h.setAttribute('data-date', date);
@@ -5653,11 +5700,108 @@
      walks the two fields and then the week, which is the path a week of
      hours is actually typed along — stopping it at a button twice per
      cell would cost more than the buttons are worth. */
+  /* ─── Save, on a phone ──────────────────────────────────
+     The desktop writes a cell the moment the caret leaves it, and the
+     cell carries whatever the server says afterwards. A phone has no
+     cell to carry anything: the sheet covers the week, and a figure
+     that failed would be a red card behind it that nobody is looking
+     at. So on a phone the sheet is the transaction. Save is pressed,
+     the sheet waits, and it closes only when the write has landed.
+
+     The button is never disabled while the day is over its 24 hours:
+     a dead button is a question with no answer, so it stays live and
+     says why when it is pressed. */
+  var sheetHold = null, sheetFail = null, sheetWas = null;
+  function setSheetBusy(on) {
+    notePop.classList.toggle('busy', !!on);
+    el('np-done').textContent = on ? 'Saving…' : (sheetFail ? 'Try again' : 'Save');
+  }
+  function sheetSay(msg) {
+    sheetFail = msg || null;
+    el('np-err').hidden = !msg;
+    if (msg) el('np-err-t').textContent = msg;
+  }
+  function sheetSettled(dk) {
+    sheetHold = null;
+    var bad = cellErr[dk];
+    /* A site taken away mid-week has its own sheet up already, and it
+       says more than this one can. The cell's sheet gets out of its
+       way. */
+    if (bad && bad.kind === 'blocked') {
+      sheetFail = null;
+      setSheetBusy(false);
+      closeNotePop(); clearSel();
+      renderGrid(); renderWeek(); syncEditBar();
+      return;
+    }
+    if (!bad) {
+      sheetFail = null;
+      setSheetBusy(false);
+      closeNotePop(); clearSel();
+      renderGrid(); renderWeek(); syncEditBar();
+      return;
+    }
+    /* Refused. The sheet stays where it is, with everything the worker
+       typed still in it, and says what happened. */
+    /* The desktop's wording sends people to the Retry button in the
+       header. In a sheet the retry is the button right under the
+       message, so that sentence is taken off rather than lying. */
+    var msg = String(bad.msg).replace(/&mdash;/g, '\u2014').replace(/&amp;/g, '&')
+      .replace(/\s*Press (the )?Retry[^.]*\./gi, '')
+      .replace(/\s*or refresh and try again\./i, '')
+      .replace(/\s+/g, ' ').trim();
+    if (!/[.!?]$/.test(msg)) msg += '.';
+    sheetSay(msg);
+    setSheetBusy(false);
+  }
   el('np-done').addEventListener('click', function () {
-    if (liveCell) commitHours();
-    clearSel();
+    var narrow = document.body.classList.contains('is-narrow');
+    if (!narrow) { if (liveCell) commitHours(); clearSel(); return; }
+    if (sheetHold) return;
+    /* Pressed again after a refusal: send the same cell back up. */
+    if (sheetFail && !liveCell && sheetWas) {
+      sheetHold = sheetWas.dk;
+      sheetSay(null); setSheetBusy(true);
+      sendCell(sheetWas.dk, sheetWas.key, sheetWas.date, true);
+      return;
+    }
+    if (!liveCell) { clearSel(); return; }
+    var at = liveCell.lastIndexOf('|');
+    var key = liveCell.slice(0, at), date = liveCell.slice(at + 1);
+    /* Twenty-four hours is a rule the page knows on its own, so it is
+       answered here rather than sent to be refused. Nothing is saved
+       and nothing closes — the figure is still there to be fixed. */
+    if (overCap(date)) {
+      syncNoteErr(date);
+      /* The reason is already written in the sheet, a few lines up. A
+         snackbar would repeat it on top of the very button that was
+         just pressed — so instead the line itself is brought into view
+         and blinks once, which is what the press was asking about. */
+      var box = el('np-err');
+      box.scrollIntoView({ block: 'center' });
+      box.classList.remove('knock');
+      void box.offsetWidth;
+      box.classList.add('knock');
+      return;
+    }
+    sheetWas = { dk: liveCell, key: key, date: date };
+    sheetHold = liveCell;
+    sheetSay(null); setSheetBusy(true);
+    commitHours(true);
+    /* Nothing was sent after all — opened, read, left alone. */
+    if (sheetHold && !inFlight[sheetWas.dk]) {
+      sheetHold = null; setSheetBusy(false);
+      closeNotePop(); clearSel();
+    }
   });
-  el('np-cancel').addEventListener('click', function () { cancelHours(); });
+  el('np-cancel').addEventListener('click', function () {
+    /* Walking away from a refusal leaves the figure where the desktop
+       leaves it: on the card, red, and retried from the top. */
+    sheetHold = null; sheetFail = null; sheetWas = null;
+    setSheetBusy(false);
+    if (!liveCell) { closeNotePop(); clearSel(); renderWeek(); return; }
+    cancelHours();
+  });
   /* A list being edited redraws itself, so the control that was being
      used has to be found again afterwards — the same trick the grid
      plays when a figure is typed into it. */
@@ -6162,6 +6306,12 @@
     /* Bringing the panel into view is a scroll, and it used to close the
        very cell it had just opened. */
     if (Date.now() < scrollQuietUntil) return;
+    /* On a desktop a scroll moves the table out from under the panel,
+       which is as good as looking away. On a phone the thing being
+       scrolled is usually the sheet itself — reading to the bottom of
+       your own form is not walking away from it, and it was saving the
+       cell out from under the reader. */
+    if (document.body.classList.contains('is-narrow')) return;
     if (popKey) commitCell();
     if (liveCell) commitHours();
   }, true);

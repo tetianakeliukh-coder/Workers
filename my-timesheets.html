@@ -1375,8 +1375,8 @@
   /* The toolbar keeps its search on a phone; the grid-only controls go. */
   body.is-narrow .period-bar { order: 3; display: block; margin: 0; }
   body.is-narrow .period-bar .search-wrap { width: 100%; }
-  body.is-narrow .period-bar .search-bar { height: 32px; }
-  body.is-narrow .m-date .dd-trigger { height: 32px; }
+  body.is-narrow .period-bar .search-bar { height: 40px; }
+  body.is-narrow .m-date .dd-trigger { height: 40px; }
   body.is-narrow .period-bar .period-actions { display: none; }
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
@@ -1472,28 +1472,24 @@
      spread over a week, and the question is how much went where. The
      same two the supervisor screen is being cut along, so the product
      has one vocabulary for this rather than two. */
-  .wk-mode, .wk-bar { display: none; }
-  /* One line about how to look at the week: which way it is cut, and
-     how much of it is open. The switch takes the width — it is the
-     choice — and Collapse all keeps only what its words need. */
-  body.is-narrow .wk-bar {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-  }
+  .wk-mode { display: none; }
+  /* Every control above the list is the same height. They were 32, 36
+     and 40 and the column of them read as a stack of different things
+     rather than one set of controls. */
   body.is-narrow .wk-mode {
-    display: flex; flex: 1 1 auto; padding: 3px;
-    background: var(--grey-100); border-radius: 9px;
+    display: flex; width: 100%; height: 40px; padding: 3px;
+    background: var(--grey-100); border-radius: 10px;
   }
-  body.is-narrow .wk-mode button { flex: 1 1 0; padding: 0; }
-  /* No box: beside a segmented control, a bordered button reads as a
-     third segment — as if "Collapse all" were a third way to look at
-     the week rather than something you do to it. */
+  body.is-narrow .wk-mode button { flex: 1 1 0; height: 34px; padding: 0; font-size: 14px; }
+  /* Collapse all is not a third way of reading the week, so it is not
+     on the switch. It belongs with the other facts about the week as a
+     whole, quietly, at the end of their line. */
   body.is-narrow #m-collapse {
-    flex: 0 0 auto; height: 36px; padding: 0 4px 0 10px; font-size: 13px;
+    order: 3; flex: 0 0 auto; height: auto; padding: 0;
     border: none; background: none; color: var(--primary);
+    font-size: 13px; font-weight: 500;
   }
   body.is-narrow #m-collapse:hover { background: none; }
-  /* The words say it on their own at this size, and the icon was the
-     widest part of a button that had to give its width away. */
   body.is-narrow #m-collapse svg { display: none; }
   .wk-mode button {
     height: 30px; padding: 0 14px; border: none; border-radius: 7px;
@@ -1593,7 +1589,7 @@
   body.is-narrow #m-date .dd-wrap { order: 2; flex: 1 1 auto; min-width: 0; width: auto; }
   body.is-narrow #m-date .dd-trigger { width: 100%; }
   .wk-step {
-    display: none; width: 32px; height: 32px; flex-shrink: 0;
+    display: none; width: 40px; height: 40px; flex-shrink: 0;
     align-items: center; justify-content: center;
     background: var(--white); border: 1px solid var(--grey-350); border-radius: 8px;
     color: var(--grey-700); cursor: pointer;
@@ -1612,7 +1608,7 @@
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     text-align: left;
   }
-  body.is-narrow #week-total .wk-sum { margin-left: auto; }
+  body.is-narrow #week-total .wk-sum { order: 2; margin-left: auto; }
   body.is-narrow #week-total .save-state { font-size: 13px; }
   body.is-narrow #week-total .save-retry { flex-shrink: 0; }
 
@@ -2150,14 +2146,18 @@
              questions about the same thing, so they share a line. Add
              task is on its own at the top, where the one thing a worker
              came to do belongs. -->
-        <div class="wk-bar">
-          <div class="wk-mode" id="wk-mode" role="group" aria-label="How to read the week">
-            <button type="button" data-wkmode="day" class="on">By day</button>
-            <button type="button" data-wkmode="task">By task</button>
-          </div>
+        <!-- A switch on a phone is a row of its own: two halves, the
+             whole width, nothing else on the line. -->
+        <div class="wk-mode" id="wk-mode" role="group" aria-label="How to read the week">
+          <button type="button" data-wkmode="day" class="on">By day</button>
+          <button type="button" data-wkmode="task">By task</button>
+        </div>
+        <!-- Whether it landed, what the week comes to, and how much of
+             it is unfolded: three quiet facts about the week, on the
+             week's own line. -->
+        <div class="week-total" id="week-total">
           <button class="btn-ghost" type="button" id="m-collapse"></button>
         </div>
-        <div class="week-total" id="week-total"></div>
         <div class="day-list" id="day-list"></div>
       </div>
 
@@ -3795,7 +3795,10 @@
             (taskRest(m) ? '<span class="entry-sub">' + Shell.esc(taskRest(m)) + '</span>' : '') +
             '<span class="entry-where">' + Shell.esc(m.sup) + ' \u00b7 ' + Shell.esc(m.site) + '</span>' +
           '</span>' +
-          (lock ? '<span class="m-marks">' + ICO_LOCK + '</span>' : '') +
+          /* No padlock here. On a desktop it answers "why can I not type
+             in this cell", asked by hovering; a phone cannot hover, the
+             card is already at half strength, and tapping it says the
+             reason out loud. */
           right +
         '</' + tag + '>';
       }).join('')
@@ -5522,6 +5525,9 @@
     /* Bringing the panel into view is a scroll, and it used to close the
        very cell it had just opened. */
     if (Date.now() < scrollQuietUntil) return;
+    /* On a phone the thing being scrolled is the list the field sits in,
+       not a table moving out from under a panel. */
+    if (document.body.classList.contains('is-narrow')) return;
     if (popKey) commitCell();
     if (liveCell) commitHours();
   }, true);
