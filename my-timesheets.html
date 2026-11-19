@@ -843,6 +843,7 @@
     box-shadow: 0 0 0 2px var(--primary), 0 0 0 9999px rgba(16, 24, 40, 0.45);
     transition: top .18s ease, left .18s ease, width .18s ease, height .18s ease;
   }
+  body.is-narrow .coach { width: auto; left: 12px !important; right: 12px; }
   .coach {
     display: none; position: fixed; z-index: 701; width: 296px; padding: 14px 16px 12px;
     border-radius: 10px; background: var(--white);
@@ -6695,9 +6696,12 @@
      Not a description of the machine — a sentence each about what to
      do and what to expect. Short enough to be read standing up, which
      is how a tour is read. */
+  function onPhone() { return document.body.classList.contains('is-narrow'); }
   var WEEK_TIPS = [
     { find: function () {
-        return gridBody.querySelector('.hr-view[data-key]:not(.locked)');
+        return onPhone()
+          ? dayList.querySelector('[data-mrow]:not([aria-disabled])')
+          : gridBody.querySelector('.hr-view[data-key]:not(.locked)');
       },
       h: 'Just type',
       p: 'Click a day and enter your hours. They are kept as you go.' },
@@ -6705,11 +6709,15 @@
       h: 'No Save button',
       p: 'This line tells you if something did not go through, and lets you try again.' },
     { find: function () {
-        return gridBody.querySelector('td.col-day .hr-view.locked');
+        return onPhone()
+          ? dayList.querySelector('.entry.locked')
+          : gridBody.querySelector('td.col-day .hr-view.locked');
       },
       h: 'Grey days are signed off',
       p: 'Your supervisor has approved them, so they cannot be changed. Hover to see why.' },
-    { find: function () { return gridHead.querySelector('th.col-day'); },
+    { find: function () {
+        return onPhone() ? dayList.querySelector('.dgroup-head') : gridHead.querySelector('th.col-day');
+      },
       h: 'A day holds 24 hours',
       p: 'Go over and the day turns red. Nothing is kept until you bring it back down.' }
   ];
@@ -6720,6 +6728,10 @@
      two it points at live inside a menu, so the tour opens it. */
   var EMPTY_TIPS = [
     { find: function () {
+        /* On a phone the empty week is seven empty day cards, so the
+           way in is the Add task on one of them, not the big button
+           in a card the phone does not draw. */
+        if (onPhone()) return dayList.querySelector('[data-card-add]');
         return gridBody.querySelector('[data-empty="recent"]') ||
                addMenu.querySelector('[data-addmode="recent"]');
       },
@@ -6727,6 +6739,7 @@
       p: 'Bring over the tasks you worked on before \u2014 all of them, or just a few. ' +
          'The hours stay behind.' },
     { find: function () {
+        if (onPhone()) return document.getElementById('m-add');
         return gridBody.querySelector('[data-empty="new"]') ||
                addMenu.querySelector('[data-addmode="new"]');
       },
@@ -6760,18 +6773,31 @@
     el('coach-next').textContent = i === COACH.length - 1 ? 'Got it' : 'Next';
     el('coach-skip').hidden = i === COACH.length - 1;
     ensureVisible(node.closest('tr') || node);
+    /* Inside a phone frame, a fixed element measures itself against the
+       frame, and the frame is scaled to fit the desk — so the target's
+       screen rectangle is converted back into the phone's own pixels
+       before the ring and the card are placed against it. */
+    var frame = document.getElementById('device-frame');
+    var ox = 0, oy = 0, k = 1, maxW = window.innerWidth, maxH = window.innerHeight;
+    if (frame) {
+      var fb = frame.getBoundingClientRect();
+      k = fb.width / frame.offsetWidth || 1;
+      ox = fb.left; oy = fb.top; maxW = frame.offsetWidth; maxH = frame.offsetHeight;
+    }
     var r = node.getBoundingClientRect();
+    var rt = (r.top - oy) / k, rl = (r.left - ox) / k;
+    var rw = r.width / k, rh = r.height / k;
     coachRing.hidden = false;
-    coachRing.style.top = (r.top - 4) + 'px';
-    coachRing.style.left = (r.left - 4) + 'px';
-    coachRing.style.width = (r.width + 8) + 'px';
-    coachRing.style.height = (r.height + 8) + 'px';
+    coachRing.style.top = (rt - 4) + 'px';
+    coachRing.style.left = (rl - 4) + 'px';
+    coachRing.style.width = (rw + 8) + 'px';
+    coachRing.style.height = (rh + 8) + 'px';
     coach.classList.add('open');
     /* Under the thing it is about, or over it when the page has run out
        of room below — the same rule every other panel here follows. */
-    var top = r.bottom + 12, left = r.left - 8;
-    if (top + coach.offsetHeight > window.innerHeight - 12) top = r.top - coach.offsetHeight - 12;
-    if (left + coach.offsetWidth > window.innerWidth - 12) left = window.innerWidth - coach.offsetWidth - 12;
+    var top = rt + rh + 12, left = rl - 8;
+    if (top + coach.offsetHeight > maxH - 12) top = rt - coach.offsetHeight - 12;
+    if (left + coach.offsetWidth > maxW - 12) left = maxW - coach.offsetWidth - 12;
     coach.style.top = Math.max(12, top) + 'px';
     coach.style.left = Math.max(12, left) + 'px';
   }
