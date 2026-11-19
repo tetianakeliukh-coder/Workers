@@ -3831,6 +3831,14 @@
 
     if (weekMode === 'task') { renderByTask(); giveCaretIfPhone(); return; }
 
+    /* A week with nothing on it was seven identical cards saying nothing
+       is booked, and the two ways onto it were buried inside the first
+       of them. */
+    if (!weekKeys().length && !state.query) {
+      dayList.innerHTML = emptyState();
+      return;
+    }
+
     /* The week in the order the week happens, the same as the columns
        on the desktop. Every day is drawn, the empty ones included: a
        missing Thursday reads as a Thursday nobody worked, which is

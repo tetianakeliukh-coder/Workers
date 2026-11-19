@@ -293,6 +293,15 @@
     line-height: 22px; color: var(--text-main); }
   .ts-empty p { margin: 0; font-size: 14px; line-height: 20px; color: var(--grey-600); max-width: 380px; }
   .ts-empty-acts { display: flex; gap: 10px; margin-top: 12px; }
+  /* On a phone it is the week, so it is a card like the days it stands
+     in for, and the two ways stack to the full width a thumb wants. */
+  body.is-narrow .ts-empty {
+    padding: 40px 20px 36px; gap: 6px;
+    background: var(--white); border: 1px solid var(--grey-300); border-radius: 12px;
+  }
+  body.is-narrow .ts-empty-acts { flex-direction: column; align-self: stretch; margin-top: 16px; }
+  body.is-narrow .ts-empty-acts .btn-primary,
+  body.is-narrow .ts-empty-acts .btn-outline { height: 36px; justify-content: center; }
 
   /* ─── Picking from what has been booked before ─────────────────── */
   .pick-modal { max-width: 560px; height: min(620px, 88vh); }
@@ -4100,6 +4109,15 @@
 
     if (weekMode === 'task') { renderByTask(); return; }
 
+    /* A week with nothing on it was seven identical cards saying nothing
+       is booked, and the two ways onto it were buried inside the first
+       of them. The desktop has said this properly all along; the phone
+       says it the same way. */
+    if (!weekKeys().length && !state.query) {
+      dayList.innerHTML = emptyState();
+      return;
+    }
+
     /* The week in the order the week happens, the same as the columns
        on the desktop. Every day is drawn, including the empty ones:
        a missing Thursday reads as a Thursday that was never worked,
@@ -6461,6 +6479,16 @@
     }
     /* The row is the cell. Tapping it opens what a desktop click on
        the cell opens — the same panel, the same write. */
+    var blank = e.target.closest('[data-empty]');
+    if (blank && document.body.classList.contains('is-narrow')) {
+      /* The same two ways the grid offers, from the list that replaced
+         it. Scoped to the phone so the grid's own handler stays the one
+         that answers on a desktop. */
+      if (!state.editing) enterEdit();
+      if (blank.getAttribute('data-empty') === 'recent') { openPick(); return; }
+      openWherePop(blank);
+      return;
+    }
     var mrow = e.target.closest('[data-mrow]');
     if (mrow && mrow.getAttribute('aria-disabled') === 'true') {
       /* Tapped something that cannot be typed into: say why rather
