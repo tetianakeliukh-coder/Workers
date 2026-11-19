@@ -171,8 +171,6 @@
   /* An approved day is read, not worked on. The tick replaces the box so
      the row cannot be picked again, and the green is the same one the
      status chips use. */
-  /* My Timesheets shares this file and has nothing to approve. */
-  body[data-module="mytsflat"] #approval-switch { display: none; }
   .appr-tick { display: inline-flex; color: var(--sec-green); }
   .appr-tick.fin { color: var(--grey-600); }
   /* What a heading's entries come to, beside the heading's own name. */
@@ -735,6 +733,32 @@
     margin-top: 4px; font-size: 12px; line-height: 16px; color: var(--grey-700); font-style: italic;
     white-space: normal; overflow-wrap: anywhere;
   }
+  /* Period review: one worker's week, tasks down the side. */
+  .rvp-wrap { margin-top: 18px; }
+  .rvp-grid col.c-task { width: 240px; }
+  .rvp-grid .rvp-task {
+    position: sticky; left: 0; z-index: 1; background: var(--white); box-shadow: none;
+    white-space: normal;
+  }
+  .rvp-path { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: 1px; }
+  .rvp-site { font-size: 12px; line-height: 16px; color: var(--grey-600); margin-top: 4px; }
+  .rvp-h { font-size: 14px; font-weight: 600; color: var(--text-main); font-variant-numeric: tabular-nums; }
+  .rvp-time { font-size: 12px; color: var(--grey-700); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .rvp-st { display: flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 11px; color: var(--grey-600); }
+  .rvp-st svg { width: 12px; height: 12px; }
+  /* A day column is narrow; a long allowance name wraps inside its tag
+     rather than running into the next day. */
+  .rvp-grid .rvx-tag { max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 15px; padding-top: 2px; padding-bottom: 2px; }
+  .rvp-day.done, .rvp-day.out,
+  .rvp-day.done .rvp-h, .rvp-day.out .rvp-h, .rvp-day.done .rvp-time, .rvp-day.out .rvp-time,
+  .rvp-day.done .rvx-note, .rvp-day.out .rvx-note, .rvp-day.done .rvx-tag, .rvp-day.out .rvx-tag,
+  .rvp-grid tr.done .rvx-code, .rvp-grid tr.done .rvp-path, .rvp-grid tr.done .rvp-site,
+  .rvp-grid tr.done .rvx-tot { color: var(--grey-400); }
+  .rvp-grid tfoot td {
+    background: var(--grey-50, #f8f9fa); font-weight: 600; border-top: 1px solid var(--grey-300);
+    border-bottom: none;
+  }
+  .rvp-grid tfoot .rvp-task { background: var(--grey-50, #f8f9fa); font-size: 13px; }
   .rvx-cards { display: flex; flex-direction: column; gap: 12px; }
   .rvx-card { border: 1px solid var(--grey-300); border-radius: 8px; overflow: hidden; }
   .rvx-card-h {
@@ -1062,16 +1086,8 @@
   </div>
 </div>
 
-<!-- ── Prototype device, not product ────────────────────────────────
-     The same screen built on two approval models, to be compared rather
-     than argued about: by day (a worker's whole day goes through) and by
-     entry (each line goes through, the day is worked out from them). The
-     shell gathers every .vp-switch into the Prototype options dock. -->
-<div class="vp-switch structure-switch" id="approval-switch" role="group" aria-label="Prototype approval model">
-  <span class="sw-label">Approval</span>
-  <button type="button" data-approval="timesheets-flat.html">By day</button>
-  <button type="button" data-approval="timesheets-flat-entry.html" class="on">By entry</button>
-</div>
+<!-- The By day / By entry switch is gone (19 Nov): By entry is the one
+     model now. timesheets-flat.html (By day) is still on disk, unlinked. -->
 
 <script src="assets/shell.js"></script>
 <script>
@@ -1358,7 +1374,21 @@
 
   /* Period turns the date into the columns, so it cannot also be a
      grouping — the days are already across the top. */
+  /* ─── Group by, parked ─────────────────────────────────────────────
+     19 Nov: each view groups one fixed way, and the Group by control is
+     hidden. Entries by date — in a list of lines the date is just a
+     number in a row, the heading makes it visible. Period by worker — the
+     week is approved one worker at a time. Set GROUP_BY_UI to true to
+     bring the control (and free grouping) back exactly as it was. */
+  var GROUP_BY_UI = false;
+  var FIXED_GROUPS = { list: ['date'], period: ['worker'] };
+
   function activeGroups() {
+    if (!GROUP_BY_UI) {
+      var fx = FIXED_GROUPS[state.mode] || [];
+      /* The worker's own tab has one worker: no heading for it. */
+      return state.tab === 'mine' ? fx.filter(function (k) { return k !== 'worker'; }) : fx;
+    }
     var g = state.groups[state.tab];
     return state.mode === 'period' ? g.filter(function (k) { return k !== 'date'; }) : g;
   }
@@ -1483,7 +1513,10 @@
       if (!by[v]) { by[v] = []; order.push(v); }
       by[v].push(e);
     });
-    order.sort();
+    /* Dates go in calendar order, not by their label — "Fri 20" came
+       before "Mon 16" alphabetically. */
+    if (keys[0] === 'date') order.sort(function (a, b) { return by[a][0].date < by[b][0].date ? -1 : 1; });
+    else order.sort();
     return order.map(function (v) {
       return { name: v, rows: by[v], kids: nest(by[v], keys.slice(1)) };
     });
@@ -1681,7 +1714,8 @@
       if (!by[k]) { by[k] = { key: k, label: k, units: [] }; order.push(k); }
       by[k].units.push(u);
     });
-    order.sort();
+    if (f1.k === 'date') order.sort(function (a, b) { return by[a].units[0].e.date < by[b].units[0].e.date ? -1 : 1; });
+    else order.sort();
     rvSheets = order.map(function (k) { return by[k]; });
     rvAt = 0;
     el('rv-modal').classList.add('open');
@@ -1780,7 +1814,98 @@
       }).join('') + '</tbody></table></div>';
   }
 
+  /* ─── Period: one worker's week, read-only ─────────────────────────
+     As agreed on 19 Nov: the worker's overlay without the editing. Tasks
+     down the side and no worker column — the queue on the left already
+     says whose week it is. In each day, whatever the day carries: start
+     and finish, allowances, the comment. Hours already approved stay in
+     the grid, greyed and marked, so nobody goes looking for where they
+     went; hours left out of this approval are marked the same way. */
+  function rvPeriodDetail(sheet) {
+    var live = rvLive(sheet), w = sheet.key;
+    var inSel = Object.create(null);
+    sheet.units.forEach(function (u) { inSel[u.e.id] = true; });
+    var dates = days().map(iso);
+    var all = rows().filter(function (e) { return !e.isNew && e.worker === w; });
+    function stOf(e) { return isClosed(e) ? 'done' : inSel[e.id] ? 'go' : 'out'; }
+
+    var tasks = [], byT = Object.create(null);
+    all.forEach(function (e) {
+      var k = e.site + '§' + e.task;
+      if (!byT[k]) { byT[k] = { task: e.task, site: e.site, list: [] }; tasks.push(byT[k]); }
+      byT[k].list.push(e);
+    });
+    tasks.sort(function (a, b) {
+      return a.site !== b.site ? (a.site < b.site ? -1 : 1) : (a.task < b.task ? -1 : a.task > b.task ? 1 : 0);
+    });
+
+    var sum = { go: 0, done: 0, out: 0 };
+    all.forEach(function (e) { sum[stOf(e)] += Number(hoursOf(e)) || 0; });
+    var says = [];
+    if (sum.done) says.push(fmtHours(sum.done) + ' h already approved');
+    if (sum.out) says.push(fmtHours(sum.out) + ' h not selected');
+    var sites = rvDistinct(all, function (e) { return e.site; });
+
+    function dayCell(on) {
+      if (!on.length) return '<td class="rvp-day"><span class="cell-empty">&mdash;</span></td>';
+      var st = on.some(function (e) { return stOf(e) === 'go'; }) ? 'go'
+        : on.some(function (e) { return stOf(e) === 'out'; }) ? 'out' : 'done';
+      var h = rvHours(on), alw = [], notes = [], times = [];
+      on.forEach(function (e) {
+        alw = alw.concat(e.allowances || []);
+        if (e.comment) notes.push(e.comment);
+        if (e.start && e.finish) times.push(e.start + '–' + e.finish);
+      });
+      return '<td class="rvp-day ' + st + '">' +
+        '<div class="rvp-h">' + (h ? fmtHours(h) + ' h' : '<span class="cell-empty">&mdash;</span>') + '</div>' +
+        times.map(function (t) { return '<div class="rvp-time">' + Shell.esc(t) + '</div>'; }).join('') +
+        (alw.length ? '<div class="rvx-tags">' + alw.map(function (a) {
+          return '<span class="rvx-tag">' + Shell.esc(a.name) + (a.qty != null ? ' × ' + a.qty : '') + '</span>';
+        }).join('') + '</div>' : '') +
+        notes.map(function (n) { return '<div class="rvx-note">“' + Shell.esc(n) + '”</div>'; }).join('') +
+        (st === 'done' ? '<div class="rvp-st">' + ICO_TICK + 'Approved</div>'
+          : st === 'out' ? '<div class="rvp-st">Not selected</div>' : '') +
+        '</td>';
+    }
+
+    var minW = 240 + dates.length * 112 + 96;
+    return '<div class="rv-head"><div><div class="rv-who">' + Shell.esc(w) + '</div>' +
+        '<div class="rv-meta">' + sites.map(Shell.esc).join(' · ') +
+          (says.length ? ' &nbsp;·&nbsp; ' + says.join(' · ') : '') + '</div></div>' +
+        '<button class="btn-primary" type="button" id="rv-one"' + (live.length ? '' : ' disabled') + '>' +
+          (live.length ? 'Approve ' + fmtHours(sum.go) + ' h' : 'Nothing left to approve') + '</button>' +
+      '</div>' +
+      '<div class="rvx-gridwrap rvp-wrap"><table class="rvx-grid rvp-grid" style="min-width:' + minW + 'px">' +
+        '<colgroup><col class="c-task" />' + dates.map(function () { return '<col />'; }).join('') +
+        '<col class="c-tot" /></colgroup>' +
+        '<thead><tr><th class="rvp-task">Task</th>' +
+          dates.map(function (d) { return '<th>' + rvDay(d) + '</th>'; }).join('') +
+          '<th class="rvx-tot">Total</th></tr></thead><tbody>' +
+        tasks.map(function (t) {
+          var tp = String(t.task).split(' | ');
+          var allDone = t.list.every(function (e) { return stOf(e) === 'done'; });
+          return '<tr' + (allDone ? ' class="done"' : '') + '><td class="rvp-task">' +
+              '<div class="rvx-code">' + Shell.esc(tp[0]) + '</div>' +
+              (tp.length > 1 ? '<div class="rvp-path">' + Shell.esc(tp.slice(1).join(' | ')) + '</div>' : '') +
+              '<div class="rvp-site">' + Shell.esc(t.site) + '</div></td>' +
+            dates.map(function (d) {
+              return dayCell(t.list.filter(function (e) { return e.date === d; }));
+            }).join('') +
+            '<td class="rvx-tot">' + fmtHours(rvHours(t.list)) + ' h</td></tr>';
+        }).join('') +
+        '</tbody><tfoot><tr><td class="rvp-task">Day total</td>' +
+          dates.map(function (d) {
+            var on = all.filter(function (e) { return e.date === d; });
+            if (!on.length) return '<td></td>';
+            var h = rvHours(on);
+            return '<td><div class="rvp-h">' + fmtHours(h) + ' h</div>' + rvOf(w, d, h) + '</td>';
+          }).join('') +
+          '<td class="rvx-tot">' + fmtHours(rvHours(all)) + ' h</td></tr></tfoot>' +
+      '</table></div>';
+  }
+
   function rvDetail(sheet) {
+    if (state.mode === 'period' && rvLevels().first.k === 'worker') return rvPeriodDetail(sheet);
     var lv = rvLevels(), live = rvLive(sheet);
     var inSel = Object.create(null), workers = Object.create(null);
     sheet.units.forEach(function (u) { inSel[u.e.id] = true; workers[u.e.worker] = true; });
@@ -2733,11 +2858,6 @@
     e.preventDefault();
     togglePick(box);
   });
-  el('approval-switch').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-approval]');
-    if (!b || b.classList.contains('on')) return;
-    window.location.href = b.getAttribute('data-approval');
-  });
   el('sel-approve').addEventListener('click', rvOpen);
   el('sel-clear').addEventListener('click', function () { clearPick(); render(); });
 
@@ -3619,12 +3739,24 @@
   el('modeswitch').addEventListener('click', function (e) {
     var b = e.target.closest('[data-mode]');
     if (!b) return;
-    state.mode = b.getAttribute('data-mode');
-    this.querySelectorAll('.seg-btn').forEach(function (x) { x.classList.toggle('active', x === b); });
+    setMode(b.getAttribute('data-mode'));
     collapsed = Object.create(null);
     unpinAll();
     render();
   });
+
+  /* The view is remembered (19 Nov): the supervisor comes back to the one
+     they used last, and a reload does not throw it away. */
+  var MODE_KEY = 'opms-supts-mode';
+  function setMode(m) {
+    state.mode = m === 'period' ? 'period' : 'list';
+    el('modeswitch').querySelectorAll('.seg-btn').forEach(function (x) {
+      x.classList.toggle('active', x.getAttribute('data-mode') === state.mode);
+    });
+    try { localStorage.setItem(MODE_KEY, state.mode); } catch (err) {}
+  }
+  try { setMode(localStorage.getItem(MODE_KEY)); } catch (err) {}
+  if (!GROUP_BY_UI) el('gb-wrap').style.display = 'none';
 
   render();
 })();

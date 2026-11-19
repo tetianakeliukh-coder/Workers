@@ -614,6 +614,36 @@ body.shell-mobile .q-fab { bottom: 20px; right: 20px; }
 .proto-row { display: flex; align-items: center; gap: 16px; justify-content: space-between; }
 .proto-row[hidden] { display: none; }
 .proto-lab { font-size: 12px; font-weight: 500; color: var(--grey-600); white-space: nowrap; }
+/* Same frame on every screen: what this is and which screen it is for
+   on top, whether it survives a reload at the bottom. */
+.proto-panel { min-width: 280px; }
+.proto-head {
+  display: flex; flex-direction: column; gap: 2px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--grey-200);
+}
+.proto-title { font-size: 13px; font-weight: 600; color: var(--text-main); }
+.proto-screen { font-size: 12px; color: var(--grey-600); }
+.proto-none { font-size: 13px; color: var(--grey-600); padding: 2px 0; }
+.proto-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding-top: 10px; border-top: 1px solid var(--grey-200);
+  font-size: 12px; color: var(--grey-600);
+}
+.proto-reset {
+  height: 28px; padding: 0 10px; border: 1px solid var(--grey-350); border-radius: 7px;
+  background: var(--white); color: var(--text-main); cursor: pointer;
+  font-family: var(--fs-sans); font-size: 12px; font-weight: 500;
+}
+.proto-reset:hover { background: var(--grey-100); }
+/* A switch with nothing to pick ("Show the tips again") is an action:
+   drawn as a plain button, not as a one-segment selector. */
+.proto-panel .proto-row .vp-switch.is-action { border: none; padding: 0; background: none; }
+.proto-panel .proto-row .vp-switch.is-action button {
+  height: 30px; padding: 0 12px; border: 1px solid var(--grey-350); border-radius: 8px;
+  background: var(--white); color: var(--text-main); cursor: pointer;
+  font-family: var(--fs-sans); font-size: 13px; font-weight: 500;
+}
+.proto-panel .proto-row .vp-switch.is-action button:hover { background: var(--grey-100); }
 /* Three classes, to outrank the per-screen rules that pin each switcher
    to its own corner — those live in the page, which is loaded after. */
 .proto-panel .proto-row .vp-switch {

@@ -76,7 +76,15 @@
     { k: 'current', label: 'Current', home: 'timesheets-flat-entry.html' },
     { k: 'flat',    label: 'Flat',    home: 'timesheets-flat.html' }
   ];
+  /* 19 Nov: parked. Two structures and two approval models side by side
+     left nobody sure which screen they were looking at. There is one
+     line now — Supervisor Timesheets is the flat approve-by-entry screen,
+     My Timesheets the current one — and no Structure switch. Set this to
+     true to bring the switch and the Flat sidebar back as they were. The
+     Flat screens (timesheets-flat.html, By day) still open by address. */
+  var STRUCTURE_SWITCH = false;
   function structure() {
+    if (!STRUCTURE_SWITCH) return 'current';
     try { return localStorage.getItem('opms-structure') === 'flat' ? 'flat' : 'current'; }
     catch (e) { return 'current'; }
   }
@@ -646,7 +654,7 @@
   /* The structure switch itself: moves between the two and lands on the
      matching screen, since the screens differ between them. */
   function renderStructureSwitch() {
-    if (document.getElementById('structure-switch')) return;
+    if (!STRUCTURE_SWITCH || document.getElementById('structure-switch')) return;
     var box = document.createElement('div');
     box.className = 'vp-switch structure-switch';
     box.id = 'structure-switch';
@@ -677,7 +685,7 @@
        flat screen with the old sidebar beside it. */
     var mod = document.body.getAttribute('data-module');
     var owner = NAV.filter(function (i) { return i.id === mod && i.only; })[0];
-    if (owner) setStructure(owner.only);
+    if (owner && STRUCTURE_SWITCH) setStructure(owner.only);
 
     renderSidebar(mod);
     initDropdowns(document);
@@ -697,9 +705,91 @@
     '<circle cx="13.5" cy="6" r="2" stroke="currentColor" stroke-width="1.6"/>' +
     '<circle cx="6.5" cy="14" r="2" stroke="currentColor" stroke-width="1.6"/></svg>';
 
+  /* Every screen gets the same dock: the same button in the same corner,
+     a heading naming the screen the options belong to, and the options
+     themselves — or a line saying there are none, rather than no button
+     at all, so nobody wonders where it went.
+
+     What is picked is remembered per screen. Reloading to see a change
+     used to throw every option back to its default, and finding the
+     state that was being worked on took a dozen clicks. "Reset" at the
+     bottom puts this screen's options back to their defaults. Buttons
+     that go to another page are not remembered — replaying those would
+     bounce the reader straight off the screen they opened. */
+  var PROTO_KEY = 'opms-proto:' + (location.pathname.split('/').pop() || 'index.html') + ':';
+  function protoId(sw, i) { return sw.id || sw.getAttribute('aria-label') || ('sw' + i); }
+  function protoRead(id) { try { return localStorage.getItem(PROTO_KEY + id); } catch (e) { return null; } }
+  function protoWrite(id, v) { try { localStorage.setItem(PROTO_KEY + id, v); } catch (e) {} }
+  function protoReset() {
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (k.indexOf(PROTO_KEY) === 0) localStorage.removeItem(k);
+      });
+    } catch (e) {}
+  }
+  function protoButtons(sw) { return [].slice.call(sw.querySelectorAll('button')); }
+  function isNavButton(b) {
+    return b.hasAttribute('data-go') || b.hasAttribute('data-structure') || b.hasAttribute('data-approval');
+  }
+
+  /* Watches one switch and puts back what was picked on it last time. */
+  function protoRemember(sw, i) {
+    var id = protoId(sw, i);
+    var sel = sw.querySelector('select');
+    if (sel) {
+      var v = protoRead(id);
+      if (v != null && v !== sel.value && [].some.call(sel.options, function (o) { return o.value === v; })) {
+        sel.value = v;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      sel.addEventListener('change', function () { protoWrite(id, sel.value); });
+      return;
+    }
+    var bs = protoButtons(sw);
+    /* A switch with nothing marked on is a set of actions ("Show the
+       tips again"), not a choice — there is nothing to remember. */
+    if (!bs.some(function (b) { return b.classList.contains('on'); })) return;
+    /* Stored as the set of buttons that were on, so a switch where
+       several can be on at once ("What the cell holds") comes back the
+       same as a pick-one switch does. */
+    var at = protoRead(id);
+    if (at != null) {
+      var want = Object.create(null);
+      at.split(',').forEach(function (n) { if (n !== '') want[n] = true; });
+      var isOn = function (b) { return b.classList.contains('on'); };
+      bs.forEach(function (b, n) { if (want[n] && !isOn(b) && !isNavButton(b)) b.click(); });
+      bs.forEach(function (b, n) { if (!want[n] && isOn(b) && !isNavButton(b)) b.click(); });
+    }
+    sw.addEventListener('click', function (e) {
+      var hit = e.target.closest('button');
+      if (!hit || isNavButton(hit)) return;
+      /* After the screen's own handler has moved the "on". */
+      setTimeout(function () {
+        var on = [];
+        protoButtons(sw).forEach(function (x, n) { if (x.classList.contains('on')) on.push(n); });
+        protoWrite(id, on.join(','));
+      }, 0);
+    });
+  }
+
   function initProtoDock() {
-    var items = [].slice.call(document.querySelectorAll('.vp-switch'));
-    if (!items.length || document.getElementById('proto-dock')) return;
+    if (document.getElementById('proto-dock')) return;
+    /* A switch marked data-dock="off" is kept in the page but left out:
+       not shown, not remembered. */
+    var all = [].slice.call(document.querySelectorAll('.vp-switch'));
+    all.forEach(function (sw) { if (sw.getAttribute('data-dock') === 'off') sw.style.display = 'none'; });
+    var items = all.filter(function (sw) { return sw.getAttribute('data-dock') !== 'off'; });
+    /* One order on every screen: what you are looking at (desktop or
+       phone) first, then which version of the screen, then that
+       version's own options, the tips, and the error situations last. */
+    var RANK = { 'Preview size': 0, 'Release': 1, 'First-visit tips': 8, 'Situation': 9 };
+    var rank = function (sw) {
+      var r = RANK[sw.getAttribute('aria-label') || ''];
+      return r == null ? 5 : r;
+    };
+    items = items.map(function (sw, i) { return { sw: sw, i: i }; })
+      .sort(function (a, b) { return rank(a.sw) - rank(b.sw) || a.i - b.i; })
+      .map(function (x) { return x.sw; });
 
     var dock = document.createElement('div');
     dock.className = 'proto-dock';
@@ -707,21 +797,49 @@
 
     var panel = document.createElement('div');
     panel.className = 'proto-panel';
+    var screen = (document.title || '').split(/\s[—–-]\s/)[0] || 'This screen';
+    var head = document.createElement('div');
+    head.className = 'proto-head';
+    head.innerHTML = '<span class="proto-title">Prototype options</span>' +
+      '<span class="proto-screen">' + esc(screen) + '</span>';
+    panel.appendChild(head);
+
     items.forEach(function (sw) {
       var row = document.createElement('div');
       row.className = 'proto-row';
       var lab = document.createElement('span');
       lab.className = 'proto-lab';
-      /* The structure switcher carries its own label inside itself; the
-         rest name themselves to a screen reader. */
-      var own = sw.querySelector('.sw-label');
-      if (own) { lab.textContent = own.textContent.trim(); own.parentNode.removeChild(own); }
-      else lab.textContent = (sw.getAttribute('aria-label') || 'Option').replace(/^Prototype /, '');
+      /* A switch may carry its own label inside itself; the rest name
+         themselves to a screen reader. Either way the dock says it once,
+         on the left, in the same words and the same place. */
+      var own = sw.querySelector('.sw-label, .vp-label');
+      var name = (sw.getAttribute('aria-label') || '').replace(/^Prototype /, '');
+      if (own) { name = own.textContent.trim().replace(/:$/, '') || name; own.parentNode.removeChild(own); }
+      lab.textContent = name || 'Option';
       sw.classList.add('in-dock');
+      /* Nothing on in it: a button that does something, not a choice. */
+      if (!sw.querySelector('select') && !sw.querySelector('button.on')) sw.classList.add('is-action');
       row.appendChild(lab);
       row.appendChild(sw);
       panel.appendChild(row);
     });
+
+    if (!items.length) {
+      var none = document.createElement('div');
+      none.className = 'proto-none';
+      none.textContent = 'Nothing to switch on this screen.';
+      panel.appendChild(none);
+    } else {
+      var foot = document.createElement('div');
+      foot.className = 'proto-foot';
+      foot.innerHTML = '<span>Kept when you reload.</span>' +
+        '<button type="button" class="proto-reset">Reset</button>';
+      foot.querySelector('.proto-reset').addEventListener('click', function () {
+        protoReset();
+        location.reload();
+      });
+      panel.appendChild(foot);
+    }
 
     var btn = document.createElement('button');
     btn.className = 'proto-fab';
@@ -733,6 +851,8 @@
     dock.appendChild(panel);
     dock.appendChild(btn);
     document.body.appendChild(dock);
+
+    items.forEach(protoRemember);
 
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
