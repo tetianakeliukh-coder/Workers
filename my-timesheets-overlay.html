@@ -874,10 +874,10 @@
     background: var(--white); border-top: 1px solid var(--grey-200);
   }
   body.is-narrow .note-pop .np-foot .btn-ghost,
-  body.is-narrow .note-pop .np-foot .btn-primary { height: 40px; flex: 1 1 0; justify-content: center; }
-  body.is-narrow .np-line input, body.is-narrow .np-line select { height: 40px; font-size: 15px; }
+  body.is-narrow .note-pop .np-foot .btn-primary { height: 36px; flex: 1 1 0; justify-content: center; }
+  body.is-narrow .np-line input, body.is-narrow .np-line select { height: 36px; font-size: 15px; }
   body.is-narrow .np-line .np-t { width: 88px; }
-  body.is-narrow .note-pop input.hr-cell { height: 40px; font-size: 15px; }
+  body.is-narrow .note-pop input.hr-cell { height: 36px; font-size: 15px; }
   /* The cross is a 28px target on a desktop. A thumb needs more, and
      has nothing to hover with, so it is simply always there. */
   body.is-narrow .np-x { opacity: 1; width: 36px; height: 36px; }
@@ -943,13 +943,13 @@
     display: block; margin: 0 0 16px;
     font-size: 18px; font-weight: 600; line-height: 24px; color: var(--text-main);
   }
-  body.is-narrow .where-pop select, body.is-narrow .task-pop select { height: 44px; font-size: 15px; }
+  body.is-narrow .where-pop select, body.is-narrow .task-pop select { height: 36px; font-size: 15px; }
   body.is-narrow .where-pop .fld, body.is-narrow .task-pop .fld { margin-bottom: 14px; }
   body.is-narrow .where-pop .tp-foot, body.is-narrow .task-pop .tp-foot { margin-top: 18px; }
   body.is-narrow .where-pop .tp-foot .btn-ghost,
   body.is-narrow .where-pop .tp-foot .btn-primary,
   body.is-narrow .task-pop .tp-foot .btn-ghost,
-  body.is-narrow .task-pop .tp-foot .btn-primary { height: 44px; flex: 1 1 0; justify-content: center; }
+  body.is-narrow .task-pop .tp-foot .btn-primary { height: 36px; flex: 1 1 0; justify-content: center; }
   /* The picker is a table as wide as the page allows. "As wide as the
      page allows" was measured against the window, which on a phone
      preview is the desk behind it. */
@@ -977,11 +977,11 @@
      and 40 and the column of them read as a stack of different things
      rather than one set of controls. */
   body.is-narrow .wk-mode {
-    display: flex; width: 100%; height: 40px; padding: 3px;
+    display: flex; width: 100%; height: 36px; padding: 3px;
     margin-bottom: 16px;
     background: var(--grey-100); border-radius: 10px;
   }
-  body.is-narrow .wk-mode button { flex: 1 1 0; height: 34px; padding: 0; font-size: 14px; }
+  body.is-narrow .wk-mode button { flex: 1 1 0; height: 30px; padding: 0; font-size: 14px; }
 
   .wk-mode button {
     height: 30px; padding: 0 14px; border: none; border-radius: 7px;
@@ -1073,7 +1073,14 @@
   .tcard-drop svg { flex-shrink: 0; }
   .tcard-drop[aria-disabled="true"] { color: var(--grey-400); cursor: default; }
   .tday .td-name { font-size: 14px; color: var(--grey-700); }
-  .tday .td-today { color: var(--primary); font-weight: 500; }
+  /* Today is marked the way the day heading marks it — a tag, not a
+     different colour for the same kind of thing. */
+  .tday .td-today { color: var(--text-main); font-weight: 500; }
+  .tday .td-chip {
+    height: 20px; display: inline-flex; align-items: center; padding: 0 7px;
+    border-radius: 5px; background: var(--bg-blue-light); color: var(--primary);
+    font-size: 11px; font-weight: 500;
+  }
   .tday .td-marks { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; color: var(--grey-600); }
   .tday .td-hrs {
     min-width: 54px; text-align: right;
@@ -1116,7 +1123,7 @@
      half of that were taking the room Collapse all needed. */
   body.is-narrow .wk-step { display: none; }
   body.is-narrow #m-collapse {
-    order: 3; flex: 0 0 104px; height: 40px; justify-content: center;
+    order: 3; flex: 0 0 104px; height: 36px; justify-content: center;
     padding: 0; border: 1px solid var(--grey-350); border-radius: 8px;
     background: var(--white); color: var(--primary);
     font-size: 14px; font-weight: 500;
@@ -1838,13 +1845,13 @@
      answer to "what do I do here". */
   body.is-narrow .m-actions { order: 2; display: block; margin-top: 0; }
   body.is-narrow .m-actions .btn-primary {
-    width: 100%; justify-content: center; height: 40px; font-size: 15px;
+    width: 100%; justify-content: center; height: 36px; font-size: 15px;
   }
   /* The toolbar keeps its search on a phone; the grid-only controls go. */
   body.is-narrow .period-bar { order: 3; display: block; margin: 0; }
   body.is-narrow .period-bar .search-wrap { width: 100%; }
-  body.is-narrow .period-bar .search-bar { height: 40px; }
-  body.is-narrow .m-date .dd-trigger { height: 40px; }
+  body.is-narrow .period-bar .search-bar { height: 36px; }
+  body.is-narrow .m-date .dd-trigger { height: 36px; }
   body.is-narrow .period-bar .period-actions { display: none; }
   body.is-narrow .m-date { order: 4; display: block; margin-top: 0; }
   body.is-narrow .m-date .dd-wrap, body.is-narrow .m-date .dd-trigger { width: 100%; }
@@ -4221,6 +4228,7 @@
               (lock ? ' aria-disabled="true"' : '') + '>' +
               '<span class="td-name' + (today ? ' td-today' : '') + '">' +
                 DOW[d.getDay()] + ' ' + fmtDay(d) + '</span>' +
+              (today ? '<span class="td-chip">Today</span>' : '') +
               '<span class="td-marks">' +
                 (HAS_CELL_MARKS && noteOf(t.key, k) ? ICO_CMT : '') +
                 (HAS_CELL_MARKS && (cellOf(t.key, k).a || []).length ? ALW_MARK : '') +
