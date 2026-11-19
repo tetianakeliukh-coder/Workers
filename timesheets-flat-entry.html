@@ -134,7 +134,7 @@
   /* Total and the row's actions are one frozen band at the right edge:
      an action you have to scroll sideways to find is not an action. */
   th.col-hrs, td.col-hrs {
-    position: sticky; right: 64px; z-index: 2; background: inherit; padding-right: 16px;
+    position: sticky; right: 96px; z-index: 2; background: inherit; padding-right: 16px;
   }
   /* An overlay scrollbar is drawn over the content whatever the gutter
      says, so the button keeps a lane of its own clear of the edge. */
@@ -631,6 +631,8 @@
   }
   .cm-lock { display: inline-flex; align-items: center; color: var(--grey-600); }
   #grid .cm-lock.is-lock { visibility: hidden; }
+  .cm-st { display: inline-flex; align-items: center; }
+  .cm-st .hr-st { margin: 0; }
   #grid td:hover .cm-lock.is-lock, #grid tr:hover .cm-lock.is-lock { visibility: visible; }
 
   /* ─── Open: the field appears where the figure was ─────────────── */
@@ -692,6 +694,8 @@
   .tn-code, .tn-rest { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tn-code { font-weight: 500; color: var(--text-main); line-height: 18px; }
   .tn-rest { margin-top: 1px; font-size: 12px; line-height: 16px; color: var(--grey-600); }
+  .tn-sitex { font-weight: 500; color: var(--grey-700); }
+  #grid tbody tr.appr .tn-sitex { color: var(--grey-400); }
   #grid tbody tr.appr .tname { opacity: 0.5; }
 
   /* ─── Review: two rough layouts, to compare ────────────────────── */
@@ -734,7 +738,21 @@
     white-space: normal; overflow-wrap: anywhere;
   }
   /* Period review: one worker's week, tasks down the side. */
-  .rvp-wrap { margin-top: 18px; }
+  .rvp-wrap { margin-top: 0; }
+  .rvp-sec { margin-top: 20px; }
+  .rvp-sec-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .rvp-sec-t { font-size: 14px; font-weight: 600; color: var(--text-main); }
+  .rvp-sec-n { font-size: 13px; color: var(--grey-600); }
+  /* What the button takes: framed in the primary colour. */
+  .rvp-sec-go .rvx-gridwrap { border-color: var(--primary); box-shadow: inset 3px 0 0 var(--primary); }
+  /* Context only: a quieter frame and a grey ground, so it never reads
+     as part of what is being approved. */
+  .rvp-sec-info { margin-top: 28px; padding-top: 20px; border-top: 1px dashed var(--grey-350); }
+  .rvp-sec-info .rvp-sec-t { color: var(--grey-700); }
+  .rvp-info { background: var(--grey-50, #f8f9fa); }
+  .rvp-info .rvp-grid th, .rvp-info .rvp-grid td, .rvp-info .rvp-grid .rvp-task { background: var(--grey-50, #f8f9fa); }
+  .rvp-info .rvp-h { font-weight: 500; color: var(--grey-700); }
+  .rvp-st .hr-st { margin: 0 2px 0 0; }
   .rvp-grid col.c-task { width: 240px; }
   .rvp-grid .rvp-task {
     position: sticky; left: 0; z-index: 1; background: var(--white); box-shadow: none;
@@ -1310,13 +1328,15 @@
      approval model is about whose time it is and what state it is in,
      and both were off the right-hand edge where nobody saw them. */
   var FIELDS = [
-    { k: 'date',    label: 'Date',       w: 165, group: true,  get: function (e) { return fmtDay(fromIso(e.date)); } },
+    { k: 'date',    label: 'Date',       w: 160, group: true,  get: function (e) { return fmtDay(fromIso(e.date)); } },
     { k: 'worker',  label: 'Worker',     w: 150, group: true,  get: function (e) { return e.worker; } },
+    /* The task is what a supervisor reads a line by; at the far end it
+       sat under the frozen Hours on a laptop screen (review, 19 Nov). */
+    { k: 'task',    label: 'Task',       w: 300, group: true,  get: function (e) { return e.task; } },
     { k: 'status',  label: 'Status',     w: 160, group: true,  get: function (e) { return entryState(e); } },
     { k: 'site',    label: 'Site',       w: 215, group: true,  get: function (e) { return e.site; } },
     { k: 'sup',     label: 'Supervisor', w: 175, group: true,  get: function (e) { return e.sup; } },
     { k: 'project', label: 'Project',    w: 210, group: true,  get: function (e) { return e.project; } },
-    { k: 'task',    label: 'Task',       w: 300, group: true,  get: function (e) { return e.task; } },
     { k: 'times',   label: 'Start - Finish', w: 140, group: false,
       get: function (e) { return e.start && e.finish ? e.start + ' - ' + e.finish : ''; } },
     { k: 'allow',   label: 'Allowance',  w: 200, group: false, get: function (e) { return allowText(e); } },
@@ -1815,94 +1835,114 @@
       }).join('') + '</tbody></table></div>';
   }
 
-  /* ─── Period: one worker's week, read-only ─────────────────────────
-     As agreed on 19 Nov: the worker's overlay without the editing. Tasks
-     down the side and no worker column — the queue on the left already
-     says whose week it is. In each day, whatever the day carries: start
-     and finish, allowances, the comment. Hours already approved stay in
-     the grid, greyed and marked, so nobody goes looking for where they
-     went; hours left out of this approval are marked the same way. */
+  /* ─── Period: what you approve, and the rest for context ───────────
+     19 Nov, and the review after it: the dialog showed the worker's whole
+     week with "Not selected" marks, so it was not clear what the button
+     would approve — and it still left out their hours on other sites.
+     Now it is two blocks. On top, exactly what Approve takes: the picked
+     hours that are still open, nothing else. Underneath, plainly marked
+     as information, everything else the worker booked that week — every
+     site, every supervisor, filters or not — each figure saying what
+     state it is in. The last line is the whole day across all of it,
+     which is the figure the 24-hour rule watches. */
   function rvPeriodDetail(sheet) {
     var live = rvLive(sheet), w = sheet.key;
-    var inSel = Object.create(null);
-    sheet.units.forEach(function (u) { inSel[u.e.id] = true; });
+    var go = Object.create(null);
+    live.forEach(function (u) { go[u.e.id] = true; });
     var dates = days().map(iso);
-    var all = rows().filter(function (e) { return !e.isNew && e.worker === w; });
-    function stOf(e) { return isClosed(e) ? 'done' : inSel[e.id] ? 'go' : 'out'; }
+    var inWeek = Object.create(null);
+    dates.forEach(function (d) { inWeek[d] = true; });
+    var everything = ENTRIES.filter(function (e) { return e.worker === w && inWeek[e.date]; });
+    var mine = everything.filter(function (e) { return go[e.id]; });
+    var rest = everything.filter(function (e) { return !go[e.id]; });
 
-    var tasks = [], byT = Object.create(null);
-    all.forEach(function (e) {
-      var k = e.site + '§' + e.task;
-      if (!byT[k]) { byT[k] = { task: e.task, site: e.site, list: [] }; tasks.push(byT[k]); }
-      byT[k].list.push(e);
-    });
-    tasks.sort(function (a, b) {
-      return a.site !== b.site ? (a.site < b.site ? -1 : 1) : (a.task < b.task ? -1 : a.task > b.task ? 1 : 0);
-    });
+    function byTask(list) {
+      var out = [], by = Object.create(null);
+      list.forEach(function (e) {
+        var k = e.site + '§' + e.task;
+        if (!by[k]) { by[k] = { task: e.task, site: e.site, list: [] }; out.push(by[k]); }
+        by[k].list.push(e);
+      });
+      return out.sort(function (x, y) {
+        return x.site !== y.site ? (x.site < y.site ? -1 : 1) : (x.task < y.task ? -1 : x.task > y.task ? 1 : 0);
+      });
+    }
+    function stateOf(e) { return isClosed(e) ? 'done' : entryState(e) === 'Submitted' ? 'sub' : 'open'; }
+    var ST_LABEL = {
+      done: ICO_TICK + 'Approved',
+      sub: stMark('Submitted') + 'Submitted',
+      open: stMark('Draft') + 'Open'
+    };
 
-    var sum = { go: 0, done: 0, out: 0 };
-    all.forEach(function (e) { sum[stOf(e)] += Number(hoursOf(e)) || 0; });
-    var says = [];
-    if (sum.done) says.push(fmtHours(sum.done) + ' h already approved');
-    if (sum.out) says.push(fmtHours(sum.out) + ' h not selected');
-    var sites = rvDistinct(all, function (e) { return e.site; });
-
-    function dayCell(on) {
+    function dayCell(on, info) {
       if (!on.length) return '<td class="rvp-day"><span class="cell-empty">&mdash;</span></td>';
-      var st = on.some(function (e) { return stOf(e) === 'go'; }) ? 'go'
-        : on.some(function (e) { return stOf(e) === 'out'; }) ? 'out' : 'done';
-      var h = rvHours(on), alw = [], notes = [], times = [];
+      var h = rvHours(on), alw = [], notes = [], times = [], sts = [];
       on.forEach(function (e) {
         alw = alw.concat(e.allowances || []);
         if (e.comment) notes.push(e.comment);
         if (e.start && e.finish) times.push(e.start + '–' + e.finish);
+        var st = stateOf(e); if (sts.indexOf(st) === -1) sts.push(st);
       });
-      return '<td class="rvp-day ' + st + '">' +
+      return '<td class="rvp-day' + (info && sts.length === 1 && sts[0] === 'done' ? ' done' : '') + '">' +
         '<div class="rvp-h">' + (h ? fmtHours(h) + ' h' : '<span class="cell-empty">&mdash;</span>') + '</div>' +
         times.map(function (t) { return '<div class="rvp-time">' + Shell.esc(t) + '</div>'; }).join('') +
-        (alw.length ? '<div class="rvx-tags">' + alw.map(function (a) {
-          return '<span class="rvx-tag">' + Shell.esc(a.name) + (a.qty != null ? ' × ' + a.qty : '') + '</span>';
+        (alw.length ? '<div class="rvx-tags">' + alw.map(function (x) {
+          return '<span class="rvx-tag">' + Shell.esc(x.name) + (x.qty != null ? ' × ' + x.qty : '') + '</span>';
         }).join('') + '</div>' : '') +
         notes.map(function (n) { return '<div class="rvx-note">“' + Shell.esc(n) + '”</div>'; }).join('') +
-        (st === 'done' ? '<div class="rvp-st">' + ICO_TICK + 'Approved</div>'
-          : st === 'out' ? '<div class="rvp-st">Not selected</div>' : '') +
+        (info ? sts.map(function (st) { return '<div class="rvp-st">' + ST_LABEL[st] + '</div>'; }).join('') : '') +
         '</td>';
     }
 
     var minW = 240 + dates.length * 112 + 96;
-    return '<div class="rv-head"><div><div class="rv-who">' + Shell.esc(w) + '</div>' +
-        '<div class="rv-meta">' + sites.map(Shell.esc).join(' · ') +
-          (says.length ? ' &nbsp;·&nbsp; ' + says.join(' · ') : '') + '</div></div>' +
-        '<button class="btn-primary" type="button" id="rv-one"' + (live.length ? '' : ' disabled') + '>' +
-          (live.length ? 'Approve ' + fmtHours(sum.go) + ' h' : 'Nothing left to approve') + '</button>' +
-      '</div>' +
-      '<div class="rvx-gridwrap rvp-wrap"><table class="rvx-grid rvp-grid" style="min-width:' + minW + 'px">' +
+    function table(list, info, foot) {
+      return '<div class="rvx-gridwrap rvp-wrap' + (info ? ' rvp-info' : '') + '">' +
+        '<table class="rvx-grid rvp-grid" style="min-width:' + minW + 'px">' +
         '<colgroup><col class="c-task" />' + dates.map(function () { return '<col />'; }).join('') +
         '<col class="c-tot" /></colgroup>' +
         '<thead><tr><th class="rvp-task">Task</th>' +
           dates.map(function (d) { return '<th>' + rvDay(d) + '</th>'; }).join('') +
           '<th class="rvx-tot">Total</th></tr></thead><tbody>' +
-        tasks.map(function (t) {
+        byTask(list).map(function (t) {
           var tp = String(t.task).split(' | ');
-          var allDone = t.list.every(function (e) { return stOf(e) === 'done'; });
-          return '<tr' + (allDone ? ' class="done"' : '') + '><td class="rvp-task">' +
+          return '<tr><td class="rvp-task">' +
               '<div class="rvx-code">' + Shell.esc(tp[0]) + '</div>' +
-              (tp.length > 1 ? '<div class="rvp-path">' + Shell.esc(tp.slice(1).join(' | ')) + '</div>' : '') +
-              '<div class="rvp-site">' + Shell.esc(t.site) + '</div></td>' +
+              '<div class="rvp-path"><b class="tn-sitex">' + Shell.esc(t.site) + '</b>' +
+                (tp.length > 1 ? ' · ' + Shell.esc(tp.slice(1).join(' | ')) : '') + '</div></td>' +
             dates.map(function (d) {
-              return dayCell(t.list.filter(function (e) { return e.date === d; }));
+              return dayCell(t.list.filter(function (e) { return e.date === d; }), info);
             }).join('') +
             '<td class="rvx-tot">' + fmtHours(rvHours(t.list)) + ' h</td></tr>';
         }).join('') +
-        '</tbody><tfoot><tr><td class="rvp-task">Day total</td>' +
-          dates.map(function (d) {
-            var on = all.filter(function (e) { return e.date === d; });
-            if (!on.length) return '<td></td>';
-            var h = rvHours(on);
-            return '<td><div class="rvp-h">' + fmtHours(h) + ' h</div>' + rvOf(w, d, h) + '</td>';
-          }).join('') +
-          '<td class="rvx-tot">' + fmtHours(rvHours(all)) + ' h</td></tr></tfoot>' +
-      '</table></div>';
+        '</tbody>' + (foot ? '<tfoot>' + foot + '</tfoot>' : '') + '</table></div>';
+    }
+    function footRow(label, list) {
+      return '<tr><td class="rvp-task">' + label + '</td>' +
+        dates.map(function (d) {
+          var h = rvHours(list.filter(function (e) { return e.date === d; }));
+          return '<td>' + (h ? '<div class="rvp-h">' + fmtHours(h) + ' h</div>' : '') + '</td>';
+        }).join('') +
+        '<td class="rvx-tot">' + fmtHours(rvHours(list)) + ' h</td></tr>';
+    }
+
+    var hrs = rvHours(mine), restH = rvHours(rest);
+    var sites = rvDistinct(everything, function (e) { return e.site; });
+    return '<div class="rv-head"><div><div class="rv-who">' + Shell.esc(w) + '</div>' +
+        '<div class="rv-meta">' + sites.length + ' site' + (sites.length === 1 ? '' : 's') +
+          ' this week · ' + fmtHours(rvHours(everything)) + ' h booked in all</div></div>' +
+        '<button class="btn-primary" type="button" id="rv-one"' + (live.length ? '' : ' disabled') + '>' +
+          (live.length ? 'Approve ' + fmtHours(hrs) + ' h' : 'Nothing left to approve') + '</button>' +
+      '</div>' +
+      '<div class="rvp-sec rvp-sec-go"><div class="rvp-sec-h"><span class="rvp-sec-t">To approve</span>' +
+        '<span class="rvp-sec-n">' + fmtHours(hrs) + ' h</span></div>' +
+        (mine.length ? table(mine, false, rest.length ? '' : footRow('Day total', everything))
+          : '<p class="rv-none">Everything picked for this worker is already approved.</p>') +
+      '</div>' +
+      (rest.length
+        ? '<div class="rvp-sec rvp-sec-info"><div class="rvp-sec-h"><span class="rvp-sec-t">Other work this week</span>' +
+            '<span class="rvp-sec-n">' + fmtHours(restH) + ' h · for information, not approved by this</span></div>' +
+            table(rest, true, footRow('Whole day, all sites', everything)) + '</div>'
+        : '');
   }
 
   function rvDetail(sheet) {
@@ -2119,11 +2159,16 @@
 
   /* The work order is what a row is found by, so it leads on its own
      line; the rest of the path is what tells it from the row under it. */
-  function taskName(t) {
+  /* `site`, when given, leads the second line — first, so a narrow
+     column cuts the path rather than the one thing that tells two rows
+     of the same work order apart. */
+  function taskName(t, site) {
     var parts = String(t || '').split(' | ');
+    var rest = [];
+    if (site) rest.push('<b class="tn-sitex">' + Shell.highlight(site, state.q) + '</b>');
+    if (parts.length > 1) rest.push(Shell.highlight(parts.slice(1).join(' | '), state.q));
     return '<span class="tname"><span class="tn-code">' + Shell.highlight(parts[0], state.q) + '</span>' +
-      (parts.length > 1
-        ? '<span class="tn-rest">' + Shell.highlight(parts.slice(1).join(' | '), state.q) + '</span>' : '') +
+      (rest.length ? '<span class="tn-rest">' + rest.join(' · ') + '</span>' : '') +
       '</span>';
   }
 
@@ -2153,9 +2198,20 @@
         '<span class="hr-view locked"><span class="cnum">' + fig +
         '<span class="cm-lock is-lock">' + ICO_LOCK + '</span></span>' + marks + '</span></td>';
     }
-    return '<td class="' + td + '"' + (bad ? ' data-tip="' + Shell.esc(bad.msg) + '"' : '') + '>' +
+    /* Period has no Status column, so each figure carries its state in
+       the slot the padlock takes on an approved one: open (the worker is
+       still on it) or submitted (ready to approve). The same marks the
+       Entries chips use. */
+    var st = '', stTip = '';
+    if (state.mode === 'period' && owns && !e.isNew && v > 0) {
+      var es = entryState(e);
+      st = '<span class="cm-st">' + stMark(es === 'Submitted' ? 'Submitted' : 'Draft') + '</span>';
+      stTip = es === 'Submitted' ? 'Submitted — ready to approve' : 'Open — not submitted yet';
+    }
+    var tipTxt = bad ? bad.msg : stTip;
+    return '<td class="' + td + '"' + (tipTxt ? ' data-tip="' + Shell.esc(tipTxt) + '"' : '') + '>' +
       '<button class="hr-view" type="button" data-ck="' + Shell.esc(k) + '">' +
-      '<span class="cnum">' + fig + (fly && fly.slow ? '<span class="hr-spin"></span>' : '') + '</span>' +
+      '<span class="cnum">' + fig + st + (fly && fly.slow ? '<span class="hr-spin"></span>' : '') + '</span>' +
       marks + '</button></td>';
   }
 
@@ -2540,7 +2596,9 @@
           if (i === cols.length - 1) {
             /* Whatever the view has no column for is asked in the task
                cell; what it does have a column for is asked there. */
-            html = fresh ? taskBtn(fresh) : taskName(e.task);
+            /* The site under the task: a worker can have the same work
+               order on two sites, and the rows told apart by nothing else. */
+            html = fresh ? taskBtn(fresh) : taskName(e.task, e.site);
           } else if (fresh && isPick(fresh, c.k)) {
             html = pickCell(fresh, c);
           }
