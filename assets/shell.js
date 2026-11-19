@@ -717,13 +717,23 @@
      that go to another page are not remembered — replaying those would
      bounce the reader straight off the screen they opened. */
   var PROTO_KEY = 'opms-proto:' + (location.pathname.split('/').pop() || 'index.html') + ':';
-  function protoId(sw, i) { return sw.id || sw.getAttribute('aria-label') || ('sw' + i); }
-  function protoRead(id) { try { return localStorage.getItem(PROTO_KEY + id); } catch (e) { return null; } }
-  function protoWrite(id, v) { try { localStorage.setItem(PROTO_KEY + id, v); } catch (e) {} }
+  /* Preview size is one choice for the whole prototype, not one per
+     screen: picking Mobile and then stepping to another screen should
+     not drop back to Desktop. */
+  var PROTO_GLOBAL = 'opms-proto:*:';
+  /* cell-holds too: the first release writes it before opening the
+     overlay, and cannot know which address the overlay will answer on. */
+  var GLOBAL_SW = { 'vp-switch': true, 'cell-holds': true };
+  function protoId(sw, i) {
+    return sw.getAttribute('data-proto-id') || sw.id || sw.getAttribute('aria-label') || ('sw' + i);
+  }
+  function protoKeyOf(id) { return (GLOBAL_SW[id] ? PROTO_GLOBAL : PROTO_KEY) + id; }
+  function protoRead(id) { try { return localStorage.getItem(protoKeyOf(id)); } catch (e) { return null; } }
+  function protoWrite(id, v) { try { localStorage.setItem(protoKeyOf(id), v); } catch (e) {} }
   function protoReset() {
     try {
       Object.keys(localStorage).forEach(function (k) {
-        if (k.indexOf(PROTO_KEY) === 0) localStorage.removeItem(k);
+        if (k.indexOf(PROTO_KEY) === 0 || k.indexOf(PROTO_GLOBAL) === 0) localStorage.removeItem(k);
       });
     } catch (e) {}
   }
@@ -782,7 +792,7 @@
     /* One order on every screen: what you are looking at (desktop or
        phone) first, then which version of the screen, then that
        version's own options, the tips, and the error situations last. */
-    var RANK = { 'Preview size': 0, 'Release': 1, 'First-visit tips': 8, 'Situation': 9 };
+    var RANK = { 'Preview size': 0, 'What the cell holds': 1, 'Release': 1, 'First-visit tips': 8, 'Situation': 9 };
     var rank = function (sw) {
       var r = RANK[sw.getAttribute('aria-label') || ''];
       return r == null ? 5 : r;

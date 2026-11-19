@@ -4982,18 +4982,20 @@
      way out, which is also what makes Cancel mean anything. */
   var PARTS = { times: true, alw: true, note: true };
   /* Arriving from the first release with one field picked
-     (?parts=alw): write it where the dock keeps this switch, and the
-     dock puts the buttons that way as the page opens. Hours is index 0. */
+     (#parts=alw — a hash, because a server that tidies .html off the
+     address drops the query on the way): write it where the dock keeps
+     this switch, and the dock puts the buttons that way as the page
+     opens. Hours is index 0. */
   (function () {
-    var want = new URLSearchParams(location.search).get('parts');
+    var m = /(?:^#|&)parts=([a-z,]+)/.exec(location.hash);
+    var want = m && m[1];
     if (!want) return;
     var at = { times: 1, alw: 2, note: 3 }, on = ['0'];
     want.split(',').forEach(function (k) { if (at[k]) on.push(String(at[k])); });
     try {
-      localStorage.setItem('opms-proto:' + (location.pathname.split('/').pop() || 'index.html') +
-        ':cell-holds', on.join(','));
+      localStorage.setItem('opms-proto:*:cell-holds', on.join(','));
     } catch (err) {}
-    history.replaceState(null, '', location.pathname + location.hash);
+    history.replaceState(null, '', location.pathname + location.search);
   })();
   var cellShift = Object.create(null);   // 'key|date' -> [{ s, f }]
   var draftShifts = [], draftAlw = [];
